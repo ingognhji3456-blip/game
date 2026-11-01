@@ -43,6 +43,7 @@ not copy names, text or designs from any existing game.
 | Owner | Files |
 |---|---|
 | (shared, done) | `js/util.js`, `docs/ARCHITECTURE.md` |
+| (tests) | `tests/load.js` loads the browser scripts into a Node `vm` for `tests/*.js` |
 | **Engine** | `js/core/combat.js`, `js/core/run.js`, `js/core/save.js`, `tests/sim.js` (+ any `tests/*`) |
 | **Content** | `js/data/keywords.js`, `js/data/cards.js`, `js/data/enemies.js`, `js/data/relics.js`, `js/data/potions.js`, `js/data/events.js` |
 | **Art** | `js/art/icons.js`, `js/art/enemies.js`, `css/art.css` |
@@ -472,6 +473,8 @@ state afterwards. Engine functions never throw on bad input from the UI; they re
 | `potion` | `slot`, `potionId` |
 | `gold` | `amount`, `total` |
 | `battleEnd` | `result: 'won'\|'lost'` |
+| `upgradeHand` | `count` (cards upgraded by an `upgradeHand` effect) |
+| `cardTrigger` | `cardUid` (a card's `onTurnEndInHand` effects are about to run) |
 | `error` | `text` |
 
 Turn order:
@@ -599,7 +602,8 @@ Only one screen is visible at a time.
   screen, builds the scene inside `#screen-battle`, runs the whole battle, calls
   `CB.combat.finishBattle` before resolving, plays the victory/defeat banner.
 - `CB.ui.battle.isActive()`, `CB.ui.battle.current()` → battle | null,
-  `CB.ui.battle.usePotionFlow(slot)`, `CB.ui.battle.debugWin()`.
+  `CB.ui.battle.usePotionFlow(slot)`, `CB.ui.battle.debugWin()`, `CB.ui.battle.debugLose()`,
+  `CB.ui.battle.abort()` (leave a battle without resolving, e.g. "save and quit").
 - Layout: act background; hero on the left, 1–4 enemies on the right standing on a common ground
   line (size by `size`/`rank`); each unit has HP bar (animated, with block overlay), block badge,
   status icons with tooltips (`CB.combat.statusList`), enemy intent above head (`CB.art.intent` +
