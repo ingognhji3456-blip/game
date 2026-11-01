@@ -5,6 +5,12 @@
 
 설치도, 빌드도, 인터넷 연결도 필요 없습니다. 그림은 모두 코드로 그린 SVG이고, 효과음과 배경음악은 브라우저에서 실시간으로 합성합니다.
 
+| 타이틀 | 지도 |
+|---|---|
+| ![타이틀](docs/screenshots/title.png) | ![지도](docs/screenshots/map.png) |
+| **전투 (보스: 리치 왕)** | **이벤트** |
+| ![전투](docs/screenshots/battle.png) | ![이벤트](docs/screenshots/event.png) |
+
 ## 실행 방법
 
 `index.html` 파일을 브라우저(Chrome, Edge, Firefox, Safari)로 열면 끝입니다.
