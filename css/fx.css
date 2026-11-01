@@ -1,0 +1,81 @@
+/* =========================================================
+ * 시각 효과 레이어
+ * ========================================================= */
+#fx-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 900; }
+#fx-layer { position: fixed; inset: 0; pointer-events: none; z-index: 901; overflow: hidden; }
+
+/* 떠오르는 숫자 */
+.fx-float {
+  position: absolute; transform: translate(-50%, -50%);
+  font-weight: 900; font-size: 34px; letter-spacing: -1px; white-space: nowrap;
+  color: #fff; -webkit-text-stroke: 1.5px rgba(10, 6, 20, .85); paint-order: stroke fill;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, .5), 0 0 18px rgba(0, 0, 0, .35);
+  animation: fx-float-up 1s cubic-bezier(.2, .9, .3, 1) forwards;
+}
+.fx-damage { color: #ff5a4a; }
+.fx-crit { color: #ffd23f; font-size: 50px; }
+.fx-block { color: #8ac4ff; font-size: 26px; }
+.fx-heal { color: #5cf08a; }
+.fx-poison { color: #9cff5a; }
+.fx-buff { color: #ffd25a; font-size: 22px; }
+.fx-debuff { color: #d79bff; font-size: 22px; }
+.fx-gold { color: #ffd25a; font-size: 26px; }
+.fx-info { color: #e8e4ff; font-size: 20px; }
+@keyframes fx-float-up {
+  0% { opacity: 0; transform: translate(-50%, -30%) scale(.4); }
+  14% { opacity: 1; transform: translate(-50%, -60%) scale(1.25); }
+  28% { transform: translate(-50%, -70%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -180%) scale(.95); }
+}
+
+/* 요소 깜빡임 */
+.fx-flash { animation: fx-flash .3s ease-out; }
+@keyframes fx-flash {
+  0% { filter: brightness(3) drop-shadow(0 0 12px var(--flash-color, #fff)); }
+  100% { filter: none; }
+}
+
+.fx-screen-flash { position: absolute; inset: 0; animation: fx-screen-flash .45s ease-out forwards; }
+@keyframes fx-screen-flash { from { opacity: 1; } to { opacity: 0; } }
+
+/* 배너 */
+.fx-banner {
+  position: absolute; left: 0; right: 0; top: 38%; transform: translateY(-50%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  padding: 22px 0; text-align: center;
+  background: linear-gradient(90deg, transparent, rgba(8, 6, 18, .82) 20%, rgba(8, 6, 18, .82) 80%, transparent);
+  animation: fx-banner 1.15s ease-in-out forwards;
+}
+.fx-banner-text {
+  font-size: 54px; font-weight: 900; letter-spacing: 6px; color: #fff;
+  text-shadow: 0 0 24px rgba(255, 255, 255, .35), 0 4px 0 rgba(0, 0, 0, .6);
+  animation: fx-banner-text 1.15s ease-out forwards; animation-duration: inherit;
+}
+.fx-banner-sub { font-size: 18px; font-weight: 700; letter-spacing: 4px; color: #cfc6ff; opacity: .9; }
+.fx-banner-player .fx-banner-text { color: #ffe9a8; text-shadow: 0 0 26px rgba(255, 200, 80, .55), 0 4px 0 rgba(0, 0, 0, .6); }
+.fx-banner-enemy .fx-banner-text { color: #ff9a8a; text-shadow: 0 0 26px rgba(255, 70, 50, .55), 0 4px 0 rgba(0, 0, 0, .6); }
+.fx-banner-boss { background: linear-gradient(90deg, transparent, rgba(40, 4, 10, .9) 15%, rgba(40, 4, 10, .9) 85%, transparent); }
+.fx-banner-boss .fx-banner-text { font-size: 64px; color: #ff6a5a; text-shadow: 0 0 30px rgba(255, 40, 30, .8), 0 4px 0 #000; }
+.fx-banner-victory .fx-banner-text { font-size: 68px; color: #ffd25a; text-shadow: 0 0 34px rgba(255, 200, 60, .8), 0 4px 0 #000; }
+.fx-banner-defeat { background: linear-gradient(90deg, transparent, rgba(20, 0, 4, .92) 15%, rgba(20, 0, 4, .92) 85%, transparent); }
+.fx-banner-defeat .fx-banner-text { font-size: 68px; color: #a8a0b8; }
+.fx-banner-act .fx-banner-text { font-size: 60px; color: #f4ecd0; }
+@keyframes fx-banner {
+  0% { opacity: 0; clip-path: inset(48% 0 48% 0); }
+  15% { opacity: 1; clip-path: inset(0 0 0 0); }
+  82% { opacity: 1; clip-path: inset(0 0 0 0); }
+  100% { opacity: 0; clip-path: inset(50% 0 50% 0); }
+}
+@keyframes fx-banner-text {
+  0% { transform: translateX(-60px) scale(1.1); opacity: 0; letter-spacing: 20px; }
+  20% { transform: translateX(0) scale(1); opacity: 1; letter-spacing: 6px; }
+  80% { transform: translateX(10px); opacity: 1; }
+  100% { transform: translateX(60px); opacity: 0; }
+}
+
+@media (max-width: 640px) {
+  .fx-banner-text { font-size: 36px; letter-spacing: 3px; }
+  .fx-banner-boss .fx-banner-text, .fx-banner-victory .fx-banner-text, .fx-banner-defeat .fx-banner-text, .fx-banner-act .fx-banner-text { font-size: 42px; }
+  .fx-float { font-size: 26px; }
+  .fx-crit { font-size: 38px; }
+}
