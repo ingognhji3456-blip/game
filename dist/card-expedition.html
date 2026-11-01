@@ -50,6 +50,8 @@ button { font-family: inherit; }
   inset: 0;
   display: flex;
   flex-direction: column;
+  /* 노치·홈 바 영역 피하기 (viewport-fit=cover) */
+  padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
   background: var(--bg);
   background-size: cover;
   transition: background .6s ease;
