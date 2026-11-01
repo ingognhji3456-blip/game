@@ -1,0 +1,44 @@
+/* =========================================================
+ * 아트 애니메이션 — 대기 동작
+ * ========================================================= */
+.enemy-art, .hero-art { display: block; width: 100%; height: 100%; overflow: visible; }
+.enemy-art .art-body, .hero-art .art-body { transform-box: fill-box; transform-origin: 50% 100%; }
+
+.enemy-art .art-body { animation: art-breathe 3.2s ease-in-out infinite; }
+.enemy-art.floating .art-body { animation: art-float 3.6s ease-in-out infinite; }
+.enemy-art-slime .art-body { animation: art-squish 1.8s ease-in-out infinite; }
+.enemy-art-golem .art-body, .enemy-art-sentinel .art-body { animation-duration: 4.6s; }
+.hero-art .art-body { animation: art-breathe 3s ease-in-out infinite; }
+.hero-art .cape { transform-box: fill-box; transform-origin: 100% 0%; animation: art-cape 2.6s ease-in-out infinite; }
+.hero-art .scarf { transform-box: fill-box; transform-origin: 100% 50%; animation: art-cape 1.8s ease-in-out infinite; }
+
+.enemy-art .wing-l { transform-box: fill-box; transform-origin: 100% 70%; animation: art-wing-l 2.4s ease-in-out infinite; }
+.enemy-art .wing-r { transform-box: fill-box; transform-origin: 0% 70%; animation: art-wing-r 2.4s ease-in-out infinite; }
+.enemy-art.flapping .wing-l, .enemy-art.flapping .wing-r { animation-duration: .5s; }
+
+.enemy-art .flicker { transform-box: fill-box; transform-origin: 50% 100%; animation: art-flicker .9s ease-in-out infinite alternate; }
+.enemy-art .flicker.f1 { animation-delay: -.3s; } .enemy-art .flicker.f2 { animation-delay: -.6s; }
+.enemy-art .flicker.f3 { animation-delay: -.15s; } .enemy-art .flicker.f4 { animation-delay: -.45s; }
+.enemy-art .spore { animation: art-spore 4s ease-in-out infinite; }
+.enemy-art .spore.s1 { animation-delay: -1s; } .enemy-art .spore.s2 { animation-delay: -2s; }
+.enemy-art .spore.s3 { animation-delay: -3s; } .enemy-art .spore.s4 { animation-delay: -1.5s; } .enemy-art .spore.s5 { animation-delay: -2.5s; }
+.enemy-art .rune { animation: art-rune 2.2s ease-in-out infinite; }
+.enemy-art .pulse { transform-box: fill-box; transform-origin: 50% 50%; animation: art-pulse 1.6s ease-in-out infinite; }
+.enemy-art .shard { animation: art-shard 3s ease-in-out infinite; }
+.enemy-art .shard.sh1 { animation-delay: -.8s; } .enemy-art .shard.sh2 { animation-delay: -1.6s; } .enemy-art .shard.sh3 { animation-delay: -2.2s; }
+
+@keyframes art-breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.015, .985) translateY(1px); } }
+@keyframes art-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes art-squish { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.05, .94); } }
+@keyframes art-cape { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(3deg); } }
+@keyframes art-wing-l { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-8deg); } }
+@keyframes art-wing-r { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(8deg); } }
+@keyframes art-flicker { from { transform: scale(1, 1); opacity: .9; } to { transform: scale(1.08, 1.15); opacity: 1; } }
+@keyframes art-spore { 0%, 100% { transform: translateY(0); opacity: .3; } 50% { transform: translateY(-14px); opacity: .95; } }
+@keyframes art-rune { 0%, 100% { opacity: .35; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-6px); } }
+@keyframes art-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+@keyframes art-shard { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .enemy-art *, .hero-art * { animation: none !important; }
+}
