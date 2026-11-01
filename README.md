@@ -13,7 +13,9 @@
 
 ## 실행 방법
 
-`index.html` 파일을 브라우저(Chrome, Edge, Firefox, Safari)로 열면 끝입니다.
+**가장 간단한 방법:** [`dist/card-expedition.html`](dist/card-expedition.html) 파일 하나만 내려받아 브라우저(Chrome, Edge, Firefox, Safari)로 여세요. 게임 전체가 이 파일 하나에 들어 있습니다.
+
+저장소 전체를 받았다면 `index.html` 을 열어도 됩니다.
 
 로컬 서버로 띄우고 싶다면:
 
@@ -73,6 +75,8 @@ js/art/             SVG 아트 생성기 (적, 주인공, 아이콘, 배경, 로
 js/fx/              시각 효과(캔버스 파티클)와 사운드(WebAudio 합성)
 js/ui/              화면 — 공용 UI, 지도, 각종 화면 흐름, 전투 화면
 js/main.js          시작점
+tools/build.js      한 파일짜리 게임(dist/card-expedition.html) 만들기
+dist/               한 파일짜리 게임 (배포용)
 tests/              Node 로 돌리는 엔진 테스트와 전체 런 시뮬레이터
 docs/ARCHITECTURE.md  모듈 간 계약(API, 데이터 형식, 이벤트 타입)
 ```
@@ -120,6 +124,14 @@ fireSlash: {
 - 유물(`js/data/relics.js`): `triggers`(전투 시작, 턴 시작, 카드 사용 시 등)와 `modifiers`(에너지 +1, 상점 할인 등)로 정의
 - 물약(`js/data/potions.js`): 전투 중 한 번 쓰는 효과
 - 이벤트(`js/data/events.js`): 장면 그림, 본문, 선택지와 결과(확률 분기 가능)
+
+## 한 파일로 만들기
+
+코드를 고친 뒤 아래 명령을 실행하면 모든 CSS/JS 를 합친 `dist/card-expedition.html` 이 다시 만들어집니다.
+
+```bash
+node tools/build.js
+```
 
 ## 테스트
 
