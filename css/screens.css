@@ -1,0 +1,273 @@
+/* =========================================================
+ * 타이틀 / 지도 / 보상 / 상점 / 휴식 / 이벤트 / 보물 / 결과
+ * ========================================================= */
+
+/* ---------------- 타이틀 ---------------- */
+.title-screen {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 20px;
+}
+.title-logo { width: min(640px, 92vw); filter: drop-shadow(0 10px 30px rgba(0, 0, 0, .6)); animation: logo-in 1s cubic-bezier(.2, 1.2, .4, 1); }
+.title-logo svg { width: 100%; height: auto; display: block; }
+.title-hero { position: absolute; left: 6vw; bottom: 4vh; width: min(260px, 30vw); height: min(260px, 30vw); opacity: .9; pointer-events: none; }
+.title-menu { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 8px; }
+.title-menu .btn.big { width: 260px; }
+.title-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.title-foot { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; color: var(--muted); letter-spacing: 2px; font-size: .85rem; }
+.title-embers { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.title-embers span {
+  position: absolute; bottom: -10px; width: 4px; height: 4px; border-radius: 50%;
+  background: #ffb24a; box-shadow: 0 0 8px 2px rgba(255, 160, 60, .7);
+  animation: ember linear infinite;
+}
+@keyframes ember {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translate(60px, -100vh); opacity: 0; }
+}
+@keyframes logo-in { from { opacity: 0; transform: scale(.85) translateY(-20px); } to { opacity: 1; transform: none; } }
+
+/* ---------------- 지도 ---------------- */
+.map-screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; }
+.map-header { flex: none; display: flex; flex-direction: column; align-items: center; padding: 4px 0 2px; }
+.map-act { font-size: .85rem; font-weight: 800; letter-spacing: 4px; color: var(--muted); }
+.map-act-name { font-size: 1.5rem; }
+.map-hint { font-size: .8rem; color: var(--muted); min-height: 1em; }
+.map-scroller {
+  position: relative;
+  flex: 1; min-height: 0; width: min(760px, 100%);
+  overflow-y: auto; overflow-x: hidden;
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(255, 230, 180, .06), transparent 70%),
+    linear-gradient(180deg, rgba(60, 46, 30, .35), rgba(30, 24, 18, .35));
+  border: 1px solid rgba(255, 220, 150, .14);
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, .5);
+  margin-bottom: 8px;
+}
+.map-scroller.peek { width: 100%; height: 60vh; }
+.map-modal { width: min(820px, 100%); }
+.map-canvas { position: relative; width: 100%; }
+.map-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.map-line { fill: none; stroke: rgba(220, 200, 160, .28); stroke-width: 3; stroke-dasharray: 3 9; stroke-linecap: round; }
+.map-line.walked { stroke: rgba(255, 210, 110, .9); stroke-width: 4; stroke-dasharray: none; }
+.map-line.open { stroke: rgba(255, 240, 200, .85); stroke-width: 4; stroke-dasharray: 6 8; animation: arrow-dash .6s linear infinite; }
+
+.map-node {
+  position: absolute;
+  width: 50px; height: 50px;
+  margin: -25px 0 0 -25px;
+  padding: 5px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 220, 150, .3);
+  background: radial-gradient(circle at 40% 35%, #f4ead4, #c8b896);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .55);
+  cursor: default;
+  transition: transform .15s, filter .2s;
+}
+.map-node svg { width: 100%; height: 100%; display: block; }
+.map-node.locked { filter: grayscale(.7) brightness(.55); }
+.map-node.visited { filter: grayscale(.35) brightness(.8); border-color: rgba(255, 210, 110, .8); }
+.map-node.current { filter: none; border-color: #ffd25a; box-shadow: 0 0 0 4px rgba(255, 210, 90, .3), 0 4px 10px rgba(0, 0, 0, .55); }
+.map-node.available { cursor: pointer; border-color: #fff2c0; animation: node-pulse 1.4s ease-in-out infinite; }
+.map-node.available:hover { transform: scale(1.22); animation: none; box-shadow: 0 0 0 5px rgba(255, 230, 150, .55), 0 0 24px rgba(255, 210, 90, .8); }
+@keyframes node-pulse { 50% { box-shadow: 0 0 0 7px rgba(255, 230, 150, .25), 0 0 22px rgba(255, 210, 90, .7); transform: scale(1.08); } }
+.map-node.type-elite { background: radial-gradient(circle at 40% 35%, #ffd8d0, #c88a7a); }
+.map-node.type-rest { background: radial-gradient(circle at 40% 35%, #ffe8c8, #d8a870); }
+.map-node.type-shop { background: radial-gradient(circle at 40% 35%, #fff4c0, #d8c070); }
+.map-node.type-event { background: radial-gradient(circle at 40% 35%, #d8fff4, #7ac8b8); }
+.map-node.type-treasure { background: radial-gradient(circle at 40% 35%, #fff0c8, #e0b060); }
+.map-node.type-boss {
+  width: 140px; height: 150px; margin: -75px 0 0 -70px;
+  border-radius: 20px; padding: 6px;
+  background: radial-gradient(circle at 50% 40%, rgba(160, 40, 40, .8), rgba(40, 10, 20, .9));
+  border-color: rgba(255, 120, 100, .6);
+}
+.map-node.type-boss .boss-portrait { width: 110px; height: 110px; margin: 0 auto; }
+.map-node.type-boss .boss-label { font-weight: 900; font-size: .85rem; color: #ffd0c8; text-shadow: 0 1px 2px #000; }
+.map-you { position: absolute; transform: translate(-50%, -150%); font-size: 26px; pointer-events: none; animation: you-bob 1.2s ease-in-out infinite; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .6)); }
+@keyframes you-bob { 50% { transform: translate(-50%, -175%); } }
+
+.map-legend { position: absolute; right: 16px; top: 64px; padding: 10px 14px; font-size: .85rem; }
+.legend-title { font-weight: 900; color: var(--gold-2); margin-bottom: 6px; }
+.legend-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.legend-icon { width: 26px; height: 26px; display: inline-block; padding: 2px; border-radius: 50%; background: #e8dcc0; }
+.legend-icon svg { width: 100%; height: 100%; display: block; }
+@media (max-width: 1100px) { .map-legend { display: none; } }
+
+/* ---------------- 보상 ---------------- */
+.reward-screen { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.reward-panel { width: min(460px, 100%); padding: 22px; text-align: center; animation: pop-in .3s ease-out; }
+.reward-panel h2 { margin: 0; font-size: 1.8rem; }
+.reward-sub { color: var(--muted); margin: 4px 0 14px; }
+.reward-list { display: flex; flex-direction: column; gap: 10px; }
+.reward-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: linear-gradient(90deg, rgba(60, 50, 90, .9), rgba(36, 30, 58, .9));
+  color: var(--text);
+  font-size: 1.05rem; font-weight: 800; text-align: left;
+  cursor: pointer;
+  transition: transform .12s, background .15s, opacity .25s;
+}
+.reward-item:hover { transform: translateX(6px); background: linear-gradient(90deg, rgba(90, 76, 130, .95), rgba(50, 42, 80, .95)); }
+.reward-item.special { border-color: rgba(255, 210, 90, .7); box-shadow: 0 0 14px rgba(255, 200, 80, .2); }
+.reward-item.taken { opacity: 0; transform: translateX(40px); }
+.reward-item small { color: var(--muted); font-weight: 600; }
+.reward-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+.reward-svg, .reward-svg svg { width: 38px; height: 38px; display: block; }
+.reward-relic { font-size: 26px; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #3a3460, #15132a); border: 1px solid var(--line-strong); flex: none; }
+.reward-actions { margin-top: 18px; }
+.reward-cards .card { animation: deal-in .4s cubic-bezier(.2, 1.2, .4, 1) backwards; }
+@keyframes deal-in { from { opacity: 0; transform: translateY(40px) rotate(-6deg) scale(.8); } }
+.boss-relics { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.boss-relic { width: 220px; padding: 16px; text-align: center; color: var(--text); cursor: pointer; transition: transform .15s; }
+.boss-relic:hover { transform: translateY(-6px); border-color: var(--gold); }
+.br-icon { font-size: 44px; }
+.br-name { font-weight: 900; font-size: 1.1rem; color: var(--gold-2); margin: 6px 0; }
+.br-desc { font-size: .9rem; color: #d8d3e8; line-height: 1.45; }
+
+/* ---------------- 상점 ---------------- */
+.shop-screen { position: absolute; inset: 0; overflow-y: auto; padding: 8px 16px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.shop-header { display: flex; align-items: center; gap: 14px; width: min(1000px, 100%); }
+.merchant { width: 200px; height: 112px; border-radius: 12px; overflow: hidden; flex: none; border: 1px solid var(--line); }
+.merchant svg { width: 100%; height: 100%; display: block; }
+.merchant-talk { padding: 12px 16px; }
+.merchant-talk b { color: var(--gold-2); }
+.merchant-talk p { margin: 4px 0 0; color: #d8d3e8; }
+.shop-section { padding: 10px 14px 14px; width: min(1000px, 100%); }
+.shop-section h3 { margin: 0 0 8px; color: var(--gold-2); letter-spacing: 2px; font-size: 1rem; }
+.shop-row { display: flex; gap: 12px; width: min(1000px, 100%); flex-wrap: wrap; }
+.shop-row .shop-section { flex: 1; width: auto; min-width: 220px; }
+.shop-cards { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.shop-slot { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 150px; min-height: 120px; justify-content: center; }
+.shop-slot .card { cursor: pointer; }
+.shop-relics, .shop-potions { display: flex; gap: 10px; flex-wrap: wrap; }
+.shop-item {
+  position: relative; width: 96px; min-height: 112px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  padding: 8px 4px;
+  border-radius: 12px; border: 1px solid var(--line);
+  background: rgba(30, 26, 50, .9); color: var(--text);
+  cursor: pointer; transition: transform .12s, border-color .15s;
+}
+.shop-item:hover:not(.sold) { transform: translateY(-4px); border-color: var(--gold); }
+.shop-relic-icon { font-size: 34px; }
+.shop-potion-icon { width: 44px; height: 44px; }
+.shop-potion-icon svg { width: 100%; height: 100%; }
+.shop-item-name { font-size: .78rem; font-weight: 700; text-align: center; line-height: 1.2; }
+.price { font-weight: 900; color: var(--gold-2); font-size: .95rem; padding: 2px 10px; border-radius: 999px; background: rgba(0, 0, 0, .5); }
+.price.expensive { color: #ff8a7a; }
+.shop-item.sold, .shop-slot.sold { opacity: .45; cursor: default; }
+.sold-mark { font-weight: 800; color: var(--muted); }
+.shop-leave { margin-top: 6px; }
+
+/* ---------------- 휴식 ---------------- */
+.rest-screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 16px; }
+.rest-screen h2 { margin: 0; font-size: 1.8rem; }
+.campfire { position: relative; width: 160px; height: 150px; }
+.campfire .logs { position: absolute; left: 20px; right: 20px; bottom: 6px; height: 26px; background: linear-gradient(180deg, #7a4a24, #3a200e); border-radius: 12px; transform: rotate(-8deg); box-shadow: 0 0 0 3px #15101f; }
+.campfire .logs::after { content: ''; position: absolute; inset: 0; background: inherit; border-radius: 12px; transform: rotate(16deg); box-shadow: 0 0 0 3px #15101f; }
+.campfire .flame { position: absolute; left: 50%; bottom: 22px; border-radius: 50% 50% 40% 40% / 60% 60% 40% 40%; transform-origin: 50% 100%; animation: flame .5s ease-in-out infinite alternate; mix-blend-mode: screen; }
+.campfire .f1 { width: 80px; height: 110px; margin-left: -40px; background: radial-gradient(ellipse at 50% 80%, #ffe08a, #ff7a1a 55%, transparent 72%); }
+.campfire .f2 { width: 54px; height: 80px; margin-left: -27px; background: radial-gradient(ellipse at 50% 80%, #fff6c8, #ffb030 60%, transparent 75%); animation-delay: -.2s; }
+.campfire .f3 { width: 30px; height: 46px; margin-left: -15px; background: radial-gradient(ellipse at 50% 80%, #ffffff, #ffe08a 60%, transparent 80%); animation-delay: -.35s; }
+.campfire .glow { position: absolute; left: 50%; bottom: -40px; width: 400px; height: 200px; margin-left: -200px; background: radial-gradient(ellipse, rgba(255, 140, 40, .35), transparent 65%); animation: glow 2s ease-in-out infinite; pointer-events: none; }
+@keyframes flame { from { transform: scale(1, 1) rotate(-2deg); } to { transform: scale(1.08, 1.15) rotate(2deg); } }
+@keyframes glow { 50% { opacity: .7; } }
+.rest-hero { position: absolute; left: 10vw; bottom: 6vh; width: min(220px, 26vw); height: min(220px, 26vw); }
+.rest-options { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; align-items: center; position: relative; z-index: 2; }
+.rest-option { width: 200px; padding: 18px 14px; color: var(--text); text-align: center; cursor: pointer; transition: transform .15s, border-color .15s; }
+.rest-option:hover:not(:disabled) { transform: translateY(-6px); border-color: var(--gold); }
+.rest-option:disabled { opacity: .45; cursor: not-allowed; }
+.rest-icon { font-size: 40px; }
+.rest-label { font-weight: 900; font-size: 1.2rem; color: var(--gold-2); margin: 4px 0; }
+.rest-desc { font-size: .9rem; color: #d8d3e8; }
+.rest-result { padding: 14px 20px; font-weight: 700; }
+
+/* ---------------- 이벤트 ---------------- */
+.event-screen { position: absolute; inset: 0; overflow-y: auto; display: flex; align-items: flex-start; justify-content: center; padding: 10px 16px 24px; }
+.event-card { width: min(680px, 100%); padding: 0 0 18px; overflow: hidden; margin: auto 0; }
+.event-scene { height: clamp(140px, 30vh, 260px); border-bottom: 1px solid var(--line); }
+.event-scene svg { width: 100%; height: 100%; display: block; }
+.event-title { margin: 14px 0 6px; font-size: 1.5rem; }
+.event-text { padding: 0 22px; line-height: 1.7; color: #e4def0; text-align: center; min-height: 3em; }
+.event-text p { margin: 0 0 8px; }
+.event-msg { display: inline-block; margin: 3px 4px; padding: 4px 12px; border-radius: 999px; background: rgba(0, 0, 0, .4); border: 1px solid var(--line); font-weight: 700; font-size: .9rem; }
+.event-choices { display: flex; flex-direction: column; gap: 8px; padding: 14px 22px 0; align-items: stretch; }
+.event-choices .btn { align-self: center; }
+.event-choice {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 10px 16px;
+  border-radius: 10px; border: 1px solid var(--line);
+  background: linear-gradient(90deg, rgba(54, 46, 84, .95), rgba(34, 30, 56, .95));
+  color: var(--text); text-align: left; cursor: pointer;
+  transition: transform .12s, border-color .15s;
+}
+.event-choice:hover:not(:disabled) { transform: translateX(6px); border-color: var(--gold); }
+.event-choice:disabled { opacity: .45; cursor: not-allowed; }
+.choice-label { font-weight: 900; font-size: 1.02rem; }
+.choice-label::before { content: '▸ '; color: var(--gold); }
+.choice-preview { font-size: .85rem; color: #c8f0d8; }
+.choice-req { font-size: .8rem; color: #ff9a8a; font-weight: 700; }
+
+/* ---------------- 보물 ---------------- */
+.treasure-screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; }
+.treasure-screen h2 { margin: 0; font-size: 1.8rem; }
+.treasure-hint { color: var(--muted); margin: 0; min-height: 1.2em; }
+.chest { position: relative; width: 200px; height: 170px; background: none; border: none; cursor: pointer; animation: chest-wiggle 2s ease-in-out infinite; }
+.chest.open { animation: none; cursor: default; }
+.chest-body { position: absolute; left: 10px; right: 10px; bottom: 0; height: 90px; border-radius: 6px; background: linear-gradient(180deg, #a8652a, #6a3a14); border: 4px solid #15101f; box-shadow: inset 0 0 0 6px rgba(255, 210, 90, .5); }
+.chest-lid { position: absolute; left: 6px; right: 6px; top: 26px; height: 60px; border-radius: 40px 40px 6px 6px; background: linear-gradient(180deg, #c87a34, #8a4a1a); border: 4px solid #15101f; box-shadow: inset 0 0 0 6px rgba(255, 210, 90, .5); transform-origin: 50% 100%; transition: transform .5s cubic-bezier(.3, 1.4, .5, 1); z-index: 2; }
+.chest-lock { position: absolute; left: 50%; top: -12px; width: 30px; height: 30px; margin-left: -15px; background: #ffd25a; border: 3px solid #15101f; border-radius: 6px; }
+.chest-glow { position: absolute; left: 50%; top: 40px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: #fff6c8; box-shadow: 0 0 0 0 rgba(255, 220, 120, 0); transition: box-shadow .6s; }
+.chest.open .chest-lid { transform: translateY(-40px) rotate(-28deg); }
+.chest.open .chest-glow { box-shadow: 0 0 80px 60px rgba(255, 220, 120, .6); }
+@keyframes chest-wiggle { 0%, 80%, 100% { transform: rotate(0); } 85% { transform: rotate(-3deg); } 90% { transform: rotate(3deg); } 95% { transform: rotate(-2deg); } }
+.treasure-loot { display: flex; flex-direction: column; align-items: center; gap: 10px; min-height: 120px; }
+.loot-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; min-width: 300px; animation: pop-in .3s ease-out; }
+.loot-item small { color: #d8d3e8; }
+
+/* ---------------- 결과 ---------------- */
+.end-screen { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 30px; padding: 16px; overflow-y: auto; }
+.end-art { width: min(300px, 30vw); height: min(300px, 30vw); flex: none; }
+.end-screen.defeat .end-art { filter: grayscale(.4) drop-shadow(0 0 30px rgba(255, 40, 40, .4)); }
+.end-screen.victory .end-art { filter: drop-shadow(0 0 30px rgba(255, 210, 90, .6)); }
+.end-panel { width: min(460px, 100%); padding: 22px 26px; text-align: center; }
+.end-title { margin: 0; font-size: 2.3rem; letter-spacing: 4px; }
+.victory .end-title { color: var(--gold-2); text-shadow: 0 0 24px rgba(255, 200, 60, .6); }
+.defeat .end-title { color: #c8b8d0; }
+.end-sub { color: var(--muted); margin: 6px 0 12px; line-height: 1.5; }
+.end-score { font-size: 1.2rem; margin-bottom: 10px; }
+.end-score b { font-size: 2rem; color: var(--gold-2); margin-left: 6px; }
+.end-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; text-align: left; padding: 10px 6px; border-top: 1px solid rgba(255, 255, 255, .08); border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.end-stat { display: flex; justify-content: space-between; font-size: .92rem; }
+.end-stat span { color: var(--muted); }
+.end-panel h3 { margin: 12px 0 4px; color: var(--gold-2); font-size: 1rem; letter-spacing: 2px; }
+.end-history { margin: 0; padding-left: 22px; text-align: left; font-size: .9rem; line-height: 1.7; }
+.end-history li.me { color: var(--gold-2); }
+.end-history.big { font-size: 1rem; }
+.end-buttons { display: flex; gap: 12px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+
+/* ---------------- 도움말 ---------------- */
+.help h3 { margin: 14px 0 4px; color: var(--gold-2); }
+.help p { margin: 0; line-height: 1.65; color: #ddd8ea; }
+.glossary { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; margin-top: 6px; }
+.glossary-item { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 8px; background: rgba(0, 0, 0, .3); font-size: .88rem; }
+.glossary-item b { color: var(--gold-2); }
+
+@media (max-width: 700px) {
+  .title-hero, .rest-hero { display: none; }
+  .end-screen { flex-direction: column; justify-content: flex-start; }
+  .end-art { width: 160px; height: 160px; }
+  .shop-header .merchant { width: 120px; height: 68px; }
+  .map-node { width: 42px; height: 42px; margin: -21px 0 0 -21px; }
+  .map-node.type-boss { width: 110px; height: 124px; margin: -62px 0 0 -55px; }
+  .map-node.type-boss .boss-portrait { width: 86px; height: 86px; }
+}
+
+/* 보상 화면은 전투 배경 위에 어둡게 */
+.reward-screen { background: radial-gradient(ellipse at 50% 50%, rgba(8, 6, 16, .55), rgba(8, 6, 16, .82)); }

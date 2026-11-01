@@ -1,0 +1,295 @@
+/* =========================================================
+ * 카드 원정대 — 기본 디자인 시스템
+ * ========================================================= */
+:root {
+  --bg: #0e0f1a;
+  --bg-2: #161627;
+  --panel: rgba(22, 20, 38, .94);
+  --panel-2: rgba(32, 28, 52, .96);
+  --line: rgba(255, 220, 150, .22);
+  --line-strong: rgba(255, 220, 150, .5);
+  --gold: #f2c14e;
+  --gold-2: #ffe08a;
+  --text: #efeaf6;
+  --muted: #a8a3be;
+  --red: #e5574a;
+  --blue: #3f8fd8;
+  --purple: #a066d3;
+  --green: #45c46b;
+  --font: 'Pretendard', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  --hud-h: 92px;
+  --radius: 12px;
+  --shadow: 0 10px 30px rgba(0, 0, 0, .45);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body {
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+button { font-family: inherit; }
+.hidden { display: none !important; }
+
+#app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  background-size: cover;
+  transition: background .6s ease;
+}
+
+/* ---------------- 버튼 ---------------- */
+.btn {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px;
+  padding: 10px 22px;
+  border: 2px solid rgba(0, 0, 0, .55);
+  border-radius: 10px;
+  font-size: 1rem; font-weight: 800; letter-spacing: .5px;
+  color: #2a1a00;
+  background: linear-gradient(180deg, #ffe7a0 0%, #f2c14e 45%, #c88a24 100%);
+  box-shadow: 0 4px 0 #7a4e10, 0 8px 18px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .7);
+  cursor: pointer;
+  transition: transform .08s, filter .15s, box-shadow .08s;
+}
+.btn:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+.btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #7a4e10, 0 3px 8px rgba(0, 0, 0, .4); }
+.btn:disabled { filter: grayscale(.8) brightness(.6); cursor: not-allowed; }
+.btn.secondary {
+  color: var(--text);
+  background: linear-gradient(180deg, #3e3a5e 0%, #2a2744 100%);
+  border-color: rgba(255, 220, 150, .3);
+  box-shadow: 0 4px 0 #15132a, 0 8px 18px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+.btn.danger { color: #fff; background: linear-gradient(180deg, #ff7a6a 0%, #c43a2a 100%); box-shadow: 0 4px 0 #6a1408, 0 8px 18px rgba(0, 0, 0, .4); }
+.btn.big { min-height: 56px; padding: 12px 36px; font-size: 1.2rem; }
+.btn:focus-visible, .icon-btn:focus-visible { outline: 3px solid var(--gold-2); outline-offset: 2px; }
+
+.icon-btn {
+  position: relative;
+  width: 42px; height: 42px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(20, 18, 36, .8);
+  color: var(--text);
+  font-size: 20px;
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+}
+.icon-btn:hover { background: rgba(60, 54, 96, .9); }
+.icon-btn:active { transform: scale(.94); }
+.icon-btn .badge {
+  position: absolute; right: -4px; bottom: -4px;
+  min-width: 20px; padding: 1px 5px; border-radius: 10px;
+  font-size: 11px; font-weight: 800; color: #1a1000; background: var(--gold);
+}
+
+/* ---------------- 패널 ---------------- */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, .05);
+}
+.title-ornament {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  font-weight: 900; letter-spacing: 2px; color: var(--gold-2);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, .6);
+}
+.title-ornament::before, .title-ornament::after {
+  content: ''; height: 2px; width: 60px;
+  background: linear-gradient(90deg, transparent, var(--gold));
+}
+.title-ornament::after { transform: scaleX(-1); }
+
+/* ---------------- HUD ---------------- */
+#hud {
+  position: relative; z-index: 50;
+  flex: none;
+  padding: 8px 14px 4px;
+  background: linear-gradient(180deg, rgba(8, 7, 16, .92), rgba(8, 7, 16, .6) 80%, transparent);
+}
+.hud-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.hud-group { display: flex; align-items: center; gap: 10px; }
+.hud-stat {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px;
+  font-weight: 800; font-size: 1rem;
+  background: rgba(0, 0, 0, .45); border: 1px solid var(--line);
+}
+.hud-hp #hud-hp-text { color: #ff8a80; }
+.hud-gold #hud-gold-text { color: var(--gold-2); }
+.hud-icon { font-size: 1rem; }
+.hud-floor { font-weight: 800; letter-spacing: 1px; color: var(--muted); text-align: center; flex: 1; }
+.hud-floor b { color: var(--text); }
+.hud-potions { display: flex; gap: 4px; }
+.potion-slot {
+  width: 38px; height: 38px; padding: 3px;
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 255, 255, .2);
+  background: rgba(0, 0, 0, .35);
+  cursor: pointer;
+  transition: transform .12s, background .15s;
+}
+.potion-slot.filled { border-style: solid; border-color: var(--line); }
+.potion-slot.filled:hover { transform: scale(1.12) rotate(-6deg); background: rgba(255, 220, 150, .12); }
+.potion-slot svg { width: 100%; height: 100%; display: block; }
+.hud-relics { display: flex; flex-wrap: wrap; gap: 4px; min-height: 34px; padding-top: 4px; }
+.relic-icon {
+  position: relative;
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #3a3460, #15132a);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .5);
+  cursor: help;
+}
+.relic-icon.boss { border-color: #ff7a6a; }
+.relic-icon .relic-counter {
+  position: absolute; right: -4px; bottom: -4px;
+  font-size: 10px; font-weight: 900; padding: 0 4px; border-radius: 6px;
+  background: #1a1630; border: 1px solid var(--line-strong); color: var(--gold-2);
+}
+.relic-icon.pulse { animation: relic-pulse .6s ease-out; }
+@keyframes relic-pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 220, 120, .9); }
+  40% { transform: scale(1.35); }
+  100% { transform: scale(1); box-shadow: 0 0 0 16px rgba(255, 220, 120, 0); }
+}
+.hud-stat.bump { animation: hud-bump .4s ease-out; }
+@keyframes hud-bump { 40% { transform: scale(1.15); } }
+
+/* ---------------- 화면 ---------------- */
+#screens { position: relative; flex: 1; min-height: 0; }
+.screen {
+  position: absolute; inset: 0;
+  display: none;
+  overflow: hidden;
+}
+.screen.active { display: block; animation: screen-in .35s ease-out; }
+@keyframes screen-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ---------------- 툴팁 ---------------- */
+.tooltip {
+  position: fixed; z-index: 2000;
+  max-width: 280px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(12, 10, 24, .97);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow);
+  font-size: .86rem; line-height: 1.45;
+  pointer-events: none;
+  opacity: 0; transform: translateY(4px);
+  transition: opacity .12s, transform .12s;
+}
+.tooltip.show { opacity: 1; transform: none; }
+.tooltip b, .tooltip .tt-title { color: var(--gold-2); }
+.tooltip .tt-title { font-weight: 900; font-size: .95rem; display: block; margin-bottom: 4px; }
+.tooltip p { margin: 2px 0 0; color: #d8d3e8; }
+.tooltip .tt-kw + .tt-kw { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, .1); }
+.tooltip .tt-sub { color: var(--muted); font-size: .78rem; }
+
+/* ---------------- 모달 ---------------- */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  background: rgba(4, 3, 10, .72);
+  backdrop-filter: blur(3px);
+  animation: fade-in .2s ease-out;
+}
+.modal {
+  position: relative;
+  width: min(920px, 100%);
+  max-height: 100%;
+  display: flex; flex-direction: column;
+  padding: 22px 24px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #24203c, #17152a);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .6);
+  animation: pop-in .22s cubic-bezier(.2, 1.3, .4, 1);
+}
+.modal.small { width: min(440px, 100%); }
+.modal-title { margin: 0 0 4px; font-size: 1.4rem; text-align: center; }
+.modal-sub { margin: 0 0 12px; text-align: center; color: var(--muted); }
+.modal-body { overflow: auto; min-height: 0; flex: 1; padding: 6px 2px; }
+.modal-buttons { display: flex; justify-content: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+.modal-close { position: absolute; top: 10px; right: 10px; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pop-in { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
+
+.card-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; padding: 8px; }
+.card-grid .card { cursor: pointer; }
+.card-grid.view-only .card { cursor: default; }
+.card-grid .card.selected { transform: translateY(-6px); box-shadow: 0 0 0 4px var(--gold), 0 0 26px rgba(255, 210, 90, .7); }
+.upgrade-preview { display: flex; align-items: center; justify-content: center; gap: 18px; margin: 10px 0; min-height: 40px; }
+.upgrade-preview .arrow { font-size: 2rem; color: var(--gold); }
+
+/* ---------------- 토스트 ---------------- */
+#toast-root { position: fixed; left: 50%; top: 110px; transform: translateX(-50%); z-index: 1500; display: flex; flex-direction: column; gap: 6px; align-items: center; pointer-events: none; }
+.toast {
+  padding: 9px 18px; border-radius: 999px;
+  font-weight: 800; font-size: .95rem;
+  background: rgba(14, 12, 28, .95); border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow);
+  animation: toast 2.2s ease forwards;
+}
+.toast.error { border-color: #ff6a5a; color: #ffb4a8; }
+.toast.good { border-color: #5ad68a; color: #b8ffd0; }
+@keyframes toast { 0% { opacity: 0; transform: translateY(-10px); } 10%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-6px); } }
+
+/* ---------------- 설정/폼 ---------------- */
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 4px; border-bottom: 1px solid rgba(255, 255, 255, .06); }
+.settings-row label { font-weight: 700; }
+.settings-row input[type=range] { width: 180px; accent-color: var(--gold); }
+.toggle { position: relative; width: 52px; height: 28px; border-radius: 14px; background: #3a3654; border: 1px solid var(--line); cursor: pointer; transition: background .2s; }
+.toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #ddd; transition: transform .2s; }
+.toggle.on { background: #c8902a; }
+.toggle.on::after { transform: translateX(24px); background: #fff; }
+
+.kw { color: var(--gold-2); font-weight: 800; }
+.num { font-weight: 900; }
+.num.up { color: #6dff9a; }
+.num.down { color: #ffab5a; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: rgba(0, 0, 0, .25); }
+::-webkit-scrollbar-thumb { background: rgba(255, 220, 150, .25); border-radius: 6px; }
+
+@media (max-width: 700px) {
+  :root { --hud-h: 84px; }
+  #hud { padding: 6px 8px 2px; }
+  .hud-stat { padding: 4px 8px; font-size: .85rem; }
+  .hud-floor { display: none; }
+  .icon-btn { width: 36px; height: 36px; font-size: 17px; }
+  .potion-slot { width: 32px; height: 32px; }
+  .relic-icon { width: 28px; height: 28px; font-size: 16px; }
+  .hud-relics { min-height: 28px; }
+  .modal { padding: 16px 12px; }
+}
+
+@media (max-width: 520px) {
+  .hud-bar { gap: 4px; }
+  .hud-group { gap: 4px; }
+  .hud-stat { padding: 3px 7px; font-size: .8rem; gap: 3px; }
+  .hud-icon { font-size: .8rem; }
+  #hud-mute { display: none; }
+  .icon-btn { width: 32px; height: 32px; font-size: 15px; border-radius: 8px; }
+  .potion-slot { width: 28px; height: 28px; padding: 2px; }
+  .hud-potions { gap: 2px; }
+}
