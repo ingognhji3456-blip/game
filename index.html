@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>카드 배틀</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header id="topbar">
+      <h1>⚔️ 카드 배틀</h1>
+      <div id="stage-info"></div>
+      <button id="deck-btn" class="secondary">덱 보기</button>
+      <button id="restart-btn" class="secondary">처음부터</button>
+    </header>
+
+    <main id="battlefield">
+      <section id="player" class="unit">
+        <div class="portrait">🧑</div>
+        <div class="unit-name">플레이어</div>
+        <div class="hpbar"><div class="hpfill" id="player-hpfill"></div><span id="player-hptext"></span></div>
+        <div class="statuses" id="player-status"></div>
+        <div class="energy-wrap">
+          <div id="energy" class="energy" title="에너지: 카드를 낼 때 소모됩니다"></div>
+          <span>에너지</span>
+        </div>
+      </section>
+
+      <div class="versus">VS</div>
+
+      <section id="enemy" class="unit">
+        <div class="intent" id="enemy-intent"></div>
+        <div class="portrait" id="enemy-portrait"></div>
+        <div class="unit-name" id="enemy-name"></div>
+        <div class="hpbar"><div class="hpfill" id="enemy-hpfill"></div><span id="enemy-hptext"></span></div>
+        <div class="statuses" id="enemy-status"></div>
+      </section>
+    </main>
+
+    <section id="log" aria-live="polite"></section>
+
+    <section id="hand"></section>
+
+    <footer id="controls">
+      <div id="piles"></div>
+      <div class="help">카드 클릭 또는 <kbd>1</kbd>~<kbd>9</kbd> · 턴 종료 <kbd>E</kbd></div>
+      <button id="end-turn">턴 종료</button>
+    </footer>
+  </div>
+
+  <div id="overlay" class="hidden">
+    <div class="modal" id="modal"></div>
+  </div>
+
+  <script src="js/cards.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
