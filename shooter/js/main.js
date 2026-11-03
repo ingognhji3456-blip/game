@@ -6,8 +6,8 @@
  * ========================================================= */
 
 (() => {
-  const { W, DT } = SH;
-  const PW = 225, PH = 400;
+  const { DT } = SH;
+  const PW = 480, PH = 270; // 가로 화면 버퍼
   const $ = (id) => document.getElementById(id);
   const S = { game: null, save: null, scale: 1, rect: null, last: 0, acc: 0 };
 
@@ -19,12 +19,12 @@
     const ah = app.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
     const dpr = window.devicePixelRatio || 1;
     const fit = Math.min((aw * dpr) / PW, (ah * dpr) / PH);
-    // 정수배가 화면을 충분히 채우면 정수배(가장 또렷), 아니면 그대로
+    // 정수배가 화면을 충분히 채우면 정수배(가장 또렷), 아니면 그대로 (1920×1080 이면 꼭 4배)
     const k = Math.floor(fit) >= 1 && Math.floor(fit) / fit >= 0.82 ? Math.floor(fit) : fit;
     const devW = Math.max(PW, Math.round(PW * k)), devH = Math.max(PH, Math.round(PH * k));
     const cssW = devW / dpr, cssH = devH / dpr;
     SH.render.resize(devW, devH, cssW, cssH);
-    S.scale = cssW / W; // CSS 픽셀 / 게임 논리 좌표
+    S.scale = cssW / SH.W; // CSS 픽셀 / 게임 논리 좌표
   }
 
   /** 화면 좌표 → 버퍼 픽셀 좌표 */
@@ -52,7 +52,8 @@
     missile: 'missile', bossBoom: 'bossBoom', bossDie: 'bossDie', playerDie: 'playerDie', bomb: 'bomb',
     power: 'power', item: 'item', extend: 'extend', gem: 'gem', spark: 'spark', shieldBreak: 'shield',
     warning: 'warning', bossPhase: 'phase', stageClear: 'clear', partDestroyed: 'part', laserWarn: 'laserWarn',
-    laserFire: 'laserFire', enemyMissile: 'enemyMissile', missileDown: 'missileDown',
+    laserFire: 'laserFire', enemyMissile: 'enemyMissile', missileDown: 'missileDown', charge: 'charge', bigCharge: 'bigCharge',
+    call: 'call', gunIn: 'gunIn', hatch: 'hatch', muzzle: 'muzzle', gunDown: 'gunDown', partBreak: 'part', armorFall: 'armorFall',
   };
   function onEvent(type, d) {
     SH.fx.onEvent(type, d);
@@ -63,9 +64,9 @@
       case 'stageStart': SH.render.reset(); SH.audio.music('stage1'); break;
       case 'warning': SH.audio.music('none'); break;
       case 'bossAppear': SH.audio.music('boss'); break;
-      case 'bossReady': SH.render.showNotice('포탑을 부숴라!', '코어는 방어막으로 덮여 있다', '#ffd84a', 2.4); break;
+      case 'bossReady': SH.render.showNotice('포탑을 부숴라!', '코어는 방어막으로 덮여 있다', '#ffd84a', 2.6); break;
       case 'bossPhase':
-        SH.render.showNotice(d.name, d.berserk ? '모든 공격이 빨라진다!' : '파워 아이템을 챙기자!', d.berserk ? '#ff5a5a' : '#ffd84a', 2.4);
+        SH.render.showNotice(d.unlock || d.name, d.hint, d.berserk ? '#ff5a5a' : '#ffd84a', 3.2, true);
         vibrate(80);
         break;
       case 'partDestroyed': vibrate(120); break;
@@ -73,7 +74,7 @@
       case 'playerDie': vibrate(220); break;
       case 'bomb': vibrate(60); break;
       case 'bossDie': vibrate(400); break;
-      case 'extend': if (d.score && S.game && S.game.phase !== 'clear') SH.render.showNotice('1UP!', '점수 보너스 - 비행기 +1', '#ff7aa8', 1.8); break;
+      case 'extend': if (d.score && S.game && S.game.phase !== 'clear') SH.render.showNotice('비행기 +1!', '점수 보너스', '#ff7aa8', 1.8); break;
       case 'gameOver':
         SH.audio.sfx('gameOver');
         SH.audio.music('none');
@@ -180,7 +181,8 @@
     e.preventDefault();
     if (playing()) {
       if (SH.ui.playHit(p.x, p.y)) return;
-      SH.input.dragDown(e);
+      // 비행기는 키보드로 움직임 (마우스로는 움직이지 않음). 휴대폰 터치만 끌어서 이동.
+      if (touch) SH.input.dragDown(e);
     } else SH.ui.pointerDown(p.x, p.y, touch);
   }
   function onMove(e) {
@@ -268,7 +270,21 @@
         god: () => { if (S.game) S.game.god = !S.game.god; return S.game && S.game.god; },
         power: (n, w) => { if (S.game) { S.game.power = n || 5; if (w) S.game.weapon = w; } },
         skip: (sec) => { const g = S.game; if (!g) return; for (let i = 0; i < sec * 60; i++) { g.update(DT); SH.fx.update(DT); } },
-        phase: (n) => { const g = S.game; if (!g || !g.boss) return; while (g.boss && g.boss.phase < n) { if (g.boss.phase === 0) for (const p of Object.values(g.boss.parts)) { p.hp = 1; g._damagePart(p, 5); } else { g.boss.inv = 0; g._damageCore(g.boss.maxHp * 0.34); } } },
+        phase: (n) => {
+          const g = S.game;
+          for (let guard = 0; guard < 20 && g && g.B && g.B.phase < n; guard++) {
+            const B = g.B;
+            while (B.state !== 'fight') { g.update(DT); SH.fx.update(DT); }
+            if (B.phase === 0) {
+              for (const w of [B.w.turretL, B.w.turretR]) if (w.alive) g._damageWeapon(w, 9999);
+            } else {
+              B.inv = 0;
+              g._damageCore(B.hp - B.maxHp * g.def.phases[B.phase].until + 1);
+            }
+          }
+          for (let i = 0; i < 200 && g.B && g.B.state !== 'fight'; i++) { g.update(DT); SH.fx.update(DT); }
+        },
+        pattern: (name) => { const g = S.game; if (g && g.B) { for (const t of g.tasks) if (t.tag === 'boss') t.done = true; g.B.task = g.run(SH.BOSS_PATTERNS[name](g), null, 'boss'); } },
         state: () => S,
       };
       console.log('[하늘 사냥꾼] 디버그: SH.debug.start() · god() · power(5,"laser") · skip(초) · phase(0~3)');

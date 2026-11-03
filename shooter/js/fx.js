@@ -32,7 +32,7 @@ SH.fx = (() => {
     add({ t: 'ring', x, y, r0, r1, life, age: 0, color, thick: thick || 1 });
   }
   function text(x, y, str, color, scale, life) {
-    add({ t: 'text', x, y, str, color: color || '#ffffff', scale: scale || 1, life: life || 1, age: 0, vy: -22 });
+    add({ t: 'text', x, y, x0: x, y0: y, str, color: color || '#ffffff', scale: scale || 1, life: life || 1, age: 0, vy: -22 });
   }
   function explosion(x, y, r, color, big) {
     if (big) {
@@ -43,6 +43,13 @@ SH.fx = (() => {
     } else {
       anim('boom', x, y, 22);
       debris(x, y, 7, [color, '#fff4a8', '#ffffff'], 80, 0.45);
+    }
+  }
+  /** 떨어져 나가는 쇳조각 (튀어 올랐다가 떨어지며 돔) */
+  function chunks(x, y, n) {
+    for (let i = 0; i < n; i++) {
+      const a = -Math.PI / 2 + (R() - 0.5) * 2.6, s = 50 + R() * 90;
+      add({ t: 'chunk', x: x + (R() - 0.5) * 50, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, age: 0, life: 1.4 + R() * 0.6, spin: R() * 4, drag: 0.6 });
     }
   }
   function shake(v) { if (state.shakeOn) state.shake = Math.max(state.shake, v); }
@@ -60,7 +67,7 @@ SH.fx = (() => {
       case 'partDestroyed':
         explosion(x, y, 14, '#ff8a2a', true);
         for (let i = 0; i < 4; i++) anim('boomBig', x + (R() - 0.5) * 24, y + (R() - 0.5) * 20, 14, i * 0.08);
-        text(x, y - 18, 'TURRET DOWN!', '#ffd84a', 1, 1.4);
+        text(x, y - 18, '포탑 파괴!', '#ffd84a', 1, 1.4);
         flash(0.3, '#fff4c8');
         shake(6);
         return;
@@ -69,7 +76,25 @@ SH.fx = (() => {
         debris(x, y, 5, ['#e8384f', '#ffd84a', '#ffffff'], 70, 0.35);
         return;
       case 'laserFire':
-        shake(3);
+        shake(d.big ? 7 : 3);
+        return;
+      case 'muzzle':
+        anim(d.big ? 'boom' : 'hitSpark', x, y, d.big ? 28 : 34);
+        return;
+      case 'gunDown':
+        explosion(x, y, 10, '#c9a8ff', true);
+        text(x, y - 14, '파괴!', '#c9a8ff');
+        shake(4);
+        return;
+      case 'partBreak':
+        explosion(x, y, 10, '#ff8a2a', true);
+        chunks(x, y, 6);
+        shake(5);
+        return;
+      case 'armorFall':
+        chunks(x, y + 20, 18);
+        flash(0.5, '#fff4c8');
+        shake(9);
         return;
       case 'kill':
         explosion(x, y, d.r * K, d.color || '#ffd84a', d.heavy);
@@ -89,7 +114,7 @@ SH.fx = (() => {
         shake(10);
         return;
       case 'bossDefeated':
-        text(x, y + 20, 'DESTROYED!', '#ffd84a', 2, 2);
+        text(x, y + 20, '격파!', '#ffd84a', 2, 2);
         return;
       case 'bossPhase':
         ring(x, y, 8, 120, 0.5, '#ff7aa8', 2);
@@ -111,23 +136,23 @@ SH.fx = (() => {
       case 'shieldBreak':
         ring(x, y, 8, 55, 0.4, '#8fd4ff', 2);
         debris(x, y, 12, ['#e0f7ff', '#8fd4ff'], 120, 0.4);
-        text(x, y - 16, 'SHIELD BREAK', '#8fd4ff');
+        text(x, y - 16, '방패 깨짐!', '#8fd4ff');
         shake(3);
         return;
       case 'power': {
         const w = SH.WEAPONS[d.weapon];
         ring(x, y, 4, 30, 0.35, w.light, 1);
         if (d.maxed) text(x, y - 14, '+5000', '#ffd84a');
-        else if (d.level >= SH.MAX_POWER) text(x, y - 14, 'POWER MAX!', w.light);
-        else text(x, y - 14, d.changed ? `${WNAME[d.weapon]} LV${d.level}` : 'POWER UP!', w.light);
+        else if (d.level >= SH.MAX_POWER) text(x, y - 14, '파워 최대!', w.light);
+        else text(x, y - 14, d.changed ? `${WNAME[d.weapon]} ${d.level}단계` : '파워 업!', w.light);
         return;
       }
       case 'item':
         ring(x, y, 4, 26, 0.3, '#ffffff', 1);
-        text(x, y - 14, d.kind === 'bomb' ? 'BOMB +1' : 'SHIELD!', d.kind === 'bomb' ? '#ffd84a' : '#8fd4ff');
+        text(x, y - 14, d.kind === 'bomb' ? '폭탄 +1' : '방패!', d.kind === 'bomb' ? '#ffd84a' : '#8fd4ff');
         return;
       case 'extend':
-        text(x, y - 16, '1UP!', '#ff7aa8', 2, 1.4);
+        text(x, y - 16, '비행기 +1', '#ff7aa8', 1, 1.4);
         ring(x, y, 4, 40, 0.5, '#ff7aa8', 2);
         return;
       case 'gem':
@@ -147,7 +172,7 @@ SH.fx = (() => {
       default:
     }
   }
-  const WNAME = { spread: 'SPREAD', laser: 'LASER', homing: 'HOMING' };
+  const WNAME = { spread: '확산탄', laser: '레이저', homing: '유도탄' };
 
   /* ---------------- 진행 ---------------- */
   function update(dt) {
@@ -160,10 +185,10 @@ SH.fx = (() => {
       const p = parts[i];
       p.age += dt;
       if (p.age >= p.life) continue;
-      if (p.t === 'px') {
+      if (p.t === 'px' || p.t === 'chunk') {
         const k = Math.max(0, 1 - p.drag * dt);
         p.vx *= k;
-        p.vy = p.vy * k + 40 * dt;
+        p.vy = p.vy * k + (p.t === 'chunk' ? 160 : 40) * dt;
         p.x += p.vx * dt;
         p.y += p.vy * dt;
       } else if (p.t === 'text') p.y += p.vy * dt * (p.age < 0.4 ? 1 : 0.2);
@@ -198,6 +223,9 @@ SH.fx = (() => {
       const u = p.age / p.life;
       if (p.t === 'anim') {
         SH.pix.draw(ctx, p.name, p.x, p.y, { frame: Math.min(p.n - 1, Math.floor(p.age * p.fps)) });
+      } else if (p.t === 'chunk') {
+        if (u > 0.8 && (Math.floor(p.age * 30) & 1)) continue;
+        SH.pix.draw(ctx, 'scrap', p.x, p.y, { frame: Math.floor(p.age * 10 + p.spin) });
       } else if (p.t === 'px') {
         if (u > 0.7 && (Math.floor(p.age * 30) & 1)) continue; // 꺼질 때 깜빡
         ctx.fillStyle = p.color;
@@ -208,11 +236,18 @@ SH.fx = (() => {
         pixelCircle(ctx, p.x, p.y, r, p.color, p.thick);
       }
     }
+  }
+
+  /** 떠오르는 글자는 화면(가로)에 똑바로. map: 세계 픽셀 → 화면 픽셀 */
+  function drawText(ctx, map) {
     for (const p of parts) {
       if (p.t !== 'text' || p.age < 0) continue;
       const u = p.age / p.life;
       if (u > 0.75 && (Math.floor(p.age * 20) & 1)) continue;
-      SH.pix.text(ctx, p.str, p.x, p.y, { color: p.color, align: 'center', scale: p.scale });
+      // 세계에서 위로 떠오르던 값(vy)을 화면에서도 위로: 처음 위치에서 떠오른 만큼 화면 y 를 줄임
+      const [X, Y] = map(p.x0 != null ? p.x0 : p.x, p.y0 != null ? p.y0 : p.y);
+      const rise = p.y0 != null ? p.y0 - p.y : 0;
+      SH.pix.text(ctx, p.str, X, Y - rise, { color: p.color, align: 'center', scale: p.scale });
     }
   }
 
@@ -222,5 +257,5 @@ SH.fx = (() => {
     state.flash = 0;
   }
 
-  return { onEvent, update, draw, text, ring, anim, debris, pixelCircle, state, clear, WNAME };
+  return { onEvent, update, draw, drawText, text, ring, anim, debris, chunks, pixelCircle, state, clear, WNAME };
 })();

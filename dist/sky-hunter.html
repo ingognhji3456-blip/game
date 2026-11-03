@@ -58,9 +58,9 @@ body {
 window.SH = window.SH || {};
 
 (() => {
-  /** 게임 화면의 논리 크기 (세로 9:16). 실제 화면에 맞게 늘이고 줄입니다. */
-  SH.W = 450;
-  SH.H = 800;
+  /** 게임 화면의 논리 크기 (가로 16:9). 화면 픽셀은 이것의 절반(480×270)입니다. */
+  SH.W = 960;
+  SH.H = 540;
   SH.TAU = Math.PI * 2;
   SH.DT = 1 / 60;
   SH.FONT = "'Pretendard', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif";
@@ -107,15 +107,14 @@ window.SH = window.SH || {};
 'use strict';
 
 /* =========================================================
- * 하늘 사냥꾼 — 게임 데이터 (기계 보스 한 마리와의 결전)
- * 무기 · 보스(부품 · 단계 · 공격 패턴)
- * 숫자만 고쳐도 밸런스를 바꿀 수 있습니다.
+ * 하늘 사냥꾼 — 게임 데이터 (기계 요새 내부에서 벌이는 보스 결전)
+ * 무기 · 보스(무기 위치 · 단계 · 패턴 묶음)
+ * 패턴 자체(어떻게 조준하고 충전하고 쏘는지)는 js/boss.js 에 있습니다.
  * ========================================================= */
 
 (() => {
-  /* ---------------- 무기 ----------------
-   * 파워 아이템을 먹을 때마다 레벨이 오르고, 아이템 색이 무기 종류를 정합니다.
-   * (아이템 색은 몇 초마다 바뀝니다.) */
+  /* ---------------- 내 무기 ----------------
+   * 파워 아이템을 먹을 때마다 레벨이 오르고, 아이템 색이 무기 종류를 정합니다. */
   SH.WEAPONS = {
     spread: { name: '확산탄', color: '#ff8a3d', light: '#ffd27a' },
     laser: { name: '관통 레이저', color: '#3fb4ff', light: '#c9f0ff' },
@@ -129,68 +128,58 @@ window.SH = window.SH || {};
   SH.EXTENDS = [50000, 150000, 300000];
   SH.extendAt = (i) => (i < SH.EXTENDS.length ? SH.EXTENDS[i] : SH.EXTENDS[SH.EXTENDS.length - 1] + (i - SH.EXTENDS.length + 1) * 250000);
 
-  /** 결전 무대 */
-  SH.STAGE = { en: 'FINAL MISSION', name: '강철 요새를 막아라!', bg: 'sky', music: 'boss' };
+  /** 결전 무대: 기계 요새 내부 */
+  SH.STAGE = { en: '최종 작전', name: '요새 내부로 진입!', bg: 'hangar', music: 'boss' };
 
   /* ---------------- 기계 보스 ----------------
-   * 좌표는 논리 좌표(450×800). 보스 그림 가운데가 (x, y).
-   * hull   : 몸통 타원 — 총알을 막아 줌(피해 없음), 부딪히면 내가 맞음
-   * core   : 가운데 코어 — 체력(hp)을 가진 진짜 약점
-   * parts  : 부술 수 있는 포탑 (첫 단계에서는 코어가 방어막으로 덮여 있어 포탑부터 부숴야 함)
-   * phases : 차례로 진행. needParts 가 있으면 그 부품이 다 부서져야, 없으면 코어 체력이 until 비율 아래로 떨어지면 다음 단계.
-   *          look = 그림 모습(0 장갑 · 1 코어 열림 · 2 부서짐 · 3 폭주)
-   * 공격(a): 쏘는 곳 from = core | parts(살아 있는 포탑마다) | sides(코어 양옆)
-   *   ring fan stream spiral rain wall curve split  — 보통 탄막
-   *   laser    — 위험 구역을 warn 초 동안 보여 준 뒤 굵은 광선이 a0→a1 로 쓸고 지나감(dur 초)
-   *              aim 이면 플레이어 쪽을 중심으로 sweep 만큼, mirror 면 오른쪽은 좌우 반대로
-   *   missiles — 플레이어를 천천히 쫓는 미사일 (내 탄으로 맞혀 부술 수 있음) */
+   * 좌표는 논리 좌표(960×540), 보스 가운데 기준. 화면 픽셀은 ÷2.
+   * weapons: 보스 몸에 달린 무기. unlock 단계부터 나타나고 lose 단계부터 부서져 없어짐.
+   *   turret  — 돌아가는 포탑 (첫 단계 목표, 체력 있음)
+   *   emitter — 플라스마 구체를 키워서 던지는 발사구
+   *   vent    — 작은 탄을 흩뿌리는 배기구
+   *   cannon  — 주포 (조준 → 충전 → 굵은 레이저)
+   *   pod     — 미사일 포드 (뚜껑이 열리고 미사일 발사)
+   *   antenna — 벽 레이저포를 부르는 신호기
+   * phases: 차례로 진행. needParts 의 무기를 모두 부수거나, 코어 체력이 until 아래로 떨어지면 다음 단계.
+   *   pool: 이 단계에서 쓰는 패턴과 뽑힐 확률(무게). 바로 전에 쓴 패턴은 다시 뽑지 않음.
+   *   unlock: 단계가 바뀔 때 새로 꺼내는 무기 이름 (화면에 크게 알림) */
   SH.BOSS = {
-    name: '강철 요새 타이탄', title: '하늘을 뒤덮은 기계 요새', art: 'titan',
-    y: 215, sway: 70, score: 150000,
-    hull: { rx: 140, ry: 58 },
-    core: { oy: 8, r: 34, hp: 2200 },
-    parts: {
-      L: { ox: -96, oy: 26, r: 26, hp: 280, score: 15000 },
-      R: { ox: 96, oy: 26, r: 26, hp: 280, score: 15000 },
+    name: '강철 요새 타이탄', title: '요새의 심장을 지키는 기계 거신', art: 'titan',
+    y: 128, sway: 150, score: 150000,
+    hull: { rx: 140, ry: 60 },
+    core: { ox: 0, oy: 0, r: 30, hp: 2400 },
+    weapons: {
+      turretL: { kind: 'turret', ox: -100, oy: 24, len: 26, hp: 300, unlock: 0, lose: 1, score: 15000 },
+      turretR: { kind: 'turret', ox: 100, oy: 24, len: 26, hp: 300, unlock: 0, lose: 1, score: 15000 },
+      emitL: { kind: 'emitter', ox: -56, oy: 44, len: 12, unlock: 0, lose: 2 },
+      emitR: { kind: 'emitter', ox: 56, oy: 44, len: 12, unlock: 0, lose: 2 },
+      ventL: { kind: 'vent', ox: -80, oy: -20, len: 8, unlock: 0, lose: 2 },
+      ventR: { kind: 'vent', ox: 80, oy: -20, len: 8, unlock: 0, lose: 2 },
+      cannon: { kind: 'cannon', ox: 0, oy: 52, len: 30, unlock: 1 },
+      podL: { kind: 'pod', ox: -36, oy: -48, len: 6, unlock: 2 },
+      podR: { kind: 'pod', ox: 36, oy: -48, len: 6, unlock: 2 },
+      antenna: { kind: 'antenna', ox: 0, oy: -70, len: 0, unlock: 0 },
     },
     phases: [
       {
-        name: '포탑을 부숴라!', look: 0, needParts: ['L', 'R'], shield: true,
-        attacks: [
-          { a: 'fan', from: 'parts', n: 3, spread: 0.32, speed: 190, times: 4, every: 0.38, kind: 'orange' },
-          { a: 'ring', from: 'core', n: 16, speed: 105, times: 3, every: 0.6, rot: 0.1, kind: 'blue' },
-          { a: 'stream', from: 'parts', speed: 230, times: 9, every: 0.13, kind: 'red', jitter: 0.04 },
-          { a: 'missiles', from: 'core', n: 4, speed: 150, times: 1, every: 0.2, kind: 'red', rest: 1.6 },
-        ],
+        name: '완전 무장', look: 0, needParts: ['turretL', 'turretR'], shield: true, rest: 0.8,
+        hint: '포탑을 부숴라! 코어는 방어막으로 덮여 있다',
+        pool: { turretBurst: 3, turretSweep: 2, orbToss: 2, wallSnipe: 2, ventRain: 2 },
       },
       {
-        name: '코어가 열렸다!', look: 1, until: 0.66,
-        attacks: [
-          { a: 'laser', from: 'core', aim: true, sweep: 0.5, warn: 1.0, dur: 1.4, width: 18, times: 1, every: 0.1, rest: 2.6 },
-          { a: 'curve', from: 'core', n: 14, speed: 115, curve: 0.85, times: 4, every: 0.5, kind: 'blue' },
-          { a: 'fan', from: 'sides', n: 5, spread: 0.7, speed: 180, times: 3, every: 0.4, kind: 'orange' },
-          { a: 'missiles', from: 'sides', n: 3, speed: 155, times: 1, every: 0.2, kind: 'red', rest: 1.4 },
-        ],
+        name: '장갑 붕괴', look: 1, until: 0.64, rest: 0.8, unlock: '주포 개방!',
+        hint: '앞쪽 장갑이 떨어져 나가며 주포가 드러났다',
+        pool: { mainBeam: 3, wallCrossfire: 2, gridLasers: 2, orbToss: 2, ventRain: 1, coreRing: 2 },
       },
       {
-        name: '장갑이 부서진다!', look: 2, until: 0.33,
-        attacks: [
-          { a: 'laser', from: 'sides', a0: 1.62, a1: 2.3, mirror: true, warn: 1.0, dur: 1.8, width: 16, times: 1, every: 0.1, rest: 3.0 },
-          { a: 'spiral', from: 'core', arms: 4, step: 0.19, speed: 130, times: 44, every: 0.07, kind: 'purple', still: true },
-          { a: 'wall', gap: 100, step: 28, speed: 125, times: 3, every: 0.85, kind: 'red' },
-          { a: 'missiles', from: 'sides', n: 4, speed: 160, times: 2, every: 0.6, kind: 'red' },
-        ],
+        name: '내부 노출', look: 2, until: 0.32, rest: 0.7, unlock: '미사일 포드 개방!',
+        hint: '발사구가 터지고 등 뒤 격납고가 열렸다',
+        pool: { missileSalvo: 3, mainSweep: 2, wallSniper: 2, gridLasers: 2, coreSpiral: 2, beamAmbush: 2 },
       },
       {
-        name: '폭주 모드!!', look: 3, until: 0, berserk: true,
-        attacks: [
-          { a: 'spiral', from: 'core', arms: 3, step: 0.21, speed: 140, times: 44, every: 0.07, kind: 'red', still: true, both: true },
-          { a: 'laser', from: 'core', aim: true, sweep: 0.55, warn: 0.8, dur: 1.2, width: 20, times: 1, every: 0.1, rest: 2.0 },
-          { a: 'rain', from: 'sides', count: 2, cone: 1.0, speed: 185, times: 24, every: 0.08, kind: 'orange' },
-          { a: 'laser', from: 'sides', a0: 1.62, a1: 2.35, mirror: true, warn: 0.85, dur: 1.5, width: 16, times: 1, every: 0.1, rest: 2.4 },
-          { a: 'stream', from: 'core', speed: 250, times: 14, every: 0.075, kind: 'red', jitter: 0.05 },
-          { a: 'missiles', from: 'sides', n: 5, speed: 165, times: 2, every: 0.5, kind: 'red' },
-        ],
+        name: '폭주', look: 3, until: 0, rest: 0.55, unlock: '코어 폭주!', berserk: true,
+        hint: '코어가 녹아내린다! 마지막 발악',
+        pool: { overloadSpiral: 3, laserCage: 2, finalCharge: 2, missileSalvo: 2, mainBeam: 2, beamAmbush: 2 },
       },
     ],
   };
@@ -201,14 +190,14 @@ window.SH = window.SH || {};
 'use strict';
 
 /* =========================================================
- * 하늘 사냥꾼 — 게임 엔진 (기계 보스 결전 · DOM 없음, Node 에서도 실행 가능)
+ * 하늘 사냥꾼 — 게임 엔진 (기계 요새 결전 · 가로 화면 960×540 · DOM 없음, Node 에서도 실행 가능)
  *
  *   const g = new SH.Game({ seed, emit(type, data) {} });
  *   g.input = { tx, ty, ax, ay, focus, bomb };   // 매 프레임 입력
  *   g.update(SH.DT);                             // 1/60 초씩 진행
  *
  * 진행: intro → warning → boss(싸움) → clear(점수 정산) → 승리
- * 보스: 포탑(부품) → 코어 열림 → 장갑 부서짐 → 폭주
+ * 보스의 공격은 js/boss.js 의 패턴(제너레이터)이 "조준 → 충전 → 발사" 순서로 무기를 움직여 만듭니다.
  * 그리기·소리·효과는 emit 으로 받은 이벤트를 보고 따로 처리합니다.
  * ========================================================= */
 
@@ -216,80 +205,8 @@ window.SH = window.SH || {};
   const { W, H, TAU, clamp } = SH;
   const HALF_PI = Math.PI / 2;
   const INTRO = 2.2, WARNING = 3.0, CLEAR = 6.5;
+  const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU; return d; };
 
-  /* =========================================================
-   * 보스 공격. src = { x, y, ang(포탑이 겨눈 방향), side(-1 왼쪽/1 오른쪽/0 가운데) }
-   * k = 이번 공격에서 몇 번째 발사인지
-   * ========================================================= */
-  const ATTACKS = {
-    ring(g, src, k, a) {
-      const n = g._dens(a.n);
-      const off = (a.rot || 0) * k + (a.rot ? 0 : g.rng() * TAU);
-      for (let i = 0; i < n; i++) g._eShot(src.x, src.y, off + (i * TAU) / n, a.speed, a);
-    },
-    fan(g, src, k, a) {
-      g._fan(src.x, src.y, src.ang != null ? src.ang : g._aim(src.x, src.y), g._dens(a.n), a.spread || 0.6, a.speed, a);
-    },
-    stream(g, src, k, a) {
-      const base = src.ang != null ? src.ang : g._aim(src.x, src.y);
-      g._eShot(src.x, src.y, base + (g.rng() - 0.5) * 2 * (a.jitter || 0), a.speed, a);
-    },
-    spiral(g, src, k, a) {
-      const arms = a.arms || 3;
-      for (let j = 0; j < arms; j++) {
-        const base = (j * TAU) / arms;
-        g._eShot(src.x, src.y, base + k * a.step, a.speed, a);
-        if (a.both) g._eShot(src.x, src.y, base - k * a.step + TAU / arms / 2, a.speed * 0.85, a);
-      }
-    },
-    curve(g, src, k, a) {
-      const n = g._dens(a.n);
-      const dir = k % 2 ? -1 : 1;
-      const off = g.rng() * TAU;
-      for (let i = 0; i < n; i++) g._eShot(src.x, src.y, off + (i * TAU) / n, a.speed, a, { curve: a.curve * dir, curveT: 1.6 });
-    },
-    rain(g, src, k, a) {
-      for (let c = 0; c < (a.count || 1); c++) g._eShot(src.x, src.y, HALF_PI + (g.rng() * 2 - 1) * a.cone, a.speed * (0.7 + g.rng() * 0.5), a);
-    },
-    wall(g, src, k, a) {
-      if (src.side > 0) return; // 양쪽에서 불려도 한 번만
-      const gx = 70 + g.rng() * (W - 140);
-      for (let x = 14; x < W; x += a.step || 28) {
-        if (Math.abs(x - gx) < a.gap / 2) continue;
-        g._eShot(x, -8, HALF_PI, a.speed, a);
-      }
-    },
-    split(g, src, k, a) {
-      const ang = a.aim ? g._aim(src.x, src.y) : HALF_PI + (g.rng() - 0.5) * 1.2;
-      g._eShot(src.x, src.y, ang, a.speed, a, { big: true, split: { at: a.at || 1, n: a.sn || 10, speed: a.sspeed || 120, kind: a.skind || a.kind } });
-    },
-    missiles(g, src, k, a) {
-      const n = a.n || 3;
-      for (let i = 0; i < n; i++) {
-        const ang = HALF_PI + (i - (n - 1) / 2) * 0.5 + (src.side || 0) * 0.3;
-        g._missile(src.x, src.y, ang, a.speed);
-      }
-    },
-    laser(g, src, k, a) {
-      let a0, a1;
-      if (a.aim) {
-        const base = g._aim(src.x, src.y), dir = g.rng() < 0.5 ? -1 : 1;
-        a0 = base - (dir * a.sweep) / 2;
-        a1 = base + (dir * a.sweep) / 2;
-      } else {
-        const mir = a.mirror && src.side > 0;
-        a0 = mir ? Math.PI - a.a0 : a.a0;
-        a1 = mir ? Math.PI - a.a1 : a.a1;
-      }
-      g.beams.push({ ox: src.x - g.boss.x, oy: src.y - g.boss.y, a0, a1, warn: a.warn, dur: a.dur, width: a.width, t: 0, ang: a0, on: false });
-      g.boss.hold = Math.max(g.boss.hold, a.warn + a.dur);
-      if (src.side <= 0) g.emit('laserWarn', {});
-    },
-  };
-
-  /* =========================================================
-   * 게임
-   * ========================================================= */
   class Game {
     constructor(o = {}) {
       this.seed = o.seed != null ? o.seed >>> 0 : (Date.now() >>> 0);
@@ -305,7 +222,7 @@ window.SH = window.SH || {};
       this.weapon = o.weapon || 'spread';
       this.power = o.power || 1;
       this.extendIdx = 0;
-      this.stats = { deaths: 0, bombs: 0, gems: 0, time: 0, missiles: 0 };
+      this.stats = { deaths: 0, bombs: 0, gems: 0, time: 0, missiles: 0, guns: 0, patterns: {} };
 
       this.input = { tx: null, ty: null, ax: 0, ay: 0, focus: false, bomb: false };
       this.player = {
@@ -314,30 +231,37 @@ window.SH = window.SH || {};
       };
       this.pb = []; // 내 탄
       this.eb = []; // 적 탄 (미사일 포함)
-      this.beams = []; // 레이저
+      this.beams = []; // 레이저 (총구를 따라다님)
+      this.guns = []; // 벽 레이저포
+      this.tasks = []; // 돌아가는 패턴들
       this.items = [];
       this.time = 0;
       this.bombT = 0;
       this.bombTick = 0;
-      this.boss = null;
+      this.B = null;
       this.over = null; // 'gameover' | 'win'
       this.overT = 0;
       this.start();
     }
 
+    get boss() { return this.B; }
+    get def() { return SH.BOSS; }
+    get bossDef() { return SH.BOSS; }
+    get bossPhase() { return this.B ? SH.BOSS.phases[this.B.phase] : null; }
+
     /* ---------------- 진행 ---------------- */
     start() {
-      this.def = SH.BOSS;
-      this.bossDef = SH.BOSS;
       this.stage = SH.STAGE;
       this.stageIndex = 0;
       this._setPhase('intro');
       this.fightT = 0;
-      this.boss = null;
+      this.B = null;
       this.tally = null;
       this.eb.length = 0;
       this.pb.length = 0;
       this.beams.length = 0;
+      this.guns.length = 0;
+      this.tasks.length = 0;
       this.deathsThisRun = 0;
       this._calcDiff();
       const p = this.player;
@@ -355,7 +279,8 @@ window.SH = window.SH || {};
 
     _calcDiff() {
       const L = this.loop;
-      this.diff = { hp: 1 + 0.4 * L, speed: 1 + 0.12 * L, density: 1 + 0.25 * L };
+      // 가로 화면이라 보스와 나 사이가 가까워서 탄을 조금 느리게
+      this.diff = { hp: 1 + 0.4 * L, speed: 0.86 + 0.1 * L, tempo: 1 + 0.15 * L };
     }
 
     /** 2회차 이상: 더 단단하고 더 빠른 보스와 다시 */
@@ -382,11 +307,13 @@ window.SH = window.SH || {};
       this.time += dt;
       this.phaseT += dt;
       this.stats.time += dt;
-      if (this.boss && this.boss.state === 'fight') this.fightT += dt;
+      if (this.B && this.B.state === 'fight') this.fightT += dt;
 
       this._updatePhase();
       this._updatePlayer(dt);
       this._updateBoss(dt);
+      this._runTasks(dt * (this.B && this.bossPhase.berserk ? 1.12 : 1) * this.diff.tempo);
+      this._updateWeapons(dt);
       this._updateBullets(dt);
       this._updateBeams(dt);
       this._collide();
@@ -400,6 +327,7 @@ window.SH = window.SH || {};
           this._bombDamage(5);
         }
         if (this.eb.length) this._cancelBullets(true);
+        this.beams.length = 0;
       }
 
       if (this.overT > 0) {
@@ -426,7 +354,7 @@ window.SH = window.SH || {};
           }
           break;
         case 'boss':
-          if (!this.boss) this._startClear();
+          if (!this.B) this._startClear();
           break;
         case 'clear':
           if (this.phaseT >= CLEAR - 1.6 && !this.player.dead) this.player.exiting = true;
@@ -460,216 +388,372 @@ window.SH = window.SH || {};
       this.emit('stageClear', t);
     }
 
-    /* ---------------- 보스 ---------------- */
+    /* =========================================================
+     * 보스
+     * ========================================================= */
     _spawnBoss() {
       const def = this.def, hp = Math.round(def.core.hp * this.diff.hp);
-      const parts = {};
-      for (const [id, p] of Object.entries(def.parts)) {
-        const php = Math.round(p.hp * this.diff.hp);
-        parts[id] = { id, ox: p.ox, oy: p.oy, r: p.r, hp: php, maxHp: php, alive: true, flash: 0, ang: HALF_PI, score: p.score };
-      }
-      this.boss = {
-        x: W / 2, y: -150, hp, maxHp: hp, flash: 0, state: 'enter', st: 0,
-        phase: 0, cur: null, order: 0, rest: 1.2, inv: 0, mt: 0, boomT: 0, hold: 0, parts,
+      const w = {};
+      const mk = (name, d) => ({
+        name, kind: d.kind, ox: d.ox, oy: d.oy, len: d.len || 0, unlock: d.unlock || 0, lose: d.lose,
+        hp: d.hp ? Math.round(d.hp * this.diff.hp) : 0, maxHp: d.hp ? Math.round(d.hp * this.diff.hp) : 0, score: d.score || 0,
+        alive: (d.unlock || 0) === 0, reveal: 1, ang: HALF_PI, target: null, turn: 0,
+        state: 'idle', charge: 0, chargeDur: 1, recoil: 0, open: 0, flash: 0, sweep: null, big: false,
+      });
+      for (const [name, d] of Object.entries(def.weapons)) w[name] = mk(name, d);
+      w.core = mk('core', { kind: 'core', ox: def.core.ox, oy: def.core.oy, len: 0 });
+      this.B = {
+        x: W / 2, y: -160, hp, maxHp: hp, flash: 0, state: 'enter', st: 0,
+        phase: 0, look: 0, hold: 0, mt: 0, boomT: 0, inv: 0, rest: 1.2, recent: [], task: null, w,
       };
       this.emit('bossAppear', { boss: def });
     }
 
-    get bossPhase() { return this.boss ? this.def.phases[this.boss.phase] : null; }
-
-    _updateBoss(dt) {
-      const e = this.boss;
-      if (!e) return;
-      const def = this.def;
-      e.st += dt;
-      if (e.flash > 0) e.flash -= dt;
-      if (e.inv > 0) e.inv -= dt;
-      for (const p of Object.values(e.parts)) {
-        if (p.flash > 0) p.flash -= dt;
-        // 포탑은 플레이어 쪽으로 천천히 돌아감
-        const want = Math.atan2(this.player.y - (e.y + p.oy), this.player.x - (e.x + p.ox));
-        let da = want - p.ang;
-        while (da > Math.PI) da -= TAU;
-        while (da < -Math.PI) da += TAU;
-        p.ang += clamp(da, -2.2 * dt, 2.2 * dt);
-        p.ang = clamp(p.ang, 0.25, Math.PI - 0.25);
-      }
-
-      if (e.state === 'enter') {
-        const u = Math.min(1, e.st / 3);
-        e.y = SH.lerp(-150, def.y, SH.easeOut(u));
-        if (u >= 1) { e.state = 'fight'; e.st = 0; this.fightT = 0; this.emit('bossReady', {}); }
-        return;
-      }
-      if (e.state === 'dying') {
-        e.x += Math.sin(e.st * 40) * 0.8;
-        e.y += 12 * dt;
-        e.boomT -= dt;
-        if (e.boomT <= 0) {
-          e.boomT = 0.1;
-          this.emit('bossBoom', { x: e.x + (this.rng() - 0.5) * def.hull.rx * 2, y: e.y + (this.rng() - 0.5) * def.hull.ry * 2 });
-        }
-        if (e.st >= 3.4) this._bossFinish();
-        return;
-      }
-
-      // 움직임 (레이저를 쏘는 동안·나선 공격 중에는 가운데에 멈춤)
-      const ph = def.phases[e.phase];
-      e.mt += dt;
-      if (e.hold > 0) e.hold -= dt;
-      const still = e.hold > 0 || (e.cur && e.cur.def.still);
-      const sway = def.sway * (ph.berserk ? 1.4 : 1);
-      const tx = still ? e.x : W / 2 + Math.sin(e.mt * (ph.berserk ? 0.9 : 0.5)) * sway;
-      const ty = def.y + Math.sin(e.mt * 1.1) * 10;
-      const kk = Math.min(1, dt * 1.8);
-      e.x += (tx - e.x) * kk;
-      e.y += (ty - e.y) * kk;
-
-      // 공격
-      if (this.player.dead || e.inv > 0) return;
-      if (e.cur) {
-        const c = e.cur;
-        c.acc += dt;
-        while (c.acc >= c.def.every && c.k < c.def.times) {
-          c.acc -= c.def.every;
-          for (const src of this._sources(c.def.from)) ATTACKS[c.def.a](this, src, c.k, c.def);
-          c.k += 1;
-        }
-        if (c.k >= c.def.times) {
-          e.rest = c.def.rest != null ? c.def.rest : 0.8;
-          e.cur = null;
-        }
-      } else {
-        e.rest -= dt * (ph.berserk ? 1.5 : 1);
-        if (e.rest <= 0) {
-          let atk = ph.attacks[e.order % ph.attacks.length];
-          e.order += 1;
-          // 쏠 포탑이 없으면 건너뜀
-          if (atk.from === 'parts' && !this._aliveParts().length) atk = ph.attacks[e.order++ % ph.attacks.length];
-          e.cur = { def: atk, k: 0, acc: atk.every };
-        }
-      }
+    W(name) { return this.B.w[name]; }
+    /** 지금 쓸 수 있는 무기인가 (나왔고, 안 부서졌고, 다 나왔는지) */
+    avail(name) {
+      const w = this.B && this.B.w[name];
+      if (!w || !w.alive || w.reveal < 1) return false;
+      const ph = this.B.phase;
+      return ph >= w.unlock && (w.lose == null || ph < w.lose);
     }
-
-    _aliveParts() { return this.boss ? Object.values(this.boss.parts).filter((p) => p.alive) : []; }
-
-    /** 쏘는 곳 목록 */
-    _sources(from) {
-      const e = this.boss, c = this.def.core;
-      if (from === 'parts') {
-        return this._aliveParts().map((p) => ({
-          x: e.x + p.ox + Math.cos(p.ang) * 22, y: e.y + p.oy + Math.sin(p.ang) * 22, ang: p.ang, side: Math.sign(p.ox),
-        }));
-      }
-      if (from === 'sides') return [-1, 1].map((s) => ({ x: e.x + s * 48, y: e.y + 34, side: s }));
-      return [{ x: e.x, y: e.y + c.oy + 26, side: 0 }];
+    wpos(w) {
+      if (w.kind === 'gun') return [w.x, w.y];
+      return [this.B.x + w.ox, this.B.y + w.oy];
     }
-
-    _nextPhase() {
-      const e = this.boss;
-      e.phase += 1;
-      e.cur = null;
-      e.order = 0;
-      e.rest = 1.8;
-      e.inv = 1.6;
-      e.hold = 0;
-      this.beams.length = 0;
-      this._cancelBullets(true);
-      this._dropItem('power', e.x, e.y + 40);
-      const ph = this.def.phases[e.phase];
-      this.emit('bossPhase', { x: e.x, y: e.y, phase: e.phase, name: ph.name, berserk: !!ph.berserk });
+    /** 총구 끝 (반동만큼 살짝 들어감) */
+    muzzle(w) {
+      const [x, y] = this.wpos(w);
+      const len = w.len * (1 - 0.25 * w.recoil);
+      return [x + Math.cos(w.ang) * len, y + Math.sin(w.ang) * len];
     }
-
-    _damageCore(dmg) {
-      const e = this.boss;
-      if (!e || e.state !== 'fight' || e.inv > 0) return false;
-      const ph = this.def.phases[e.phase];
-      if (ph.shield) return false;
-      e.hp -= dmg;
-      e.flash = 0.06;
-      this._addScore(Math.round(dmg * 10));
-      if (e.hp <= 0) { e.hp = 0; this._killBoss(); return true; }
-      if (ph.until != null && e.hp <= e.maxHp * ph.until && e.phase < this.def.phases.length - 1) this._nextPhase();
-      return true;
+    aim(w, turn) { w.state = 'aim'; w.target = 'player'; w.turn = turn; }
+    point(w, ang, turn) { w.state = 'aim'; w.target = ang; w.turn = turn; }
+    charge(w, t) {
+      w.state = 'charge';
+      w.charge = 0;
+      w.chargeDur = t;
+      const [x, y] = this.muzzle(w);
+      this.emit('charge', { x, y, kind: w.kind, big: w.big });
     }
+    idle(w) { w.state = 'idle'; w.target = null; w.charge = 0; w.sweep = null; }
+    hold(t) { if (this.B) this.B.hold = Math.max(this.B.hold, t); }
 
-    _damagePart(p, dmg) {
-      const e = this.boss;
-      if (!p.alive || e.state !== 'fight' || e.inv > 0) return;
-      p.hp -= dmg;
-      p.flash = 0.06;
-      this._addScore(Math.round(dmg * 10));
-      if (p.hp > 0) return;
-      p.alive = false;
-      const x = e.x + p.ox, y = e.y + p.oy;
-      this._addScore(p.score * (1 + this.loop * 0.5));
-      this.emit('partDestroyed', { x, y, id: p.id });
-      this._dropItem('power', x, y);
-      this._dropItem('bomb', x, y);
-      const ph = this.def.phases[e.phase];
-      if (ph.needParts && ph.needParts.every((id) => !e.parts[id].alive)) this._nextPhase();
+    /** 무기 총구에서 탄 하나. o.abs 면 각도를 그대로, 아니면 무기가 겨눈 방향 + 각도차 */
+    orb(w, dAng, speed, kind, o) {
+      o = o || {};
+      const [x, y] = this.muzzle(w);
+      const ang = o.abs ? dAng : w.ang + dAng;
+      w.recoil = 1;
+      if (!o.quiet) this.emit('muzzle', { x, y, kind });
+      return this.orbAt(x, y, ang, speed, kind, o);
     }
-
-    _bombDamage(dmg) {
-      const e = this.boss;
-      if (!e) return;
-      for (const p of this._aliveParts()) this._damagePart(p, dmg);
-      this._damageCore(dmg);
-    }
-
-    _killBoss() {
-      const e = this.boss;
-      e.state = 'dying';
-      e.st = 0;
-      e.cur = null;
-      this.beams.length = 0;
-      this._addScore(this.def.score * (1 + this.loop * 0.5));
-      this._cancelBullets(true);
-      this.emit('bossDefeated', { x: e.x, y: e.y, name: this.def.name, time: this.fightT });
-    }
-
-    _bossFinish() {
-      const e = this.boss;
-      this.emit('bossDie', { x: e.x, y: e.y });
-      this._cancelBullets(true);
-      for (let i = 0; i < 36; i++) this._dropItem(i % 4 === 0 ? 'bigGem' : 'gem', e.x + (this.rng() - 0.5) * 160, e.y, 220);
-      this.boss = null;
-    }
-
-    _dens(n) { return Math.max(1, Math.round(n * this.diff.density)); }
-
-    _aim(x, y) {
-      const p = this.player;
-      return Math.atan2(p.y - y, p.x - x);
-    }
-
-    _fan(x, y, center, n, spread, speed, o) {
-      if (n === 1) { this._eShot(x, y, center, speed, o); return; }
-      for (let i = 0; i < n; i++) this._eShot(x, y, center - spread / 2 + (spread * i) / (n - 1), speed, o);
-    }
-
-    /** 적 탄 하나 쏘기 */
-    _eShot(x, y, ang, speed, o, extra) {
+    orbAt(x, y, ang, speed, kind, o) {
       if (this.bombT > 0 || this.eb.length >= 700) return null;
+      o = o || {};
       const sp = speed * this.diff.speed;
-      const big = !!((extra && extra.big) || o.big);
       const b = {
-        x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, r: big ? 10 : 5.5, kind: o.kind || 'pink', big, t: 0,
-        curve: (extra && extra.curve) || o.curve || 0, curveT: (extra && extra.curveT) || 99,
-        split: (extra && extra.split) || null,
+        x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, r: o.big ? 10 : 5.5, kind: kind || 'pink', big: !!o.big, t: 0,
+        curve: o.curve || 0, curveT: o.curveT || 99, split: o.split || null,
       };
       this.eb.push(b);
       return b;
     }
-
     /** 쫓아오는 미사일 (내 탄으로 부술 수 있음) */
-    _missile(x, y, ang, speed) {
+    missileFrom(w, ang, speed) {
+      const [x, y] = this.muzzle(w);
+      w.recoil = 1;
       if (this.bombT > 0 || this.eb.length >= 700) return null;
       const sp = speed * this.diff.speed;
       const m = { x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, r: 6, kind: 'missile', missile: true, hp: 2, t: 0, speed: sp, rot: ang };
       this.eb.push(m);
-      this.emit('enemyMissile', {});
+      this.emit('enemyMissile', { x, y });
       return m;
+    }
+    /** 레이저: 무기 총구에서 나가고, 무기가 돌면 같이 돔. from/to 를 주면 그 사이를 쓸어냄 */
+    beam(w, o) {
+      const bm = { src: w, width: o.width, dur: o.dur, t: 0, from: o.from, to: o.to, ang: o.from != null ? o.from : w.ang, x: 0, y: 0, on: true };
+      [bm.x, bm.y] = this.muzzle(w);
+      w.state = 'fire';
+      this.beams.push(bm);
+      this.emit('laserFire', { big: o.width > 30 });
+      return bm;
+    }
+    /** 패턴 하나를 따로 돌림 (동시에 여러 개 가능) */
+    run(gen, owner, tag) {
+      const t = { it: gen, wait: 0, owner: owner || null, tag: tag || 'boss', done: false };
+      this.tasks.push(t);
+      return t;
+    }
+
+    /* ---------------- 벽 레이저포 ---------------- */
+    /** edge: L R (옆 벽, pos = 높이) · BL BR (아래 구석) */
+    gun(edge, pos, plan) {
+      const hp = Math.round(26 * this.diff.hp);
+      const g = {
+        kind: 'gun', edge, pos, slide: 0, x: -50, y: -50, len: 15, hp, maxHp: hp, alive: true, gone: false, flash: 0,
+        ang: { L: 0, R: Math.PI, BL: -Math.PI / 4, BR: (-3 * Math.PI) / 4 }[edge], target: null, turn: 0,
+        state: 'in', charge: 0, chargeDur: 1, recoil: 0, fixed: plan.fixed,
+      };
+      this._placeGun(g);
+      this.guns.push(g);
+      g.task = this.run(this._gunLife(g, plan), g, 'gun');
+      return g;
+    }
+    _placeGun(g) {
+      const s = SH.easeOut(g.slide);
+      if (g.edge === 'L') { g.x = SH.lerp(-28, 17, s); g.y = g.pos; }
+      else if (g.edge === 'R') { g.x = SH.lerp(W + 28, W - 17, s); g.y = g.pos; }
+      else if (g.edge === 'BL') { g.x = SH.lerp(-30, 26, s); g.y = SH.lerp(H + 30, H - 96, s); }
+      else { g.x = SH.lerp(W + 30, W - 26, s); g.y = SH.lerp(H + 30, H - 96, s); }
+    }
+    *_gunLife(g, plan) {
+      this.emit('gunIn', { x: g.x, y: g.y });
+      const st = plan.slide || 0.45;
+      while (g.slide < 1) { g.slide = Math.min(1, g.slide + SH.DT / st); yield; }
+      if (plan.fixed != null) this.point(g, plan.fixed, 6);
+      else this.aim(g, 3);
+      yield plan.aim;
+      if (plan.fixed == null) g.turn = 0.35;
+      this.charge(g, plan.charge);
+      yield plan.charge;
+      if (plan.fixed == null) g.target = null; // 쏘는 동안은 방향 고정
+      g.state = 'fire';
+      yield* plan.fire(this, g);
+      this.idle(g);
+      yield 0.2;
+      yield* this._gunOut(g);
+    }
+    *_gunOut(g) {
+      g.state = 'out';
+      while (g.slide > 0) { g.slide = Math.max(0, g.slide - SH.DT / 0.4); yield; }
+      g.gone = true;
+    }
+    /** 모든 벽 레이저포를 들여보냄 */
+    _recallGuns() {
+      for (const g of this.guns) {
+        if (g.gone) continue;
+        if (g.task) g.task.done = true;
+        g.task = this.run(this._gunOut(g), g, 'gun');
+      }
+      this.beams = this.beams.filter((b) => b.src.kind !== 'gun');
+    }
+
+    /* ---------------- 패턴 돌리기 ---------------- */
+    _runTasks(dt) {
+      for (const t of this.tasks) {
+        if (t.done) continue;
+        if (t.owner && (t.owner.gone || t.owner.alive === false)) { t.done = true; continue; }
+        t.wait -= dt;
+        let guard = 0;
+        while (t.wait <= 0 && !t.done && guard++ < 40) {
+          const r = t.it.next();
+          if (r.done) { t.done = true; break; }
+          t.wait += r.value == null ? SH.DT : r.value;
+        }
+      }
+      if (this.tasks.some((t) => t.done)) this.tasks = this.tasks.filter((t) => !t.done);
+      if (this.guns.some((g) => g.gone)) this.guns = this.guns.filter((g) => !g.gone);
+    }
+
+    /** 다음 패턴 고르기: 무게대로 뽑되, 바로 전 두 개는 빼고, 쓸 무기가 없는 것도 뺌 */
+    _pickPattern() {
+      const B = this.B, ph = this.bossPhase;
+      const ok = (n) => !(SH.BOSS_NEEDS[n] || []).length || SH.BOSS_NEEDS[n].some((w) => this.avail(w));
+      let list = Object.entries(ph.pool).filter(([n]) => ok(n) && !B.recent.includes(n));
+      if (!list.length) list = Object.entries(ph.pool).filter(([n]) => ok(n));
+      const total = list.reduce((s, [, w]) => s + w, 0);
+      let r = this.rng() * total;
+      let name = list[0][0];
+      for (const [n, w] of list) { r -= w; if (r <= 0) { name = n; break; } }
+      B.recent.push(name);
+      if (B.recent.length > 2) B.recent.shift();
+      this.stats.patterns[name] = (this.stats.patterns[name] || 0) + 1;
+      return name;
+    }
+
+    _updateBoss(dt) {
+      const B = this.B;
+      if (!B) return;
+      const def = this.def;
+      B.st += dt;
+      if (B.flash > 0) B.flash -= dt;
+      if (B.flashCd > 0) B.flashCd -= dt;
+      if (B.inv > 0 && B.state === 'fight') B.inv -= dt;
+
+      if (B.state === 'enter') {
+        const u = Math.min(1, B.st / 3);
+        B.y = SH.lerp(-160, def.y, SH.easeOut(u));
+        if (u >= 1) {
+          B.state = 'fight';
+          B.st = 0;
+          this.fightT = 0;
+          this.emit('bossReady', { hint: def.phases[0].hint });
+        }
+        return;
+      }
+      if (B.state === 'dying') {
+        B.x += Math.sin(B.st * 40) * 0.8;
+        B.y += 12 * dt;
+        B.boomT -= dt;
+        if (B.boomT <= 0) {
+          B.boomT = 0.1;
+          this.emit('bossBoom', { x: B.x + (this.rng() - 0.5) * def.hull.rx * 2, y: B.y + (this.rng() - 0.5) * def.hull.ry * 2 });
+        }
+        if (B.st >= 3.4) this._bossFinish();
+        return;
+      }
+
+      // 움직임 (충전·레이저·나선 중에는 멈춤)
+      const ph = this.bossPhase;
+      B.mt += dt;
+      if (B.hold > 0) B.hold -= dt;
+      const still = B.hold > 0 || B.state === 'transform';
+      const sway = def.sway * (ph.berserk ? 1.35 : 1);
+      const tx = still ? B.x : W / 2 + Math.sin(B.mt * (ph.berserk ? 0.85 : 0.5)) * sway;
+      const ty = def.y + Math.sin(B.mt * 1.1) * 8;
+      const kk = Math.min(1, dt * 1.6);
+      B.x += (tx - B.x) * kk;
+      B.y += (ty - B.y) * kk;
+
+      if (B.state !== 'fight') return;
+      // 다음 패턴
+      if (B.task && !B.task.done) return;
+      if (this.player.dead) return;
+      B.rest -= dt;
+      if (B.rest > 0) return;
+      const name = this._pickPattern();
+      B.task = this.run(SH.BOSS_PATTERNS[name](this), null, 'boss');
+      B.pattern = name;
+      B.rest = ph.rest + this.rng() * 0.4;
+      this.emit('pattern', { name });
+    }
+
+    /** 무기 움직임: 겨누기(회전), 반동, 충전, 뚜껑 */
+    _updateWeapons(dt) {
+      const all = this.B ? Object.values(this.B.w).concat(this.guns) : this.guns;
+      const p = this.player;
+      for (const w of all) {
+        if (w.flash > 0) w.flash -= dt;
+        if (w.flashCd > 0) w.flashCd -= dt;
+        if (w.recoil > 0) w.recoil = Math.max(0, w.recoil - dt * 6);
+        if (w.reveal < 1) w.reveal = Math.min(1, w.reveal + dt / 0.8);
+        if (w.state === 'charge') w.charge = Math.min(1, w.charge + dt / w.chargeDur);
+        if (w.kind === 'pod') {
+          if (w.state === 'open') w.open = Math.min(1, w.open + dt / 0.35);
+          else w.open = Math.max(0, w.open - dt / 0.35);
+        }
+        if (w.kind === 'gun') this._placeGun(w);
+        if (w.target != null) {
+          const [x, y] = this.wpos(w);
+          const want = w.target === 'player' ? Math.atan2(p.y - y, p.x - x) : w.target;
+          w.ang += clamp(angDiff(w.ang, want), -w.turn * dt, w.turn * dt);
+        }
+        if (w.kind === 'turret' || w.kind === 'cannon') w.ang = clamp(w.ang, 0.2, Math.PI - 0.2);
+      }
+    }
+
+    /** 단계 넘어가기: 공격을 멈추고, 부서지며 모습이 바뀌고, 새 무기를 꺼냄 */
+    _nextPhase() {
+      const B = this.B;
+      const next = B.phase + 1;
+      B.phase = next;
+      B.inv = 99;
+      B.state = 'transform';
+      B.recent = [];
+      for (const t of this.tasks) if (t.tag === 'boss' || t.tag === 'transform') t.done = true;
+      for (const w of Object.values(B.w)) this.idle(w);
+      B.task = null;
+      B.rest = 1.0;
+      this._recallGuns();
+      this.beams.length = 0;
+      this._cancelBullets(true);
+      this._dropItem('power', B.x, B.y + 40);
+      const ph = this.def.phases[next];
+      this.emit('bossPhase', { x: B.x, y: B.y, phase: next, name: ph.name, unlock: ph.unlock, hint: ph.hint, berserk: !!ph.berserk });
+      this.run(SH.bossTransform(this, next), null, 'transform');
+    }
+
+    /** 맞으면 잠깐 하얗게 (계속 맞아도 깜빡이도록 간격을 둠) */
+    _flash(o) {
+      if (o.flashCd > 0) return;
+      o.flash = 0.05;
+      o.flashCd = 0.16;
+    }
+
+    _damageCore(dmg) {
+      const B = this.B;
+      if (!B || B.state !== 'fight' || B.inv > 0) return false;
+      const ph = this.bossPhase;
+      if (ph.shield) return false;
+      B.hp -= dmg;
+      this._flash(B);
+      this._addScore(Math.round(dmg * 10));
+      if (B.hp <= 0) { B.hp = 0; this._killBoss(); return true; }
+      if (ph.until != null && B.hp <= B.maxHp * ph.until && B.phase < this.def.phases.length - 1) this._nextPhase();
+      return true;
+    }
+
+    _damageWeapon(w, dmg) {
+      const B = this.B;
+      if (!w.alive || !w.maxHp) return;
+      if (w.kind !== 'gun' && (B.state !== 'fight' || B.inv > 0)) return;
+      w.hp -= dmg;
+      this._flash(w);
+      this._addScore(Math.round(dmg * 10));
+      if (w.hp > 0) return;
+      w.alive = false;
+      const [x, y] = this.wpos(w);
+      if (w.kind === 'gun') {
+        w.gone = true;
+        this.stats.guns += 1;
+        this._addScore(2000 * (1 + this.loop));
+        this.emit('gunDown', { x, y });
+        this.beams = this.beams.filter((b) => b.src !== w);
+        if (this.rng() < 0.25) this._dropItem('gem', x, y);
+        return;
+      }
+      this._addScore(w.score * (1 + this.loop * 0.5));
+      this.emit('partDestroyed', { x, y, id: w.name });
+      this.beams = this.beams.filter((b) => b.src !== w);
+      this._dropItem('power', x, y);
+      this._dropItem('bomb', x, y);
+      const ph = this.bossPhase;
+      if (ph.needParts && ph.needParts.every((id) => !B.w[id].alive)) this._nextPhase();
+    }
+
+    _bombDamage(dmg) {
+      const B = this.B;
+      for (const g of this.guns) if (g.alive && g.slide > 0.5) this._damageWeapon(g, dmg * 3);
+      if (!B) return;
+      for (const n of ['turretL', 'turretR']) if (this.avail(n)) this._damageWeapon(B.w[n], dmg);
+      this._damageCore(dmg);
+    }
+
+    _killBoss() {
+      const B = this.B;
+      B.state = 'dying';
+      B.st = 0;
+      for (const t of this.tasks) t.done = true;
+      for (const w of Object.values(B.w)) this.idle(w);
+      this._recallGuns();
+      this.beams.length = 0;
+      this._addScore(this.def.score * (1 + this.loop * 0.5));
+      this._cancelBullets(true);
+      this.emit('bossDefeated', { x: B.x, y: B.y, name: this.def.name, time: this.fightT });
+    }
+
+    _bossFinish() {
+      const B = this.B;
+      this.emit('bossDie', { x: B.x, y: B.y });
+      this._cancelBullets(true);
+      for (let i = 0; i < 36; i++) this._dropItem(i % 4 === 0 ? 'bigGem' : 'gem', B.x + (this.rng() - 0.5) * 160, B.y, 220);
+      this.B = null;
+    }
+
+    _aim(x, y) {
+      const p = this.player;
+      return Math.atan2(p.y - y, p.x - x);
     }
 
     /* ---------------- 플레이어 ---------------- */
@@ -686,7 +770,7 @@ window.SH = window.SH || {};
       if (p.entering) {
         p.enterT += dt;
         const u = Math.min(1, p.enterT / 0.9);
-        p.y = SH.lerp(H + 40, H - 140, SH.easeOut(u));
+        p.y = SH.lerp(H + 40, H - 90, SH.easeOut(u));
         if (u >= 1) { p.entering = false; p.anchor += 1; }
         p.bank *= 0.8;
       } else if (p.exiting) {
@@ -708,7 +792,7 @@ window.SH = window.SH || {};
           p.x += (inp.ax / len) * sp * dt;
           p.y += (inp.ay / len) * sp * dt;
         }
-        p.x = clamp(p.x, 16, W - 16);
+        p.x = clamp(p.x, 46, W - 46);
         p.y = clamp(p.y, 50, H - 26);
         const vx = (p.x - ox) / dt;
         p.bank += (clamp(vx / 260, -1, 1) - p.bank) * Math.min(1, dt * 12);
@@ -822,17 +906,16 @@ window.SH = window.SH || {};
     }
 
     /* ---------------- 탄 ---------------- */
-    /** 유도 미사일이 노릴 곳: 살아 있는 포탑 → 코어 */
+    /** 내 유도 미사일이 노릴 곳: 벽 레이저포 → 포탑 → 코어 */
     _homingTarget(x, y) {
-      const e = this.boss;
-      if (!e || e.state !== 'fight') return null;
       let best = null, bd = Infinity;
-      for (const p of this._aliveParts()) {
-        const px = e.x + p.ox, py = e.y + p.oy;
-        const d = (px - x) ** 2 + (py - y) ** 2;
-        if (d < bd) { bd = d; best = [px, py]; }
-      }
-      return best || [e.x, e.y + this.def.core.oy];
+      const consider = (px, py) => { const d = (px - x) ** 2 + (py - y) ** 2; if (d < bd) { bd = d; best = [px, py]; } };
+      for (const g of this.guns) if (g.alive && g.slide > 0.6) consider(g.x, g.y);
+      if (best) return best;
+      const B = this.B;
+      if (!B || B.state === 'enter' || B.state === 'dying') return null;
+      for (const n of ['turretL', 'turretR']) if (this.avail(n)) consider(...this.wpos(B.w[n]));
+      return best || [B.x, B.y + this.def.core.oy];
     }
 
     _updateBullets(dt) {
@@ -847,12 +930,7 @@ window.SH = window.SH || {};
           let sp = Math.hypot(b.vx, b.vy);
           sp = Math.min(560, sp + 700 * dt);
           let a = Math.atan2(b.vy, b.vx);
-          if (tg && b.t > 0.08) {
-            let da = Math.atan2(tg[1] - b.y, tg[0] - b.x) - a;
-            while (da > Math.PI) da -= TAU;
-            while (da < -Math.PI) da += TAU;
-            a += clamp(da, -8 * dt, 8 * dt);
-          }
+          if (tg && b.t > 0.08) a += clamp(angDiff(a, Math.atan2(tg[1] - b.y, tg[0] - b.x)), -8 * dt, 8 * dt);
           b.vx = Math.cos(a) * sp;
           b.vy = Math.sin(a) * sp;
           b.rot = a + HALF_PI;
@@ -874,16 +952,13 @@ window.SH = window.SH || {};
         b.t += dt;
         if (b.missile) {
           if (b.hp <= 0) continue;
-          if (b.t < 3.2 && !pl.dead) {
+          if (b.t > 0.35 && b.t < 3.6 && !pl.dead) {
             let a = Math.atan2(b.vy, b.vx);
-            let da = Math.atan2(pl.y - b.y, pl.x - b.x) - a;
-            while (da > Math.PI) da -= TAU;
-            while (da < -Math.PI) da += TAU;
-            a += clamp(da, -1.7 * dt, 1.7 * dt);
+            a += clamp(angDiff(a, Math.atan2(pl.y - b.y, pl.x - b.x)), -1.9 * dt, 1.9 * dt);
             b.vx = Math.cos(a) * b.speed;
             b.vy = Math.sin(a) * b.speed;
-            b.rot = a;
           }
+          b.rot = Math.atan2(b.vy, b.vx);
         } else if (b.curve && b.t < b.curveT) {
           const c = Math.cos(b.curve * dt), s = Math.sin(b.curve * dt);
           const vx = b.vx * c - b.vy * s;
@@ -895,12 +970,11 @@ window.SH = window.SH || {};
         if (b.split && b.t >= b.split.at) {
           const sp = b.split;
           const off = this.rng() * TAU;
-          const n = this._dens(sp.n);
-          for (let q = 0; q < n; q++) this._eShot(b.x, b.y, off + (q * TAU) / n, sp.speed, { kind: sp.kind });
+          for (let q = 0; q < sp.n; q++) this.orbAt(b.x, b.y, off + (q * TAU) / sp.n, sp.speed, sp.kind);
           this.emit('split', { x: b.x, y: b.y });
           continue;
         }
-        if (b.y < -40 || b.y > H + 30 || b.x < -30 || b.x > W + 30) continue;
+        if (b.y < -60 || b.y > H + 30 || b.x < -30 || b.x > W + 30) continue;
         this.eb[j++] = b;
       }
       for (let i = n0; i < this.eb.length; i++) this.eb[j++] = this.eb[i];
@@ -908,17 +982,19 @@ window.SH = window.SH || {};
     }
 
     _updateBeams(dt) {
-      const e = this.boss;
       let j = 0;
       for (const bm of this.beams) {
         bm.t += dt;
-        if (!e || bm.t >= bm.warn + bm.dur) continue;
-        if (bm.t >= bm.warn) {
-          if (!bm.on) { bm.on = true; this.emit('laserFire', {}); }
-          bm.ang = SH.lerp(bm.a0, bm.a1, SH.easeInOut((bm.t - bm.warn) / bm.dur));
+        const src = bm.src;
+        if (bm.t >= bm.dur || !src || src.gone || src.alive === false || (src.kind !== 'gun' && !this.B)) {
+          if (src && src.state === 'fire') src.state = 'cool';
+          continue;
         }
-        bm.x = e.x + bm.ox;
-        bm.y = e.y + bm.oy;
+        if (bm.from != null) {
+          bm.ang = SH.lerp(bm.from, bm.to, SH.easeInOut(bm.t / bm.dur));
+          src.ang = bm.ang;
+        } else bm.ang = src.ang;
+        [bm.x, bm.y] = this.muzzle(src);
         this.beams[j++] = bm;
       }
       this.beams.length = j;
@@ -940,13 +1016,12 @@ window.SH = window.SH || {};
 
     /* ---------------- 충돌 ---------------- */
     _collide() {
-      const e = this.boss;
+      const B = this.B;
       const def = this.def;
-      // 내 탄 → 미사일 · 포탑 · 코어 · 몸통(막힘)
+      // 내 탄 → 미사일 · 벽 레이저포 · 포탑 · 코어 · 몸통(막힘)
       for (let i = 0; i < this.pb.length; i++) {
         const b = this.pb[i];
         if (b.dead) continue;
-        // 미사일 격추
         for (let q = 0; q < this.eb.length; q++) {
           const m = this.eb[q];
           if (!m.missile || m.hp <= 0) continue;
@@ -961,33 +1036,45 @@ window.SH = window.SH || {};
             break;
           }
         }
-        if (b.dead || !e || e.state === 'enter' || e.state === 'dying') continue;
-        // 포탑
-        let hitSomething = false;
-        for (const p of this._aliveParts()) {
-          const px = e.x + p.ox, py = e.y + p.oy;
-          if (Math.abs(b.x - px) < b.hw + p.r && Math.abs(b.y - py) < b.hh + p.r) {
-            this._damagePart(p, b.dmg);
-            this.emit('hit', { x: b.x, y: py + p.r * 0.5, kind: b.kind });
-            hitSomething = true;
+        if (b.dead) continue;
+        for (const g of this.guns) {
+          if (!g.alive || g.slide < 0.5) continue;
+          if (Math.abs(b.x - g.x) < b.hw + 13 && Math.abs(b.y - g.y) < b.hh + 13) {
+            this._damageWeapon(g, b.dmg);
+            this.emit('hit', { x: b.x, y: g.y + 8, kind: b.kind });
+            b.dead = true;
             break;
           }
         }
-        if (!hitSomething) {
-          const cx = e.x, cy = e.y + def.core.oy, cr = def.core.r;
-          if (Math.abs(b.x - cx) < b.hw + cr && Math.abs(b.y - cy) < b.hh + cr) {
+        if (b.dead || !B || B.state === 'enter' || B.state === 'dying') continue;
+        let hit = false;
+        for (const n of ['turretL', 'turretR']) {
+          if (!this.avail(n)) continue;
+          const w = B.w[n];
+          const [px, py] = this.wpos(w);
+          if (Math.abs(b.x - px) < b.hw + 26 && Math.abs(b.y - py) < b.hh + 26) {
+            this._damageWeapon(w, b.dmg);
+            this.emit('hit', { x: b.x, y: py + 13, kind: b.kind, armor: B.state !== 'fight' });
+            hit = true;
+            break;
+          }
+        }
+        if (!hit) {
+          // 코어를 향해 곧장 올라가는 탄은 앞 장갑 틈으로 코어까지 닿음
+          const cx = B.x + def.core.ox, cy = B.y + def.core.oy, cr = def.core.r;
+          if (Math.abs(b.x - cx) < b.hw + cr && b.y < cy + def.hull.ry + 10 && b.y > cy - cr - b.hh) {
             const dealt = this._damageCore(b.dmg);
             this.emit('hit', { x: b.x, y: cy + cr * 0.6, kind: b.kind, armor: !dealt });
-            hitSomething = true;
+            hit = true;
           } else {
-            const nx = (b.x - e.x) / def.hull.rx, ny = (b.y - e.y) / def.hull.ry;
+            const nx = (b.x - B.x) / def.hull.rx, ny = (b.y - B.y) / def.hull.ry;
             if (nx * nx + ny * ny < 1) {
               this.emit('hit', { x: b.x, y: b.y, kind: b.kind, armor: true });
-              hitSomething = true;
+              hit = true;
             }
           }
         }
-        if (hitSomething) b.dead = true;
+        if (hit) b.dead = true;
       }
 
       const p = this.player;
@@ -1004,17 +1091,14 @@ window.SH = window.SH || {};
       }
       // 레이저 → 나
       for (const bm of this.beams) {
-        if (!bm.on) continue;
         const dx = p.x - bm.x, dy = p.y - bm.y;
         const ux = Math.cos(bm.ang), uy = Math.sin(bm.ang);
-        const along = dx * ux + dy * uy;
-        if (along < 0) continue;
-        const perp = Math.abs(dx * uy - dy * ux);
-        if (perp < bm.width / 2 + p.r) { this._hitPlayer(); return; }
+        if (dx * ux + dy * uy < 0) continue;
+        if (Math.abs(dx * uy - dy * ux) < bm.width / 2 + p.r) { this._hitPlayer(); return; }
       }
       // 보스 몸통 → 나
-      if (e && e.state !== 'dying') {
-        const nx = (p.x - e.x) / (def.hull.rx * 0.9), ny = (p.y - e.y) / (def.hull.ry * 0.9);
+      if (B && B.state !== 'dying') {
+        const nx = (p.x - B.x) / (def.hull.rx * 0.9), ny = (p.y - B.y) / (def.hull.ry * 0.9);
         if (nx * nx + ny * ny < 1) this._hitPlayer();
       }
     }
@@ -1036,7 +1120,7 @@ window.SH = window.SH || {};
     _updateItems(dt) {
       const p = this.player;
       const canTake = !p.dead && !p.entering;
-      const vacuum = canTake && (p.y < H * 0.26 || this.phase === 'clear');
+      const vacuum = canTake && this.phase === 'clear';
       let j = 0;
       for (let i = 0; i < this.items.length; i++) {
         const it = this.items[i];
@@ -1053,16 +1137,16 @@ window.SH = window.SH || {};
         } else if (it.kind === 'power' && it.t < 10) {
           it.x += it.vx * dt;
           it.y += it.vy * dt;
-          if (it.x < 18 || it.x > W - 18) { it.vx = -it.vx; it.x = clamp(it.x, 18, W - 18); }
-          if (it.y > H * 0.72 && it.vy > 0) it.vy = -Math.abs(it.vy);
-          if (it.y < 260 && it.vy < 0) it.vy = Math.abs(it.vy);
+          if (it.x < 40 || it.x > W - 40) { it.vx = -it.vx; it.x = clamp(it.x, 40, W - 40); }
+          if (it.y > H * 0.88 && it.vy > 0) it.vy = -Math.abs(it.vy);
+          if (it.y < H * 0.44 && it.vy < 0) it.vy = Math.abs(it.vy);
           if (it.t > 0.6) it.vy += (Math.sign(it.vy) * 50 - it.vy) * Math.min(1, dt * 2);
         } else {
           it.vy = Math.min(it.vy + 260 * dt, 85);
           it.vx *= 1 - Math.min(1, dt * 2);
           it.x += it.vx * dt;
           it.y += it.vy * dt;
-          if (it.x < 10 || it.x > W - 10) { it.vx = -it.vx; it.x = clamp(it.x, 10, W - 10); }
+          if (it.x < 30 || it.x > W - 30) { it.vx = -it.vx; it.x = clamp(it.x, 30, W - 30); }
         }
         if (canTake && Math.hypot(p.x - it.x, p.y - it.y) < 24) { this._takeItem(it); continue; }
         if (it.y > H + 30 || it.y < -60) continue;
@@ -1114,7 +1198,397 @@ window.SH = window.SH || {};
   }
 
   SH.Game = Game;
-  SH.ATTACKS = ATTACKS;
+})();
+
+</script>
+  <script>/* js/boss.js */
+'use strict';
+
+/* =========================================================
+ * 하늘 사냥꾼 — 보스 패턴 (DOM 없음)
+ *
+ * 패턴 하나 = 제너레이터 함수. `yield 초` 로 기다리며 차례대로
+ *   ① 무기를 겨누고(aim: 조준선이 보임) ② 충전하고(charge: 빛이 모임) ③ 그 무기의 총구에서 쏩니다.
+ * 벽 레이저포(gun)는 화면 밖에서 미끄러져 나와 쏘고 다시 들어갑니다. 보스가 신호기로 불러야 나옵니다.
+ *
+ * 쓰는 도구 (game.js 의 Game 메서드):
+ *   g.W(name) 무기   g.avail(name) 쓸 수 있나   g.aim(w, 회전속도) 플레이어 쪽으로   g.point(w, 각도, 회전속도)
+ *   g.charge(w, 초)  g.orb(w, 각도차, 속도, 색, 옵션)  g.orbAt(x, y, 각도, 속도, 색, 옵션)  g.beam(w, 옵션)
+ *   g.missileFrom(w, 각도, 속도)  g.gun(가장자리, 위치, 계획)  g.run(제너레이터)  g.hold(초)  g.idle(w)
+ * ========================================================= */
+
+(() => {
+  const HALF_PI = Math.PI / 2;
+  const TAU = Math.PI * 2;
+
+  /** 신호기를 깜빡여 벽 레이저포를 부름 (보스가 부른다는 걸 보여 줌) */
+  function* signal(g) {
+    const a = g.W('antenna');
+    a.state = 'charge';
+    a.charge = 0;
+    a.chargeDur = 0.5;
+    g.emit('call', {});
+    yield 0.5;
+    g.idle(a);
+  }
+  /** 부른 레이저포가 모두 들어갈 때까지 */
+  function* waitGuns(guns) {
+    while (guns.some((x) => !x.gone)) yield 0.1;
+  }
+  function* charge(g, ws, t) {
+    for (const w of [].concat(ws)) g.charge(w, t);
+    yield t;
+  }
+  const shuffle = (g, a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(g.rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pick = (g, a) => a[Math.floor(g.rng() * a.length)];
+  const clampY = (y) => Math.max(230, Math.min(505, y)); // 벽 레이저포가 나올 수 있는 높이 (내가 있는 아래쪽)
+
+  /* ---------------- 벽 레이저포 쏘는 방법 ---------------- */
+  const FIRE = {
+    /** 굵은 레이저 한 줄 */
+    beam: (width, dur) => function* (g, gun) {
+      g.beam(gun, { width, dur });
+      yield dur;
+    },
+    /** 겨눈 쪽으로 세 갈래 탄을 여러 번 */
+    burst: (times, every) => function* (g, gun) {
+      for (let i = 0; i < times; i++) {
+        for (let k = -1; k <= 1; k++) g.orb(gun, k * 0.2, 210, 'orange');
+        yield every;
+      }
+    },
+  };
+
+  /* =========================================================
+   * 패턴
+   * ========================================================= */
+  const P = {
+    /* ---------- 1단계: 포탑 ---------- */
+    /** 포탑이 번갈아 겨누고 3연사 */
+    *turretBurst(g) {
+      const ws = shuffle(g, ['turretL', 'turretR'].filter((n) => g.avail(n)).map((n) => g.W(n)));
+      const fan = g.rng() < 0.5;
+      for (const w of ws) {
+        g.aim(w, 3.2);
+        yield 0.45;
+        yield* charge(g, w, 0.35);
+        w.state = 'fire';
+        for (let i = 0; i < 3 && w.alive; i++) {
+          if (fan) for (let k = -2; k <= 2; k++) g.orb(w, k * 0.16, 190, 'orange');
+          else for (let k = 0; k < 3; k++) g.orb(w, 0, 160 + k * 45, 'orange');
+          yield 0.24;
+        }
+        g.idle(w);
+        yield 0.2;
+      }
+    },
+    /** 두 포탑이 포신을 크게 휘두르며 연속 사격 (교차 또는 바깥으로) */
+    *turretSweep(g) {
+      const ws = ['turretL', 'turretR'].filter((n) => g.avail(n)).map((n) => g.W(n));
+      const out = g.rng() < 0.5;
+      for (const w of ws) {
+        const L = w.ox < 0;
+        w.sw = out ? [L ? 0.95 : 2.2, L ? 2.6 : 0.54] : [L ? 2.6 : 0.54, L ? 0.95 : 2.2];
+        g.point(w, w.sw[0], 5);
+      }
+      yield 0.55;
+      yield* charge(g, ws, 0.3);
+      const dur = 1.6;
+      for (let t = 0; t < dur; t += 0.08) {
+        for (const w of ws) {
+          if (!w.alive) continue;
+          w.state = 'fire';
+          w.target = null;
+          w.ang = SH.lerp(w.sw[0], w.sw[1], t / dur);
+          g.orb(w, 0, 215, 'red');
+        }
+        yield 0.08;
+      }
+      ws.forEach((w) => g.idle(w));
+    },
+
+    /* ---------- 발사구 · 배기구 ---------- */
+    /** 양옆 발사구에서 플라스마 구체가 자라다가 던져짐 → 터지며 원형 탄 */
+    *orbToss(g) {
+      const ws = ['emitL', 'emitR'].filter((n) => g.avail(n)).map((n) => g.W(n));
+      if (!ws.length) return;
+      yield* charge(g, ws, 0.9);
+      const n = g.B.phase >= 1 ? 3 : 1;
+      for (const w of ws) {
+        const [mx, my] = g.muzzle(w);
+        const a = Math.atan2(g.player.y - my, g.player.x - mx);
+        for (let k = 0; k < n; k++) g.orbAt(mx, my, a + (k - (n - 1) / 2) * 0.4, 120, 'purple', { big: true, split: { at: 1.0, n: 10, speed: 112, kind: 'purple' } });
+        w.recoil = 1;
+        g.emit('muzzle', { x: mx, y: my, big: true });
+      }
+      ws.forEach((w) => g.idle(w));
+      yield 0.4;
+    },
+    /** 등 쪽 배기구가 증기를 뿜다가 작은 탄을 흩뿌림 */
+    *ventRain(g) {
+      const ws = ['ventL', 'ventR'].filter((n) => g.avail(n)).map((n) => g.W(n));
+      if (!ws.length) return;
+      yield* charge(g, ws, 0.55);
+      for (let t = 0; t < 2; t += 0.09) {
+        for (const w of ws) { w.state = 'fire'; g.orb(w, (g.rng() * 2 - 1) * 0.85, 140 + g.rng() * 70, 'blue', { quiet: true }); }
+        yield 0.09;
+      }
+      ws.forEach((w) => g.idle(w));
+    },
+
+    /* ---------- 벽 레이저포 (보스가 부름) ---------- */
+    /** 내 높이의 양쪽 벽에서 레이저포가 나와 조준 → 레이저 */
+    *wallSnipe(g) {
+      yield* signal(g);
+      const y = clampY(g.player.y + (g.rng() - 0.5) * 60);
+      const off = g.rng() < 0.5 ? -60 : 60;
+      const plan = { aim: 0.8, charge: 0.45, fire: FIRE.beam(12, 0.55) };
+      const guns = [g.gun('L', y, plan), g.gun('R', clampY(y + off), plan)];
+      yield* waitGuns(guns);
+    },
+    /** 레이저포 넷이 번갈아 나와 세 갈래 탄 */
+    *wallCrossfire(g) {
+      yield* signal(g);
+      const ys = shuffle(g, [250, 320, 390, 460]);
+      let edge = g.rng() < 0.5 ? 'L' : 'R';
+      const guns = [];
+      for (const y of ys) {
+        guns.push(g.gun(edge, y, { aim: 0.55, charge: 0.3, fire: FIRE.burst(3, 0.33) }));
+        edge = edge === 'L' ? 'R' : 'L';
+        yield 0.35;
+      }
+      yield* waitGuns(guns);
+    },
+    /** 벽 양쪽에서 가로 레이저가 층층이 — 틈으로 위아래 피하기 */
+    *gridLasers(g) {
+      yield* signal(g);
+      const n = g.B.phase >= 2 ? 4 : 3;
+      const rows = shuffle(g, [235, 305, 375, 445, 505]).slice(0, n).sort((a, b) => a - b);
+      let edge = g.rng() < 0.5 ? 'L' : 'R';
+      const guns = [];
+      rows.forEach((y, i) => {
+        guns.push(g.gun(edge, y, { fixed: edge === 'L' ? 0 : Math.PI, aim: 1.0 + i * 0.28, charge: 0.35, fire: FIRE.beam(14, 0.7) }));
+        edge = edge === 'L' ? 'R' : 'L';
+      });
+      yield* waitGuns(guns);
+    },
+    /** 화면 구석 여기저기서 하나씩 튀어나와 빠르게 저격 */
+    *wallSniper(g) {
+      yield* signal(g);
+      const guns = [];
+      let last = null;
+      for (let i = 0; i < 3; i++) {
+        let edge = pick(g, ['L', 'R', 'BL', 'BR']);
+        if (edge === last) edge = edge === 'L' ? 'R' : 'L';
+        last = edge;
+        const pos = edge === 'L' || edge === 'R' ? clampY(250 + g.rng() * 230) : 0;
+        guns.push(g.gun(edge, pos, { slide: 0.3, aim: 0.5, charge: 0.25, fire: FIRE.beam(7, 0.3) }));
+        yield 0.75;
+      }
+      yield* waitGuns(guns);
+    },
+
+    /* ---------- 코어 ---------- */
+    /** 드러난 코어가 빛나다가 원형 탄 세 겹 */
+    *coreRing(g) {
+      const c = g.W('core');
+      yield* charge(g, c, 0.6);
+      const off = g.rng() * TAU;
+      for (let r = 0; r < 3; r++) {
+        c.state = 'fire';
+        for (let i = 0; i < 18; i++) g.orb(c, off + r * 0.17 + (i * TAU) / 18, 118, 'purple', { abs: true, quiet: i > 0 });
+        yield 0.42;
+      }
+      g.idle(c);
+    },
+    /** 코어가 돌면서 나선 탄 */
+    *coreSpiral(g) {
+      const c = g.W('core');
+      g.hold(3.4);
+      yield* charge(g, c, 0.5);
+      const dir = g.rng() < 0.5 ? 1 : -1;
+      let k = 0;
+      for (let t = 0; t < 2.6; t += 0.07, k++) {
+        c.state = 'fire';
+        for (let j = 0; j < 3; j++) g.orb(c, dir * k * 0.2 + (j * TAU) / 3, 125, 'purple', { abs: true, quiet: j > 0 });
+        yield 0.07;
+      }
+      g.idle(c);
+    },
+    /** 폭주한 코어의 양방향 나선 */
+    *overloadSpiral(g) {
+      const c = g.W('core');
+      g.hold(3.8);
+      yield* charge(g, c, 0.5);
+      let k = 0;
+      for (let t = 0; t < 3; t += 0.07, k++) {
+        c.state = 'fire';
+        for (let j = 0; j < 3; j++) {
+          g.orb(c, k * 0.21 + (j * TAU) / 3, 135, 'red', { abs: true, quiet: j > 0 });
+          g.orb(c, -k * 0.21 + (j * TAU) / 3 + Math.PI / 3, 115, 'orange', { abs: true, quiet: true });
+        }
+        yield 0.07;
+      }
+      g.idle(c);
+    },
+
+    /* ---------- 주포 (2단계에 개방) ---------- */
+    /** 주포가 나를 겨누고 충전 → 천천히 따라오는 굵은 레이저 */
+    *mainBeam(g) {
+      if (!g.avail('cannon')) return;
+      const c = g.W('cannon');
+      const twice = g.B.phase >= 3 && g.rng() < 0.45;
+      g.hold(twice ? 6 : 4.4);
+      for (let shot = 0; shot < (twice ? 2 : 1); shot++) {
+        g.aim(c, 1.8);
+        yield twice ? 0.4 : 0.6;
+        c.turn = 0.6;
+        yield* charge(g, c, twice ? 0.7 : 1.0);
+        c.state = 'fire';
+        c.turn = 0.26 * g.diff.speed;
+        const dur = twice ? 0.9 : 1.5;
+        g.beam(c, { width: 22, dur });
+        yield dur;
+        c.state = 'cool';
+        c.target = null;
+        yield 0.5;
+      }
+      g.idle(c);
+    },
+    /** 주포가 넓은 부채꼴을 쓸어냄 (쓸고 갈 구역을 미리 보여 줌) */
+    *mainSweep(g) {
+      if (!g.avail('cannon')) return;
+      const c = g.W('cannon');
+      g.hold(3.6);
+      const [mx, my] = g.muzzle(c);
+      const base = Math.atan2(g.player.y - my, g.player.x - mx);
+      const dir = g.rng() < 0.5 ? 1 : -1;
+      const a0 = Math.max(0.35, Math.min(Math.PI - 0.35, base - dir * 0.6));
+      const a1 = Math.max(0.35, Math.min(Math.PI - 0.35, base + dir * 0.6));
+      c.sweep = [a0, a1];
+      g.point(c, a0, 3);
+      yield 0.5;
+      yield* charge(g, c, 0.9);
+      c.state = 'fire';
+      g.beam(c, { width: 22, dur: 1.6, from: a0, to: a1 });
+      yield 1.6;
+      c.sweep = null;
+      c.state = 'cool';
+      yield 0.5;
+      g.idle(c);
+    },
+    /** 주포 + 벽 레이저포 동시에 */
+    *beamAmbush(g) {
+      g.run(P.wallSnipe(g));
+      yield 0.3;
+      yield* P.mainBeam(g);
+    },
+    /** 마지막 일격: 오래 충전한 거대한 레이저, 그동안 벽 포대가 몰아붙임 */
+    *finalCharge(g) {
+      if (!g.avail('cannon')) return;
+      const c = g.W('cannon');
+      g.hold(6.2);
+      g.aim(c, 1.2);
+      yield 0.5;
+      c.big = true;
+      g.charge(c, 2.0);
+      g.emit('bigCharge', {});
+      g.run((function* () {
+        yield* signal(g);
+        const guns = [g.gun('L', 420, { aim: 0.5, charge: 0.25, fire: FIRE.burst(3, 0.3) }), g.gun('R', 560, { aim: 0.6, charge: 0.25, fire: FIRE.burst(3, 0.3) })];
+        yield* waitGuns(guns);
+      })());
+      yield 2.0;
+      c.state = 'fire';
+      c.turn = 0.22 * g.diff.speed;
+      g.beam(c, { width: 46, dur: 2.0 });
+      yield 2.0;
+      c.big = false;
+      c.state = 'cool';
+      c.target = null;
+      yield 0.8;
+      g.idle(c);
+    },
+    /** 벽 양쪽에서 가로 레이저 넷이 한꺼번에 — 사이 틈에 들어가기 */
+    *laserCage(g) {
+      yield* signal(g);
+      const shift = (g.rng() - 0.5) * 40;
+      const rows = [245, 330, 415, 500].map((y) => clampY(y + shift));
+      let edge = g.rng() < 0.5 ? 'L' : 'R';
+      const guns = rows.map((y) => {
+        const gun = g.gun(edge, y, { fixed: edge === 'L' ? 0 : Math.PI, aim: 1.15, charge: 0.35, fire: FIRE.beam(14, 1.0) });
+        edge = edge === 'L' ? 'R' : 'L';
+        return gun;
+      });
+      yield 0.8;
+      const c = g.W('core');
+      yield* charge(g, c, 0.4);
+      for (let i = 0; i < 14; i++) g.orb(c, (i * TAU) / 14, 100, 'red', { abs: true, quiet: i > 0 });
+      g.idle(c);
+      yield* waitGuns(guns);
+    },
+
+    /* ---------- 미사일 포드 (3단계에 개방) ---------- */
+    /** 등 뒤 포드 뚜껑이 열리고 미사일이 솟아올라 휘어져 쫓아옴 (쏘면 터짐) */
+    *missileSalvo(g) {
+      const ps = ['podL', 'podR'].filter((n) => g.avail(n)).map((n) => g.W(n));
+      if (!ps.length) return;
+      for (const p of ps) { p.state = 'open'; }
+      g.emit('hatch', {});
+      yield 0.5;
+      const n = g.B.phase >= 3 ? 8 : 6;
+      for (let i = 0; i < n; i++) {
+        const p = ps[i % ps.length];
+        g.missileFrom(p, -HALF_PI + (p.ox < 0 ? -0.7 : 0.7) + (g.rng() - 0.5) * 0.4, 170);
+        yield 0.16;
+      }
+      yield 0.3;
+      for (const p of ps) p.state = 'close';
+      yield 0.4;
+      ps.forEach((p) => g.idle(p));
+    },
+  };
+
+  /** 이 패턴을 쓸 무기가 있나 */
+  const NEEDS = {
+    turretBurst: ['turretL', 'turretR'], turretSweep: ['turretL', 'turretR'], orbToss: ['emitL', 'emitR'], ventRain: ['ventL', 'ventR'],
+    mainBeam: ['cannon'], mainSweep: ['cannon'], beamAmbush: ['cannon'], finalCharge: ['cannon'], missileSalvo: ['podL', 'podR'],
+  };
+
+  /* =========================================================
+   * 단계가 바뀔 때: 폭발하며 부서지고(다른 모습으로 바뀜), 새 무기를 꺼냄
+   * ========================================================= */
+  function* transform(g, next) {
+    const B = g.B;
+    const def = SH.BOSS;
+    B.state = 'transform';
+    // 이번에 부서지는 무기는 그 자리에서 폭발
+    for (const w of Object.values(B.w)) {
+      if (w.lose === next && w.alive) {
+        w.alive = false;
+        const [x, y] = g.wpos(w);
+        g.emit('partBreak', { x, y });
+      }
+    }
+    for (let i = 0; i < 10; i++) {
+      g.emit('bossBoom', { x: B.x + (g.rng() - 0.5) * def.hull.rx * 1.8, y: B.y + (g.rng() - 0.5) * def.hull.ry * 1.6 });
+      if (i === 5) {
+        B.look = def.phases[next].look;
+        g.emit('armorFall', { x: B.x, y: B.y, look: B.look });
+      }
+      yield 0.14;
+    }
+    // 새 무기 등장 (안에서 밀려 나옴)
+    for (const w of Object.values(B.w)) if (w.unlock === next) { w.reveal = 0; w.alive = true; }
+    yield 0.9;
+    B.state = 'fight';
+    B.inv = 0;
+  }
+
+  SH.BOSS_PATTERNS = P;
+  SH.BOSS_NEEDS = NEEDS;
+  SH.bossTransform = transform;
+  SH.bossGunPlans = FIRE;
 })();
 
 </script>
@@ -1981,22 +2455,32 @@ SH.pix = (() => {
 
 /* =========================================================
  * 픽셀 그림 — 기계 보스 "강철 요새 타이탄"
- *  titan       : 몸통. 프레임 = 모습×2 + 깜빡임 (모습 0 장갑 · 1 코어 열림 · 2 부서짐 · 3 폭주)
- *  turret      : 돌아가는 포탑 (프레임 = 포신 방향, 오른쪽 아래 → 왼쪽 아래)
- *  turretWreck : 부서진 포탑
+ *  titan       : 몸통. 프레임 = 모습×2 + 깜빡임
+ *                모습 0 완전 무장 · 1 장갑 붕괴(앞 장갑이 떨어지고 주포 칸이 드러남)
+ *                     2 내부 노출(왼쪽 날개 끝이 뜯기고 구멍·배관, 등 뒤 격납고 열림) · 3 폭주(뼈대만 남고 코어가 녹아내림)
+ *  turret      : 1단계 포탑 (프레임 = 포신 방향)      turretWreck : 부서진 포탑
+ *  cannon      : 2단계부터 나오는 주포 (프레임 = 포신 방향)
+ *  pod         : 3단계부터 나오는 미사일 포드 (프레임 = 뚜껑 열림 정도)
+ *  wallgun     : 벽에서 나오는 레이저포 (프레임 i = 오른쪽에서 시계 방향 i×22.5°)
  *  emissile    : 쫓아오는 적 미사일 (프레임 i = 위에서 시계 방향 i×45°)
+ *  scrap       : 떨어져 나가는 쇳조각
+ * 무기 자리(픽셀, 그림 가운데 기준): 코어 (0,0) · 주포 (0,26) · 포탑 (±50,12) · 발사구 (±28,22) · 배기구 (±40,-10) · 포드 (±18,-24) · 신호기 (0,-35)
  * ========================================================= */
 
 (() => {
   const k = '#0e1220';
   const M = '#010203';
   const STEEL = ['#1e2638', '#3a4660', '#5e6e8c', '#8e9ebc'];
-  const STEEL_HI = '#c8d4e8';
+  const HI = '#c8d4e8';
+  const DARK = '#141826';
+  const RIB = '#3a4660';
+  const TAU = Math.PI * 2;
 
-  function shade(P, cx, cy, rx, ry, cols) {
+  function shade(P, cx, cy, rx, ry, cols, marker) {
+    const mk = marker || M;
     for (let y = 0; y < P.h; y++) {
       for (let x = 0; x < P.w; x++) {
-        if (P.get(x, y) !== M) continue;
+        if (P.get(x, y) !== mk) continue;
         const nx = (x + 0.5 - cx) / rx, ny = (y + 0.5 - cy) / ry;
         const v = -(nx * 0.55 + ny * 0.8) * 0.7 + (1 - Math.min(1, nx * nx + ny * ny)) * 0.35;
         P.set(x, y, v > 0.45 ? cols[3] : v > 0 ? cols[2] : v > -0.42 ? cols[1] : cols[0]);
@@ -2011,108 +2495,207 @@ SH.pix = (() => {
       }
     }
   };
+  /** 다각형 모양으로 지우기 (뜯겨 나간 자리) */
+  const cut = (P, pts) => P.poly(pts, '#ff00fe');
+  const finishCut = (P) => P.replace('#ff00fe', null);
+  /** 쇳조각 들쭉날쭉한 구멍 */
+  function hole(P, cx, cy, r, seed, fire, f) {
+    for (let a = 0; a < 18; a++) {
+      const ang = (a / 18) * TAU;
+      const rr = r * (0.75 + 0.35 * Math.abs(Math.sin(seed * 3.7 + a * 1.9)));
+      P.line(cx, cy, cx + Math.cos(ang) * rr, cy + Math.sin(ang) * rr, DARK);
+    }
+    P.line(cx - r * 0.6, cy - r * 0.2, cx + r * 0.6, cy + r * 0.3, '#c88a1a');
+    P.line(cx - r * 0.3, cy + r * 0.5, cx + r * 0.4, cy - r * 0.5, seed % 2 ? '#e8384f' : '#3a86f0');
+    if (fire) {
+      const fl = f ? ['#ffd84a', '#ff8a2a'] : ['#ff8a2a', '#e8384f'];
+      P.set(cx, cy - 1, fl[0]); P.set(cx + 1, cy - 2 - f, fl[1]); P.set(cx - 1, cy - 1 - f, fl[1]);
+    }
+  }
+  /** 뼈대 (철골) */
+  function girders(P, x0, y0, x1, y1) {
+    for (let x = x0; x <= x1; x += 8) P.line(x, y0, x, y1, RIB);
+    P.line(x0, y0, x1, y0, RIB);
+    P.line(x0, y1, x1, y1, RIB);
+    for (let x = x0; x + 8 <= x1; x += 8) { P.line(x, y0, x + 8, y1, '#2a3248'); }
+  }
 
   /* =========================================================
    * 몸통
    * ========================================================= */
   SH.pix.paint('titan', 156, 96, 8, (P, f) => {
     const look = f >> 1, blink = f & 1;
-    const red = look === 3;
-    const CX = 78, CY = 52;
+    const CX = 78, CY = 48;
+    const fireCols = blink ? ['#fff4a8', '#ffd84a', '#ff8a2a'] : ['#ffd84a', '#ff8a2a', '#e8384f'];
 
-    // 뒤쪽 엔진 불꽃 (위)
-    for (const ex of [50, 78, 106]) {
-      const len = 5 + blink * 3 + (ex === 78 ? 2 : 0);
+    // 뒤 엔진 불꽃 (위쪽)
+    const red = look === 3;
+    for (const [ex, on] of [[CX - 26, look < 3], [CX, true], [CX + 26, look < 2]]) {
+      if (!on) continue;
+      const len = 4 + blink * 3;
       for (let i = 0; i < len; i++) {
         const w = i < 2 ? 3 : i < len - 2 ? 2 : 1;
-        P.rect(ex - Math.floor(w / 2), 11 - i, w, 1, red ? (i < 2 ? '#fff4a8' : i < 5 ? '#ff8a2a' : '#e8384f') : i < 2 ? '#ffffff' : i < 5 ? '#8fd4ff' : '#3a86f0');
+        P.rect(ex - Math.floor(w / 2), 7 - i, w, 1, red ? (i < 2 ? '#fff4a8' : '#ff8a2a') : i < 2 ? '#ffffff' : i < 4 ? '#8fd4ff' : '#3a86f0');
       }
     }
-    // 날개 (포탑을 단 양옆)
+
+    // ---- 겉모양 (날개 + 본체) ----
     for (const s of [-1, 1]) {
       const X = (x) => CX + s * x;
-      P.poly([X(30), 30, X(66), 44, X(76), 58, X(70), 72, X(52), 76, X(32), 70], M);
+      P.poly([X(30), 26, X(66), 40, X(76), 54, X(70), 68, X(52), 72, X(32), 66], M);
     }
-    shade(P, CX, 44, 78, 40, STEEL);
-    // 본체
-    P.poly([CX - 40, 18, CX - 18, 10, CX + 18, 10, CX + 40, 18, CX + 48, 40, CX + 44, 66, CX + 28, 82, CX, 90, CX - 28, 82, CX - 44, 66, CX - 48, 40], M);
-    shade(P, CX, 42, 50, 46, STEEL);
+    P.poly([CX - 40, 14, CX - 18, 6, CX + 18, 6, CX + 40, 14, CX + 48, 36, CX + 44, 62, CX + 28, 78, CX, 86, CX - 28, 78, CX - 44, 62, CX - 48, 36], M);
+    // 뜯겨 나간 날개
+    if (look >= 2) cut(P, [CX - 80, 30, CX - 58, 40, CX - 62, 50, CX - 56, 58, CX - 68, 72, CX - 80, 72]);
+    if (look >= 3) cut(P, [CX + 80, 50, CX + 66, 56, CX + 70, 62, CX + 60, 74, CX + 80, 74]);
+    finishCut(P);
+    shade(P, CX, 40, 78, 44, STEEL);
+
     // 엔진 받침
-    for (const ex of [50, 78, 106]) { P.rect(ex - 3, 11, 7, 5, '#2a3248'); P.rect(ex - 2, 12, 5, 1, '#5e6e8c'); }
-    // 판 이음새
-    for (const [x0, y0, x1, y1] of [[CX - 40, 18, CX - 30, 60], [CX + 40, 18, CX + 30, 60], [CX - 30, 60, CX, 74], [CX + 30, 60, CX, 74], [CX - 48, 40, CX - 30, 40], [CX + 48, 40, CX + 30, 40]]) P.line(x0, y0, x1, y1, STEEL[0]);
+    for (const ex of [CX - 26, CX, CX + 26]) { P.rect(ex - 3, 7, 7, 5, '#2a3248'); P.rect(ex - 2, 8, 5, 1, '#5e6e8c'); }
+    // 판 이음새 · 리벳
+    for (const [x0, y0, x1, y1] of [[CX - 40, 14, CX - 30, 56], [CX + 40, 14, CX + 30, 56], [CX - 48, 36, CX - 30, 36], [CX + 48, 36, CX + 30, 36]]) P.line(x0, y0, x1, y1, STEEL[0]);
     for (const s of [-1, 1]) {
-      P.line(CX + s * 32, 36, CX + s * 64, 50, STEEL[0]);
-      P.line(CX + s * 40, 66, CX + s * 62, 70, STEEL[0]);
-      // 리벳
-      for (const [rx, ry] of [[36, 24], [44, 30], [24, 78], [56, 64], [70, 60], [40, 56]]) P.set(CX + s * rx, ry, STEEL_HI);
+      P.line(CX + s * 32, 32, CX + s * 64, 46, STEEL[0]);
+      for (const [rx, ry] of [[36, 20], [44, 26], [56, 60], [70, 56], [40, 52]]) if (P.get(CX + s * rx, ry)) P.set(CX + s * rx, ry, HI);
     }
-    // 앞쪽 경고 줄무늬
-    for (let x = CX - 26; x <= CX + 26; x++) {
-      const y = 82 + Math.round(Math.abs(x - CX) * -0.28) + 4;
-      const c = Math.floor((x + 200) / 3) % 2 ? '#ffd84a' : '#1b1230';
-      P.set(x, y, c);
-      P.set(x, y - 1, c);
-    }
-    // 함교 (위 가운데)
-    P.rect(CX - 10, 20, 21, 12, '#2a3248');
-    P.rect(CX - 9, 21, 19, 2, '#5e6e8c');
-    for (let i = 0; i < 4; i++) P.rect(CX - 8 + i * 5, 25, 3, 3, (i + blink) % 4 === 0 ? '#fff4a8' : red ? '#ff5a5a' : '#8fd4ff');
-    // 옆 발사구 (sides)
-    for (const s of [-1, 1]) {
-      const vx = CX + s * 24, vy = 69;
-      P.rect(vx - 3, vy - 3, 7, 7, '#1e2638');
-      P.rect(vx - 2, vy - 2, 5, 5, red ? (blink ? '#ff5a3a' : '#c4202e') : blink ? '#ffd84a' : '#ff8a2a');
-      P.rect(vx - 1, vy - 1, 3, 3, red ? '#ffb0a0' : '#fff4a8');
-    }
-    // 포탑 자리
-    for (const s of [-1, 1]) {
-      ring(P, CX + s * 48, 61, 9.5, 12.5, '#1e2638');
-      P.circle(CX + s * 48, 61, 9.5, '#2a3248');
-    }
-    // 코어
-    ring(P, CX, CY, 15, 19, '#1e2638');
-    ring(P, CX, CY, 17.5, 19, '#5e6e8c');
+
+    // ---- 앞 장갑 / 주포 칸 ----
     if (look === 0) {
-      // 닫힌 방어 덮개
-      P.circle(CX, CY, 15, '#3a4660');
-      for (let y = CY - 15; y <= CY + 15; y++) for (let x = CX - 15; x <= CX + 15; x++) {
+      // 앞 장갑판 + 닫힌 주포 덮개
+      P.poly([CX - 26, 64, CX + 26, 64, CX + 22, 80, CX, 86, CX - 22, 80], '#3a4660');
+      P.poly([CX - 26, 64, CX + 26, 64, CX + 24, 68, CX - 24, 68], '#5e6e8c');
+      P.rect(CX - 9, 70, 19, 9, '#1e2638');
+      for (let x = CX - 8; x <= CX + 9; x++) P.set(x, 74, Math.floor((x + 300) / 2) % 2 ? '#ffd84a' : '#1e2638');
+      P.rect(CX - 1, 70, 2, 9, '#5e6e8c');
+      // 경고 줄무늬
+      for (let x = CX - 22; x <= CX + 22; x++) {
+        const y = 80 + Math.round(-Math.abs(x - CX) * 0.25) + 2;
+        const c = Math.floor((x + 300) / 3) % 2 ? '#ffd84a' : '#1b1230';
+        P.set(x, y, c); P.set(x, y - 1, c);
+      }
+    } else {
+      // 앞 장갑이 떨어져 나가 들쭉날쭉한 가장자리 + 안쪽 뼈대 + 주포 칸
+      const edge = [CX - 30, 60, CX - 24, 66, CX - 27, 72, CX - 18, 76, CX - 20, 82, CX - 8, 84, CX, 88, CX + 9, 83, CX + 19, 84, CX + 18, 76, CX + 27, 71, CX + 24, 65, CX + 30, 60];
+      P.poly(edge, DARK);
+      girders(P, CX - 22, 64, CX + 22, 80);
+      P.rect(CX - 10, 68, 21, 14, '#0a0d18');
+      ring(P, CX, 74, 7, 9, '#2a3248');
+      // 떨어진 장갑 잔해 자국
+      for (const [x, y] of [[CX - 30, 60], [CX + 30, 60], [CX - 20, 82], [CX + 19, 84]]) { P.set(x, y, HI); P.set(x + 1, y + 1, '#5e6e8c'); }
+      // 그을음
+      for (const [x, y] of [[CX - 34, 58], [CX + 33, 57], [CX - 12, 60], [CX + 14, 61]]) if (P.get(x, y)) { P.set(x, y, STEEL[0]); P.set(x + 1, y, STEEL[0]); }
+    }
+
+    // ---- 함교 · 신호기 ----
+    P.rect(CX - 10, 16, 21, 10, '#2a3248');
+    P.rect(CX - 9, 17, 19, 2, '#5e6e8c');
+    for (let i = 0; i < 4; i++) P.rect(CX - 8 + i * 5, 20, 3, 3, (i + blink) % 4 === 0 ? '#fff4a8' : red ? '#ff5a5a' : '#8fd4ff');
+    P.rect(CX - 1, 9, 3, 8, '#5e6e8c');
+    P.rect(CX - 3, 11, 7, 2, '#3a4660');
+
+    // ---- 포탑 자리 ----
+    for (const s of [-1, 1]) {
+      const tx = CX + s * 50, ty = 60;
+      if (look === 0) {
+        ring(P, tx, ty, 9.5, 12.5, '#1e2638');
+        P.circle(tx, ty, 9.5, '#2a3248');
+      } else if (!(look >= 2 && s < 0)) {
+        hole(P, tx, ty, 8, s + 3, true, blink);
+        P.line(tx - 9, ty - 4, tx - 4, ty - 9, HI);
+        P.line(tx + 6, ty + 5, tx + 10, ty + 2, '#5e6e8c');
+      }
+    }
+
+    // ---- 플라스마 발사구 / 배기구 ----
+    for (const s of [-1, 1]) {
+      const ex = CX + s * 28, ey = 70;
+      const vx = CX + s * 40, vy = 38;
+      if (look <= 1) {
+        P.circle(ex, ey, 5, '#1e2638');
+        P.circle(ex, ey, 3.6, blink ? '#c9a8ff' : '#8850e0');
+        P.set(ex - 1, ey - 1, '#ffffff');
+        P.rect(vx - 5, vy - 3, 11, 7, '#1e2638');
+        for (let i = 0; i < 4; i++) P.rect(vx - 4, vy - 2 + i * 2 - (i > 1 ? 1 : 0), 9, 1, '#5e6e8c');
+      } else {
+        if (!(look >= 2 && s < 0 && ex < CX - 56)) hole(P, ex, ey, 5, s + 7, true, blink);
+        hole(P, vx, vy, 5, s + 11, look >= 3, blink);
+      }
+    }
+
+    // ---- 등 뒤 격납고 (미사일 포드 자리) ----
+    for (const s of [-1, 1]) {
+      const px = CX + s * 18, py = 24;
+      if (look <= 1) {
+        P.rect(px - 7, py - 5, 15, 11, '#3a4660');
+        P.rect(px - 7, py - 5, 15, 1, '#5e6e8c');
+        P.line(px - 7, py, px + 7, py, '#1e2638');
+      } else {
+        P.rect(px - 8, py - 6, 17, 13, DARK);
+        P.rect(px - 9, py - 7, 3, 2, '#5e6e8c'); // 날아간 뚜껑 경첩
+        P.rect(px + 7, py - 7, 3, 2, '#5e6e8c');
+      }
+    }
+
+    // ---- 내부 노출 · 폭주: 구멍, 배관, 뼈대 ----
+    if (look >= 2) {
+      for (const [hx, hy, r, sd] of [[CX - 36, 28, 5, 1], [CX + 30, 22, 4, 2], [CX + 42, 50, 5, 3], [CX - 14, 54, 3.5, 4]]) hole(P, hx, hy, r, sd, true, blink);
+      // 뜯긴 날개 끝의 철골
+      girders(P, CX - 60, 42, CX - 50, 60);
+      P.line(CX - 58, 40, CX - 66, 46, HI);
+    }
+    if (look >= 3) {
+      // 넓게 벗겨진 판 → 철골 사이로 바닥이 보임
+      for (const [x0, y0, x1, y1] of [[CX - 44, 30, CX - 30, 46], [CX + 28, 28, CX + 44, 44], [CX - 24, 34, CX - 14, 44]]) {
+        P.rect(x0, y0, x1 - x0, y1 - y0, '#ff00fe');
+        finishCut(P);
+        girders(P, x0, y0, x1, y1);
+      }
+      girders(P, CX + 56, 54, CX + 64, 66);
+      for (const [x, y] of [[CX - 40, 44], [CX + 36, 30], [CX + 60, 52], [CX - 20, 70]]) {
+        P.set(x, y, fireCols[0]); P.set(x, y - 1, fireCols[1]); P.set(x + 1, y - 2 - blink, fireCols[2]);
+      }
+    }
+
+    // ---- 코어 ----
+    ring(P, CX, CY, 14, 18, '#1e2638');
+    ring(P, CX, CY, 16.5, 18, '#5e6e8c');
+    if (look === 0) {
+      P.circle(CX, CY, 14, '#3a4660');
+      for (let y = CY - 14; y <= CY + 14; y++) for (let x = CX - 14; x <= CX + 14; x++) {
         if (P.get(x, y) !== '#3a4660') continue;
         if (Math.abs(x - CX) <= 1) P.set(x, y, '#1e2638');
-        else if (((x - y + 400) >> 2) % 2 === 0 && Math.hypot(x - CX, y - CY) > 11) P.set(x, y, '#ffd84a');
+        else if (((x - y + 400) >> 2) % 2 === 0 && Math.hypot(x - CX, y - CY) > 10) P.set(x, y, '#ffd84a');
         else if (x < CX && y < CY) P.set(x, y, '#5e6e8c');
       }
       P.rect(CX - 3, CY - 2, 7, 5, '#1e2638');
       P.rect(CX - 2, CY - 1, 5, 3, blink ? '#e8384f' : '#8e1c3a');
     } else {
       const cols = look === 1 ? ['#1c3f9a', '#3a86f0', '#8fd4ff', '#ffffff'] : look === 2 ? ['#b8501c', '#ff8a2a', '#ffd84a', '#ffffff'] : ['#8e1c3a', '#e8384f', '#ff9a8a', '#ffffff'];
-      const r = 14 + (blink ? 1 : 0);
+      const r = 13 + blink;
       P.circle(CX, CY, r, cols[0]);
       P.circle(CX - 1, CY - 1, r - 3, cols[1]);
       P.circle(CX - 2, CY - 2, r - 7, cols[2]);
-      P.circle(CX - 3, CY - 3, 2.5, cols[3]);
-      // 열린 덮개 조각
-      for (const s of [-1, 1]) P.rect(CX + s * 19 - (s < 0 ? 4 : 0), CY - 6, 5, 12, '#3a4660');
-    }
-    // 부서진 모습
-    if (look >= 2) {
-      for (const [hx, hy, r] of [[CX - 34, 30, 4], [CX + 28, 26, 3], [CX + 40, 50, 3.5], [CX - 20, 74, 3], [CX + 58, 66, 2.6], [CX - 62, 56, 3]]) {
-        P.circle(hx, hy, r, '#0e1220');
-        P.circle(hx - 0.5, hy - 0.5, r - 1.6, red ? '#e8384f' : '#ff6a1a');
-        P.set(hx + r - 1, hy - r + 1, STEEL_HI);
+      P.circle(CX - 3, CY - 3, 2.4, cols[3]);
+      if (look === 3) {
+        // 코어에서 뻗어 나가는 붉은 금
+        for (let a = 0; a < 6; a++) {
+          const ang = (a / 6) * TAU + 0.4;
+          P.line(CX + Math.cos(ang) * 17, CY + Math.sin(ang) * 17, CX + Math.cos(ang) * (24 + (a % 2) * 6), CY + Math.sin(ang) * (24 + (a % 2) * 6), blink ? '#ff5a3a' : '#c4202e');
+        }
       }
-      for (const [x0, y0, x1, y1] of [[CX - 38, 34, CX - 30, 42], [CX + 26, 30, CX + 34, 22]]) P.line(x0, y0, x1, y1, '#0e1220');
-      if (blink) for (const [sx, sy] of [[CX - 33, 26], [CX + 41, 46], [CX - 18, 70]]) { P.set(sx, sy, '#ffffff'); P.set(sx + 1, sy - 1, '#fff4a8'); }
     }
-    // 폭주 경고등
+
+    // ---- 불빛 ----
     if (red) {
-      for (const [lx, ly] of [[CX - 44, 42], [CX + 44, 42], [CX - 26, 16], [CX + 26, 16], [CX, 88]]) {
+      for (const [lx, ly] of [[CX - 44, 38], [CX + 44, 38], [CX - 26, 12], [CX + 26, 12]]) {
+        if (!P.get(lx, ly)) continue;
         P.rect(lx - 1, ly - 1, 3, 3, blink ? '#ff3030' : '#6a0a14');
         if (blink) P.set(lx, ly, '#ffffff');
       }
     } else {
-      P.set(CX - 46, 42, blink ? '#45c44a' : '#23703a');
-      P.set(CX + 46, 42, blink ? '#e8384f' : '#8e1c3a');
+      if (P.get(CX - 46, 38)) P.set(CX - 46, 38, blink ? '#45c44a' : '#23703a');
+      P.set(CX + 46, 38, blink ? '#e8384f' : '#8e1c3a');
     }
     P.outline(k);
   });
@@ -2120,25 +2703,30 @@ SH.pix = (() => {
   /* =========================================================
    * 포탑 (프레임 0 = 오른쪽 아래 끝 … 8 = 왼쪽 아래 끝)
    * ========================================================= */
-  SH.TURRET_FRAMES = 9;
-  SH.turretFrame = (ang) => Math.max(0, Math.min(8, Math.round(((ang - 0.25) / (Math.PI - 0.5)) * 8)));
+  const angFrame = (ang, lo, hi, n) => Math.max(0, Math.min(n - 1, Math.round(((ang - lo) / (hi - lo)) * (n - 1))));
+  SH.turretFrame = (ang) => angFrame(ang, 0.25, Math.PI - 0.25, 9);
+  SH.cannonFrame = (ang) => angFrame(ang, 0.2, Math.PI - 0.2, 13);
+  SH.wallgunFrame = (ang) => ((Math.round(ang / (TAU / 16)) % 16) + 16) % 16;
+
+  function barrel(P, cx, cy, ang, len, half, cols) {
+    const ux = Math.cos(ang), uy = Math.sin(ang), px = -uy, py = ux;
+    P.poly([cx + px * half, cy + py * half, cx + ux * len + px * half, cy + uy * len + py * half, cx + ux * len - px * half, cy + uy * len - py * half, cx - px * half, cy - py * half], cols[0]);
+    P.poly([cx + px * half, cy + py * half, cx + ux * len + px * half, cy + uy * len + py * half, cx + ux * len + px * (half - 2), cy + uy * len + py * (half - 2), cx + px * (half - 2), cy + py * (half - 2)], cols[1]);
+    const m = half + 1;
+    P.poly([cx + ux * (len - 3) + px * m, cy + uy * (len - 3) + py * m, cx + ux * (len + 1) + px * m, cy + uy * (len + 1) + py * m, cx + ux * (len + 1) - px * m, cy + uy * (len + 1) - py * m, cx + ux * (len - 3) - px * m, cy + uy * (len - 3) - py * m], cols[2]);
+  }
+
   SH.pix.paint('turret', 30, 30, 9, (P, f) => {
     const ang = 0.25 + (f / 8) * (Math.PI - 0.5);
     const cx = 15, cy = 14;
-    const ux = Math.cos(ang), uy = Math.sin(ang);
-    // 포신 (굵게)
-    const px = -uy, py = ux;
-    P.poly([cx + px * 3, cy + py * 3, cx + ux * 13 + px * 3, cy + uy * 13 + py * 3, cx + ux * 13 - px * 3, cy + uy * 13 - py * 3, cx - px * 3, cy - py * 3], '#3a4660');
-    P.poly([cx + px * 3, cy + py * 3, cx + ux * 13 + px * 3, cy + uy * 13 + py * 3, cx + ux * 13 + px * 1, cy + uy * 13 + py * 1, cx + px * 1, cy + py * 1], '#8e9ebc');
-    P.poly([cx + ux * 12 + px * 4, cy + uy * 12 + py * 4, cx + ux * 15.5 + px * 4, cy + uy * 15.5 + py * 4, cx + ux * 15.5 - px * 4, cy + uy * 15.5 - py * 4, cx + ux * 12 - px * 4, cy + uy * 12 - py * 4], '#1e2638');
-    P.set(cx + ux * 14, cy + uy * 14, '#ff8a2a');
-    // 받침 (돔)
+    barrel(P, cx, cy, ang, 13, 3, ['#3a4660', '#8e9ebc', '#1e2638']);
+    P.set(cx + Math.cos(ang) * 14, cy + Math.sin(ang) * 14, '#ff8a2a');
     P.circle(cx, cy, 8.6, M);
     shade(P, cx, cy, 8.6, 8.6, STEEL);
     P.circle(cx, cy, 3.4, '#1e2638');
     P.circle(cx - 0.5, cy - 0.5, 2, '#e8384f');
     P.set(cx - 1, cy - 1, '#ffb0a0');
-    P.set(cx - 5, cy - 4, STEEL_HI); P.set(cx - 4, cy - 5, STEEL_HI);
+    P.set(cx - 5, cy - 4, HI); P.set(cx - 4, cy - 5, HI);
     P.outline(k);
   });
 
@@ -2153,36 +2741,82 @@ SH.pix = (() => {
     P.outline(k);
   });
 
-  /* =========================================================
-   * 적 미사일
-   * ========================================================= */
+  /* ---------------- 주포 ---------------- */
+  SH.pix.paint('cannon', 40, 40, 13, (P, f) => {
+    const ang = 0.2 + (f / 12) * (Math.PI - 0.4);
+    const cx = 20, cy = 17;
+    barrel(P, cx, cy, ang, 17, 4, ['#3a4660', '#8e9ebc', '#1e2638']);
+    // 코일 줄무늬 (충전 장치)
+    for (const t of [7, 10, 13]) {
+      const x = cx + Math.cos(ang) * t, y = cy + Math.sin(ang) * t;
+      P.line(x - Math.sin(ang) * 4, y + Math.cos(ang) * 4, x + Math.sin(ang) * 4, y - Math.cos(ang) * 4, '#c88a1a');
+    }
+    P.circle(cx + Math.cos(ang) * 17.5, cy + Math.sin(ang) * 17.5, 2, '#0a0d18');
+    // 받침
+    P.poly([cx - 9, cy - 4, cx - 4, cy - 9, cx + 4, cy - 9, cx + 9, cy - 4, cx + 9, cy + 4, cx + 4, cy + 9, cx - 4, cy + 9, cx - 9, cy + 4], M);
+    shade(P, cx, cy, 9, 9, STEEL);
+    P.circle(cx, cy, 4, '#1e2638');
+    P.circle(cx - 0.5, cy - 0.5, 2.6, '#3a86f0');
+    P.set(cx - 1, cy - 1, '#e0f7ff');
+    P.outline(k);
+  });
+
+  /* ---------------- 미사일 포드 (뚜껑 열림 0~3) ---------------- */
+  SH.pix.paint('pod', 22, 18, 4, (P, f) => {
+    P.rect(2, 2, 18, 14, '#2a3248');
+    P.rect(3, 3, 16, 12, '#141826');
+    // 발사관 4개
+    for (const [x, y] of [[5, 5], [12, 5], [5, 10], [12, 10]]) {
+      P.rect(x, y, 5, 4, '#3a4660');
+      P.rect(x + 1, y + 1, 3, 2, f >= 2 ? '#e8384f' : '#5a1020');
+      if (f >= 3) P.set(x + 2, y + 1, '#ffffff');
+    }
+    // 미닫이 뚜껑
+    const gap = [0, 3, 6, 8][f];
+    if (gap < 8) {
+      P.rect(2, 2, 9 - gap, 14, '#5e6e8c');
+      P.rect(11 + gap, 2, 9 - gap, 14, '#5e6e8c');
+      P.rect(2, 2, 9 - gap, 1, '#8e9ebc');
+      P.rect(11 + gap, 2, 9 - gap, 1, '#8e9ebc');
+      if (gap === 0) for (let y = 3; y < 16; y += 3) P.set(10, y, '#ffd84a');
+    }
+    P.outline(k);
+  });
+
+  /* ---------------- 벽 레이저포 (16방향) ---------------- */
+  SH.pix.paint('wallgun', 32, 32, 16, (P, f) => {
+    const ang = (f / 16) * TAU;
+    const cx = 16, cy = 16;
+    barrel(P, cx, cy, ang, 13, 3, ['#4a3a60', '#c9a8ff', '#1e2638']);
+    P.set(cx + Math.cos(ang) * 14, cy + Math.sin(ang) * 14, '#ff3b4e');
+    // 몸체 (육각 덩어리)
+    P.poly([cx - 7, cy - 3, cx - 3, cy - 7, cx + 3, cy - 7, cx + 7, cy - 3, cx + 7, cy + 3, cx + 3, cy + 7, cx - 3, cy + 7, cx - 7, cy + 3], M);
+    shade(P, cx, cy, 7, 7, ['#2a1a40', '#44257e', '#6a4aa0', '#9a86c8']);
+    P.circle(cx, cy, 2.6, '#1e1030');
+    P.set(cx, cy, '#ff3b4e');
+    P.set(cx - 4, cy - 4, '#d8c8ff');
+    P.outline(k);
+  });
+
+  /* ---------------- 쇳조각 ---------------- */
+  SH.pix.sprite('scrap', {
+    palette: { k, a: '#8e9ebc', b: '#5e6e8c', c: '#3a4660' },
+    frames: [
+      ['.kkk..', 'kaabk.', 'kabbck', '.kbcck', '..kkk.', '......'],
+      ['..kk..', '.kabk.', 'kaabck', 'kbbcck', '.kcck.', '..kk..'],
+      ['......', '.kkk..', 'kcbaak', 'kcbbak', '.kkcbk', '...kk.'],
+      ['..kk..', '.kcck.', 'kcbbak', 'kbaabk', '.kbak.', '..kk..'],
+    ],
+  });
+
+  /* ---------------- 적 미사일 ---------------- */
   const rot90 = (rows) => {
     const n = rows.length, m = rows[0].length, out = [];
     for (let x = 0; x < m; x++) { let s = ''; for (let y = n - 1; y >= 0; y--) s += rows[y][x]; out.push(s); }
     return out;
   };
-  const up = [
-    '....k....',
-    '...krk...',
-    '...kwk...',
-    '...kgk...',
-    '...kgk...',
-    '..kdgdk..',
-    '..kdkdk..',
-    '...kyk...',
-    '....o....',
-  ];
-  const ur = [
-    '.......k.',
-    '......krk',
-    '.....kwk.',
-    '....kgk..',
-    '..kkgk...',
-    '.kdgk....',
-    '..kdk....',
-    '.yk......',
-    'o........',
-  ];
+  const up = ['....k....', '...krk...', '...kwk...', '...kgk...', '...kgk...', '..kdgdk..', '..kdkdk..', '...kyk...', '....o....'];
+  const ur = ['.......k.', '......krk', '.....kwk.', '....kgk..', '..kkgk...', '.kdgk....', '..kdk....', '.yk......', 'o........'];
   const u1 = rot90(up), u2 = rot90(u1), u3 = rot90(u2);
   const d1 = rot90(ur), d2 = rot90(d1), d3 = rot90(d2);
   SH.pix.sprite('emissile', {
@@ -2196,7 +2830,7 @@ SH.pix = (() => {
 'use strict';
 
 /* =========================================================
- * 픽셀 그림 — 효과(폭발·불꽃·연기)와 배경 소품(구름·섬·바위)
+ * 픽셀 그림 — 효과 (폭발 · 불꽃 · 연기)
  * ========================================================= */
 
 (() => {
@@ -2310,58 +2944,6 @@ SH.pix = (() => {
         P.set(x, y, x + y < 8 ? '#9a96b8' : '#5a5680');
       }
     }
-  });
-
-  /* =========================================================
-   * 배경 소품 (대비를 낮게)
-   * ========================================================= */
-  function cloud(P, puffs) {
-    // 그림자 → 몸 → 밝은 윗부분
-    for (const [x, y, r] of puffs) P.circle(x, y + 1.5, r, '#b4d2ee');
-    for (const [x, y, r] of puffs) P.circle(x, y, r, '#e8f4fe');
-    for (const [x, y, r] of puffs) P.circle(x - r * 0.25, y - r * 0.3, r * 0.62, '#ffffff');
-    P.outline('#a4c6e8');
-  }
-  SH.pix.paint('cloud0', 64, 26, 1, (P) => cloud(P, [[12, 15, 8], [24, 11, 10], [38, 10, 11], [50, 14, 8], [30, 17, 7], [57, 18, 5], [6, 19, 4]]));
-  SH.pix.paint('cloud1', 48, 22, 1, (P) => cloud(P, [[10, 13, 7], [21, 9, 8], [33, 10, 8], [41, 15, 5], [24, 15, 6]]));
-  SH.pix.paint('cloud2', 80, 30, 1, (P) => cloud(P, [[10, 19, 7], [22, 14, 10], [37, 11, 12], [52, 13, 11], [65, 17, 8], [73, 21, 5], [44, 20, 8], [28, 21, 7]]));
-  SH.pix.paint('cloud3', 36, 16, 1, (P) => cloud(P, [[8, 9, 5], [16, 6, 6], [25, 7, 6], [31, 10, 3.6], [18, 10, 4]]));
-
-  SH.pix.paint('island', 72, 54, 1, (P) => {
-    // 아랫면 바위
-    P.poly([5, 22, 67, 22, 56, 36, 44, 47, 36, 53, 28, 46, 15, 35], '#9a7e6a');
-    P.poly([36, 22, 67, 22, 56, 36, 44, 47, 36, 53], '#7a6252');
-    for (let y = 24; y < 52; y += 4) for (let x = 12; x < 62; x += 7) if (P.get(x + (y % 8), y) !== null) P.set(x + (y % 8), y, '#5e4a3e');
-    // 윗면 풀
-    P.ellipse(36, 19, 33, 14, '#6cbf58');
-    P.ellipse(32, 16, 26, 10, '#86d46a');
-    P.ellipse(26, 13, 14, 5, '#a2e284');
-    // 나무
-    for (const [x, y, r] of [[14, 16, 5], [21, 10, 6], [52, 14, 6], [59, 20, 4], [45, 24, 4]]) {
-      P.circle(x + 1, y + 2, r, '#3f8a42');
-      P.circle(x, y, r, '#58a852');
-      P.circle(x - r * 0.3, y - r * 0.35, r * 0.5, '#7cc86a');
-    }
-    // 작은 집
-    P.rect(31, 17, 9, 6, '#f4ead8');
-    P.rect(38, 17, 2, 6, '#d8c8b0');
-    P.poly([29.5, 17.5, 35.5, 11, 41.5, 17.5], '#d45a48');
-    P.poly([35.5, 11, 41.5, 17.5, 37, 17.5], '#b04238');
-    P.rect(34, 19, 2, 4, '#8a6a52');
-    P.outline('#4e6e5a');
-  });
-
-  SH.pix.paint('rock', 44, 30, 1, (P) => {
-    // 거품
-    P.ellipse(22, 19, 21, 9.5, '#d8f2ff');
-    for (let y = 9; y < 30; y++) for (let x = 0; x < 44; x++) if (P.get(x, y) === '#d8f2ff' && bay(x, y) < 0.35) P.set(x, y, '#9ccced');
-    P.ellipse(22, 18, 17, 7, '#2a5a8a');
-    // 바위
-    P.poly([6, 18, 10, 9, 18, 4, 28, 5, 36, 11, 38, 18, 30, 22, 14, 22], '#6a6e86');
-    P.poly([10, 9, 18, 4, 28, 5, 24, 10, 14, 12], '#9a9eb4');
-    P.poly([28, 5, 36, 11, 38, 18, 30, 22, 26, 14], '#4e5068');
-    P.set(17, 6, '#c8ccdc'); P.set(18, 6, '#c8ccdc');
-    P.outline('#26304a');
   });
 
 })();
@@ -2592,7 +3174,7 @@ SH.fx = (() => {
     add({ t: 'ring', x, y, r0, r1, life, age: 0, color, thick: thick || 1 });
   }
   function text(x, y, str, color, scale, life) {
-    add({ t: 'text', x, y, str, color: color || '#ffffff', scale: scale || 1, life: life || 1, age: 0, vy: -22 });
+    add({ t: 'text', x, y, x0: x, y0: y, str, color: color || '#ffffff', scale: scale || 1, life: life || 1, age: 0, vy: -22 });
   }
   function explosion(x, y, r, color, big) {
     if (big) {
@@ -2603,6 +3185,13 @@ SH.fx = (() => {
     } else {
       anim('boom', x, y, 22);
       debris(x, y, 7, [color, '#fff4a8', '#ffffff'], 80, 0.45);
+    }
+  }
+  /** 떨어져 나가는 쇳조각 (튀어 올랐다가 떨어지며 돔) */
+  function chunks(x, y, n) {
+    for (let i = 0; i < n; i++) {
+      const a = -Math.PI / 2 + (R() - 0.5) * 2.6, s = 50 + R() * 90;
+      add({ t: 'chunk', x: x + (R() - 0.5) * 50, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, age: 0, life: 1.4 + R() * 0.6, spin: R() * 4, drag: 0.6 });
     }
   }
   function shake(v) { if (state.shakeOn) state.shake = Math.max(state.shake, v); }
@@ -2620,7 +3209,7 @@ SH.fx = (() => {
       case 'partDestroyed':
         explosion(x, y, 14, '#ff8a2a', true);
         for (let i = 0; i < 4; i++) anim('boomBig', x + (R() - 0.5) * 24, y + (R() - 0.5) * 20, 14, i * 0.08);
-        text(x, y - 18, 'TURRET DOWN!', '#ffd84a', 1, 1.4);
+        text(x, y - 18, '포탑 파괴!', '#ffd84a', 1, 1.4);
         flash(0.3, '#fff4c8');
         shake(6);
         return;
@@ -2629,7 +3218,25 @@ SH.fx = (() => {
         debris(x, y, 5, ['#e8384f', '#ffd84a', '#ffffff'], 70, 0.35);
         return;
       case 'laserFire':
-        shake(3);
+        shake(d.big ? 7 : 3);
+        return;
+      case 'muzzle':
+        anim(d.big ? 'boom' : 'hitSpark', x, y, d.big ? 28 : 34);
+        return;
+      case 'gunDown':
+        explosion(x, y, 10, '#c9a8ff', true);
+        text(x, y - 14, '파괴!', '#c9a8ff');
+        shake(4);
+        return;
+      case 'partBreak':
+        explosion(x, y, 10, '#ff8a2a', true);
+        chunks(x, y, 6);
+        shake(5);
+        return;
+      case 'armorFall':
+        chunks(x, y + 20, 18);
+        flash(0.5, '#fff4c8');
+        shake(9);
         return;
       case 'kill':
         explosion(x, y, d.r * K, d.color || '#ffd84a', d.heavy);
@@ -2649,7 +3256,7 @@ SH.fx = (() => {
         shake(10);
         return;
       case 'bossDefeated':
-        text(x, y + 20, 'DESTROYED!', '#ffd84a', 2, 2);
+        text(x, y + 20, '격파!', '#ffd84a', 2, 2);
         return;
       case 'bossPhase':
         ring(x, y, 8, 120, 0.5, '#ff7aa8', 2);
@@ -2671,23 +3278,23 @@ SH.fx = (() => {
       case 'shieldBreak':
         ring(x, y, 8, 55, 0.4, '#8fd4ff', 2);
         debris(x, y, 12, ['#e0f7ff', '#8fd4ff'], 120, 0.4);
-        text(x, y - 16, 'SHIELD BREAK', '#8fd4ff');
+        text(x, y - 16, '방패 깨짐!', '#8fd4ff');
         shake(3);
         return;
       case 'power': {
         const w = SH.WEAPONS[d.weapon];
         ring(x, y, 4, 30, 0.35, w.light, 1);
         if (d.maxed) text(x, y - 14, '+5000', '#ffd84a');
-        else if (d.level >= SH.MAX_POWER) text(x, y - 14, 'POWER MAX!', w.light);
-        else text(x, y - 14, d.changed ? `${WNAME[d.weapon]} LV${d.level}` : 'POWER UP!', w.light);
+        else if (d.level >= SH.MAX_POWER) text(x, y - 14, '파워 최대!', w.light);
+        else text(x, y - 14, d.changed ? `${WNAME[d.weapon]} ${d.level}단계` : '파워 업!', w.light);
         return;
       }
       case 'item':
         ring(x, y, 4, 26, 0.3, '#ffffff', 1);
-        text(x, y - 14, d.kind === 'bomb' ? 'BOMB +1' : 'SHIELD!', d.kind === 'bomb' ? '#ffd84a' : '#8fd4ff');
+        text(x, y - 14, d.kind === 'bomb' ? '폭탄 +1' : '방패!', d.kind === 'bomb' ? '#ffd84a' : '#8fd4ff');
         return;
       case 'extend':
-        text(x, y - 16, '1UP!', '#ff7aa8', 2, 1.4);
+        text(x, y - 16, '비행기 +1', '#ff7aa8', 1, 1.4);
         ring(x, y, 4, 40, 0.5, '#ff7aa8', 2);
         return;
       case 'gem':
@@ -2707,7 +3314,7 @@ SH.fx = (() => {
       default:
     }
   }
-  const WNAME = { spread: 'SPREAD', laser: 'LASER', homing: 'HOMING' };
+  const WNAME = { spread: '확산탄', laser: '레이저', homing: '유도탄' };
 
   /* ---------------- 진행 ---------------- */
   function update(dt) {
@@ -2720,10 +3327,10 @@ SH.fx = (() => {
       const p = parts[i];
       p.age += dt;
       if (p.age >= p.life) continue;
-      if (p.t === 'px') {
+      if (p.t === 'px' || p.t === 'chunk') {
         const k = Math.max(0, 1 - p.drag * dt);
         p.vx *= k;
-        p.vy = p.vy * k + 40 * dt;
+        p.vy = p.vy * k + (p.t === 'chunk' ? 160 : 40) * dt;
         p.x += p.vx * dt;
         p.y += p.vy * dt;
       } else if (p.t === 'text') p.y += p.vy * dt * (p.age < 0.4 ? 1 : 0.2);
@@ -2758,6 +3365,9 @@ SH.fx = (() => {
       const u = p.age / p.life;
       if (p.t === 'anim') {
         SH.pix.draw(ctx, p.name, p.x, p.y, { frame: Math.min(p.n - 1, Math.floor(p.age * p.fps)) });
+      } else if (p.t === 'chunk') {
+        if (u > 0.8 && (Math.floor(p.age * 30) & 1)) continue;
+        SH.pix.draw(ctx, 'scrap', p.x, p.y, { frame: Math.floor(p.age * 10 + p.spin) });
       } else if (p.t === 'px') {
         if (u > 0.7 && (Math.floor(p.age * 30) & 1)) continue; // 꺼질 때 깜빡
         ctx.fillStyle = p.color;
@@ -2768,11 +3378,18 @@ SH.fx = (() => {
         pixelCircle(ctx, p.x, p.y, r, p.color, p.thick);
       }
     }
+  }
+
+  /** 떠오르는 글자는 화면(가로)에 똑바로. map: 세계 픽셀 → 화면 픽셀 */
+  function drawText(ctx, map) {
     for (const p of parts) {
       if (p.t !== 'text' || p.age < 0) continue;
       const u = p.age / p.life;
       if (u > 0.75 && (Math.floor(p.age * 20) & 1)) continue;
-      SH.pix.text(ctx, p.str, p.x, p.y, { color: p.color, align: 'center', scale: p.scale });
+      // 세계에서 위로 떠오르던 값(vy)을 화면에서도 위로: 처음 위치에서 떠오른 만큼 화면 y 를 줄임
+      const [X, Y] = map(p.x0 != null ? p.x0 : p.x, p.y0 != null ? p.y0 : p.y);
+      const rise = p.y0 != null ? p.y0 - p.y : 0;
+      SH.pix.text(ctx, p.str, X, Y - rise, { color: p.color, align: 'center', scale: p.scale });
     }
   }
 
@@ -2782,7 +3399,7 @@ SH.fx = (() => {
     state.flash = 0;
   }
 
-  return { onEvent, update, draw, text, ring, anim, debris, pixelCircle, state, clear, WNAME };
+  return { onEvent, update, draw, drawText, text, ring, anim, debris, chunks, pixelCircle, state, clear, WNAME };
 })();
 
 </script>
@@ -2790,21 +3407,30 @@ SH.fx = (() => {
 'use strict';
 
 /* =========================================================
- * 하늘 사냥꾼 — 픽셀 화면 그리기
+ * 하늘 사냥꾼 — 픽셀 화면 그리기 (가로 480×270)
  *
- * 모든 것을 225×400 픽셀 버퍼(SH.render.ctx)에 그린 다음 present() 로
- * 번짐 없이(최근접) 화면 캔버스에 크게 늘려 옮깁니다.
- * 게임 좌표(450×800)는 절반으로 줄여 픽셀 좌표가 됩니다.
+ * 모든 것을 480×270 픽셀 버퍼(SH.render.ctx)에 그린 다음 present() 로
+ * 번짐 없이(최근접) 화면 캔버스에 크게 늘려 옮깁니다. (1080p 화면에서 꼭 4배)
+ * 게임 좌표(960×540)는 절반으로 줄여 픽셀 좌표가 됩니다.
+ * 보스는 위, 나는 아래에서 위로 쏘는 그대로이고, 화면만 가로로 넓습니다.
+ *
+ * 무대: 기계 요새 내부 (철판 바닥 · 양쪽 벽의 배관·조명·포문)
+ * 보스: 몸통 그림 위에 무기(포탑·주포·포드)를 따로 그려 움직이고,
+ *       조준 중에는 조준선, 충전 중에는 빛이 모이는 모습, 쏘면 총구 섬광이 보입니다.
  * ========================================================= */
 
 SH.render = (() => {
-  const PW = 225, PH = 400, K = 0.5;
+  const PW = 480, PH = 270, K = 0.5;
+  const TH = 400; // 바닥 무늬 한 장의 높이 (위아래가 이어짐)
+  const WALL = 18; // 양쪽 벽 두께(픽셀)
+  const MENU_Y = Math.round((PH - 225) / 2); // 메뉴는 가운데 225 높이 기준으로 그림
   let view = null, vctx = null, buf = null, ctx = null;
-  const bg = { kind: null, props: [], tiles: null, scroll: 0, embers: [], rain: [], bolt: 0, boltX: 0, nextBolt: 5, fade: 0, t: 0 };
+  const bg = { kind: null, tile: null, scroll: 0, t: 0, fade: 0, girders: [] };
   let notice = null;
   let bossLag = 1;
-  const title = { t: 0, mobs: [] };
+  const title = { t: 0 };
   const R = Math.random;
+  const TAU = Math.PI * 2;
   const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
   const bayer = (x, y) => BAYER[(y & 3) * 4 + (x & 3)];
 
@@ -2830,6 +3456,14 @@ SH.render = (() => {
     vctx.drawImage(buf, 0, 0, view.width, view.height);
   }
 
+  /** 메뉴의 위치 이동을 무시하고 화면 전체 기준으로 그리기 */
+  function absolute(fn) {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    fn();
+    ctx.restore();
+  }
+
   /* ---------------- 픽셀 도우미 ---------------- */
   function canvasFrom(w, h, fn) {
     const c = document.createElement('canvas');
@@ -2843,212 +3477,172 @@ SH.render = (() => {
   }
   const hex = (h) => SH.pix.rgba(h);
   function put(d, w, x, y, c) {
+    if (x < 0 || x >= w || y < 0) return;
     const o = (y * w + x) * 4;
     d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = c[3];
   }
-  /** 0..1 값을 색 단계로 (단계 사이를 바이어 디더링) */
-  function ramp(cols, v, x, y) {
-    const n = cols.length - 1;
-    const f = Math.max(0, Math.min(0.9999, v)) * n;
-    const i = Math.floor(f);
-    return bayer(x, y) < f - i ? cols[Math.min(n, i + 1)] : cols[i];
-  }
-  const TAU = Math.PI * 2;
-
-  /* =========================================================
-   * 배경
-   * ========================================================= */
-  function skyTile() {
-    const cols = ['#3672d8', '#4589e6', '#5aa0ef', '#71b6f5', '#8ccaf8', '#a9dcfa', '#c8ecfc'].map(hex);
-    return canvasFrom(PW, PH, (d, w, h) => {
-      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) put(d, w, x, y, ramp(cols, y / h, x, y));
-    });
-  }
-
-  function seaTile() {
-    const base = ['#0f3468', '#14457f', '#1a5696', '#2167aa'].map(hex);
-    const crest = hex('#7fbcec'), white = hex('#d8f2ff'), shadow = hex('#0f3468');
-    return canvasFrom(PW, PH, (d, w, h) => {
-      for (let y = 0; y < h; y++) {
-        const v = (y / h) * TAU;
-        for (let x = 0; x < w; x++) {
-          const n = 0.5 + 0.22 * Math.sin(x * 0.045 + v * 2) + 0.16 * Math.sin(x * 0.11 - v * 3 + 1.3) + 0.1 * Math.sin(x * 0.23 + v * 5);
-          put(d, w, x, y, ramp(base, n, x, y));
-        }
-      }
-      // 물결
-      for (let i = 0; i < 150; i++) {
-        const x0 = Math.floor(R() * w), y0 = Math.floor(R() * h), len = 3 + Math.floor(R() * 5);
-        for (let k = 0; k < len; k++) {
-          const x = (x0 + k) % w;
-          const yy = (y0 + (k === 0 || k === len - 1 ? 1 : 0)) % h;
-          put(d, w, x, yy, k === 1 ? white : crest);
-          put(d, w, x, (yy + 1) % h, shadow);
-        }
-      }
-    });
-  }
-
-  function lavaTiles() {
-    const rock = ['#170810', '#221018', '#2e1620', '#3a1e26'].map(hex);
-    const glow = hex('#4a1410');
-    const L = ['#8a1c0e', '#d23a16', '#ff6a1a', '#ffa62a', '#ffe58a'].map(hex);
-    const rivers = [[42, 18, 1, 0.3, 8], [132, 26, 2, 2.1, 10], [200, 14, 1, 4.2, 6]];
-    const make = (shift) => canvasFrom(PW, PH, (d, w, h) => {
-      for (let y = 0; y < h; y++) {
-        const v = (y / h) * TAU;
-        for (let x = 0; x < w; x++) {
-          const n = 0.45 + 0.2 * Math.sin(x * 0.07 + v * 3) + 0.18 * Math.sin(x * 0.19 - v * 4 + 2) + 0.12 * Math.sin(x * 0.41 + v * 7);
-          put(d, w, x, y, ramp(rock, n, x, y));
-        }
-        for (const [x0, amp, k, ph, wd] of rivers) {
-          const cx = x0 + Math.sin(v * k + ph) * amp + Math.sin(v * (k + 2)) * 5;
-          const half = wd / 2 + Math.sin(v * 5 + ph) * 1.5;
-          for (let x = Math.floor(cx - half - 4); x <= Math.ceil(cx + half + 4); x++) {
-            if (x < 0 || x >= w) continue;
-            const dist = Math.abs(x + 0.5 - cx) / half;
-            if (dist > 1) {
-              if (dist < 1 + 4 / half && bayer(x, y) < 0.55) put(d, w, x, y, glow);
-              continue;
-            }
-            const lvl = Math.min(4, Math.floor((1 - dist) * 5 + ((shift + y * 0.25) % 1 > 0.5 && dist < 0.4 ? 1 : 0)));
-            put(d, w, x, y, L[Math.max(0, lvl)]);
-          }
-        }
-      }
-      // 갈라진 틈
-      const crack = hex('#ff5a1a'), crackD = hex('#6a1a10');
-      const rnd = SH.rng(99);
-      for (let i = 0; i < 30; i++) {
-        let x = rnd() * w, y = rnd() * h;
-        for (let s = 0; s < 9; s++) {
-          const xi = Math.floor(x) % w, yi = Math.floor(y) % h;
-          put(d, w, (xi + w) % w, yi, s % 3 === 1 ? crack : crackD);
-          x += (rnd() - 0.5) * 3;
-          y += 1 + rnd();
-        }
-      }
-    });
-    return [make(0), make(0.5)];
-  }
-
-  function overlay(fn, color) {
+  function overlay(w, h, fn, color) {
     const c = hex(color);
-    return canvasFrom(PW, PH, (d, w, h) => {
+    return canvasFrom(w, h, (d) => {
       for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (bayer(x, y) < fn(x, y)) put(d, w, x, y, c);
     });
   }
-  let stormOverlay = null, lavaOverlay = null, dimOverlay = null, dimLight = null;
+  let dimOverlay = null, dimLight = null, vignette = null;
   function getOverlays() {
-    if (!stormOverlay) {
-      stormOverlay = overlay((x, y) => Math.max(0, 0.7 - y / 140), '#081430');
-      lavaOverlay = overlay((x, y) => {
-        const dx = (x - PW / 2) / (PW / 2), dy = (y - PH * 0.55) / (PH * 0.6);
-        return Math.max(0, Math.hypot(dx, dy) - 0.75) * 1.6;
-      }, '#0a0306');
-      dimOverlay = overlay(() => 0.62, '#0c0820');
-      dimLight = overlay(() => 0.4, '#0c0820');
-    }
+    if (dimOverlay) return;
+    dimOverlay = overlay(PW, PH, () => 0.62, '#0c0820');
+    dimLight = overlay(PW, PH, () => 0.4, '#0c0820');
+    vignette = overlay(PW, PH, (x, y) => {
+      const dx = (x - PW / 2) / (PW * 0.55), dy = (y - PH * 0.55) / (PH * 0.62);
+      return Math.max(0, Math.hypot(dx, dy) - 0.82) * 1.4;
+    }, '#05060c');
   }
 
-  function prop(name, layer, sp, top) {
-    const inf = SH.pix.info(name) || { w: 40, h: 20 };
-    return { name, layer, sp, x: 10 + R() * (PW - 20), y: top ? -inf.h - R() * 160 : R() * PH, h: inf.h };
+  /* =========================================================
+   * 무대: 기계 요새 내부 (위아래가 이어지는 바닥·벽 한 장, 480×400)
+   * ========================================================= */
+  function hangarTile() {
+    const C = {
+      plate: hex('#2a3040'), plate2: hex('#30374a'), seam: hex('#161a26'), seamHi: hex('#3e465c'), rivet: hex('#566078'),
+      grateHi: hex('#323a50'), glow: hex('#3a1a18'), glow2: hex('#5a2418'),
+      line: hex('#8a7a2a'), trench: hex('#10131c'), cable1: hex('#a02a3a'), cable2: hex('#2a5aa0'), cable3: hex('#c88a1a'),
+      wall: hex('#3a4258'), wallHi: hex('#56607a'), wallDk: hex('#232838'), pipe: hex('#6e7a96'), pipeHi: hex('#a8b4cc'),
+      brass: hex('#9a7030'), brassHi: hex('#d0a050'), hazY: hex('#c8a020'), hazK: hex('#141824'), shadow: hex('#0e1018'),
+      hatch: hex('#1a1e2a'),
+    };
+    return canvasFrom(PW, TH, (d, w, h) => {
+      // 바닥 철판 (40×40)
+      for (let y = 0; y < h; y++) {
+        for (let x = WALL; x < w - WALL; x++) {
+          const px = (x - WALL + 2) % 40, py = y % 40;
+          const cell = Math.floor((x - WALL + 2) / 40) + Math.floor(y / 40) * 7;
+          let c = cell % 3 === 0 ? C.plate2 : C.plate;
+          if (px === 0 || py === 0) c = C.seam;
+          else if (px === 39 || py === 39) c = C.seamHi;
+          else if ((px === 3 || px === 36) && (py === 3 || py === 36)) c = C.rivet;
+          else if (bayer(x, y) < 0.03) c = C.seam;
+          put(d, w, x, y, c);
+        }
+      }
+      // 격자 창 (아래에서 희미한 불빛)
+      for (const [gx, gy] of [[1, 1], [3, 4], [0, 7], [8, 2], [6, 8], [10, 5]]) {
+        const x0 = WALL + gx * 40 + 4, y0 = gy * 40 + 8;
+        for (let y = 0; y < 24; y++) for (let x = 0; x < 28; x++) {
+          put(d, w, x0 + x, (y0 + y) % h, y % 3 === 0 ? C.grateHi : (bayer(x, y) < 0.35 ? C.glow2 : C.glow));
+        }
+      }
+      // 안내선 (점선)
+      for (const lx of [158, 320]) for (let y = 0; y < h; y++) if (y % 16 < 9) { put(d, w, lx, y, C.line); put(d, w, lx + 1, y, C.line); }
+      // 케이블 도랑
+      for (const tx of [WALL + 8, w - WALL - 13]) {
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < 6; x++) put(d, w, tx + x, y, C.trench);
+          put(d, w, tx + 1, y, C.cable1);
+          put(d, w, tx + 3, y, C.cable2);
+          if (y % 50 < 25) put(d, w, tx + 4, y, C.cable3);
+        }
+      }
+      // 벽 + 벽과 바닥 경계의 경고 줄무늬
+      for (const side of [0, 1]) {
+        const x0 = side ? w - WALL : 0;
+        for (let y = 0; y < h; y++) {
+          for (let i = 0; i < WALL; i++) {
+            const x = x0 + i;
+            const inner = side ? i : WALL - 1 - i; // 0 = 바닥 쪽
+            let c = C.wall;
+            if (inner === 0) c = C.shadow;
+            else if (inner === 1 || inner === 2) c = ((y + (side ? 0 : 3)) >> 2) % 2 ? C.hazY : C.hazK;
+            else if (inner === WALL - 1) c = C.wallDk;
+            else if (inner >= 4 && inner <= 6) c = inner === 5 ? C.pipeHi : C.pipe;
+            else if (inner >= 9 && inner <= 11) c = inner === 10 ? C.brassHi : C.brass;
+            else if (inner === 13 || inner === 15) c = y % 20 === 0 ? C.wallHi : C.wall;
+            else if (bayer(x, y) < 0.08) c = C.wallDk;
+            if (y % 60 === 0 && inner >= 4 && inner <= 11) c = C.wallDk;
+            put(d, w, x, y, c);
+          }
+        }
+        // 포문 (벽 레이저포가 숨는 곳)
+        for (const hy of [40, 240]) {
+          for (let y = 0; y < 26; y++) for (let i = 3; i < WALL - 1; i++) {
+            const x = x0 + (side ? i : WALL - 1 - i);
+            const edge = y === 0 || y === 25 || i === 3 || i === WALL - 2;
+            put(d, w, x, hy + y, edge ? (((y + i) >> 1) % 2 ? C.hazY : C.hazK) : C.hatch);
+          }
+        }
+      }
+    });
   }
 
   function setBg(kind) {
     if (bg.kind === kind) return;
     if (bg.kind) bg.fade = 1;
     bg.kind = kind;
-    bg.props = [];
     bg.scroll = 0;
     getOverlays();
-    if (kind === 'sky') {
-      bg.tiles = [skyTile()];
-      bg.props.push(prop('island', 0, 12, false), prop('island', 0, 12, true));
-      for (const [n, l, s] of [['cloud3', 1, 20], ['cloud1', 1, 20], ['cloud3', 1, 20], ['cloud0', 2, 42], ['cloud2', 2, 42], ['cloud1', 2, 42]]) bg.props.push(prop(n, l, s, false));
-    } else if (kind === 'sea') {
-      bg.tiles = [seaTile()];
-      bg.props.push(prop('rock', 0, 35, false), prop('rock', 0, 35, true));
-      bg.rain = [];
-      for (let i = 0; i < 45; i++) bg.rain.push({ x: R() * (PW + 60), y: R() * PH, s: 230 + R() * 120 });
-    } else if (kind === 'lava') {
-      bg.tiles = lavaTiles();
-      bg.embers = [];
-      for (let i = 0; i < 40; i++) bg.embers.push({ x: R() * PW, y: R() * PH, s: 14 + R() * 30, ph: R() * TAU });
-    }
+    bg.tile = hangarTile();
+    bg.girders = [{ y: 40 }, { y: 200 }];
   }
 
-  function updateBg(dt, slow) {
-    const k = slow ? 0.6 : 1;
+  function updateBg(dt) {
     bg.t += dt;
-    const sp = bg.kind === 'sea' ? 35 : 28;
-    bg.scroll = (bg.scroll + dt * sp * k) % PH;
-    for (const p of bg.props) {
-      p.y += p.sp * dt * k;
-      if (p.y - p.h / 2 > PH) {
-        p.y = -p.h / 2 - R() * 140;
-        p.x = 10 + R() * (PW - 20);
-      }
-    }
-    if (bg.kind === 'sea') {
-      for (const r of bg.rain) {
-        r.y += r.s * dt;
-        r.x -= r.s * 0.3 * dt;
-        if (r.y > PH + 4) { r.y = -4; r.x = R() * (PW + 60); }
-      }
-      bg.nextBolt -= dt;
-      if (bg.nextBolt <= 0) { bg.bolt = 1; bg.boltX = 20 + R() * (PW - 40); bg.nextBolt = (slow ? 3 : 6) + R() * 5; }
-      bg.bolt = Math.max(0, bg.bolt - dt * 3);
-    } else if (bg.kind === 'lava') {
-      for (const e of bg.embers) {
-        e.y -= e.s * dt;
-        e.ph += dt * 3;
-        if (e.y < -2) { e.y = PH + 2; e.x = R() * PW; }
-      }
+    bg.scroll = (bg.scroll + dt * 24) % TH;
+    for (const gd of bg.girders) {
+      gd.y += dt * 24;
+      if (gd.y > PH + 20) gd.y -= PH + 60;
     }
     if (bg.fade > 0) bg.fade = Math.max(0, bg.fade - dt * 1.5);
   }
 
-  function drawBg() {
-    if (bg.kind === 'sky') {
-      ctx.drawImage(bg.tiles[0], 0, 0);
-      for (let layer = 0; layer < 3; layer++) for (const p of bg.props) if (p.layer === layer) SH.pix.draw(ctx, p.name, p.x, p.y);
-      return;
-    }
-    const tile = bg.tiles[bg.kind === 'lava' ? Math.floor(bg.t * 3) % 2 : 0];
-    const y = Math.floor(bg.scroll);
-    ctx.drawImage(tile, 0, y - PH);
-    ctx.drawImage(tile, 0, y);
-    for (const p of bg.props) SH.pix.draw(ctx, p.name, p.x, p.y);
-    if (bg.kind === 'sea') {
-      ctx.drawImage(stormOverlay, 0, 0);
-      ctx.fillStyle = '#9cc4f0';
-      for (const r of bg.rain) {
-        const x = Math.round(r.x), yy = Math.round(r.y);
-        ctx.fillRect(x, yy, 1, 1);
-        ctx.fillRect(x - 1, yy + 1, 1, 1);
-        ctx.fillRect(x - 1, yy + 2, 1, 1);
-      }
-      if (bg.bolt > 0.5) {
-        ctx.fillStyle = '#fff8c0';
-        let x = bg.boltX;
-        for (let yy = 0; yy < 90; yy += 3) {
-          ctx.fillRect(Math.round(x), yy, 2, 3);
-          x += (R() - 0.5) * 6;
+  /** 벽 조명 (깜빡임 · 폭주 땐 붉은 경광등) */
+  function drawLamps(alarm) {
+    const t = bg.t;
+    for (let i = 0; i < 4; i++) {
+      const y = Math.floor((i * 100 + 70 + bg.scroll) % TH);
+      if (y > PH + 6) continue;
+      for (const x of [WALL - 8, PW - WALL + 6]) {
+        const on = alarm ? Math.floor(t * 4 + i) % 2 === 0 : Math.floor(t * 0.7 + i * 1.3) % 7 !== 0;
+        ctx.fillStyle = '#1a1e2a';
+        ctx.fillRect(x - 1, y - 1, 4, 6);
+        ctx.fillStyle = on ? (alarm ? '#ff3030' : '#ffd84a') : '#5a4a20';
+        ctx.fillRect(x, y, 2, 4);
+        if (on) {
+          ctx.fillStyle = alarm ? '#4a1418' : '#343846';
+          const dir = x < PW / 2 ? 1 : -1;
+          for (let k = 0; k < 6; k++) for (let j = -2; j <= 6; j++) {
+            const px = x + dir * (4 + k), py = y + j;
+            if (((px + py) & 3) === 0 && Math.abs(j - 2) < 5 - k * 0.6) ctx.fillRect(px, py, 1, 1);
+          }
         }
-      }
-    } else {
-      ctx.drawImage(lavaOverlay, 0, 0);
-      for (const e of bg.embers) {
-        ctx.fillStyle = Math.sin(e.ph) > 0 ? '#ffb02e' : '#ff6a1a';
-        ctx.fillRect(Math.round(e.x + Math.sin(e.ph) * 2), Math.round(e.y), 1, 1);
       }
     }
   }
 
+  /** 들보 (머리 위를 지나가는 철골) */
+  function drawGirders() {
+    for (const gd of bg.girders) {
+      const y = Math.round(gd.y);
+      ctx.fillStyle = '#0e1018';
+      for (let x = WALL; x < PW - WALL; x++) if (((x + y) & 1) === 0) { ctx.fillRect(x, y + 6, 1, 1); ctx.fillRect(x, y + 8, 1, 1); }
+      ctx.fillStyle = '#1e2432';
+      ctx.fillRect(0, y, PW, 5);
+      ctx.fillStyle = '#3a4258';
+      ctx.fillRect(0, y, PW, 1);
+      ctx.fillStyle = '#141824';
+      for (let x = 4; x < PW; x += 12) { ctx.fillRect(x, y + 1, 1, 3); ctx.fillRect(x + 6, y + 2, 1, 1); }
+    }
+  }
+
+  function drawBg(alarm) {
+    const y = Math.floor(bg.scroll);
+    ctx.drawImage(bg.tile, 0, y - TH);
+    ctx.drawImage(bg.tile, 0, y);
+    drawLamps(alarm);
+    drawGirders();
+    ctx.drawImage(vignette, 0, 0);
+  }
+
   /* =========================================================
-   * 글자·창
+   * 글자·창 (HUD 와 메뉴가 씀)
    * ========================================================= */
   const T = (str, x, y, o) => SH.pix.text(ctx, str, x, y, o);
 
@@ -3084,7 +3678,11 @@ SH.render = (() => {
 
   function dim(light) {
     getOverlays();
-    ctx.drawImage(light ? dimLight : dimOverlay, 0, 0);
+    absolute(() => ctx.drawImage(light ? dimLight : dimOverlay, 0, 0));
+  }
+  function dimBand(y, h) {
+    getOverlays();
+    ctx.drawImage(dimOverlay, 0, y, PW, h, 0, y, PW, h);
   }
 
   /** 줄무늬 띠 (경고) */
@@ -3093,12 +3691,10 @@ SH.render = (() => {
     ctx.fillRect(0, y, PW, 9);
     ctx.fillStyle = '#ffd84a';
     const off = Math.floor(t * 30) % 12;
-    for (let x = -12; x < PW + 12; x += 12) {
-      for (let j = 0; j < 7; j++) ctx.fillRect(x + off + j, y + 1 + j, 5, 1);
-    }
+    for (let x = -12; x < PW + 12; x += 12) for (let j = 0; j < 7; j++) ctx.fillRect(x + off + j, y + 1 + j, 5, 1);
   }
 
-  /** 그림이 없으면 대신 네모 */
+  /** 그림 그리기 (그림이 없으면 대신 네모) */
   function spr(name, x, y, o, fb) {
     if (SH.pix.draw(ctx, name, x, y, o)) return;
     ctx.fillStyle = (o && o.flash) ? '#fff' : fb || '#ff00ff';
@@ -3107,75 +3703,219 @@ SH.render = (() => {
   }
 
   /* =========================================================
-   * 게임 물체
+   * 무기의 조준 · 충전 표시
    * ========================================================= */
-  /* 기계 보스: 몸통(모습별) + 포탑 + 코어 방어막 */
-  function drawBoss(g) {
-    const e = g.boss;
-    if (!e) return;
-    const x = e.x * K, y = e.y * K;
-    const ph = g.bossPhase;
-    let flash = e.flash > 0;
-    if (e.inv > 0 && Math.floor(g.time * 20) % 2) flash = true;
-    if (e.state === 'dying') {
-      if (Math.floor(g.time * 16) % 2) flash = true;
-      if (e.st > 2.8 && Math.floor(g.time * 24) % 2) return;
+  /** 조준선: 총구에서 겨눈 방향으로 점선. 충전 중이면 더 촘촘하고 밝게 */
+  function sightLine(mx, my, ang, charging, t, color) {
+    const ux = Math.cos(ang), uy = Math.sin(ang);
+    const step = charging ? 2 : 4;
+    const off = Math.floor(t * 40) % step;
+    ctx.fillStyle = color || (charging && Math.floor(t * 16) % 2 ? '#ffd0d0' : '#ff3b4e');
+    for (let d = 3 + off; d < 600; d += step) {
+      const x = Math.round(mx + ux * d), y = Math.round(my + uy * d);
+      if (x < -2 || x > PW + 2 || y < -2 || y > PH + 2) break;
+      ctx.fillRect(x, y, 1, 1);
     }
-    const blink = Math.floor(g.time * (ph.berserk ? 8 : 3)) & 1;
-    spr('titan', x, y, { frame: ph.look * 2 + blink, flash, fbs: 60 }, '#5e6e8c');
-    for (const p of Object.values(e.parts)) {
-      const px = x + p.ox * K, py = y + p.oy * K;
-      if (p.alive) {
-        spr('turret', px, py, { frame: SH.turretFrame ? SH.turretFrame(p.ang) : 4, flash: p.flash > 0 || flash, fbs: 12 }, '#8e9ebc');
-        if (e.state === 'fight' && p.hp < p.maxHp) {
-          const w = 16, r = p.hp / p.maxHp;
-          ctx.fillStyle = '#0e1220'; ctx.fillRect(Math.round(px - w / 2) - 1, Math.round(py + 13), w + 2, 3);
-          ctx.fillStyle = r > 0.3 ? '#ffd84a' : '#e8384f'; ctx.fillRect(Math.round(px - w / 2), Math.round(py + 14), Math.max(1, Math.round(w * r)), 1);
-        }
-      } else {
-        spr('turretWreck', px, py, { frame: Math.floor(g.time * 6), fbs: 10 }, '#3a4660');
-        if (Math.random() < 0.08) SH.fx.anim('puff', px + (Math.random() - 0.5) * 6, py - 4, 10);
-      }
+  }
+  /** 충전: 둘레에서 빛 알갱이가 총구로 빨려 들고, 총구 빛이 커짐 */
+  function chargeGlow(mx, my, u, t, cols, big) {
+    const n = big ? 14 : 8;
+    const R0 = big ? 30 : 15;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * TAU + t * 3 + i;
+      const phase = (t * 1.6 + i / n) % 1;
+      const r = R0 * (1 - phase) * (0.5 + 0.5 * (1 - u * 0.5));
+      ctx.fillStyle = cols[i % cols.length];
+      ctx.fillRect(Math.round(mx + Math.cos(a) * r), Math.round(my + Math.sin(a) * r), phase > 0.7 ? 2 : 1, phase > 0.7 ? 2 : 1);
     }
-    // 코어 방어막
-    if (ph.shield && e.state === 'fight' && Math.floor(g.time * 10) % 3) {
-      SH.fx.pixelCircle(ctx, x, y + g.def.core.oy * K, 21 + (Math.floor(g.time * 6) & 1), '#8fd4ff', 1);
+    const rr = (big ? 3 : 1.5) + u * (big ? 7 : 3.5) + (Math.floor(t * 20) & 1);
+    SH.fx.pixelCircle(ctx, mx, my, rr + 1, cols[0], 1);
+    ctx.fillStyle = cols[1];
+    ctx.fillRect(Math.round(mx - rr / 2), Math.round(my - rr / 2), Math.round(rr), Math.round(rr));
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(Math.round(mx - 1), Math.round(my - 1), 2, 2);
+  }
+  const CHARGE = {
+    red: ['#ff3b4e', '#ffb0a0'], purple: ['#9a4dff', '#e2ccff'], orange: ['#ff8a2a', '#fff4a8'],
+  };
+
+  function weaponTell(g, w, mx, my) {
+    const t = g.time;
+    if (w.state === 'aim' || w.state === 'charge') {
+      if (w.kind === 'turret' || w.kind === 'cannon' || w.kind === 'gun') sightLine(mx, my, w.ang, w.state === 'charge', t);
+    }
+    if (w.state !== 'charge') return;
+    const u = w.charge;
+    if (w.kind === 'cannon') chargeGlow(mx, my, u, t, CHARGE.red, w.big);
+    else if (w.kind === 'turret') chargeGlow(mx, my, u, t, CHARGE.orange, false);
+    else if (w.kind === 'gun') chargeGlow(mx, my, u, t, CHARGE.red, false);
+    else if (w.kind === 'emitter') {
+      // 플라스마 구체가 자라남
+      const r = 1 + u * 5 + (Math.floor(t * 18) & 1);
+      ctx.fillStyle = '#44257e';
+      ctx.fillRect(Math.round(mx - r - 1), Math.round(my - r - 1), Math.round(r * 2 + 2), Math.round(r * 2 + 2));
+      SH.fx.pixelCircle(ctx, mx, my, r, '#c9a8ff', 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(Math.round(mx - 1), Math.round(my - 1), 2, 2);
+      chargeGlow(mx, my, u, t, CHARGE.purple, false);
+    } else if (w.kind === 'vent') {
+      if (R() < 0.35) SH.fx.anim('puff', mx + (R() - 0.5) * 8, my - 2, 12);
+      ctx.fillStyle = Math.floor(t * 12) & 1 ? '#8fd4ff' : '#3a86f0';
+      ctx.fillRect(Math.round(mx - 4), Math.round(my - 1), 9, 2);
+    } else if (w.kind === 'core') {
+      SH.fx.pixelCircle(ctx, mx, my, 15 + u * 6 + (Math.floor(t * 20) & 1), g.bossPhase.berserk ? '#ff5a5a' : '#e2ccff', 1);
+      chargeGlow(mx, my, u, t, g.bossPhase.berserk ? CHARGE.red : CHARGE.purple, false);
+    } else if (w.kind === 'antenna') {
+      // 신호: 퍼지는 고리
+      const k = (t * 3) % 1;
+      SH.fx.pixelCircle(ctx, mx, my, 3 + k * 16, Math.floor(t * 12) & 1 ? '#ff3b4e' : '#ffd84a', 1);
+      ctx.fillStyle = '#ff3b4e';
+      ctx.fillRect(Math.round(mx - 1), Math.round(my - 2), 3, 3);
     }
   }
 
-  /* 레이저: 경고(위험 구역 점선) → 광선 */
+  /* =========================================================
+   * 보스: 몸통 + 무기
+   * ========================================================= */
+  function muzzlePx(g, w) {
+    const [x, y] = g.muzzle(w);
+    return [x * K, y * K];
+  }
+  function drawBoss(g) {
+    const B = g.boss;
+    if (!B) return;
+    const bx = B.x * K, by = B.y * K;
+    const ph = g.bossPhase;
+    let flash = B.flash > 0;
+    if (B.state === 'transform' && Math.floor(g.time * 18) % 2) flash = true;
+    if (B.state === 'dying') {
+      if (Math.floor(g.time * 16) % 2) flash = true;
+      if (B.st > 2.8 && Math.floor(g.time * 24) % 2) return;
+    }
+    const blink = Math.floor(g.time * (ph.berserk ? 8 : 3)) & 1;
+    spr('titan', bx, by, { frame: B.look * 2 + blink, flash, fbs: 60 }, '#5e6e8c');
+
+    const pos = (w) => [bx + w.ox * K, by + w.oy * K];
+    const Wp = B.w;
+    // 1단계 포탑
+    for (const n of ['turretL', 'turretR']) {
+      const w = Wp[n];
+      if (B.look > 0) continue;
+      const [x, y] = pos(w);
+      if (w.alive) {
+        const rx = x - Math.cos(w.ang) * w.recoil * 2, ry = y - Math.sin(w.ang) * w.recoil * 2;
+        spr('turret', rx, ry, { frame: SH.turretFrame(w.ang), flash: w.flash > 0 || flash, fbs: 12 }, '#8e9ebc');
+        if (B.state === 'fight' && w.hp < w.maxHp) {
+          const bw = 16, r = w.hp / w.maxHp;
+          ctx.fillStyle = '#0e1220'; ctx.fillRect(Math.round(x - bw / 2) - 1, Math.round(y + 13), bw + 2, 3);
+          ctx.fillStyle = r > 0.3 ? '#ffd84a' : '#e8384f'; ctx.fillRect(Math.round(x - bw / 2), Math.round(y + 14), Math.max(1, Math.round(bw * r)), 1);
+        }
+      } else {
+        spr('turretWreck', x, y, { frame: Math.floor(g.time * 6), fbs: 10 }, '#3a4660');
+        if (R() < 0.08) SH.fx.anim('puff', x + (R() - 0.5) * 6, y - 4, 10);
+      }
+    }
+    // 미사일 포드 (3단계부터)
+    for (const n of ['podL', 'podR']) {
+      const w = Wp[n];
+      if (!w.alive || B.phase < w.unlock) continue;
+      const [x, y] = pos(w);
+      const rise = (1 - w.reveal) * 6;
+      spr('pod', x, y + rise, { frame: Math.min(3, Math.round(w.open * 3)), flash, alpha: w.reveal < 1 && Math.floor(g.time * 20) % 2 ? 0.5 : 1, fbs: 10 }, '#5e6e8c');
+    }
+    // 주포 (2단계부터, 안에서 밀려 나옴)
+    const c = Wp.cannon;
+    if (c.alive && B.phase >= c.unlock) {
+      const [x, y] = pos(c);
+      const slide = (1 - c.reveal) * -10;
+      const rx = x - Math.cos(c.ang) * c.recoil * 3, ry = y + slide - Math.sin(c.ang) * c.recoil * 3;
+      spr('cannon', rx, ry, { frame: SH.cannonFrame(c.ang), flash: flash || (c.state === 'cool' && Math.floor(g.time * 10) % 2), fbs: 14 }, '#8e9ebc');
+      if (c.state === 'cool' && R() < 0.3) { const [mx, my] = muzzlePx(g, c); SH.fx.anim('puff', mx, my, 12); }
+    }
+    // 조준 · 충전 표시
+    if (B.state === 'fight') {
+      for (const w of Object.values(Wp)) {
+        if (!w.alive || B.phase < w.unlock || (w.lose != null && B.phase >= w.lose)) continue;
+        if (w.state === 'idle' || w.state === 'fire') continue;
+        const [mx, my] = muzzlePx(g, w);
+        weaponTell(g, w, mx, my);
+      }
+      // 주포가 쓸어낼 구역
+      if (c.sweep && (c.state === 'aim' || c.state === 'charge')) {
+        const [mx, my] = muzzlePx(g, c);
+        const [a0, a1] = c.sweep;
+        const steps = Math.ceil(Math.abs(a1 - a0) / 0.07);
+        ctx.fillStyle = Math.floor(g.time * 10) & 1 ? '#ff3b4e' : '#8e1c3a';
+        for (let i = 0; i <= steps; i++) {
+          const a = a0 + ((a1 - a0) * i) / steps;
+          for (let d = 18 + ((i * 3 + Math.floor(g.time * 30)) % 8); d < 560; d += 8) ctx.fillRect(Math.round(mx + Math.cos(a) * d), Math.round(my + Math.sin(a) * d), 1, 1);
+        }
+      }
+    }
+    // 1단계 코어 방어막
+    if (ph.shield && B.state === 'fight' && Math.floor(g.time * 10) % 3) {
+      SH.fx.pixelCircle(ctx, bx, by + g.def.core.oy * K, 20 + (Math.floor(g.time * 6) & 1), '#8fd4ff', 1);
+    }
+  }
+
+  /* ---------------- 벽 레이저포 ---------------- */
+  function lineThick(x0, y0, x1, y1, t) {
+    const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0)));
+    for (let i = 0; i <= n; i++) {
+      const u = i / n;
+      ctx.fillRect(Math.round(SH.lerp(x0, x1, u) - t / 2), Math.round(SH.lerp(y0, y1, u) - t / 2), t, t);
+    }
+  }
+  function drawGuns(g) {
+    for (const w of g.guns) {
+      const x = w.x * K, y = w.y * K;
+      // 벽에서 뻗어 나온 레일 팔
+      const ex = w.edge === 'L' || w.edge === 'BL' ? -2 : PW + 2;
+      const ey = w.edge === 'BL' || w.edge === 'BR' ? y + 10 : y;
+      ctx.fillStyle = '#1a1e2a';
+      lineThick(ex, ey, x, y, 4);
+      ctx.fillStyle = '#56607a';
+      lineThick(ex, ey - 1, x, y - 1, 1);
+      ctx.fillStyle = '#c8a020';
+      for (let i = 0; i < 3; i++) {
+        const u = 0.2 + i * 0.25;
+        ctx.fillRect(Math.round(SH.lerp(ex, x, u)), Math.round(SH.lerp(ey, y, u)) - 1, 1, 3);
+      }
+      spr('wallgun', x - Math.cos(w.ang) * w.recoil * 2, y - Math.sin(w.ang) * w.recoil * 2, { frame: SH.wallgunFrame(w.ang), flash: w.flash > 0, fbs: 10 }, '#6a4aa0');
+      if (w.state === 'aim' || w.state === 'charge') {
+        const [mx, my] = muzzlePx(g, w);
+        weaponTell(g, w, mx, my);
+      }
+    }
+  }
+
+  /* ---------------- 레이저 (총구에서 나감) ---------------- */
   function drawBeams(g) {
     for (const bm of g.beams) {
       const ox = bm.x * K, oy = bm.y * K;
-      if (!bm.on) {
-        const blink = Math.floor(bm.t * 12) & 1;
-        const lo = Math.min(bm.a0, bm.a1), hi = Math.max(bm.a0, bm.a1);
-        const steps = Math.max(2, Math.ceil((hi - lo) / 0.06));
-        ctx.fillStyle = blink ? '#ff3b4e' : '#ffb0a0';
-        for (let i = 0; i <= steps; i++) {
-          const a = lo + ((hi - lo) * i) / steps;
-          const ux = Math.cos(a), uy = Math.sin(a);
-          for (let d = 14 + ((i * 3 + Math.floor(bm.t * 30)) % 6); d < 460; d += 6) ctx.fillRect(Math.round(ox + ux * d), Math.round(oy + uy * d), 1, 1);
+      const ux = Math.cos(bm.ang), uy = Math.sin(bm.ang);
+      const grow = Math.min(1, bm.t / 0.08) * Math.min(1, (bm.dur - bm.t) / 0.12);
+      const w = Math.max(1, Math.round(bm.width * K * grow));
+      const fl = Math.floor(g.time * 30) & 1;
+      const gunBeam = bm.src.kind === 'gun';
+      const layers = gunBeam
+        ? [[w + 2, '#7a2ac0'], [w, fl ? '#c9a8ff' : '#a070ff'], [Math.max(1, w - 3), '#f0e4ff'], [Math.max(1, w - 5), '#ffffff']]
+        : [[w + 2, '#e8384f'], [w, fl ? '#ff8a8a' : '#ff6a6a'], [Math.max(1, w - 4), '#ffd0d0'], [Math.max(1, w - 6), '#ffffff']];
+      for (const [lw, c] of layers) {
+        ctx.fillStyle = c;
+        for (let d = 2; d < 600; d += 1) {
+          const x = ox + ux * d, y = oy + uy * d;
+          if (x < -10 || x > PW + 10 || y < -10 || y > PH + 10) break;
+          ctx.fillRect(Math.round(x - lw / 2), Math.round(y - lw / 2), lw, lw);
         }
-        // 시작 방향은 굵게
-        const ux = Math.cos(bm.a0), uy = Math.sin(bm.a0);
-        ctx.fillStyle = '#ff3b4e';
-        for (let d = 10; d < 460; d += 2) ctx.fillRect(Math.round(ox + ux * d), Math.round(oy + uy * d), 1, 1);
-        if (blink) SH.pix.text(ctx, '!', ox, oy + 12, { color: '#ffd84a', scale: 2, align: 'center' });
-      } else {
-        const ux = Math.cos(bm.ang), uy = Math.sin(bm.ang);
-        const w = Math.max(3, Math.round(bm.width * K));
-        const fl = Math.floor(g.time * 30) & 1;
-        const layers = [[w + 2, '#e8384f'], [w, fl ? '#ff8a8a' : '#ff6a6a'], [Math.max(1, w - 4), '#ffd0d0'], [Math.max(1, w - 6), '#ffffff']];
-        for (const [lw, c] of layers) {
-          ctx.fillStyle = c;
-          for (let d = 4; d < 470; d += 1) ctx.fillRect(Math.round(ox + ux * d - lw / 2), Math.round(oy + uy * d - lw / 2), lw, lw);
-        }
-        SH.pix.draw(ctx, 'boom', ox, oy, { frame: 1 + (Math.floor(g.time * 20) % 2) });
       }
+      SH.pix.draw(ctx, 'boom', ox, oy, { frame: 1 + (Math.floor(g.time * 20) % 2), scale: bm.width > 30 ? 2 : 1 });
     }
   }
 
+  /* =========================================================
+   * 나 · 탄 · 아이템
+   * ========================================================= */
   function drawPlayerBullets(g) {
     for (const b of g.pb) {
       const x = b.x * K, y = b.y * K;
@@ -3195,7 +3935,7 @@ SH.render = (() => {
       if (b.missile) {
         const dir = Math.round((((b.rot + Math.PI / 2) % TAU) + TAU) % TAU / (Math.PI / 4)) % 8;
         spr('emissile', b.x * K, b.y * K, { frame: dir, fbs: 5 }, '#e8384f');
-        if (Math.random() < 0.3) SH.fx.anim('puff', b.x * K - Math.cos(b.rot) * 5, b.y * K - Math.sin(b.rot) * 5, 14);
+        if (R() < 0.3) SH.fx.anim('puff', b.x * K - Math.cos(b.rot) * 5, b.y * K - Math.sin(b.rot) * 5, 14);
       } else spr((b.big ? 'big_' : 'orb_') + b.kind, b.x * K, b.y * K, { frame: f, fbs: b.big ? 10 : 5 }, '#ff4f9a');
     }
   }
@@ -3234,38 +3974,36 @@ SH.render = (() => {
   }
 
   /* =========================================================
-   * HUD
+   * HUD: 왼쪽 위 점수·목숨·폭탄 · 가운데 위 보스 체력 · 오른쪽 위 무기
    * ========================================================= */
   function drawHud(g, best) {
-    T('SCORE', 4, 5, { color: '#ffd84a' });
-    T(SH.fmt(g.score), 4, 15, { color: '#ffffff' });
-    T('HI', 98, 5, { color: '#ff7aa8' });
-    T(SH.fmt(Math.max(best, g.score)), 98, 15, { color: '#ffe3ee' });
+    T('점수', 22, 6, { color: '#ffd84a', size: 9 });
+    T(SH.fmt(g.score), 46, 6, { color: '#ffffff' });
+    T('최고', 22, 16, { color: '#ff7aa8', size: 9 });
+    T(SH.fmt(Math.max(best, g.score)), 46, 16, { color: '#ffe3ee' });
     const lives = Math.max(0, g.lives);
     if (lives > 5) {
-      spr('icon_life', 8, 28, { fbs: 6 }, '#ffffff');
-      T('×' + lives, 15, 28, { color: '#ffffff' });
-    } else for (let i = 0; i < lives; i++) spr('icon_life', 8 + i * 10, 28, { fbs: 6 }, '#ffffff');
-    for (let i = 0; i < g.bombs; i++) spr('icon_bomb', 70 + i * 10, 28, { fbs: 6 }, '#ffd84a');
+      spr('icon_life', 26, 25, { fbs: 6 }, '#ffffff');
+      T('×' + lives, 33, 25, { color: '#ffffff' });
+    } else for (let i = 0; i < lives; i++) spr('icon_life', 26 + i * 10, 25, { fbs: 6 }, '#ffffff');
+    for (let i = 0; i < g.bombs; i++) spr('icon_bomb', 26 + i * 10, 35, { fbs: 6 }, '#ffd84a');
     const w = SH.WEAPONS[g.weapon];
-    T(SH.fx.WNAME[g.weapon], 136, 28, { color: w.light });
+    T(SH.fx.WNAME[g.weapon], PW - 28, 6, { color: w.light, align: 'right', size: 9 });
     for (let i = 0; i < SH.MAX_POWER; i++) {
       ctx.fillStyle = '#1b1230';
-      ctx.fillRect(136 + i * 6, 34, 5, 4);
+      ctx.fillRect(PW - 59 + i * 6, 12, 5, 4);
       ctx.fillStyle = i < g.power ? w.color : '#3a3058';
-      ctx.fillRect(137 + i * 6, 35, 3, 2);
+      ctx.fillRect(PW - 58 + i * 6, 13, 3, 2);
     }
-    if (g.loop > 0) T(`LOOP ${g.loop + 1}`, 168, 15, { color: '#ff9ac2' });
+    if (g.loop > 0) T(`${g.loop + 1}회차`, PW - 28, 24, { color: '#ff9ac2', align: 'right', size: 9 });
 
-    const e = g.boss;
-    if (e && e.state !== 'dying') {
+    const B = g.boss;
+    if (B && B.state !== 'dying') {
       const ph = g.bossPhase;
-      const fillIn = e.state === 'enter' ? Math.min(1, e.st / 3) : 1;
-      const ratio = Math.max(0, e.hp / e.maxHp) * fillIn;
+      const fillIn = B.state === 'enter' ? Math.min(1, B.st / 3) : 1;
+      const ratio = Math.max(0, B.hp / B.maxHp) * fillIn;
       bossLag = ratio > bossLag ? ratio : bossLag + (ratio - bossLag) * 0.05;
-      const x = 4, y = 50, w2 = PW - 8;
-      T(g.def.name, x, y - 5, { color: ph.berserk ? '#ff5a5a' : '#ff8a8a', size: 10 });
-      if (e.state === 'fight') T(fmtTime(g.fightT), PW - 4, y - 5, { color: '#ffffff', align: 'right' });
+      const w2 = 190, x = (PW - w2) / 2, y = 3;
       ctx.fillStyle = '#1b1230';
       ctx.fillRect(x, y, w2, 6);
       ctx.fillStyle = '#3a2050';
@@ -3274,7 +4012,6 @@ SH.render = (() => {
         ctx.fillStyle = '#5e6e8c';
         ctx.fillRect(x + 1, y + 1, Math.round((w2 - 2) * ratio), 4);
         for (let i = 0; i < w2 - 2; i += 4) { ctx.fillStyle = '#8fd4ff'; ctx.fillRect(x + 1 + i + (Math.floor(g.time * 8) % 4), y + 2, 1, 2); }
-        T('SHIELD', PW / 2, y + 12, { color: '#8fd4ff', align: 'center' });
       } else {
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(x + 1, y + 1, Math.round((w2 - 2) * bossLag), 4);
@@ -3285,6 +4022,15 @@ SH.render = (() => {
       }
       ctx.fillStyle = '#1b1230';
       for (const p of g.def.phases) if (p.until > 0) ctx.fillRect(x + Math.round(w2 * p.until), y, 1, 6);
+      // 단계 표시 (■■□□) · 시간
+      for (let i = 0; i < g.def.phases.length; i++) {
+        ctx.fillStyle = '#1b1230';
+        ctx.fillRect(x + w2 + 4 + i * 7, y, 6, 6);
+        ctx.fillStyle = i < B.phase ? '#5a5680' : i === B.phase ? (ph.berserk ? '#ff3030' : '#ffd84a') : '#2a2448';
+        ctx.fillRect(x + w2 + 5 + i * 7, y + 1, 4, 4);
+      }
+      if (B.state !== 'enter') T(fmtTime(g.fightT), x + w2 + 34, y + 3, { color: '#ffffff' });
+      T(ph.shield ? `${g.def.name} · 방어막` : g.def.name, PW / 2, y + 13, { color: ph.shield ? '#8fd4ff' : ph.berserk ? '#ff5a5a' : '#ff8a8a', align: 'center', size: 9 });
     } else bossLag = 1;
   }
 
@@ -3294,17 +4040,18 @@ SH.render = (() => {
   }
 
   /* =========================================================
-   * 안내 (스테이지 시작 · 경고 · 클리어 · 짧은 알림)
+   * 안내 (시작 · 경고 · 클리어 · 짧은 알림)
    * ========================================================= */
   function drawBanners(g) {
+    const cy = Math.round(PH * 0.52);
     if (g.phase === 'intro') {
       const u = g.phaseT;
       if (u < 1.95 && !(u > 1.6 && Math.floor(u * 20) % 2)) {
-        const slide = Math.max(0, 1 - u / 0.35) * 120;
-        dimBand(PH * 0.36 - 26, 56);
-        T(g.stage.en, PW / 2 - slide, PH * 0.36 - 10, { color: '#ffd84a', scale: 3, align: 'center', shadow: '#8a3a10' });
-        T(g.stage.name, PW / 2 + slide, PH * 0.36 + 16, { color: '#ffffff', align: 'center', size: 12 });
-        if (g.loop > 0) T(`LOOP ${g.loop + 1}`, PW / 2, PH * 0.36 + 38, { color: '#c9a8ff', align: 'center' });
+        const slide = Math.max(0, 1 - u / 0.35) * 180;
+        dimBand(cy - 30, 60);
+        T(g.stage.en, PW / 2 - slide, cy - 12, { color: '#ffd84a', scale: 3, align: 'center', shadow: '#8a3a10' });
+        T(g.stage.name, PW / 2 + slide, cy + 14, { color: '#ffffff', align: 'center', size: 12 });
+        if (g.loop > 0) T(`${g.loop + 1}회차 · 더 강해진 요새`, PW / 2, cy + 32, { color: '#c9a8ff', align: 'center', size: 10 });
       }
     } else if (g.phase === 'warning') {
       const u = g.phaseT;
@@ -3315,57 +4062,49 @@ SH.render = (() => {
           ctx.fillRect(0, 0, PW, PH);
           ctx.globalAlpha = 1;
         }
-        const y = Math.round(PH * 0.4);
-        hazard(y - 36, u);
-        hazard(y + 28, -u);
-        if (Math.floor(u * 4) % 2 === 0) T('WARNING', PW / 2, y - 14, { color: '#ff3b4e', scale: 3, align: 'center', shadow: '#5a0a1a' });
-        const boss = g.def;
-        if (boss) {
-          T(boss.title, PW / 2, y + 6, { color: '#ffd0d6', align: 'center', size: 10 });
-          T(boss.name, PW / 2, y + 19, { color: '#ffffff', align: 'center', size: 12 });
-        }
+        hazard(cy - 40, u);
+        hazard(cy + 32, -u);
+        if (Math.floor(u * 4) % 2 === 0) T('경고!', PW / 2, cy - 16, { color: '#ff3b4e', scale: 3, align: 'center', shadow: '#5a0a1a' });
+        T(g.def.title, PW / 2, cy + 6, { color: '#ffd0d6', align: 'center', size: 10 });
+        T(g.def.name, PW / 2, cy + 20, { color: '#ffffff', align: 'center', size: 12 });
       }
     } else if (g.phase === 'clear' && g.tally) {
       const u = g.phaseT;
       if (u > 0.6 && u < 5.4) {
         const Tl = g.tally;
-        const x0 = 18, y0 = 108, w = PW - 36, h = 130;
+        const w = 240, h = 132, x0 = (PW - w) / 2, y0 = cy - h / 2;
         win(x0, y0, w, h);
-        T('MISSION CLEAR!', PW / 2, y0 + 14, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
+        T('작전 성공!', PW / 2, y0 + 14, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
         const rows = [['격파 보너스', Tl.clearBonus], [`시간 보너스 ${fmtTime(Tl.fightTime)}`, Tl.timeBonus], ['노미스 보너스', Tl.noMiss], ['남은 폭탄', Tl.bombBonus]];
         rows.forEach(([label, v], i) => {
           const show = Math.min(1, Math.max(0, (u - 1.0 - i * 0.45) / 0.4));
           if (show <= 0) return;
           const yy = y0 + 38 + i * 15;
-          T(label, x0 + 10, yy, { color: '#e8e0ff', size: 10 });
-          T(v ? '+' + SH.fmt(v * show) : '-', x0 + w - 10, yy, { color: v ? '#ffffff' : '#8f86b0', align: 'right' });
+          T(label, x0 + 12, yy, { color: '#e8e0ff', size: 10 });
+          T(v ? '+' + SH.fmt(v * show) : '-', x0 + w - 12, yy, { color: v ? '#ffffff' : '#8f86b0', align: 'right' });
         });
         const tot = Math.min(1, Math.max(0, (u - 2.5) / 0.5));
         if (tot > 0) {
           ctx.fillStyle = '#5a5680';
-          ctx.fillRect(x0 + 10, y0 + 100, w - 20, 1);
-          T('TOTAL', x0 + 10, y0 + 113, { color: '#ffd84a' });
-          T('+' + SH.fmt(Tl.total * tot), x0 + w - 10, y0 + 113, { color: '#ffd84a', align: 'right' });
+          ctx.fillRect(x0 + 12, y0 + 100, w - 24, 1);
+          T('합계', x0 + 12, y0 + 114, { color: '#ffd84a', size: 10 });
+          T('+' + SH.fmt(Tl.total * tot), x0 + w - 12, y0 + 114, { color: '#ffd84a', align: 'right' });
         }
       }
     }
     if (notice) {
       const a = notice.t < notice.dur - 0.4 || Math.floor(notice.t * 20) % 2;
       if (a) {
-        const ny = 166;
-        T(notice.title, PW / 2, ny + 9, { color: notice.color, align: 'center', size: notice.ascii ? undefined : 11 });
-        if (notice.sub) T(notice.sub, PW / 2, ny + 22, { color: '#ffffff', align: 'center', size: 10 });
+        const ny = 128;
+        const pop = Math.min(1, notice.t / 0.15);
+        T(notice.title, PW / 2, ny, { color: notice.color, align: 'center', size: notice.ascii ? undefined : (notice.big ? 16 : 11) * (0.7 + 0.3 * pop) });
+        if (notice.sub) T(notice.sub, PW / 2, ny + (notice.big ? 18 : 13), { color: '#ffffff', align: 'center', size: 10 });
       }
     }
   }
 
-  function dimBand(y, h) {
-    getOverlays();
-    ctx.drawImage(dimOverlay, 0, y, PW, h, 0, y, PW, h);
-  }
-
-  function showNotice(title, sub, color, dur) {
-    notice = { title, sub, color: color || '#ffffff', t: 0, dur: dur || 2, ascii: !/[^\x00-\x7f]/.test(title) };
+  function showNotice(title, sub, color, dur, big) {
+    notice = { title, sub, color: color || '#ffffff', t: 0, dur: dur || 2, ascii: !/[^\x00-\x7f]/.test(title), big: !!big };
   }
 
   /* =========================================================
@@ -3373,22 +4112,21 @@ SH.render = (() => {
    * ========================================================= */
   function drawGame(g, dt, opts) {
     setBg(g.stage.bg);
-    updateBg(dt, g.phase === 'boss' || g.phase === 'warning');
+    updateBg(dt);
     if (notice && dt > 0) {
       notice.t += dt;
       if (notice.t >= notice.dur) notice = null;
     }
+    const ph = g.bossPhase;
+    const alarm = !!(ph && ph.berserk && g.boss && g.boss.state !== 'dying');
     const st = SH.fx.state;
     ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.save();
     if (st.shake > 0.5) ctx.translate(Math.round((R() - 0.5) * st.shake), Math.round((R() - 0.5) * st.shake));
-    drawBg();
-    if (bg.kind === 'sea' && bg.bolt > 0.6) {
-      ctx.globalAlpha = 0.3;
-      ctx.fillStyle = '#e8f0ff';
-      ctx.fillRect(0, 0, PW, PH);
-      ctx.globalAlpha = 1;
-    }
+    drawBg(alarm);
     drawBoss(g);
+    drawGuns(g);
     drawPlayerBullets(g);
     drawItems(g);
     drawPlayer(g);
@@ -3397,14 +4135,12 @@ SH.render = (() => {
     drawEnemyBullets(g);
     ctx.restore();
 
-    const ph = g.bossPhase;
-    if (ph && ph.berserk && g.boss && g.boss.state === 'fight' && Math.floor(g.time * 3) % 2) {
+    if (alarm && Math.floor(g.time * 3) % 2) {
       ctx.globalAlpha = 0.1;
       ctx.fillStyle = '#ff1e3c';
       ctx.fillRect(0, 0, PW, PH);
       ctx.globalAlpha = 1;
     }
-
     if (g.bombT > 0 && Math.floor(g.time * 12) % 2) {
       ctx.globalAlpha = 0.12;
       ctx.fillStyle = '#ffd84a';
@@ -3423,28 +4159,33 @@ SH.render = (() => {
       ctx.fillRect(0, 0, PW, PH);
       ctx.globalAlpha = 1;
     }
+    SH.fx.drawText(ctx, (x, y) => [x, y]);
     if (!opts || !opts.noHud) drawHud(g, (opts && opts.best) || 0);
     if (!opts || !opts.frozen) drawBanners(g);
+    ctx.restore();
   }
 
-  /** 타이틀 배경: 하늘이 흐르고, 강철 요새가 버티고 있고, 비행기가 맞서 날아감 */
+  /** 타이틀 배경: 요새 안, 오른쪽에 강철 요새가 버티고 왼쪽 아래에서 비행기가 맞서 날아감 */
   function drawTitle(dt, noBoss) {
     title.t += dt;
-    setBg('sky');
-    updateBg(dt, false);
-    drawBg();
-    const t = title.t;
-    if (!noBoss) {
-      const bx = PW / 2 + Math.sin(t * 0.4) * 10, by = 290 + Math.sin(t * 0.9) * 3;
-      SH.pix.draw(ctx, 'titan', bx, by, { frame: Math.floor(t * 3) & 1 });
-      for (const s2 of [-1, 1]) SH.pix.draw(ctx, 'turret', bx + s2 * 48, by + 13, { frame: 4 + Math.round(Math.sin(t * 0.7 + s2) * 2) });
-    }
-    const px = PW / 2 + Math.sin(t * 0.8) * 34, py = PH * 0.9 + Math.sin(t * 1.3) * 3;
-    const bank = Math.cos(t * 0.8);
-    SH.pix.draw(ctx, 'flame', px, py + 15, { frame: Math.floor(t * 20) });
-    SH.pix.draw(ctx, 'player', px, py, { frame: bank > 0.5 ? 2 : bank < -0.5 ? 0 : 1 });
-    SH.fx.update(dt);
-    SH.fx.draw(ctx);
+    absolute(() => {
+      setBg('hangar');
+      updateBg(dt);
+      drawBg(false);
+      const t = title.t;
+      if (!noBoss) {
+        const bx = 404 + Math.sin(t * 0.4) * 5, by = 176 + Math.sin(t * 0.9) * 3;
+        SH.pix.draw(ctx, 'titan', bx, by, { frame: Math.floor(t * 3) & 1 });
+        for (const s2 of [-1, 1]) SH.pix.draw(ctx, 'turret', bx + s2 * 50, by + 12, { frame: 4 + Math.round(Math.sin(t * 0.7 + s2) * 2) });
+      }
+      const px = 88 + Math.sin(t * 0.8) * 34, py = 226 + Math.sin(t * 1.3) * 3;
+      const bank = Math.cos(t * 0.8);
+      SH.pix.draw(ctx, 'flame', px, py + 15, { frame: Math.floor(t * 20) });
+      SH.pix.draw(ctx, 'player', px, py, { frame: bank > 0.5 ? 2 : bank < -0.5 ? 0 : 1 });
+      SH.fx.update(dt);
+      SH.fx.draw(ctx);
+      SH.fx.drawText(ctx, (x, y) => [x, y]);
+    });
   }
 
   function reset() {
@@ -3453,7 +4194,7 @@ SH.render = (() => {
   }
 
   return {
-    PW, PH, K, init, resize, present, drawGame, drawTitle, showNotice, reset, win, dim, T, spr, hazard, fmtTime,
+    PW, PH, SW: PW, SH: PH, K, MENU_Y, init, resize, present, drawGame, drawTitle, showNotice, reset, win, dim, T, spr, hazard, fmtTime,
     get ctx() { return ctx; },
   };
 })();
@@ -3654,6 +4395,20 @@ SH.audio = (() => {
     },
     enemyMissile() { if (throttle('em', 0.25)) noise({ ft: 'bandpass', f: 1400, f2: 500, dur: 0.25, v: 0.07, q: 1.5 }); },
     missileDown() { if (throttle('md', 0.04)) { noise({ f: 2400, f2: 300, dur: 0.18, v: 0.12 }); tone({ f: 900, f2: 300, dur: 0.1, v: 0.04, type: 'square' }); } },
+    charge() { if (throttle('charge', 0.15)) tone({ f: 220, f2: 1500, dur: 0.6, v: 0.05, type: 'sawtooth', lp: 2200, a: 0.3 }); },
+    bigCharge() {
+      tone({ f: 80, f2: 900, dur: 2.0, v: 0.12, type: 'sawtooth', lp: 1800, a: 1.2 });
+      noise({ ft: 'bandpass', f: 400, f2: 2400, dur: 2.0, v: 0.08, q: 2, a: 1.0 });
+    },
+    call() { [0, 0.16, 0.32].forEach((d) => tone({ f: 1320, dur: 0.08, v: 0.06, delay: d, type: 'square' })); },
+    gunIn() { if (throttle('gunIn', 0.12)) { noise({ ft: 'bandpass', f: 700, f2: 300, dur: 0.35, v: 0.12, q: 3 }); tone({ f: 160, f2: 90, dur: 0.25, v: 0.08, type: 'square', lp: 800 }); } },
+    hatch() { noise({ ft: 'bandpass', f: 500, f2: 1600, dur: 0.4, v: 0.12, q: 2 }); tone({ f: 300, f2: 600, dur: 0.3, v: 0.05, type: 'square', lp: 1200 }); },
+    muzzle() { if (throttle('muzzle', 0.06)) tone({ f: 620, f2: 180, dur: 0.08, v: 0.05, type: 'square', lp: 2000 }); },
+    gunDown() { noise({ f: 2200, f2: 120, dur: 0.5, v: 0.28 }); tone({ f: 500, f2: 80, dur: 0.3, v: 0.1, type: 'square', lp: 1500 }); },
+    armorFall() {
+      noise({ f: 1200, f2: 60, dur: 1.4, v: 0.4 });
+      for (let i = 0; i < 5; i++) tone({ f: 300 + i * 90, f2: 80, dur: 0.18, v: 0.08, delay: 0.1 + i * 0.12, type: 'square', lp: 900 });
+    },
     part() {
       noise({ f: 2000, f2: 80, dur: 1.0, v: 0.38 });
       tone({ f: 140, f2: 30, dur: 0.8, v: 0.3, type: 'sine' });
@@ -3775,8 +4530,8 @@ SH.audio = (() => {
 
 /* =========================================================
  * 하늘 사냥꾼 — 플레이 중 입력
- *  · 터치/마우스: 화면 아무 데나 대고 끌면 비행기가 손가락 움직임만큼 따라 움직임
- *    (손가락에 비행기가 가려지지 않음). 끄는 중에 두 번째 손가락으로 톡 치면 폭탄.
+ *  · 키보드가 기본. 휴대폰 터치는 화면을 끌면 비행기가 손가락 움직임만큼 따라 움직임
+ *    (마우스로는 움직이지 않음). 끄는 중에 두 번째 손가락으로 톡 치면 폭탄.
  *  · 키보드: 방향키/WASD 이동, Shift 정밀 이동, X·Space·B 폭탄, Esc·P 일시정지
  * 메뉴 입력은 SH.ui 가, 둘 사이 나눠 주기는 main.js 가 합니다.
  * ========================================================= */
@@ -3856,7 +4611,7 @@ SH.input = (() => {
       const s = scale() || 1;
       const tx = drag.px + ((drag.fx - drag.sx) / s) * sens;
       const ty = drag.py + ((drag.fy - drag.sy) / s) * sens;
-      const cx = clamp(tx, 16, W - 16), cy = clamp(ty, 50, H - 26);
+      const cx = clamp(tx, 46, W - 46), cy = clamp(ty, 50, H - 26);
       // 벽에 닿으면 기준점을 옮겨, 반대로 움직일 때 바로 반응하게
       if (cx !== tx) { drag.px = cx; drag.sx = drag.fx; }
       if (cy !== ty) { drag.py = cy; drag.sy = drag.fy; }
@@ -3920,7 +4675,7 @@ SH.save = (() => {
 
 SH.ui = (() => {
   const R = () => SH.render;
-  const PW = 225, PH = 400;
+  const SW = 480, SHT = 225; // 가로 화면 (메뉴는 가운데 480×225 영역 기준, 위아래 여백은 render.MENU_Y)
   let screen = 'title';
   let settingsBack = 'title';
   let t = 0;
@@ -3932,7 +4687,7 @@ SH.ui = (() => {
   let touch = false;
   let keyNav = false;
   let over = { count: 10, last: 10 };
-  let result = null; // { score, rank, isNew, stage, kills, cleared }
+  let result = null; // { score, rank, isNew, cleared, pct, missiles }
   let ending = { t: 0 };
   const sens = [[1, '보통'], [1.3, '빠르게'], [1.6, '아주 빠르게']];
 
@@ -3961,150 +4716,154 @@ SH.ui = (() => {
   function column(items, x, y, w, h, gap) {
     items.forEach(([label, fn, o], i) => button(label, x, y + i * (h + gap), w, h, fn, o));
   }
+  /** 버튼 목록을 가로로 */
+  function row(items, x, y, w, h, gap) {
+    items.forEach(([label, fn, o], i) => button(label, x + i * (w + gap), y, w, h, fn, o));
+  }
 
-  /* ---------------- 화면들 ---------------- */
+  /* ---------------- 화면들 (가로 화면) ---------------- */
   function drawTitle(dt) {
     R().drawTitle(dt);
     const T = R().T;
-    if (!SH.pix.draw(R().ctx, 'logo', PW / 2, 74)) T('하늘 사냥꾼', PW / 2, 74, { color: '#ffd84a', size: 24, align: 'center', shadow: '#8a3a10' });
-    T('SKY HUNTER', PW / 2, 106, { color: '#ffffff', align: 'center', shadow: '#1c3f9a' });
-    T('VS IRON TITAN', PW / 2, 118, { color: '#ffd84a', align: 'center', shadow: '#8a3a10' });
+    if (!SH.pix.draw(R().ctx, 'logo', SW / 2, 40)) T('하늘 사냥꾼', SW / 2, 40, { color: '#ffd84a', size: 24, align: 'center', shadow: '#8a3a10' });
+    T('강철 요새 타이탄과의 결전', SW / 2, 74, { color: '#ffffff', align: 'center', size: 11 });
     for (let i = 0; i < 5; i++) {
-      const sx = [24, 196, 40, 182, 112][i], sy = [40, 52, 118, 124, 22][i];
+      const sx = [110, 370, 84, 396, 240][i], sy = [24, 30, 70, 76, 8][i];
       SH.pix.draw(R().ctx, 'star', sx, sy, { frame: Math.floor(t * 3 + i) });
     }
-    button(touch ? 'TOUCH START' : 'PRESS START', 50, 146, 125, 28, () => act.start(), { cursor: true, blink: true });
-    button('조작법', 14, 184, 62, 20, () => go('help'));
-    button('설정', 81, 184, 62, 20, () => { settingsBack = 'title'; go('settings'); });
-    button('랭킹', 148, 184, 62, 20, () => go('ranking'));
-    if (data.best) T(`HI ${SH.fmt(data.best)}`, PW / 2, 222, { color: '#ffe3ee', align: 'center' });
-    T(touch ? '화면을 끌어서 이동 · 자동 발사' : '방향키 이동 · X 폭탄 · 자동 발사', PW / 2, 390, { color: '#ffffff', align: 'center', size: 10 });
+    button('게임 시작', SW / 2 - 60, 96, 120, 24, () => act.start(), { cursor: true, blink: true, size: 12 });
+    row([
+      ['조작법', () => go('help')],
+      ['설정', () => { settingsBack = 'title'; go('settings'); }],
+      ['랭킹', () => go('ranking')],
+    ], SW / 2 - 105, 130, 66, 18, 6);
+    if (data.best) T(`최고 점수 ${SH.fmt(data.best)}`, SW / 2, 160, { color: '#ffe3ee', align: 'center', size: 10 });
+    T('방향키 이동 · X 폭탄 · Esc 일시정지 · Enter 시작', SW / 2, 213, { color: '#ffffff', align: 'center', size: 10 });
   }
 
   function drawHelp(dt) {
     R().drawTitle(dt);
     R().dim(true);
-    const T = R().T, x = 8, y = 18, w = PW - 16, h = 362;
+    const T = R().T, ctx = R().ctx;
+    const x = 8, y = 6, w = SW - 16, h = SHT - 12;
     R().win(x, y, w, h);
-    T('HOW TO PLAY', PW / 2, y + 12, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
+    T('조작법', SW / 2, y + 12, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
+    // 왼쪽: 조작 · 요령
     let yy = y + 32;
-    const line = (s, c, ind) => { T(s, x + 10 + (ind || 0), yy, { color: c || '#e8e0ff', size: 10 }); yy += 13; };
-    line(touch ? '이동: 화면 아무 데나 대고 끌기' : '이동: 방향키 / WASD (Shift 천천히)', '#ffffff');
-    line(touch ? '(PC: 방향키 / WASD)' : '(마우스로 끌어도 돼요)', '#b5aed6', 8);
-    line('공격: 총은 자동으로 쏴요', '#ffffff');
-    line(touch ? '폭탄: 오른쪽 아래 버튼, 두 손가락 톡' : '폭탄: X 또는 스페이스', '#ffffff');
-    line('비행기 가운데 빨간 점에 맞으면 한 대!', '#ff9ac2');
-    yy += 6;
-    T('ITEMS', x + 10, yy, { color: '#ffd84a' });
-    yy += 14;
-    const item = (spriteName, s, frameName) => {
-      SH.pix.draw(R().ctx, spriteName, x + 18, yy, { frame: Math.floor(t * 6) });
-      if (frameName) SH.pix.draw(R().ctx, frameName, x + 32, yy, { frame: Math.floor(t * 6) });
-      T(s, x + (frameName ? 44 : 32), yy, { color: '#e8e0ff', size: 10 });
-      yy += 17;
-    };
-    SH.pix.draw(R().ctx, 'item_spread', x + 18, yy, { frame: Math.floor(t * 6) });
-    SH.pix.draw(R().ctx, 'item_laser', x + 32, yy, { frame: Math.floor(t * 6) });
-    SH.pix.draw(R().ctx, 'item_homing', x + 46, yy, { frame: Math.floor(t * 6) });
-    T('파워업! 색 = 무기', x + 58, yy, { color: '#e8e0ff', size: 10 });
-    yy += 15;
-    T('주황 확산탄 · 파랑 레이저 · 초록 유도탄', x + 12, yy, { color: '#b5aed6', size: 10 });
-    yy += 17;
-    item('item_bomb', '폭탄 +1 (탄을 모두 지움)');
-    item('item_life', '비행기 +1');
-    item('item_shield', '한 번 막아 주는 방패');
-    item('gem', '보석: 점수! 점수가 쌓이면 1UP');
-    yy += 2;
-    T('TIPS', x + 10, yy, { color: '#ffd84a' });
-    yy += 14;
+    const L = x + 12;
+    const line = (s, c, xx) => { T(s, xx || L, yy, { color: c || '#e8e0ff', size: 10 }); yy += 13; };
+    T('조작', L, yy, { color: '#ffd84a', size: 11 }); yy += 13;
+    line('이동: 방향키 / WASD', '#ffffff');
+    line('천천히: Shift · 공격: 자동 발사', '#ffffff');
+    line('폭탄: X / Space · 일시정지: Esc', '#ffffff');
+    line('(휴대폰은 화면을 끌어서 이동)', '#b5aed6');
+    line('가운데 빨간 점에 맞으면 한 대!', '#ff9ac2');
+    yy += 4;
+    T('요령', L, yy, { color: '#ffd84a', size: 11 }); yy += 13;
     line('먼저 양쪽 포탑을 부숴야 코어가 열려요');
-    line('빨간 점선 = 레이저가 지나갈 곳!');
-    line('빨간 미사일은 쏴서 터뜨릴 수 있어요');
-    line('포탑 파괴·단계 변화 때 파워 아이템!');
-    button('뒤로', PW / 2 - 40, y + h - 28, 80, 20, () => go('title'), { cursor: true });
+    line('빨간 점선 = 무기가 겨눈 곳, 빛이 모이면 발사');
+    line('벽에서 나오는 레이저포도 부술 수 있어요');
+    line('단계마다 보스가 새 무기를 꺼내요');
+    // 오른쪽: 아이템
+    yy = y + 32;
+    const Rx = x + 268;
+    T('아이템', Rx, yy, { color: '#ffd84a', size: 11 }); yy += 15;
+    const f = Math.floor(t * 6);
+    SH.pix.draw(ctx, 'item_spread', Rx + 6, yy, { frame: f });
+    SH.pix.draw(ctx, 'item_laser', Rx + 20, yy, { frame: f });
+    SH.pix.draw(ctx, 'item_homing', Rx + 34, yy, { frame: f });
+    T('파워업 (색 = 무기)', Rx + 46, yy, { color: '#e8e0ff', size: 10 }); yy += 16;
+    for (const [n, s] of [['item_bomb', '폭탄 +1'], ['item_life', '비행기 +1'], ['item_shield', '한 번 막아 줌'], ['gem', '보석: 점수!']]) {
+      SH.pix.draw(ctx, n, Rx + 6, yy, { frame: f });
+      T(s, Rx + 20, yy, { color: '#e8e0ff', size: 10 });
+      yy += 16;
+    }
+    button('뒤로', SW / 2 - 40, y + h - 24, 80, 18, () => go('title'), { cursor: true });
   }
 
   function settingRow(label, value, y, dec, inc) {
-    const x = 20, w = PW - 40, h = 22;
+    const x = SW / 2 - 116, w = 232, h = 20;
     const i = btns.length;
     button('', x, y, w, h, inc, { side: { dec, inc } });
     const T = R().T;
-    T(label, x + 10, y + 11, { color: i === focus ? '#ffd84a' : '#ffffff', size: 11 });
-    T('◀', x + w - 82, y + 11, { color: '#c9a8ff' });
-    T(value, x + w - 46, y + 11, { color: '#ffffff', align: 'center', size: 10 });
-    T('▶', x + w - 14, y + 11, { color: '#c9a8ff' });
+    T(label, x + 10, y + 10, { color: i === focus ? '#ffd84a' : '#ffffff', size: 11 });
+    T('◀', x + w - 82, y + 10, { color: '#c9a8ff' });
+    T(value, x + w - 46, y + 10, { color: '#ffffff', align: 'center', size: 10 });
+    T('▶', x + w - 14, y + 10, { color: '#c9a8ff' });
   }
 
   function drawSettings(dt, inGame) {
     if (inGame) { act.drawGameFrozen(); R().dim(); } else { R().drawTitle(dt); R().dim(true); }
     const st = data.settings;
     const T = R().T;
-    R().win(10, 70, PW - 20, 250);
-    T('SETTINGS', PW / 2, 86, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
+    R().win(SW / 2 - 130, 8, 260, SHT - 16);
+    T('설정', SW / 2, 22, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
     const pct = (v) => `${Math.round(v * 100)}%`;
     const vol = (k) => [() => { st[k] = Math.max(0, Math.round((st[k] - 0.1) * 10) / 10); act.settings(); SH.audio.sfx('gem'); }, () => { st[k] = Math.min(1, Math.round((st[k] + 0.1) * 10) / 10); act.settings(); SH.audio.sfx('gem'); }];
     const [sd, si] = vol('sfx');
-    settingRow('효과음', pct(st.sfx), 104, sd, si);
+    settingRow('효과음', pct(st.sfx), 38, sd, si);
     const [md, mi] = vol('music');
-    settingRow('음악', pct(st.music), 130, md, mi);
+    settingRow('음악', pct(st.music), 62, md, mi);
+    const tog = (k) => () => { st[k] = !st[k]; act.settings(); };
+    settingRow('화면 흔들림', st.shake ? '켬' : '끔', 86, tog('shake'), tog('shake'));
+    settingRow('진동', st.vibrate ? '켬' : '끔', 110, tog('vibrate'), tog('vibrate'));
     const si2 = Math.max(0, sens.findIndex((s) => s[0] === st.sens));
     const setSens = (d) => () => { st.sens = sens[(si2 + d + sens.length) % sens.length][0]; act.settings(); };
-    settingRow('드래그 감도', sens[si2][1], 156, setSens(-1), setSens(1));
-    const tog = (k) => () => { st[k] = !st[k]; act.settings(); };
-    settingRow('화면 흔들림', st.shake ? 'ON' : 'OFF', 182, tog('shake'), tog('shake'));
-    settingRow('진동', st.vibrate ? 'ON' : 'OFF', 208, tog('vibrate'), tog('vibrate'));
-    T('◀ ▶ 를 눌러 바꿔요', PW / 2, 244, { color: '#b5aed6', align: 'center', size: 10 });
-    button('뒤로', PW / 2 - 40, 284, 80, 22, () => go(settingsBack), { cursor: true });
+    settingRow('터치 감도', sens[si2][1], 134, setSens(-1), setSens(1));
+    T('◀ ▶ (또는 ←→ 키) 로 바꿔요', SW / 2, 166, { color: '#b5aed6', align: 'center', size: 10 });
+    button('뒤로', SW / 2 - 40, 182, 80, 20, () => go(settingsBack), { cursor: true });
   }
 
   function drawRanking(dt) {
     R().drawTitle(dt);
     R().dim(true);
     const T = R().T;
-    R().win(14, 70, PW - 28, 230);
-    T('HIGH SCORES', PW / 2, 88, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
-    const names = ['1ST', '2ND', '3RD', '4TH', '5TH'];
+    R().win(SW / 2 - 110, 8, 220, SHT - 16);
+    T('순위', SW / 2, 24, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
+    const names = ['1위', '2위', '3위', '4위', '5위'];
     const cols = ['#ffd84a', '#d8d4ec', '#e2aa6c', '#ffffff', '#ffffff'];
     for (let i = 0; i < 5; i++) {
       const r = data.ranks[i];
-      const y = 116 + i * 24;
-      T(names[i], 30, y, { color: cols[i] });
+      const y = 50 + i * 22;
+      T(names[i], SW / 2 - 92, y, { color: cols[i], size: 10 });
       if (r) {
-        T(SH.fmt(r.score), 140, y, { color: '#ffffff', align: 'right' });
-        T(r.cleared ? 'CLEAR' : `${r.pct || 0}%`, PW - 30, y, { color: r.cleared ? '#ffd84a' : '#b5aed6', align: 'right' });
-      } else T('- - - - -', 140, y, { color: '#5a5680', align: 'right' });
+        T(SH.fmt(r.score), SW / 2 + 40, y, { color: '#ffffff', align: 'right' });
+        T(r.cleared ? '격파!' : `${r.pct || 0}%`, SW / 2 + 92, y, { color: r.cleared ? '#ffd84a' : '#b5aed6', align: 'right', size: 10 });
+      } else T('- - - - -', SW / 2 + 40, y, { color: '#5a5680', align: 'right' });
     }
-    button('뒤로', PW / 2 - 40, 268, 80, 22, () => go('title'), { cursor: true });
+    button('뒤로', SW / 2 - 40, 180, 80, 20, () => go('title'), { cursor: true });
   }
 
   function drawPause() {
     act.drawGameFrozen();
     R().dim();
     const T = R().T;
-    R().win(42, 110, PW - 84, 170);
-    T('PAUSE', PW / 2, 128, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
+    R().win(SW / 2 - 70, 30, 140, 166);
+    T('일시정지', SW / 2, 46, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
     column([
       ['계속하기', () => act.resume(), { cursor: true }],
       ['설정', () => { settingsBack = 'pause'; go('settings'); }],
       ['처음부터', () => act.start()],
       ['타이틀로', () => act.toTitle()],
-    ], 62, 146, PW - 124, 22, 6);
+    ], SW / 2 - 50, 64, 100, 22, 6);
   }
 
   function drawOver(dt) {
     act.drawGameFrozen();
     R().dim(true);
     const T = R().T;
-    T('GAME OVER', PW / 2, 110, { color: '#ff3b4e', scale: 3, align: 'center', shadow: '#5a0a1a' });
+    T('게임 오버', SW / 2, 34, { color: '#ff3b4e', scale: 3, align: 'center', shadow: '#5a0a1a' });
     over.count -= dt;
     const n = Math.max(0, Math.ceil(over.count));
     if (n !== over.last) { over.last = n; SH.audio.sfx('click'); }
     if (over.count <= 0) { finish(); return; }
-    T('CONTINUE?', PW / 2, 160, { color: '#ffffff', scale: 2, align: 'center' });
-    T(String(n), PW / 2, 206, { color: '#ffd84a', scale: 5, align: 'center', shadow: '#8a3a10' });
-    button('이어하기', 30, 250, 78, 24, () => act.continueGame(), { cursor: true });
-    button('그만하기', PW - 108, 250, 78, 24, () => finish());
-    T('이어하면 지금 자리에서 다시! (점수 유지)', PW / 2, 290, { color: '#d8d4ec', align: 'center', size: 10 });
+    T('이어서 할까요?', SW / 2, 72, { color: '#ffffff', scale: 2, align: 'center' });
+    T(String(n), SW / 2, 110, { color: '#ffd84a', scale: 5, align: 'center', shadow: '#8a3a10' });
+    row([
+      ['이어하기', () => act.continueGame(), { cursor: true }],
+      ['그만하기', () => finish()],
+    ], SW / 2 - 92, 146, 86, 22, 12);
+    T('이어하면 지금 자리에서 다시! (점수 유지)', SW / 2, 186, { color: '#d8d4ec', align: 'center', size: 10 });
   }
 
   function finish() {
@@ -4112,27 +4871,28 @@ SH.ui = (() => {
     go('results');
   }
 
-  function drawResults(dt, title) {
-    if (title) { R().drawTitle(dt); R().dim(true); } else { act.drawGameFrozen(); R().dim(); }
+  function drawResults() {
+    act.drawGameFrozen();
+    R().dim();
     const T = R().T;
     const r = result || { score: 0 };
-    R().win(16, 80, PW - 32, 220);
-    T(title ? 'CONGRATULATIONS!' : 'RESULT', PW / 2, 98, { color: '#ffd84a', scale: title ? 1 : 2, align: 'center', shadow: '#8a3a10' });
+    R().win(SW / 2 - 100, 8, 200, SHT - 16);
+    T('결과', SW / 2, 24, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
     const rows = [
-      ['SCORE', SH.fmt(r.score), '#ffffff'],
-      ['HI SCORE', SH.fmt(data.best), '#ffe3ee'],
-      ['DAMAGE', r.cleared ? 'CLEAR!' : `${r.pct || 0}%`, '#ffffff'],
-      ['MISSILES', SH.fmt(r.missiles || 0), '#ffffff'],
+      ['점수', SH.fmt(r.score), '#ffffff'],
+      ['최고 점수', SH.fmt(data.best), '#ffe3ee'],
+      ['보스 파괴율', r.cleared ? '격파!' : `${r.pct || 0}%`, '#ffffff'],
+      ['미사일 격추', SH.fmt(r.missiles || 0), '#ffffff'],
     ];
     rows.forEach(([k, v, c], i) => {
-      T(k, 32, 122 + i * 16, { color: '#c9a8ff' });
-      T(v, PW - 32, 122 + i * 16, { color: c, align: 'right' });
+      T(k, SW / 2 - 84, 46 + i * 15, { color: '#c9a8ff', size: 10 });
+      T(v, SW / 2 + 84, 46 + i * 15, { color: c, align: 'right' });
     });
-    if (r.rank >= 0 && Math.floor(t * 3) % 2 === 0) T(r.isNew ? 'NEW RECORD!' : `RANK IN ${['1ST', '2ND', '3RD', '4TH', '5TH'][r.rank]}!`, PW / 2, 196, { color: '#ff7aa8', align: 'center', scale: r.isNew ? 2 : 1 });
+    if (r.rank >= 0 && Math.floor(t * 3) % 2 === 0) T(r.isNew ? '신기록!' : `${r.rank + 1}위 기록!`, SW / 2, 114, { color: '#ff7aa8', align: 'center', scale: r.isNew ? 2 : 1 });
     column([
       ['다시 하기', () => act.start(), { cursor: true }],
       ['타이틀로', () => act.toTitle()],
-    ], 54, 218, PW - 108, 22, 8);
+    ], SW / 2 - 60, 134, 120, 22, 8);
   }
 
   function drawEnding(dt) {
@@ -4140,30 +4900,31 @@ SH.ui = (() => {
     R().drawTitle(dt, true);
     const T = R().T;
     if (Math.random() < dt * 3) {
-      const x = 20 + Math.random() * (PW - 40), y = 30 + Math.random() * 150;
+      // 불꽃놀이 (세계 좌표: 화면 오른쪽 위쪽 = 세계 위쪽)
+      const x = 20 + Math.random() * 440, y = 20 + Math.random() * 120;
       SH.fx.anim('boomBig', x, y, 14);
       SH.fx.ring(x, y, 2, 30 + Math.random() * 20, 0.6, ['#ffd84a', '#ff7aa8', '#8fd4ff', '#a6f070'][Math.floor(Math.random() * 4)], 1);
       SH.audio.sfx('bossBoom');
     }
     const e = ending.t;
-    T('CONGRATULATIONS!', PW / 2, 44, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
-    if (e > 0.8) T('강철 요새 타이탄을 무너뜨렸다!', PW / 2, 72, { color: '#ffffff', align: 'center', size: 12 });
-    if (e > 1.6) T('하늘에 다시 평화가 찾아왔어요.', PW / 2, 90, { color: '#e8e0ff', align: 'center', size: 10 });
-    if (e > 2.4) T('…하지만 더 단단해진 요새가 다시 오는데?', PW / 2, 104, { color: '#ff9ac2', align: 'center', size: 10 });
+    T('축하합니다!', SW / 2, 18, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
+    if (e > 0.8) T('강철 요새 타이탄을 무너뜨렸다!', SW / 2, 40, { color: '#ffffff', align: 'center', size: 12 });
+    if (e > 1.6) T('요새는 멈추고, 하늘에 다시 평화가 찾아왔어요.', SW / 2, 56, { color: '#e8e0ff', align: 'center', size: 10 });
+    if (e > 2.4) T('…하지만 더 단단해진 요새가 다시 오는데?', SW / 2, 69, { color: '#ff9ac2', align: 'center', size: 10 });
     if (e > 3) {
       const r = result || { score: 0 };
-      R().win(24, 122, PW - 48, 86);
+      R().win(SW / 2 - 90, 82, 180, 74);
       const g = act.game();
-      const rows = [['SCORE', SH.fmt(r.score)], ['TIME', fmtTime(g ? g.stats.time : 0)], ['DEATHS', String(g ? g.stats.deaths : 0)], ['CONTINUE', String(g ? g.continues : 0)]];
+      const rows = [['점수', SH.fmt(r.score)], ['걸린 시간', fmtTime(g ? g.stats.time : 0)], ['격추당함', String(g ? g.stats.deaths : 0)], ['이어하기', String(g ? g.continues : 0)]];
       rows.forEach(([k, v], i) => {
-        T(k, 38, 136 + i * 16, { color: '#c9a8ff' });
-        T(v, PW - 38, 136 + i * 16, { color: '#ffffff', align: 'right' });
+        T(k, SW / 2 - 78, 95 + i * 15, { color: '#c9a8ff', size: 10 });
+        T(v, SW / 2 + 78, 95 + i * 15, { color: '#ffffff', align: 'right' });
       });
-      if (r.isNew && Math.floor(t * 3) % 2 === 0) T('NEW RECORD!', PW / 2, 220, { color: '#ff7aa8', align: 'center', scale: 2 });
-      column([
-        [`LOOP ${g ? g.loop + 2 : 2} 도전!`, () => act.nextLoop(), { cursor: true }],
+      if (r.isNew && Math.floor(t * 3) % 2 === 0) T('신기록!', SW / 2, 168, { color: '#ff7aa8', align: 'center', scale: 2 });
+      row([
+        [`${g ? g.loop + 2 : 2}회차 도전!`, () => act.nextLoop(), { cursor: true }],
         ['타이틀로', () => act.toTitle()],
-      ], 54, 238, PW - 108, 22, 8);
+      ], SW / 2 - 96, 184, 90, 22, 12);
     }
   }
 
@@ -4173,12 +4934,12 @@ SH.ui = (() => {
   }
 
   /* ---------------- 게임 중 버튼 (일시정지 · 폭탄) ---------------- */
-  const playBtn = { pause: { x: 204, y: 1, w: 20, h: 20 }, bomb: { x: 186, y: 362, w: 36, h: 36 } };
+  const playBtn = { pause: { x: 460, y: 0, w: 20, h: 20 }, bomb: { x: 440, y: 228, w: 34, h: 34 } };
   let bombDown = 0, pauseDown = 0;
   function drawPlayButtons(g, dt) {
     if (bombDown > 0) bombDown -= dt;
     if (pauseDown > 0) pauseDown -= dt;
-    R().spr('btn_pause', 214, 11, { frame: pauseDown > 0 ? 1 : 0, fbs: 14 }, '#3a3058');
+    R().spr('btn_pause', 470, 10, { frame: pauseDown > 0 ? 1 : 0, fbs: 14 }, '#3a3058');
     if (touch) {
       const b = playBtn.bomb;
       R().spr('btn_bomb', b.x + b.w / 2, b.y + b.h / 2, { frame: bombDown > 0 ? 1 : 0, fbs: 26, alpha: g.bombs > 0 ? 1 : 0.45 }, '#ff8a2a');
@@ -4186,7 +4947,7 @@ SH.ui = (() => {
     }
   }
   const inside = (r, x, y, pad) => x >= r.x - pad && x <= r.x + r.w + pad && y >= r.y - pad && y <= r.y + r.h + pad;
-  /** 게임 중 터치가 버튼 위면 처리하고 true */
+  /** 게임 중 터치·클릭이 버튼 위면 처리하고 true */
   function playHit(x, y) {
     if (inside(playBtn.pause, x, y, 4)) { pauseDown = 0.15; act.pause(); return true; }
     if (touch && inside(playBtn.bomb, x, y, 6)) { bombDown = 0.15; act.bomb(); return true; }
@@ -4197,6 +4958,9 @@ SH.ui = (() => {
   function draw(dt) {
     t += dt;
     btns.length = 0;
+    const c = R().ctx;
+    c.save();
+    c.translate(0, R().MENU_Y);
     switch (screen) {
       case 'title': drawTitle(dt); break;
       case 'help': drawHelp(dt); break;
@@ -4204,10 +4968,11 @@ SH.ui = (() => {
       case 'ranking': drawRanking(dt); break;
       case 'pause': drawPause(); break;
       case 'over': drawOver(dt); break;
-      case 'results': drawResults(dt, false); break;
+      case 'results': drawResults(); break;
       case 'ending': drawEnding(dt); break;
       default:
     }
+    c.restore();
     if (focus >= btns.length) focus = Math.max(0, btns.length - 1);
   }
 
@@ -4217,6 +4982,7 @@ SH.ui = (() => {
     return -1;
   }
   function pointerDown(x, y, isTouch) {
+    y -= R().MENU_Y;
     if (isTouch) touch = true;
     keyNav = false;
     const i = hitIndex(x, y);
@@ -4224,6 +4990,7 @@ SH.ui = (() => {
     if (i >= 0) focus = i;
   }
   function pointerUp(x, y) {
+    y -= R().MENU_Y;
     const i = hitIndex(x, y);
     const p = pressed;
     pressed = -1;
@@ -4287,8 +5054,8 @@ SH.ui = (() => {
  * ========================================================= */
 
 (() => {
-  const { W, DT } = SH;
-  const PW = 225, PH = 400;
+  const { DT } = SH;
+  const PW = 480, PH = 270; // 가로 화면 버퍼
   const $ = (id) => document.getElementById(id);
   const S = { game: null, save: null, scale: 1, rect: null, last: 0, acc: 0 };
 
@@ -4300,12 +5067,12 @@ SH.ui = (() => {
     const ah = app.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
     const dpr = window.devicePixelRatio || 1;
     const fit = Math.min((aw * dpr) / PW, (ah * dpr) / PH);
-    // 정수배가 화면을 충분히 채우면 정수배(가장 또렷), 아니면 그대로
+    // 정수배가 화면을 충분히 채우면 정수배(가장 또렷), 아니면 그대로 (1920×1080 이면 꼭 4배)
     const k = Math.floor(fit) >= 1 && Math.floor(fit) / fit >= 0.82 ? Math.floor(fit) : fit;
     const devW = Math.max(PW, Math.round(PW * k)), devH = Math.max(PH, Math.round(PH * k));
     const cssW = devW / dpr, cssH = devH / dpr;
     SH.render.resize(devW, devH, cssW, cssH);
-    S.scale = cssW / W; // CSS 픽셀 / 게임 논리 좌표
+    S.scale = cssW / SH.W; // CSS 픽셀 / 게임 논리 좌표
   }
 
   /** 화면 좌표 → 버퍼 픽셀 좌표 */
@@ -4333,7 +5100,8 @@ SH.ui = (() => {
     missile: 'missile', bossBoom: 'bossBoom', bossDie: 'bossDie', playerDie: 'playerDie', bomb: 'bomb',
     power: 'power', item: 'item', extend: 'extend', gem: 'gem', spark: 'spark', shieldBreak: 'shield',
     warning: 'warning', bossPhase: 'phase', stageClear: 'clear', partDestroyed: 'part', laserWarn: 'laserWarn',
-    laserFire: 'laserFire', enemyMissile: 'enemyMissile', missileDown: 'missileDown',
+    laserFire: 'laserFire', enemyMissile: 'enemyMissile', missileDown: 'missileDown', charge: 'charge', bigCharge: 'bigCharge',
+    call: 'call', gunIn: 'gunIn', hatch: 'hatch', muzzle: 'muzzle', gunDown: 'gunDown', partBreak: 'part', armorFall: 'armorFall',
   };
   function onEvent(type, d) {
     SH.fx.onEvent(type, d);
@@ -4344,9 +5112,9 @@ SH.ui = (() => {
       case 'stageStart': SH.render.reset(); SH.audio.music('stage1'); break;
       case 'warning': SH.audio.music('none'); break;
       case 'bossAppear': SH.audio.music('boss'); break;
-      case 'bossReady': SH.render.showNotice('포탑을 부숴라!', '코어는 방어막으로 덮여 있다', '#ffd84a', 2.4); break;
+      case 'bossReady': SH.render.showNotice('포탑을 부숴라!', '코어는 방어막으로 덮여 있다', '#ffd84a', 2.6); break;
       case 'bossPhase':
-        SH.render.showNotice(d.name, d.berserk ? '모든 공격이 빨라진다!' : '파워 아이템을 챙기자!', d.berserk ? '#ff5a5a' : '#ffd84a', 2.4);
+        SH.render.showNotice(d.unlock || d.name, d.hint, d.berserk ? '#ff5a5a' : '#ffd84a', 3.2, true);
         vibrate(80);
         break;
       case 'partDestroyed': vibrate(120); break;
@@ -4354,7 +5122,7 @@ SH.ui = (() => {
       case 'playerDie': vibrate(220); break;
       case 'bomb': vibrate(60); break;
       case 'bossDie': vibrate(400); break;
-      case 'extend': if (d.score && S.game && S.game.phase !== 'clear') SH.render.showNotice('1UP!', '점수 보너스 - 비행기 +1', '#ff7aa8', 1.8); break;
+      case 'extend': if (d.score && S.game && S.game.phase !== 'clear') SH.render.showNotice('비행기 +1!', '점수 보너스', '#ff7aa8', 1.8); break;
       case 'gameOver':
         SH.audio.sfx('gameOver');
         SH.audio.music('none');
@@ -4461,7 +5229,8 @@ SH.ui = (() => {
     e.preventDefault();
     if (playing()) {
       if (SH.ui.playHit(p.x, p.y)) return;
-      SH.input.dragDown(e);
+      // 비행기는 키보드로 움직임 (마우스로는 움직이지 않음). 휴대폰 터치만 끌어서 이동.
+      if (touch) SH.input.dragDown(e);
     } else SH.ui.pointerDown(p.x, p.y, touch);
   }
   function onMove(e) {
@@ -4549,7 +5318,21 @@ SH.ui = (() => {
         god: () => { if (S.game) S.game.god = !S.game.god; return S.game && S.game.god; },
         power: (n, w) => { if (S.game) { S.game.power = n || 5; if (w) S.game.weapon = w; } },
         skip: (sec) => { const g = S.game; if (!g) return; for (let i = 0; i < sec * 60; i++) { g.update(DT); SH.fx.update(DT); } },
-        phase: (n) => { const g = S.game; if (!g || !g.boss) return; while (g.boss && g.boss.phase < n) { if (g.boss.phase === 0) for (const p of Object.values(g.boss.parts)) { p.hp = 1; g._damagePart(p, 5); } else { g.boss.inv = 0; g._damageCore(g.boss.maxHp * 0.34); } } },
+        phase: (n) => {
+          const g = S.game;
+          for (let guard = 0; guard < 20 && g && g.B && g.B.phase < n; guard++) {
+            const B = g.B;
+            while (B.state !== 'fight') { g.update(DT); SH.fx.update(DT); }
+            if (B.phase === 0) {
+              for (const w of [B.w.turretL, B.w.turretR]) if (w.alive) g._damageWeapon(w, 9999);
+            } else {
+              B.inv = 0;
+              g._damageCore(B.hp - B.maxHp * g.def.phases[B.phase].until + 1);
+            }
+          }
+          for (let i = 0; i < 200 && g.B && g.B.state !== 'fight'; i++) { g.update(DT); SH.fx.update(DT); }
+        },
+        pattern: (name) => { const g = S.game; if (g && g.B) { for (const t of g.tasks) if (t.tag === 'boss') t.done = true; g.B.task = g.run(SH.BOSS_PATTERNS[name](g), null, 'boss'); } },
         state: () => S,
       };
       console.log('[하늘 사냥꾼] 디버그: SH.debug.start() · god() · power(5,"laser") · skip(초) · phase(0~3)');

@@ -37,7 +37,7 @@ SH.save = (() => {
 
 SH.ui = (() => {
   const R = () => SH.render;
-  const PW = 225, PH = 400;
+  const SW = 480, SHT = 225; // 가로 화면 (메뉴는 가운데 480×225 영역 기준, 위아래 여백은 render.MENU_Y)
   let screen = 'title';
   let settingsBack = 'title';
   let t = 0;
@@ -49,7 +49,7 @@ SH.ui = (() => {
   let touch = false;
   let keyNav = false;
   let over = { count: 10, last: 10 };
-  let result = null; // { score, rank, isNew, stage, kills, cleared }
+  let result = null; // { score, rank, isNew, cleared, pct, missiles }
   let ending = { t: 0 };
   const sens = [[1, '보통'], [1.3, '빠르게'], [1.6, '아주 빠르게']];
 
@@ -78,150 +78,154 @@ SH.ui = (() => {
   function column(items, x, y, w, h, gap) {
     items.forEach(([label, fn, o], i) => button(label, x, y + i * (h + gap), w, h, fn, o));
   }
+  /** 버튼 목록을 가로로 */
+  function row(items, x, y, w, h, gap) {
+    items.forEach(([label, fn, o], i) => button(label, x + i * (w + gap), y, w, h, fn, o));
+  }
 
-  /* ---------------- 화면들 ---------------- */
+  /* ---------------- 화면들 (가로 화면) ---------------- */
   function drawTitle(dt) {
     R().drawTitle(dt);
     const T = R().T;
-    if (!SH.pix.draw(R().ctx, 'logo', PW / 2, 74)) T('하늘 사냥꾼', PW / 2, 74, { color: '#ffd84a', size: 24, align: 'center', shadow: '#8a3a10' });
-    T('SKY HUNTER', PW / 2, 106, { color: '#ffffff', align: 'center', shadow: '#1c3f9a' });
-    T('VS IRON TITAN', PW / 2, 118, { color: '#ffd84a', align: 'center', shadow: '#8a3a10' });
+    if (!SH.pix.draw(R().ctx, 'logo', SW / 2, 40)) T('하늘 사냥꾼', SW / 2, 40, { color: '#ffd84a', size: 24, align: 'center', shadow: '#8a3a10' });
+    T('강철 요새 타이탄과의 결전', SW / 2, 74, { color: '#ffffff', align: 'center', size: 11 });
     for (let i = 0; i < 5; i++) {
-      const sx = [24, 196, 40, 182, 112][i], sy = [40, 52, 118, 124, 22][i];
+      const sx = [110, 370, 84, 396, 240][i], sy = [24, 30, 70, 76, 8][i];
       SH.pix.draw(R().ctx, 'star', sx, sy, { frame: Math.floor(t * 3 + i) });
     }
-    button(touch ? 'TOUCH START' : 'PRESS START', 50, 146, 125, 28, () => act.start(), { cursor: true, blink: true });
-    button('조작법', 14, 184, 62, 20, () => go('help'));
-    button('설정', 81, 184, 62, 20, () => { settingsBack = 'title'; go('settings'); });
-    button('랭킹', 148, 184, 62, 20, () => go('ranking'));
-    if (data.best) T(`HI ${SH.fmt(data.best)}`, PW / 2, 222, { color: '#ffe3ee', align: 'center' });
-    T(touch ? '화면을 끌어서 이동 · 자동 발사' : '방향키 이동 · X 폭탄 · 자동 발사', PW / 2, 390, { color: '#ffffff', align: 'center', size: 10 });
+    button('게임 시작', SW / 2 - 60, 96, 120, 24, () => act.start(), { cursor: true, blink: true, size: 12 });
+    row([
+      ['조작법', () => go('help')],
+      ['설정', () => { settingsBack = 'title'; go('settings'); }],
+      ['랭킹', () => go('ranking')],
+    ], SW / 2 - 105, 130, 66, 18, 6);
+    if (data.best) T(`최고 점수 ${SH.fmt(data.best)}`, SW / 2, 160, { color: '#ffe3ee', align: 'center', size: 10 });
+    T('방향키 이동 · X 폭탄 · Esc 일시정지 · Enter 시작', SW / 2, 213, { color: '#ffffff', align: 'center', size: 10 });
   }
 
   function drawHelp(dt) {
     R().drawTitle(dt);
     R().dim(true);
-    const T = R().T, x = 8, y = 18, w = PW - 16, h = 362;
+    const T = R().T, ctx = R().ctx;
+    const x = 8, y = 6, w = SW - 16, h = SHT - 12;
     R().win(x, y, w, h);
-    T('HOW TO PLAY', PW / 2, y + 12, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
+    T('조작법', SW / 2, y + 12, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
+    // 왼쪽: 조작 · 요령
     let yy = y + 32;
-    const line = (s, c, ind) => { T(s, x + 10 + (ind || 0), yy, { color: c || '#e8e0ff', size: 10 }); yy += 13; };
-    line(touch ? '이동: 화면 아무 데나 대고 끌기' : '이동: 방향키 / WASD (Shift 천천히)', '#ffffff');
-    line(touch ? '(PC: 방향키 / WASD)' : '(마우스로 끌어도 돼요)', '#b5aed6', 8);
-    line('공격: 총은 자동으로 쏴요', '#ffffff');
-    line(touch ? '폭탄: 오른쪽 아래 버튼, 두 손가락 톡' : '폭탄: X 또는 스페이스', '#ffffff');
-    line('비행기 가운데 빨간 점에 맞으면 한 대!', '#ff9ac2');
-    yy += 6;
-    T('ITEMS', x + 10, yy, { color: '#ffd84a' });
-    yy += 14;
-    const item = (spriteName, s, frameName) => {
-      SH.pix.draw(R().ctx, spriteName, x + 18, yy, { frame: Math.floor(t * 6) });
-      if (frameName) SH.pix.draw(R().ctx, frameName, x + 32, yy, { frame: Math.floor(t * 6) });
-      T(s, x + (frameName ? 44 : 32), yy, { color: '#e8e0ff', size: 10 });
-      yy += 17;
-    };
-    SH.pix.draw(R().ctx, 'item_spread', x + 18, yy, { frame: Math.floor(t * 6) });
-    SH.pix.draw(R().ctx, 'item_laser', x + 32, yy, { frame: Math.floor(t * 6) });
-    SH.pix.draw(R().ctx, 'item_homing', x + 46, yy, { frame: Math.floor(t * 6) });
-    T('파워업! 색 = 무기', x + 58, yy, { color: '#e8e0ff', size: 10 });
-    yy += 15;
-    T('주황 확산탄 · 파랑 레이저 · 초록 유도탄', x + 12, yy, { color: '#b5aed6', size: 10 });
-    yy += 17;
-    item('item_bomb', '폭탄 +1 (탄을 모두 지움)');
-    item('item_life', '비행기 +1');
-    item('item_shield', '한 번 막아 주는 방패');
-    item('gem', '보석: 점수! 점수가 쌓이면 1UP');
-    yy += 2;
-    T('TIPS', x + 10, yy, { color: '#ffd84a' });
-    yy += 14;
+    const L = x + 12;
+    const line = (s, c, xx) => { T(s, xx || L, yy, { color: c || '#e8e0ff', size: 10 }); yy += 13; };
+    T('조작', L, yy, { color: '#ffd84a', size: 11 }); yy += 13;
+    line('이동: 방향키 / WASD', '#ffffff');
+    line('천천히: Shift · 공격: 자동 발사', '#ffffff');
+    line('폭탄: X / Space · 일시정지: Esc', '#ffffff');
+    line('(휴대폰은 화면을 끌어서 이동)', '#b5aed6');
+    line('가운데 빨간 점에 맞으면 한 대!', '#ff9ac2');
+    yy += 4;
+    T('요령', L, yy, { color: '#ffd84a', size: 11 }); yy += 13;
     line('먼저 양쪽 포탑을 부숴야 코어가 열려요');
-    line('빨간 점선 = 레이저가 지나갈 곳!');
-    line('빨간 미사일은 쏴서 터뜨릴 수 있어요');
-    line('포탑 파괴·단계 변화 때 파워 아이템!');
-    button('뒤로', PW / 2 - 40, y + h - 28, 80, 20, () => go('title'), { cursor: true });
+    line('빨간 점선 = 무기가 겨눈 곳, 빛이 모이면 발사');
+    line('벽에서 나오는 레이저포도 부술 수 있어요');
+    line('단계마다 보스가 새 무기를 꺼내요');
+    // 오른쪽: 아이템
+    yy = y + 32;
+    const Rx = x + 268;
+    T('아이템', Rx, yy, { color: '#ffd84a', size: 11 }); yy += 15;
+    const f = Math.floor(t * 6);
+    SH.pix.draw(ctx, 'item_spread', Rx + 6, yy, { frame: f });
+    SH.pix.draw(ctx, 'item_laser', Rx + 20, yy, { frame: f });
+    SH.pix.draw(ctx, 'item_homing', Rx + 34, yy, { frame: f });
+    T('파워업 (색 = 무기)', Rx + 46, yy, { color: '#e8e0ff', size: 10 }); yy += 16;
+    for (const [n, s] of [['item_bomb', '폭탄 +1'], ['item_life', '비행기 +1'], ['item_shield', '한 번 막아 줌'], ['gem', '보석: 점수!']]) {
+      SH.pix.draw(ctx, n, Rx + 6, yy, { frame: f });
+      T(s, Rx + 20, yy, { color: '#e8e0ff', size: 10 });
+      yy += 16;
+    }
+    button('뒤로', SW / 2 - 40, y + h - 24, 80, 18, () => go('title'), { cursor: true });
   }
 
   function settingRow(label, value, y, dec, inc) {
-    const x = 20, w = PW - 40, h = 22;
+    const x = SW / 2 - 116, w = 232, h = 20;
     const i = btns.length;
     button('', x, y, w, h, inc, { side: { dec, inc } });
     const T = R().T;
-    T(label, x + 10, y + 11, { color: i === focus ? '#ffd84a' : '#ffffff', size: 11 });
-    T('◀', x + w - 82, y + 11, { color: '#c9a8ff' });
-    T(value, x + w - 46, y + 11, { color: '#ffffff', align: 'center', size: 10 });
-    T('▶', x + w - 14, y + 11, { color: '#c9a8ff' });
+    T(label, x + 10, y + 10, { color: i === focus ? '#ffd84a' : '#ffffff', size: 11 });
+    T('◀', x + w - 82, y + 10, { color: '#c9a8ff' });
+    T(value, x + w - 46, y + 10, { color: '#ffffff', align: 'center', size: 10 });
+    T('▶', x + w - 14, y + 10, { color: '#c9a8ff' });
   }
 
   function drawSettings(dt, inGame) {
     if (inGame) { act.drawGameFrozen(); R().dim(); } else { R().drawTitle(dt); R().dim(true); }
     const st = data.settings;
     const T = R().T;
-    R().win(10, 70, PW - 20, 250);
-    T('SETTINGS', PW / 2, 86, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
+    R().win(SW / 2 - 130, 8, 260, SHT - 16);
+    T('설정', SW / 2, 22, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
     const pct = (v) => `${Math.round(v * 100)}%`;
     const vol = (k) => [() => { st[k] = Math.max(0, Math.round((st[k] - 0.1) * 10) / 10); act.settings(); SH.audio.sfx('gem'); }, () => { st[k] = Math.min(1, Math.round((st[k] + 0.1) * 10) / 10); act.settings(); SH.audio.sfx('gem'); }];
     const [sd, si] = vol('sfx');
-    settingRow('효과음', pct(st.sfx), 104, sd, si);
+    settingRow('효과음', pct(st.sfx), 38, sd, si);
     const [md, mi] = vol('music');
-    settingRow('음악', pct(st.music), 130, md, mi);
+    settingRow('음악', pct(st.music), 62, md, mi);
+    const tog = (k) => () => { st[k] = !st[k]; act.settings(); };
+    settingRow('화면 흔들림', st.shake ? '켬' : '끔', 86, tog('shake'), tog('shake'));
+    settingRow('진동', st.vibrate ? '켬' : '끔', 110, tog('vibrate'), tog('vibrate'));
     const si2 = Math.max(0, sens.findIndex((s) => s[0] === st.sens));
     const setSens = (d) => () => { st.sens = sens[(si2 + d + sens.length) % sens.length][0]; act.settings(); };
-    settingRow('드래그 감도', sens[si2][1], 156, setSens(-1), setSens(1));
-    const tog = (k) => () => { st[k] = !st[k]; act.settings(); };
-    settingRow('화면 흔들림', st.shake ? 'ON' : 'OFF', 182, tog('shake'), tog('shake'));
-    settingRow('진동', st.vibrate ? 'ON' : 'OFF', 208, tog('vibrate'), tog('vibrate'));
-    T('◀ ▶ 를 눌러 바꿔요', PW / 2, 244, { color: '#b5aed6', align: 'center', size: 10 });
-    button('뒤로', PW / 2 - 40, 284, 80, 22, () => go(settingsBack), { cursor: true });
+    settingRow('터치 감도', sens[si2][1], 134, setSens(-1), setSens(1));
+    T('◀ ▶ (또는 ←→ 키) 로 바꿔요', SW / 2, 166, { color: '#b5aed6', align: 'center', size: 10 });
+    button('뒤로', SW / 2 - 40, 182, 80, 20, () => go(settingsBack), { cursor: true });
   }
 
   function drawRanking(dt) {
     R().drawTitle(dt);
     R().dim(true);
     const T = R().T;
-    R().win(14, 70, PW - 28, 230);
-    T('HIGH SCORES', PW / 2, 88, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
-    const names = ['1ST', '2ND', '3RD', '4TH', '5TH'];
+    R().win(SW / 2 - 110, 8, 220, SHT - 16);
+    T('순위', SW / 2, 24, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
+    const names = ['1위', '2위', '3위', '4위', '5위'];
     const cols = ['#ffd84a', '#d8d4ec', '#e2aa6c', '#ffffff', '#ffffff'];
     for (let i = 0; i < 5; i++) {
       const r = data.ranks[i];
-      const y = 116 + i * 24;
-      T(names[i], 30, y, { color: cols[i] });
+      const y = 50 + i * 22;
+      T(names[i], SW / 2 - 92, y, { color: cols[i], size: 10 });
       if (r) {
-        T(SH.fmt(r.score), 140, y, { color: '#ffffff', align: 'right' });
-        T(r.cleared ? 'CLEAR' : `${r.pct || 0}%`, PW - 30, y, { color: r.cleared ? '#ffd84a' : '#b5aed6', align: 'right' });
-      } else T('- - - - -', 140, y, { color: '#5a5680', align: 'right' });
+        T(SH.fmt(r.score), SW / 2 + 40, y, { color: '#ffffff', align: 'right' });
+        T(r.cleared ? '격파!' : `${r.pct || 0}%`, SW / 2 + 92, y, { color: r.cleared ? '#ffd84a' : '#b5aed6', align: 'right', size: 10 });
+      } else T('- - - - -', SW / 2 + 40, y, { color: '#5a5680', align: 'right' });
     }
-    button('뒤로', PW / 2 - 40, 268, 80, 22, () => go('title'), { cursor: true });
+    button('뒤로', SW / 2 - 40, 180, 80, 20, () => go('title'), { cursor: true });
   }
 
   function drawPause() {
     act.drawGameFrozen();
     R().dim();
     const T = R().T;
-    R().win(42, 110, PW - 84, 170);
-    T('PAUSE', PW / 2, 128, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
+    R().win(SW / 2 - 70, 30, 140, 166);
+    T('일시정지', SW / 2, 46, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
     column([
       ['계속하기', () => act.resume(), { cursor: true }],
       ['설정', () => { settingsBack = 'pause'; go('settings'); }],
       ['처음부터', () => act.start()],
       ['타이틀로', () => act.toTitle()],
-    ], 62, 146, PW - 124, 22, 6);
+    ], SW / 2 - 50, 64, 100, 22, 6);
   }
 
   function drawOver(dt) {
     act.drawGameFrozen();
     R().dim(true);
     const T = R().T;
-    T('GAME OVER', PW / 2, 110, { color: '#ff3b4e', scale: 3, align: 'center', shadow: '#5a0a1a' });
+    T('게임 오버', SW / 2, 34, { color: '#ff3b4e', scale: 3, align: 'center', shadow: '#5a0a1a' });
     over.count -= dt;
     const n = Math.max(0, Math.ceil(over.count));
     if (n !== over.last) { over.last = n; SH.audio.sfx('click'); }
     if (over.count <= 0) { finish(); return; }
-    T('CONTINUE?', PW / 2, 160, { color: '#ffffff', scale: 2, align: 'center' });
-    T(String(n), PW / 2, 206, { color: '#ffd84a', scale: 5, align: 'center', shadow: '#8a3a10' });
-    button('이어하기', 30, 250, 78, 24, () => act.continueGame(), { cursor: true });
-    button('그만하기', PW - 108, 250, 78, 24, () => finish());
-    T('이어하면 지금 자리에서 다시! (점수 유지)', PW / 2, 290, { color: '#d8d4ec', align: 'center', size: 10 });
+    T('이어서 할까요?', SW / 2, 72, { color: '#ffffff', scale: 2, align: 'center' });
+    T(String(n), SW / 2, 110, { color: '#ffd84a', scale: 5, align: 'center', shadow: '#8a3a10' });
+    row([
+      ['이어하기', () => act.continueGame(), { cursor: true }],
+      ['그만하기', () => finish()],
+    ], SW / 2 - 92, 146, 86, 22, 12);
+    T('이어하면 지금 자리에서 다시! (점수 유지)', SW / 2, 186, { color: '#d8d4ec', align: 'center', size: 10 });
   }
 
   function finish() {
@@ -229,27 +233,28 @@ SH.ui = (() => {
     go('results');
   }
 
-  function drawResults(dt, title) {
-    if (title) { R().drawTitle(dt); R().dim(true); } else { act.drawGameFrozen(); R().dim(); }
+  function drawResults() {
+    act.drawGameFrozen();
+    R().dim();
     const T = R().T;
     const r = result || { score: 0 };
-    R().win(16, 80, PW - 32, 220);
-    T(title ? 'CONGRATULATIONS!' : 'RESULT', PW / 2, 98, { color: '#ffd84a', scale: title ? 1 : 2, align: 'center', shadow: '#8a3a10' });
+    R().win(SW / 2 - 100, 8, 200, SHT - 16);
+    T('결과', SW / 2, 24, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
     const rows = [
-      ['SCORE', SH.fmt(r.score), '#ffffff'],
-      ['HI SCORE', SH.fmt(data.best), '#ffe3ee'],
-      ['DAMAGE', r.cleared ? 'CLEAR!' : `${r.pct || 0}%`, '#ffffff'],
-      ['MISSILES', SH.fmt(r.missiles || 0), '#ffffff'],
+      ['점수', SH.fmt(r.score), '#ffffff'],
+      ['최고 점수', SH.fmt(data.best), '#ffe3ee'],
+      ['보스 파괴율', r.cleared ? '격파!' : `${r.pct || 0}%`, '#ffffff'],
+      ['미사일 격추', SH.fmt(r.missiles || 0), '#ffffff'],
     ];
     rows.forEach(([k, v, c], i) => {
-      T(k, 32, 122 + i * 16, { color: '#c9a8ff' });
-      T(v, PW - 32, 122 + i * 16, { color: c, align: 'right' });
+      T(k, SW / 2 - 84, 46 + i * 15, { color: '#c9a8ff', size: 10 });
+      T(v, SW / 2 + 84, 46 + i * 15, { color: c, align: 'right' });
     });
-    if (r.rank >= 0 && Math.floor(t * 3) % 2 === 0) T(r.isNew ? 'NEW RECORD!' : `RANK IN ${['1ST', '2ND', '3RD', '4TH', '5TH'][r.rank]}!`, PW / 2, 196, { color: '#ff7aa8', align: 'center', scale: r.isNew ? 2 : 1 });
+    if (r.rank >= 0 && Math.floor(t * 3) % 2 === 0) T(r.isNew ? '신기록!' : `${r.rank + 1}위 기록!`, SW / 2, 114, { color: '#ff7aa8', align: 'center', scale: r.isNew ? 2 : 1 });
     column([
       ['다시 하기', () => act.start(), { cursor: true }],
       ['타이틀로', () => act.toTitle()],
-    ], 54, 218, PW - 108, 22, 8);
+    ], SW / 2 - 60, 134, 120, 22, 8);
   }
 
   function drawEnding(dt) {
@@ -257,30 +262,31 @@ SH.ui = (() => {
     R().drawTitle(dt, true);
     const T = R().T;
     if (Math.random() < dt * 3) {
-      const x = 20 + Math.random() * (PW - 40), y = 30 + Math.random() * 150;
+      // 불꽃놀이 (세계 좌표: 화면 오른쪽 위쪽 = 세계 위쪽)
+      const x = 20 + Math.random() * 440, y = 20 + Math.random() * 120;
       SH.fx.anim('boomBig', x, y, 14);
       SH.fx.ring(x, y, 2, 30 + Math.random() * 20, 0.6, ['#ffd84a', '#ff7aa8', '#8fd4ff', '#a6f070'][Math.floor(Math.random() * 4)], 1);
       SH.audio.sfx('bossBoom');
     }
     const e = ending.t;
-    T('CONGRATULATIONS!', PW / 2, 44, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
-    if (e > 0.8) T('강철 요새 타이탄을 무너뜨렸다!', PW / 2, 72, { color: '#ffffff', align: 'center', size: 12 });
-    if (e > 1.6) T('하늘에 다시 평화가 찾아왔어요.', PW / 2, 90, { color: '#e8e0ff', align: 'center', size: 10 });
-    if (e > 2.4) T('…하지만 더 단단해진 요새가 다시 오는데?', PW / 2, 104, { color: '#ff9ac2', align: 'center', size: 10 });
+    T('축하합니다!', SW / 2, 18, { color: '#ffd84a', scale: 2, align: 'center', shadow: '#8a3a10' });
+    if (e > 0.8) T('강철 요새 타이탄을 무너뜨렸다!', SW / 2, 40, { color: '#ffffff', align: 'center', size: 12 });
+    if (e > 1.6) T('요새는 멈추고, 하늘에 다시 평화가 찾아왔어요.', SW / 2, 56, { color: '#e8e0ff', align: 'center', size: 10 });
+    if (e > 2.4) T('…하지만 더 단단해진 요새가 다시 오는데?', SW / 2, 69, { color: '#ff9ac2', align: 'center', size: 10 });
     if (e > 3) {
       const r = result || { score: 0 };
-      R().win(24, 122, PW - 48, 86);
+      R().win(SW / 2 - 90, 82, 180, 74);
       const g = act.game();
-      const rows = [['SCORE', SH.fmt(r.score)], ['TIME', fmtTime(g ? g.stats.time : 0)], ['DEATHS', String(g ? g.stats.deaths : 0)], ['CONTINUE', String(g ? g.continues : 0)]];
+      const rows = [['점수', SH.fmt(r.score)], ['걸린 시간', fmtTime(g ? g.stats.time : 0)], ['격추당함', String(g ? g.stats.deaths : 0)], ['이어하기', String(g ? g.continues : 0)]];
       rows.forEach(([k, v], i) => {
-        T(k, 38, 136 + i * 16, { color: '#c9a8ff' });
-        T(v, PW - 38, 136 + i * 16, { color: '#ffffff', align: 'right' });
+        T(k, SW / 2 - 78, 95 + i * 15, { color: '#c9a8ff', size: 10 });
+        T(v, SW / 2 + 78, 95 + i * 15, { color: '#ffffff', align: 'right' });
       });
-      if (r.isNew && Math.floor(t * 3) % 2 === 0) T('NEW RECORD!', PW / 2, 220, { color: '#ff7aa8', align: 'center', scale: 2 });
-      column([
-        [`LOOP ${g ? g.loop + 2 : 2} 도전!`, () => act.nextLoop(), { cursor: true }],
+      if (r.isNew && Math.floor(t * 3) % 2 === 0) T('신기록!', SW / 2, 168, { color: '#ff7aa8', align: 'center', scale: 2 });
+      row([
+        [`${g ? g.loop + 2 : 2}회차 도전!`, () => act.nextLoop(), { cursor: true }],
         ['타이틀로', () => act.toTitle()],
-      ], 54, 238, PW - 108, 22, 8);
+      ], SW / 2 - 96, 184, 90, 22, 12);
     }
   }
 
@@ -290,12 +296,12 @@ SH.ui = (() => {
   }
 
   /* ---------------- 게임 중 버튼 (일시정지 · 폭탄) ---------------- */
-  const playBtn = { pause: { x: 204, y: 1, w: 20, h: 20 }, bomb: { x: 186, y: 362, w: 36, h: 36 } };
+  const playBtn = { pause: { x: 460, y: 0, w: 20, h: 20 }, bomb: { x: 440, y: 228, w: 34, h: 34 } };
   let bombDown = 0, pauseDown = 0;
   function drawPlayButtons(g, dt) {
     if (bombDown > 0) bombDown -= dt;
     if (pauseDown > 0) pauseDown -= dt;
-    R().spr('btn_pause', 214, 11, { frame: pauseDown > 0 ? 1 : 0, fbs: 14 }, '#3a3058');
+    R().spr('btn_pause', 470, 10, { frame: pauseDown > 0 ? 1 : 0, fbs: 14 }, '#3a3058');
     if (touch) {
       const b = playBtn.bomb;
       R().spr('btn_bomb', b.x + b.w / 2, b.y + b.h / 2, { frame: bombDown > 0 ? 1 : 0, fbs: 26, alpha: g.bombs > 0 ? 1 : 0.45 }, '#ff8a2a');
@@ -303,7 +309,7 @@ SH.ui = (() => {
     }
   }
   const inside = (r, x, y, pad) => x >= r.x - pad && x <= r.x + r.w + pad && y >= r.y - pad && y <= r.y + r.h + pad;
-  /** 게임 중 터치가 버튼 위면 처리하고 true */
+  /** 게임 중 터치·클릭이 버튼 위면 처리하고 true */
   function playHit(x, y) {
     if (inside(playBtn.pause, x, y, 4)) { pauseDown = 0.15; act.pause(); return true; }
     if (touch && inside(playBtn.bomb, x, y, 6)) { bombDown = 0.15; act.bomb(); return true; }
@@ -314,6 +320,9 @@ SH.ui = (() => {
   function draw(dt) {
     t += dt;
     btns.length = 0;
+    const c = R().ctx;
+    c.save();
+    c.translate(0, R().MENU_Y);
     switch (screen) {
       case 'title': drawTitle(dt); break;
       case 'help': drawHelp(dt); break;
@@ -321,10 +330,11 @@ SH.ui = (() => {
       case 'ranking': drawRanking(dt); break;
       case 'pause': drawPause(); break;
       case 'over': drawOver(dt); break;
-      case 'results': drawResults(dt, false); break;
+      case 'results': drawResults(); break;
       case 'ending': drawEnding(dt); break;
       default:
     }
+    c.restore();
     if (focus >= btns.length) focus = Math.max(0, btns.length - 1);
   }
 
@@ -334,6 +344,7 @@ SH.ui = (() => {
     return -1;
   }
   function pointerDown(x, y, isTouch) {
+    y -= R().MENU_Y;
     if (isTouch) touch = true;
     keyNav = false;
     const i = hitIndex(x, y);
@@ -341,6 +352,7 @@ SH.ui = (() => {
     if (i >= 0) focus = i;
   }
   function pointerUp(x, y) {
+    y -= R().MENU_Y;
     const i = hitIndex(x, y);
     const p = pressed;
     pressed = -1;

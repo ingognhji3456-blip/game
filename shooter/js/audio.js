@@ -192,6 +192,20 @@ SH.audio = (() => {
     },
     enemyMissile() { if (throttle('em', 0.25)) noise({ ft: 'bandpass', f: 1400, f2: 500, dur: 0.25, v: 0.07, q: 1.5 }); },
     missileDown() { if (throttle('md', 0.04)) { noise({ f: 2400, f2: 300, dur: 0.18, v: 0.12 }); tone({ f: 900, f2: 300, dur: 0.1, v: 0.04, type: 'square' }); } },
+    charge() { if (throttle('charge', 0.15)) tone({ f: 220, f2: 1500, dur: 0.6, v: 0.05, type: 'sawtooth', lp: 2200, a: 0.3 }); },
+    bigCharge() {
+      tone({ f: 80, f2: 900, dur: 2.0, v: 0.12, type: 'sawtooth', lp: 1800, a: 1.2 });
+      noise({ ft: 'bandpass', f: 400, f2: 2400, dur: 2.0, v: 0.08, q: 2, a: 1.0 });
+    },
+    call() { [0, 0.16, 0.32].forEach((d) => tone({ f: 1320, dur: 0.08, v: 0.06, delay: d, type: 'square' })); },
+    gunIn() { if (throttle('gunIn', 0.12)) { noise({ ft: 'bandpass', f: 700, f2: 300, dur: 0.35, v: 0.12, q: 3 }); tone({ f: 160, f2: 90, dur: 0.25, v: 0.08, type: 'square', lp: 800 }); } },
+    hatch() { noise({ ft: 'bandpass', f: 500, f2: 1600, dur: 0.4, v: 0.12, q: 2 }); tone({ f: 300, f2: 600, dur: 0.3, v: 0.05, type: 'square', lp: 1200 }); },
+    muzzle() { if (throttle('muzzle', 0.06)) tone({ f: 620, f2: 180, dur: 0.08, v: 0.05, type: 'square', lp: 2000 }); },
+    gunDown() { noise({ f: 2200, f2: 120, dur: 0.5, v: 0.28 }); tone({ f: 500, f2: 80, dur: 0.3, v: 0.1, type: 'square', lp: 1500 }); },
+    armorFall() {
+      noise({ f: 1200, f2: 60, dur: 1.4, v: 0.4 });
+      for (let i = 0; i < 5; i++) tone({ f: 300 + i * 90, f2: 80, dur: 0.18, v: 0.08, delay: 0.1 + i * 0.12, type: 'square', lp: 900 });
+    },
     part() {
       noise({ f: 2000, f2: 80, dur: 1.0, v: 0.38 });
       tone({ f: 140, f2: 30, dur: 0.8, v: 0.3, type: 'sine' });

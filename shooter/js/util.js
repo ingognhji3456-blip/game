@@ -9,9 +9,9 @@
 window.SH = window.SH || {};
 
 (() => {
-  /** 게임 화면의 논리 크기 (세로 9:16). 실제 화면에 맞게 늘이고 줄입니다. */
-  SH.W = 450;
-  SH.H = 800;
+  /** 게임 화면의 논리 크기 (가로 16:9). 화면 픽셀은 이것의 절반(480×270)입니다. */
+  SH.W = 960;
+  SH.H = 540;
   SH.TAU = Math.PI * 2;
   SH.DT = 1 / 60;
   SH.FONT = "'Pretendard', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif";

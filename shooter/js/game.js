@@ -1,14 +1,14 @@
 'use strict';
 
 /* =========================================================
- * 하늘 사냥꾼 — 게임 엔진 (기계 보스 결전 · DOM 없음, Node 에서도 실행 가능)
+ * 하늘 사냥꾼 — 게임 엔진 (기계 요새 결전 · 가로 화면 960×540 · DOM 없음, Node 에서도 실행 가능)
  *
  *   const g = new SH.Game({ seed, emit(type, data) {} });
  *   g.input = { tx, ty, ax, ay, focus, bomb };   // 매 프레임 입력
  *   g.update(SH.DT);                             // 1/60 초씩 진행
  *
  * 진행: intro → warning → boss(싸움) → clear(점수 정산) → 승리
- * 보스: 포탑(부품) → 코어 열림 → 장갑 부서짐 → 폭주
+ * 보스의 공격은 js/boss.js 의 패턴(제너레이터)이 "조준 → 충전 → 발사" 순서로 무기를 움직여 만듭니다.
  * 그리기·소리·효과는 emit 으로 받은 이벤트를 보고 따로 처리합니다.
  * ========================================================= */
 
@@ -16,80 +16,8 @@
   const { W, H, TAU, clamp } = SH;
   const HALF_PI = Math.PI / 2;
   const INTRO = 2.2, WARNING = 3.0, CLEAR = 6.5;
+  const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU; return d; };
 
-  /* =========================================================
-   * 보스 공격. src = { x, y, ang(포탑이 겨눈 방향), side(-1 왼쪽/1 오른쪽/0 가운데) }
-   * k = 이번 공격에서 몇 번째 발사인지
-   * ========================================================= */
-  const ATTACKS = {
-    ring(g, src, k, a) {
-      const n = g._dens(a.n);
-      const off = (a.rot || 0) * k + (a.rot ? 0 : g.rng() * TAU);
-      for (let i = 0; i < n; i++) g._eShot(src.x, src.y, off + (i * TAU) / n, a.speed, a);
-    },
-    fan(g, src, k, a) {
-      g._fan(src.x, src.y, src.ang != null ? src.ang : g._aim(src.x, src.y), g._dens(a.n), a.spread || 0.6, a.speed, a);
-    },
-    stream(g, src, k, a) {
-      const base = src.ang != null ? src.ang : g._aim(src.x, src.y);
-      g._eShot(src.x, src.y, base + (g.rng() - 0.5) * 2 * (a.jitter || 0), a.speed, a);
-    },
-    spiral(g, src, k, a) {
-      const arms = a.arms || 3;
-      for (let j = 0; j < arms; j++) {
-        const base = (j * TAU) / arms;
-        g._eShot(src.x, src.y, base + k * a.step, a.speed, a);
-        if (a.both) g._eShot(src.x, src.y, base - k * a.step + TAU / arms / 2, a.speed * 0.85, a);
-      }
-    },
-    curve(g, src, k, a) {
-      const n = g._dens(a.n);
-      const dir = k % 2 ? -1 : 1;
-      const off = g.rng() * TAU;
-      for (let i = 0; i < n; i++) g._eShot(src.x, src.y, off + (i * TAU) / n, a.speed, a, { curve: a.curve * dir, curveT: 1.6 });
-    },
-    rain(g, src, k, a) {
-      for (let c = 0; c < (a.count || 1); c++) g._eShot(src.x, src.y, HALF_PI + (g.rng() * 2 - 1) * a.cone, a.speed * (0.7 + g.rng() * 0.5), a);
-    },
-    wall(g, src, k, a) {
-      if (src.side > 0) return; // 양쪽에서 불려도 한 번만
-      const gx = 70 + g.rng() * (W - 140);
-      for (let x = 14; x < W; x += a.step || 28) {
-        if (Math.abs(x - gx) < a.gap / 2) continue;
-        g._eShot(x, -8, HALF_PI, a.speed, a);
-      }
-    },
-    split(g, src, k, a) {
-      const ang = a.aim ? g._aim(src.x, src.y) : HALF_PI + (g.rng() - 0.5) * 1.2;
-      g._eShot(src.x, src.y, ang, a.speed, a, { big: true, split: { at: a.at || 1, n: a.sn || 10, speed: a.sspeed || 120, kind: a.skind || a.kind } });
-    },
-    missiles(g, src, k, a) {
-      const n = a.n || 3;
-      for (let i = 0; i < n; i++) {
-        const ang = HALF_PI + (i - (n - 1) / 2) * 0.5 + (src.side || 0) * 0.3;
-        g._missile(src.x, src.y, ang, a.speed);
-      }
-    },
-    laser(g, src, k, a) {
-      let a0, a1;
-      if (a.aim) {
-        const base = g._aim(src.x, src.y), dir = g.rng() < 0.5 ? -1 : 1;
-        a0 = base - (dir * a.sweep) / 2;
-        a1 = base + (dir * a.sweep) / 2;
-      } else {
-        const mir = a.mirror && src.side > 0;
-        a0 = mir ? Math.PI - a.a0 : a.a0;
-        a1 = mir ? Math.PI - a.a1 : a.a1;
-      }
-      g.beams.push({ ox: src.x - g.boss.x, oy: src.y - g.boss.y, a0, a1, warn: a.warn, dur: a.dur, width: a.width, t: 0, ang: a0, on: false });
-      g.boss.hold = Math.max(g.boss.hold, a.warn + a.dur);
-      if (src.side <= 0) g.emit('laserWarn', {});
-    },
-  };
-
-  /* =========================================================
-   * 게임
-   * ========================================================= */
   class Game {
     constructor(o = {}) {
       this.seed = o.seed != null ? o.seed >>> 0 : (Date.now() >>> 0);
@@ -105,7 +33,7 @@
       this.weapon = o.weapon || 'spread';
       this.power = o.power || 1;
       this.extendIdx = 0;
-      this.stats = { deaths: 0, bombs: 0, gems: 0, time: 0, missiles: 0 };
+      this.stats = { deaths: 0, bombs: 0, gems: 0, time: 0, missiles: 0, guns: 0, patterns: {} };
 
       this.input = { tx: null, ty: null, ax: 0, ay: 0, focus: false, bomb: false };
       this.player = {
@@ -114,30 +42,37 @@
       };
       this.pb = []; // 내 탄
       this.eb = []; // 적 탄 (미사일 포함)
-      this.beams = []; // 레이저
+      this.beams = []; // 레이저 (총구를 따라다님)
+      this.guns = []; // 벽 레이저포
+      this.tasks = []; // 돌아가는 패턴들
       this.items = [];
       this.time = 0;
       this.bombT = 0;
       this.bombTick = 0;
-      this.boss = null;
+      this.B = null;
       this.over = null; // 'gameover' | 'win'
       this.overT = 0;
       this.start();
     }
 
+    get boss() { return this.B; }
+    get def() { return SH.BOSS; }
+    get bossDef() { return SH.BOSS; }
+    get bossPhase() { return this.B ? SH.BOSS.phases[this.B.phase] : null; }
+
     /* ---------------- 진행 ---------------- */
     start() {
-      this.def = SH.BOSS;
-      this.bossDef = SH.BOSS;
       this.stage = SH.STAGE;
       this.stageIndex = 0;
       this._setPhase('intro');
       this.fightT = 0;
-      this.boss = null;
+      this.B = null;
       this.tally = null;
       this.eb.length = 0;
       this.pb.length = 0;
       this.beams.length = 0;
+      this.guns.length = 0;
+      this.tasks.length = 0;
       this.deathsThisRun = 0;
       this._calcDiff();
       const p = this.player;
@@ -155,7 +90,8 @@
 
     _calcDiff() {
       const L = this.loop;
-      this.diff = { hp: 1 + 0.4 * L, speed: 1 + 0.12 * L, density: 1 + 0.25 * L };
+      // 가로 화면이라 보스와 나 사이가 가까워서 탄을 조금 느리게
+      this.diff = { hp: 1 + 0.4 * L, speed: 0.86 + 0.1 * L, tempo: 1 + 0.15 * L };
     }
 
     /** 2회차 이상: 더 단단하고 더 빠른 보스와 다시 */
@@ -182,11 +118,13 @@
       this.time += dt;
       this.phaseT += dt;
       this.stats.time += dt;
-      if (this.boss && this.boss.state === 'fight') this.fightT += dt;
+      if (this.B && this.B.state === 'fight') this.fightT += dt;
 
       this._updatePhase();
       this._updatePlayer(dt);
       this._updateBoss(dt);
+      this._runTasks(dt * (this.B && this.bossPhase.berserk ? 1.12 : 1) * this.diff.tempo);
+      this._updateWeapons(dt);
       this._updateBullets(dt);
       this._updateBeams(dt);
       this._collide();
@@ -200,6 +138,7 @@
           this._bombDamage(5);
         }
         if (this.eb.length) this._cancelBullets(true);
+        this.beams.length = 0;
       }
 
       if (this.overT > 0) {
@@ -226,7 +165,7 @@
           }
           break;
         case 'boss':
-          if (!this.boss) this._startClear();
+          if (!this.B) this._startClear();
           break;
         case 'clear':
           if (this.phaseT >= CLEAR - 1.6 && !this.player.dead) this.player.exiting = true;
@@ -260,216 +199,372 @@
       this.emit('stageClear', t);
     }
 
-    /* ---------------- 보스 ---------------- */
+    /* =========================================================
+     * 보스
+     * ========================================================= */
     _spawnBoss() {
       const def = this.def, hp = Math.round(def.core.hp * this.diff.hp);
-      const parts = {};
-      for (const [id, p] of Object.entries(def.parts)) {
-        const php = Math.round(p.hp * this.diff.hp);
-        parts[id] = { id, ox: p.ox, oy: p.oy, r: p.r, hp: php, maxHp: php, alive: true, flash: 0, ang: HALF_PI, score: p.score };
-      }
-      this.boss = {
-        x: W / 2, y: -150, hp, maxHp: hp, flash: 0, state: 'enter', st: 0,
-        phase: 0, cur: null, order: 0, rest: 1.2, inv: 0, mt: 0, boomT: 0, hold: 0, parts,
+      const w = {};
+      const mk = (name, d) => ({
+        name, kind: d.kind, ox: d.ox, oy: d.oy, len: d.len || 0, unlock: d.unlock || 0, lose: d.lose,
+        hp: d.hp ? Math.round(d.hp * this.diff.hp) : 0, maxHp: d.hp ? Math.round(d.hp * this.diff.hp) : 0, score: d.score || 0,
+        alive: (d.unlock || 0) === 0, reveal: 1, ang: HALF_PI, target: null, turn: 0,
+        state: 'idle', charge: 0, chargeDur: 1, recoil: 0, open: 0, flash: 0, sweep: null, big: false,
+      });
+      for (const [name, d] of Object.entries(def.weapons)) w[name] = mk(name, d);
+      w.core = mk('core', { kind: 'core', ox: def.core.ox, oy: def.core.oy, len: 0 });
+      this.B = {
+        x: W / 2, y: -160, hp, maxHp: hp, flash: 0, state: 'enter', st: 0,
+        phase: 0, look: 0, hold: 0, mt: 0, boomT: 0, inv: 0, rest: 1.2, recent: [], task: null, w,
       };
       this.emit('bossAppear', { boss: def });
     }
 
-    get bossPhase() { return this.boss ? this.def.phases[this.boss.phase] : null; }
-
-    _updateBoss(dt) {
-      const e = this.boss;
-      if (!e) return;
-      const def = this.def;
-      e.st += dt;
-      if (e.flash > 0) e.flash -= dt;
-      if (e.inv > 0) e.inv -= dt;
-      for (const p of Object.values(e.parts)) {
-        if (p.flash > 0) p.flash -= dt;
-        // 포탑은 플레이어 쪽으로 천천히 돌아감
-        const want = Math.atan2(this.player.y - (e.y + p.oy), this.player.x - (e.x + p.ox));
-        let da = want - p.ang;
-        while (da > Math.PI) da -= TAU;
-        while (da < -Math.PI) da += TAU;
-        p.ang += clamp(da, -2.2 * dt, 2.2 * dt);
-        p.ang = clamp(p.ang, 0.25, Math.PI - 0.25);
-      }
-
-      if (e.state === 'enter') {
-        const u = Math.min(1, e.st / 3);
-        e.y = SH.lerp(-150, def.y, SH.easeOut(u));
-        if (u >= 1) { e.state = 'fight'; e.st = 0; this.fightT = 0; this.emit('bossReady', {}); }
-        return;
-      }
-      if (e.state === 'dying') {
-        e.x += Math.sin(e.st * 40) * 0.8;
-        e.y += 12 * dt;
-        e.boomT -= dt;
-        if (e.boomT <= 0) {
-          e.boomT = 0.1;
-          this.emit('bossBoom', { x: e.x + (this.rng() - 0.5) * def.hull.rx * 2, y: e.y + (this.rng() - 0.5) * def.hull.ry * 2 });
-        }
-        if (e.st >= 3.4) this._bossFinish();
-        return;
-      }
-
-      // 움직임 (레이저를 쏘는 동안·나선 공격 중에는 가운데에 멈춤)
-      const ph = def.phases[e.phase];
-      e.mt += dt;
-      if (e.hold > 0) e.hold -= dt;
-      const still = e.hold > 0 || (e.cur && e.cur.def.still);
-      const sway = def.sway * (ph.berserk ? 1.4 : 1);
-      const tx = still ? e.x : W / 2 + Math.sin(e.mt * (ph.berserk ? 0.9 : 0.5)) * sway;
-      const ty = def.y + Math.sin(e.mt * 1.1) * 10;
-      const kk = Math.min(1, dt * 1.8);
-      e.x += (tx - e.x) * kk;
-      e.y += (ty - e.y) * kk;
-
-      // 공격
-      if (this.player.dead || e.inv > 0) return;
-      if (e.cur) {
-        const c = e.cur;
-        c.acc += dt;
-        while (c.acc >= c.def.every && c.k < c.def.times) {
-          c.acc -= c.def.every;
-          for (const src of this._sources(c.def.from)) ATTACKS[c.def.a](this, src, c.k, c.def);
-          c.k += 1;
-        }
-        if (c.k >= c.def.times) {
-          e.rest = c.def.rest != null ? c.def.rest : 0.8;
-          e.cur = null;
-        }
-      } else {
-        e.rest -= dt * (ph.berserk ? 1.5 : 1);
-        if (e.rest <= 0) {
-          let atk = ph.attacks[e.order % ph.attacks.length];
-          e.order += 1;
-          // 쏠 포탑이 없으면 건너뜀
-          if (atk.from === 'parts' && !this._aliveParts().length) atk = ph.attacks[e.order++ % ph.attacks.length];
-          e.cur = { def: atk, k: 0, acc: atk.every };
-        }
-      }
+    W(name) { return this.B.w[name]; }
+    /** 지금 쓸 수 있는 무기인가 (나왔고, 안 부서졌고, 다 나왔는지) */
+    avail(name) {
+      const w = this.B && this.B.w[name];
+      if (!w || !w.alive || w.reveal < 1) return false;
+      const ph = this.B.phase;
+      return ph >= w.unlock && (w.lose == null || ph < w.lose);
     }
-
-    _aliveParts() { return this.boss ? Object.values(this.boss.parts).filter((p) => p.alive) : []; }
-
-    /** 쏘는 곳 목록 */
-    _sources(from) {
-      const e = this.boss, c = this.def.core;
-      if (from === 'parts') {
-        return this._aliveParts().map((p) => ({
-          x: e.x + p.ox + Math.cos(p.ang) * 22, y: e.y + p.oy + Math.sin(p.ang) * 22, ang: p.ang, side: Math.sign(p.ox),
-        }));
-      }
-      if (from === 'sides') return [-1, 1].map((s) => ({ x: e.x + s * 48, y: e.y + 34, side: s }));
-      return [{ x: e.x, y: e.y + c.oy + 26, side: 0 }];
+    wpos(w) {
+      if (w.kind === 'gun') return [w.x, w.y];
+      return [this.B.x + w.ox, this.B.y + w.oy];
     }
-
-    _nextPhase() {
-      const e = this.boss;
-      e.phase += 1;
-      e.cur = null;
-      e.order = 0;
-      e.rest = 1.8;
-      e.inv = 1.6;
-      e.hold = 0;
-      this.beams.length = 0;
-      this._cancelBullets(true);
-      this._dropItem('power', e.x, e.y + 40);
-      const ph = this.def.phases[e.phase];
-      this.emit('bossPhase', { x: e.x, y: e.y, phase: e.phase, name: ph.name, berserk: !!ph.berserk });
+    /** 총구 끝 (반동만큼 살짝 들어감) */
+    muzzle(w) {
+      const [x, y] = this.wpos(w);
+      const len = w.len * (1 - 0.25 * w.recoil);
+      return [x + Math.cos(w.ang) * len, y + Math.sin(w.ang) * len];
     }
-
-    _damageCore(dmg) {
-      const e = this.boss;
-      if (!e || e.state !== 'fight' || e.inv > 0) return false;
-      const ph = this.def.phases[e.phase];
-      if (ph.shield) return false;
-      e.hp -= dmg;
-      e.flash = 0.06;
-      this._addScore(Math.round(dmg * 10));
-      if (e.hp <= 0) { e.hp = 0; this._killBoss(); return true; }
-      if (ph.until != null && e.hp <= e.maxHp * ph.until && e.phase < this.def.phases.length - 1) this._nextPhase();
-      return true;
+    aim(w, turn) { w.state = 'aim'; w.target = 'player'; w.turn = turn; }
+    point(w, ang, turn) { w.state = 'aim'; w.target = ang; w.turn = turn; }
+    charge(w, t) {
+      w.state = 'charge';
+      w.charge = 0;
+      w.chargeDur = t;
+      const [x, y] = this.muzzle(w);
+      this.emit('charge', { x, y, kind: w.kind, big: w.big });
     }
+    idle(w) { w.state = 'idle'; w.target = null; w.charge = 0; w.sweep = null; }
+    hold(t) { if (this.B) this.B.hold = Math.max(this.B.hold, t); }
 
-    _damagePart(p, dmg) {
-      const e = this.boss;
-      if (!p.alive || e.state !== 'fight' || e.inv > 0) return;
-      p.hp -= dmg;
-      p.flash = 0.06;
-      this._addScore(Math.round(dmg * 10));
-      if (p.hp > 0) return;
-      p.alive = false;
-      const x = e.x + p.ox, y = e.y + p.oy;
-      this._addScore(p.score * (1 + this.loop * 0.5));
-      this.emit('partDestroyed', { x, y, id: p.id });
-      this._dropItem('power', x, y);
-      this._dropItem('bomb', x, y);
-      const ph = this.def.phases[e.phase];
-      if (ph.needParts && ph.needParts.every((id) => !e.parts[id].alive)) this._nextPhase();
+    /** 무기 총구에서 탄 하나. o.abs 면 각도를 그대로, 아니면 무기가 겨눈 방향 + 각도차 */
+    orb(w, dAng, speed, kind, o) {
+      o = o || {};
+      const [x, y] = this.muzzle(w);
+      const ang = o.abs ? dAng : w.ang + dAng;
+      w.recoil = 1;
+      if (!o.quiet) this.emit('muzzle', { x, y, kind });
+      return this.orbAt(x, y, ang, speed, kind, o);
     }
-
-    _bombDamage(dmg) {
-      const e = this.boss;
-      if (!e) return;
-      for (const p of this._aliveParts()) this._damagePart(p, dmg);
-      this._damageCore(dmg);
-    }
-
-    _killBoss() {
-      const e = this.boss;
-      e.state = 'dying';
-      e.st = 0;
-      e.cur = null;
-      this.beams.length = 0;
-      this._addScore(this.def.score * (1 + this.loop * 0.5));
-      this._cancelBullets(true);
-      this.emit('bossDefeated', { x: e.x, y: e.y, name: this.def.name, time: this.fightT });
-    }
-
-    _bossFinish() {
-      const e = this.boss;
-      this.emit('bossDie', { x: e.x, y: e.y });
-      this._cancelBullets(true);
-      for (let i = 0; i < 36; i++) this._dropItem(i % 4 === 0 ? 'bigGem' : 'gem', e.x + (this.rng() - 0.5) * 160, e.y, 220);
-      this.boss = null;
-    }
-
-    _dens(n) { return Math.max(1, Math.round(n * this.diff.density)); }
-
-    _aim(x, y) {
-      const p = this.player;
-      return Math.atan2(p.y - y, p.x - x);
-    }
-
-    _fan(x, y, center, n, spread, speed, o) {
-      if (n === 1) { this._eShot(x, y, center, speed, o); return; }
-      for (let i = 0; i < n; i++) this._eShot(x, y, center - spread / 2 + (spread * i) / (n - 1), speed, o);
-    }
-
-    /** 적 탄 하나 쏘기 */
-    _eShot(x, y, ang, speed, o, extra) {
+    orbAt(x, y, ang, speed, kind, o) {
       if (this.bombT > 0 || this.eb.length >= 700) return null;
+      o = o || {};
       const sp = speed * this.diff.speed;
-      const big = !!((extra && extra.big) || o.big);
       const b = {
-        x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, r: big ? 10 : 5.5, kind: o.kind || 'pink', big, t: 0,
-        curve: (extra && extra.curve) || o.curve || 0, curveT: (extra && extra.curveT) || 99,
-        split: (extra && extra.split) || null,
+        x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, r: o.big ? 10 : 5.5, kind: kind || 'pink', big: !!o.big, t: 0,
+        curve: o.curve || 0, curveT: o.curveT || 99, split: o.split || null,
       };
       this.eb.push(b);
       return b;
     }
-
     /** 쫓아오는 미사일 (내 탄으로 부술 수 있음) */
-    _missile(x, y, ang, speed) {
+    missileFrom(w, ang, speed) {
+      const [x, y] = this.muzzle(w);
+      w.recoil = 1;
       if (this.bombT > 0 || this.eb.length >= 700) return null;
       const sp = speed * this.diff.speed;
       const m = { x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, r: 6, kind: 'missile', missile: true, hp: 2, t: 0, speed: sp, rot: ang };
       this.eb.push(m);
-      this.emit('enemyMissile', {});
+      this.emit('enemyMissile', { x, y });
       return m;
+    }
+    /** 레이저: 무기 총구에서 나가고, 무기가 돌면 같이 돔. from/to 를 주면 그 사이를 쓸어냄 */
+    beam(w, o) {
+      const bm = { src: w, width: o.width, dur: o.dur, t: 0, from: o.from, to: o.to, ang: o.from != null ? o.from : w.ang, x: 0, y: 0, on: true };
+      [bm.x, bm.y] = this.muzzle(w);
+      w.state = 'fire';
+      this.beams.push(bm);
+      this.emit('laserFire', { big: o.width > 30 });
+      return bm;
+    }
+    /** 패턴 하나를 따로 돌림 (동시에 여러 개 가능) */
+    run(gen, owner, tag) {
+      const t = { it: gen, wait: 0, owner: owner || null, tag: tag || 'boss', done: false };
+      this.tasks.push(t);
+      return t;
+    }
+
+    /* ---------------- 벽 레이저포 ---------------- */
+    /** edge: L R (옆 벽, pos = 높이) · BL BR (아래 구석) */
+    gun(edge, pos, plan) {
+      const hp = Math.round(26 * this.diff.hp);
+      const g = {
+        kind: 'gun', edge, pos, slide: 0, x: -50, y: -50, len: 15, hp, maxHp: hp, alive: true, gone: false, flash: 0,
+        ang: { L: 0, R: Math.PI, BL: -Math.PI / 4, BR: (-3 * Math.PI) / 4 }[edge], target: null, turn: 0,
+        state: 'in', charge: 0, chargeDur: 1, recoil: 0, fixed: plan.fixed,
+      };
+      this._placeGun(g);
+      this.guns.push(g);
+      g.task = this.run(this._gunLife(g, plan), g, 'gun');
+      return g;
+    }
+    _placeGun(g) {
+      const s = SH.easeOut(g.slide);
+      if (g.edge === 'L') { g.x = SH.lerp(-28, 17, s); g.y = g.pos; }
+      else if (g.edge === 'R') { g.x = SH.lerp(W + 28, W - 17, s); g.y = g.pos; }
+      else if (g.edge === 'BL') { g.x = SH.lerp(-30, 26, s); g.y = SH.lerp(H + 30, H - 96, s); }
+      else { g.x = SH.lerp(W + 30, W - 26, s); g.y = SH.lerp(H + 30, H - 96, s); }
+    }
+    *_gunLife(g, plan) {
+      this.emit('gunIn', { x: g.x, y: g.y });
+      const st = plan.slide || 0.45;
+      while (g.slide < 1) { g.slide = Math.min(1, g.slide + SH.DT / st); yield; }
+      if (plan.fixed != null) this.point(g, plan.fixed, 6);
+      else this.aim(g, 3);
+      yield plan.aim;
+      if (plan.fixed == null) g.turn = 0.35;
+      this.charge(g, plan.charge);
+      yield plan.charge;
+      if (plan.fixed == null) g.target = null; // 쏘는 동안은 방향 고정
+      g.state = 'fire';
+      yield* plan.fire(this, g);
+      this.idle(g);
+      yield 0.2;
+      yield* this._gunOut(g);
+    }
+    *_gunOut(g) {
+      g.state = 'out';
+      while (g.slide > 0) { g.slide = Math.max(0, g.slide - SH.DT / 0.4); yield; }
+      g.gone = true;
+    }
+    /** 모든 벽 레이저포를 들여보냄 */
+    _recallGuns() {
+      for (const g of this.guns) {
+        if (g.gone) continue;
+        if (g.task) g.task.done = true;
+        g.task = this.run(this._gunOut(g), g, 'gun');
+      }
+      this.beams = this.beams.filter((b) => b.src.kind !== 'gun');
+    }
+
+    /* ---------------- 패턴 돌리기 ---------------- */
+    _runTasks(dt) {
+      for (const t of this.tasks) {
+        if (t.done) continue;
+        if (t.owner && (t.owner.gone || t.owner.alive === false)) { t.done = true; continue; }
+        t.wait -= dt;
+        let guard = 0;
+        while (t.wait <= 0 && !t.done && guard++ < 40) {
+          const r = t.it.next();
+          if (r.done) { t.done = true; break; }
+          t.wait += r.value == null ? SH.DT : r.value;
+        }
+      }
+      if (this.tasks.some((t) => t.done)) this.tasks = this.tasks.filter((t) => !t.done);
+      if (this.guns.some((g) => g.gone)) this.guns = this.guns.filter((g) => !g.gone);
+    }
+
+    /** 다음 패턴 고르기: 무게대로 뽑되, 바로 전 두 개는 빼고, 쓸 무기가 없는 것도 뺌 */
+    _pickPattern() {
+      const B = this.B, ph = this.bossPhase;
+      const ok = (n) => !(SH.BOSS_NEEDS[n] || []).length || SH.BOSS_NEEDS[n].some((w) => this.avail(w));
+      let list = Object.entries(ph.pool).filter(([n]) => ok(n) && !B.recent.includes(n));
+      if (!list.length) list = Object.entries(ph.pool).filter(([n]) => ok(n));
+      const total = list.reduce((s, [, w]) => s + w, 0);
+      let r = this.rng() * total;
+      let name = list[0][0];
+      for (const [n, w] of list) { r -= w; if (r <= 0) { name = n; break; } }
+      B.recent.push(name);
+      if (B.recent.length > 2) B.recent.shift();
+      this.stats.patterns[name] = (this.stats.patterns[name] || 0) + 1;
+      return name;
+    }
+
+    _updateBoss(dt) {
+      const B = this.B;
+      if (!B) return;
+      const def = this.def;
+      B.st += dt;
+      if (B.flash > 0) B.flash -= dt;
+      if (B.flashCd > 0) B.flashCd -= dt;
+      if (B.inv > 0 && B.state === 'fight') B.inv -= dt;
+
+      if (B.state === 'enter') {
+        const u = Math.min(1, B.st / 3);
+        B.y = SH.lerp(-160, def.y, SH.easeOut(u));
+        if (u >= 1) {
+          B.state = 'fight';
+          B.st = 0;
+          this.fightT = 0;
+          this.emit('bossReady', { hint: def.phases[0].hint });
+        }
+        return;
+      }
+      if (B.state === 'dying') {
+        B.x += Math.sin(B.st * 40) * 0.8;
+        B.y += 12 * dt;
+        B.boomT -= dt;
+        if (B.boomT <= 0) {
+          B.boomT = 0.1;
+          this.emit('bossBoom', { x: B.x + (this.rng() - 0.5) * def.hull.rx * 2, y: B.y + (this.rng() - 0.5) * def.hull.ry * 2 });
+        }
+        if (B.st >= 3.4) this._bossFinish();
+        return;
+      }
+
+      // 움직임 (충전·레이저·나선 중에는 멈춤)
+      const ph = this.bossPhase;
+      B.mt += dt;
+      if (B.hold > 0) B.hold -= dt;
+      const still = B.hold > 0 || B.state === 'transform';
+      const sway = def.sway * (ph.berserk ? 1.35 : 1);
+      const tx = still ? B.x : W / 2 + Math.sin(B.mt * (ph.berserk ? 0.85 : 0.5)) * sway;
+      const ty = def.y + Math.sin(B.mt * 1.1) * 8;
+      const kk = Math.min(1, dt * 1.6);
+      B.x += (tx - B.x) * kk;
+      B.y += (ty - B.y) * kk;
+
+      if (B.state !== 'fight') return;
+      // 다음 패턴
+      if (B.task && !B.task.done) return;
+      if (this.player.dead) return;
+      B.rest -= dt;
+      if (B.rest > 0) return;
+      const name = this._pickPattern();
+      B.task = this.run(SH.BOSS_PATTERNS[name](this), null, 'boss');
+      B.pattern = name;
+      B.rest = ph.rest + this.rng() * 0.4;
+      this.emit('pattern', { name });
+    }
+
+    /** 무기 움직임: 겨누기(회전), 반동, 충전, 뚜껑 */
+    _updateWeapons(dt) {
+      const all = this.B ? Object.values(this.B.w).concat(this.guns) : this.guns;
+      const p = this.player;
+      for (const w of all) {
+        if (w.flash > 0) w.flash -= dt;
+        if (w.flashCd > 0) w.flashCd -= dt;
+        if (w.recoil > 0) w.recoil = Math.max(0, w.recoil - dt * 6);
+        if (w.reveal < 1) w.reveal = Math.min(1, w.reveal + dt / 0.8);
+        if (w.state === 'charge') w.charge = Math.min(1, w.charge + dt / w.chargeDur);
+        if (w.kind === 'pod') {
+          if (w.state === 'open') w.open = Math.min(1, w.open + dt / 0.35);
+          else w.open = Math.max(0, w.open - dt / 0.35);
+        }
+        if (w.kind === 'gun') this._placeGun(w);
+        if (w.target != null) {
+          const [x, y] = this.wpos(w);
+          const want = w.target === 'player' ? Math.atan2(p.y - y, p.x - x) : w.target;
+          w.ang += clamp(angDiff(w.ang, want), -w.turn * dt, w.turn * dt);
+        }
+        if (w.kind === 'turret' || w.kind === 'cannon') w.ang = clamp(w.ang, 0.2, Math.PI - 0.2);
+      }
+    }
+
+    /** 단계 넘어가기: 공격을 멈추고, 부서지며 모습이 바뀌고, 새 무기를 꺼냄 */
+    _nextPhase() {
+      const B = this.B;
+      const next = B.phase + 1;
+      B.phase = next;
+      B.inv = 99;
+      B.state = 'transform';
+      B.recent = [];
+      for (const t of this.tasks) if (t.tag === 'boss' || t.tag === 'transform') t.done = true;
+      for (const w of Object.values(B.w)) this.idle(w);
+      B.task = null;
+      B.rest = 1.0;
+      this._recallGuns();
+      this.beams.length = 0;
+      this._cancelBullets(true);
+      this._dropItem('power', B.x, B.y + 40);
+      const ph = this.def.phases[next];
+      this.emit('bossPhase', { x: B.x, y: B.y, phase: next, name: ph.name, unlock: ph.unlock, hint: ph.hint, berserk: !!ph.berserk });
+      this.run(SH.bossTransform(this, next), null, 'transform');
+    }
+
+    /** 맞으면 잠깐 하얗게 (계속 맞아도 깜빡이도록 간격을 둠) */
+    _flash(o) {
+      if (o.flashCd > 0) return;
+      o.flash = 0.05;
+      o.flashCd = 0.16;
+    }
+
+    _damageCore(dmg) {
+      const B = this.B;
+      if (!B || B.state !== 'fight' || B.inv > 0) return false;
+      const ph = this.bossPhase;
+      if (ph.shield) return false;
+      B.hp -= dmg;
+      this._flash(B);
+      this._addScore(Math.round(dmg * 10));
+      if (B.hp <= 0) { B.hp = 0; this._killBoss(); return true; }
+      if (ph.until != null && B.hp <= B.maxHp * ph.until && B.phase < this.def.phases.length - 1) this._nextPhase();
+      return true;
+    }
+
+    _damageWeapon(w, dmg) {
+      const B = this.B;
+      if (!w.alive || !w.maxHp) return;
+      if (w.kind !== 'gun' && (B.state !== 'fight' || B.inv > 0)) return;
+      w.hp -= dmg;
+      this._flash(w);
+      this._addScore(Math.round(dmg * 10));
+      if (w.hp > 0) return;
+      w.alive = false;
+      const [x, y] = this.wpos(w);
+      if (w.kind === 'gun') {
+        w.gone = true;
+        this.stats.guns += 1;
+        this._addScore(2000 * (1 + this.loop));
+        this.emit('gunDown', { x, y });
+        this.beams = this.beams.filter((b) => b.src !== w);
+        if (this.rng() < 0.25) this._dropItem('gem', x, y);
+        return;
+      }
+      this._addScore(w.score * (1 + this.loop * 0.5));
+      this.emit('partDestroyed', { x, y, id: w.name });
+      this.beams = this.beams.filter((b) => b.src !== w);
+      this._dropItem('power', x, y);
+      this._dropItem('bomb', x, y);
+      const ph = this.bossPhase;
+      if (ph.needParts && ph.needParts.every((id) => !B.w[id].alive)) this._nextPhase();
+    }
+
+    _bombDamage(dmg) {
+      const B = this.B;
+      for (const g of this.guns) if (g.alive && g.slide > 0.5) this._damageWeapon(g, dmg * 3);
+      if (!B) return;
+      for (const n of ['turretL', 'turretR']) if (this.avail(n)) this._damageWeapon(B.w[n], dmg);
+      this._damageCore(dmg);
+    }
+
+    _killBoss() {
+      const B = this.B;
+      B.state = 'dying';
+      B.st = 0;
+      for (const t of this.tasks) t.done = true;
+      for (const w of Object.values(B.w)) this.idle(w);
+      this._recallGuns();
+      this.beams.length = 0;
+      this._addScore(this.def.score * (1 + this.loop * 0.5));
+      this._cancelBullets(true);
+      this.emit('bossDefeated', { x: B.x, y: B.y, name: this.def.name, time: this.fightT });
+    }
+
+    _bossFinish() {
+      const B = this.B;
+      this.emit('bossDie', { x: B.x, y: B.y });
+      this._cancelBullets(true);
+      for (let i = 0; i < 36; i++) this._dropItem(i % 4 === 0 ? 'bigGem' : 'gem', B.x + (this.rng() - 0.5) * 160, B.y, 220);
+      this.B = null;
+    }
+
+    _aim(x, y) {
+      const p = this.player;
+      return Math.atan2(p.y - y, p.x - x);
     }
 
     /* ---------------- 플레이어 ---------------- */
@@ -486,7 +581,7 @@
       if (p.entering) {
         p.enterT += dt;
         const u = Math.min(1, p.enterT / 0.9);
-        p.y = SH.lerp(H + 40, H - 140, SH.easeOut(u));
+        p.y = SH.lerp(H + 40, H - 90, SH.easeOut(u));
         if (u >= 1) { p.entering = false; p.anchor += 1; }
         p.bank *= 0.8;
       } else if (p.exiting) {
@@ -508,7 +603,7 @@
           p.x += (inp.ax / len) * sp * dt;
           p.y += (inp.ay / len) * sp * dt;
         }
-        p.x = clamp(p.x, 16, W - 16);
+        p.x = clamp(p.x, 46, W - 46);
         p.y = clamp(p.y, 50, H - 26);
         const vx = (p.x - ox) / dt;
         p.bank += (clamp(vx / 260, -1, 1) - p.bank) * Math.min(1, dt * 12);
@@ -622,17 +717,16 @@
     }
 
     /* ---------------- 탄 ---------------- */
-    /** 유도 미사일이 노릴 곳: 살아 있는 포탑 → 코어 */
+    /** 내 유도 미사일이 노릴 곳: 벽 레이저포 → 포탑 → 코어 */
     _homingTarget(x, y) {
-      const e = this.boss;
-      if (!e || e.state !== 'fight') return null;
       let best = null, bd = Infinity;
-      for (const p of this._aliveParts()) {
-        const px = e.x + p.ox, py = e.y + p.oy;
-        const d = (px - x) ** 2 + (py - y) ** 2;
-        if (d < bd) { bd = d; best = [px, py]; }
-      }
-      return best || [e.x, e.y + this.def.core.oy];
+      const consider = (px, py) => { const d = (px - x) ** 2 + (py - y) ** 2; if (d < bd) { bd = d; best = [px, py]; } };
+      for (const g of this.guns) if (g.alive && g.slide > 0.6) consider(g.x, g.y);
+      if (best) return best;
+      const B = this.B;
+      if (!B || B.state === 'enter' || B.state === 'dying') return null;
+      for (const n of ['turretL', 'turretR']) if (this.avail(n)) consider(...this.wpos(B.w[n]));
+      return best || [B.x, B.y + this.def.core.oy];
     }
 
     _updateBullets(dt) {
@@ -647,12 +741,7 @@
           let sp = Math.hypot(b.vx, b.vy);
           sp = Math.min(560, sp + 700 * dt);
           let a = Math.atan2(b.vy, b.vx);
-          if (tg && b.t > 0.08) {
-            let da = Math.atan2(tg[1] - b.y, tg[0] - b.x) - a;
-            while (da > Math.PI) da -= TAU;
-            while (da < -Math.PI) da += TAU;
-            a += clamp(da, -8 * dt, 8 * dt);
-          }
+          if (tg && b.t > 0.08) a += clamp(angDiff(a, Math.atan2(tg[1] - b.y, tg[0] - b.x)), -8 * dt, 8 * dt);
           b.vx = Math.cos(a) * sp;
           b.vy = Math.sin(a) * sp;
           b.rot = a + HALF_PI;
@@ -674,16 +763,13 @@
         b.t += dt;
         if (b.missile) {
           if (b.hp <= 0) continue;
-          if (b.t < 3.2 && !pl.dead) {
+          if (b.t > 0.35 && b.t < 3.6 && !pl.dead) {
             let a = Math.atan2(b.vy, b.vx);
-            let da = Math.atan2(pl.y - b.y, pl.x - b.x) - a;
-            while (da > Math.PI) da -= TAU;
-            while (da < -Math.PI) da += TAU;
-            a += clamp(da, -1.7 * dt, 1.7 * dt);
+            a += clamp(angDiff(a, Math.atan2(pl.y - b.y, pl.x - b.x)), -1.9 * dt, 1.9 * dt);
             b.vx = Math.cos(a) * b.speed;
             b.vy = Math.sin(a) * b.speed;
-            b.rot = a;
           }
+          b.rot = Math.atan2(b.vy, b.vx);
         } else if (b.curve && b.t < b.curveT) {
           const c = Math.cos(b.curve * dt), s = Math.sin(b.curve * dt);
           const vx = b.vx * c - b.vy * s;
@@ -695,12 +781,11 @@
         if (b.split && b.t >= b.split.at) {
           const sp = b.split;
           const off = this.rng() * TAU;
-          const n = this._dens(sp.n);
-          for (let q = 0; q < n; q++) this._eShot(b.x, b.y, off + (q * TAU) / n, sp.speed, { kind: sp.kind });
+          for (let q = 0; q < sp.n; q++) this.orbAt(b.x, b.y, off + (q * TAU) / sp.n, sp.speed, sp.kind);
           this.emit('split', { x: b.x, y: b.y });
           continue;
         }
-        if (b.y < -40 || b.y > H + 30 || b.x < -30 || b.x > W + 30) continue;
+        if (b.y < -60 || b.y > H + 30 || b.x < -30 || b.x > W + 30) continue;
         this.eb[j++] = b;
       }
       for (let i = n0; i < this.eb.length; i++) this.eb[j++] = this.eb[i];
@@ -708,17 +793,19 @@
     }
 
     _updateBeams(dt) {
-      const e = this.boss;
       let j = 0;
       for (const bm of this.beams) {
         bm.t += dt;
-        if (!e || bm.t >= bm.warn + bm.dur) continue;
-        if (bm.t >= bm.warn) {
-          if (!bm.on) { bm.on = true; this.emit('laserFire', {}); }
-          bm.ang = SH.lerp(bm.a0, bm.a1, SH.easeInOut((bm.t - bm.warn) / bm.dur));
+        const src = bm.src;
+        if (bm.t >= bm.dur || !src || src.gone || src.alive === false || (src.kind !== 'gun' && !this.B)) {
+          if (src && src.state === 'fire') src.state = 'cool';
+          continue;
         }
-        bm.x = e.x + bm.ox;
-        bm.y = e.y + bm.oy;
+        if (bm.from != null) {
+          bm.ang = SH.lerp(bm.from, bm.to, SH.easeInOut(bm.t / bm.dur));
+          src.ang = bm.ang;
+        } else bm.ang = src.ang;
+        [bm.x, bm.y] = this.muzzle(src);
         this.beams[j++] = bm;
       }
       this.beams.length = j;
@@ -740,13 +827,12 @@
 
     /* ---------------- 충돌 ---------------- */
     _collide() {
-      const e = this.boss;
+      const B = this.B;
       const def = this.def;
-      // 내 탄 → 미사일 · 포탑 · 코어 · 몸통(막힘)
+      // 내 탄 → 미사일 · 벽 레이저포 · 포탑 · 코어 · 몸통(막힘)
       for (let i = 0; i < this.pb.length; i++) {
         const b = this.pb[i];
         if (b.dead) continue;
-        // 미사일 격추
         for (let q = 0; q < this.eb.length; q++) {
           const m = this.eb[q];
           if (!m.missile || m.hp <= 0) continue;
@@ -761,33 +847,45 @@
             break;
           }
         }
-        if (b.dead || !e || e.state === 'enter' || e.state === 'dying') continue;
-        // 포탑
-        let hitSomething = false;
-        for (const p of this._aliveParts()) {
-          const px = e.x + p.ox, py = e.y + p.oy;
-          if (Math.abs(b.x - px) < b.hw + p.r && Math.abs(b.y - py) < b.hh + p.r) {
-            this._damagePart(p, b.dmg);
-            this.emit('hit', { x: b.x, y: py + p.r * 0.5, kind: b.kind });
-            hitSomething = true;
+        if (b.dead) continue;
+        for (const g of this.guns) {
+          if (!g.alive || g.slide < 0.5) continue;
+          if (Math.abs(b.x - g.x) < b.hw + 13 && Math.abs(b.y - g.y) < b.hh + 13) {
+            this._damageWeapon(g, b.dmg);
+            this.emit('hit', { x: b.x, y: g.y + 8, kind: b.kind });
+            b.dead = true;
             break;
           }
         }
-        if (!hitSomething) {
-          const cx = e.x, cy = e.y + def.core.oy, cr = def.core.r;
-          if (Math.abs(b.x - cx) < b.hw + cr && Math.abs(b.y - cy) < b.hh + cr) {
+        if (b.dead || !B || B.state === 'enter' || B.state === 'dying') continue;
+        let hit = false;
+        for (const n of ['turretL', 'turretR']) {
+          if (!this.avail(n)) continue;
+          const w = B.w[n];
+          const [px, py] = this.wpos(w);
+          if (Math.abs(b.x - px) < b.hw + 26 && Math.abs(b.y - py) < b.hh + 26) {
+            this._damageWeapon(w, b.dmg);
+            this.emit('hit', { x: b.x, y: py + 13, kind: b.kind, armor: B.state !== 'fight' });
+            hit = true;
+            break;
+          }
+        }
+        if (!hit) {
+          // 코어를 향해 곧장 올라가는 탄은 앞 장갑 틈으로 코어까지 닿음
+          const cx = B.x + def.core.ox, cy = B.y + def.core.oy, cr = def.core.r;
+          if (Math.abs(b.x - cx) < b.hw + cr && b.y < cy + def.hull.ry + 10 && b.y > cy - cr - b.hh) {
             const dealt = this._damageCore(b.dmg);
             this.emit('hit', { x: b.x, y: cy + cr * 0.6, kind: b.kind, armor: !dealt });
-            hitSomething = true;
+            hit = true;
           } else {
-            const nx = (b.x - e.x) / def.hull.rx, ny = (b.y - e.y) / def.hull.ry;
+            const nx = (b.x - B.x) / def.hull.rx, ny = (b.y - B.y) / def.hull.ry;
             if (nx * nx + ny * ny < 1) {
               this.emit('hit', { x: b.x, y: b.y, kind: b.kind, armor: true });
-              hitSomething = true;
+              hit = true;
             }
           }
         }
-        if (hitSomething) b.dead = true;
+        if (hit) b.dead = true;
       }
 
       const p = this.player;
@@ -804,17 +902,14 @@
       }
       // 레이저 → 나
       for (const bm of this.beams) {
-        if (!bm.on) continue;
         const dx = p.x - bm.x, dy = p.y - bm.y;
         const ux = Math.cos(bm.ang), uy = Math.sin(bm.ang);
-        const along = dx * ux + dy * uy;
-        if (along < 0) continue;
-        const perp = Math.abs(dx * uy - dy * ux);
-        if (perp < bm.width / 2 + p.r) { this._hitPlayer(); return; }
+        if (dx * ux + dy * uy < 0) continue;
+        if (Math.abs(dx * uy - dy * ux) < bm.width / 2 + p.r) { this._hitPlayer(); return; }
       }
       // 보스 몸통 → 나
-      if (e && e.state !== 'dying') {
-        const nx = (p.x - e.x) / (def.hull.rx * 0.9), ny = (p.y - e.y) / (def.hull.ry * 0.9);
+      if (B && B.state !== 'dying') {
+        const nx = (p.x - B.x) / (def.hull.rx * 0.9), ny = (p.y - B.y) / (def.hull.ry * 0.9);
         if (nx * nx + ny * ny < 1) this._hitPlayer();
       }
     }
@@ -836,7 +931,7 @@
     _updateItems(dt) {
       const p = this.player;
       const canTake = !p.dead && !p.entering;
-      const vacuum = canTake && (p.y < H * 0.26 || this.phase === 'clear');
+      const vacuum = canTake && this.phase === 'clear';
       let j = 0;
       for (let i = 0; i < this.items.length; i++) {
         const it = this.items[i];
@@ -853,16 +948,16 @@
         } else if (it.kind === 'power' && it.t < 10) {
           it.x += it.vx * dt;
           it.y += it.vy * dt;
-          if (it.x < 18 || it.x > W - 18) { it.vx = -it.vx; it.x = clamp(it.x, 18, W - 18); }
-          if (it.y > H * 0.72 && it.vy > 0) it.vy = -Math.abs(it.vy);
-          if (it.y < 260 && it.vy < 0) it.vy = Math.abs(it.vy);
+          if (it.x < 40 || it.x > W - 40) { it.vx = -it.vx; it.x = clamp(it.x, 40, W - 40); }
+          if (it.y > H * 0.88 && it.vy > 0) it.vy = -Math.abs(it.vy);
+          if (it.y < H * 0.44 && it.vy < 0) it.vy = Math.abs(it.vy);
           if (it.t > 0.6) it.vy += (Math.sign(it.vy) * 50 - it.vy) * Math.min(1, dt * 2);
         } else {
           it.vy = Math.min(it.vy + 260 * dt, 85);
           it.vx *= 1 - Math.min(1, dt * 2);
           it.x += it.vx * dt;
           it.y += it.vy * dt;
-          if (it.x < 10 || it.x > W - 10) { it.vx = -it.vx; it.x = clamp(it.x, 10, W - 10); }
+          if (it.x < 30 || it.x > W - 30) { it.vx = -it.vx; it.x = clamp(it.x, 30, W - 30); }
         }
         if (canTake && Math.hypot(p.x - it.x, p.y - it.y) < 24) { this._takeItem(it); continue; }
         if (it.y > H + 30 || it.y < -60) continue;
@@ -914,5 +1009,4 @@
   }
 
   SH.Game = Game;
-  SH.ATTACKS = ATTACKS;
 })();
