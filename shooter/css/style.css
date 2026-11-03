@@ -1,0 +1,32 @@
+/* =========================================================
+ * 하늘 사냥꾼 — 게임 화면은 캔버스 하나. 픽셀이 번지지 않게 늘립니다.
+ * ========================================================= */
+html, body { margin: 0; height: 100%; overflow: hidden; background: #0c0820; }
+body {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+#app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 노치·홈 바 영역 피하기 (viewport-fit=cover) */
+  padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+  box-sizing: border-box;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, .025) 0 2px, transparent 2px 4px),
+    radial-gradient(ellipse at 50% 40%, #241a52 0%, #0c0820 70%);
+}
+#cv {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  box-shadow: 0 0 0 2px #1b1230, 0 0 0 4px #3a3058, 0 18px 60px rgba(0, 0, 0, .7);
+  cursor: pointer;
+}

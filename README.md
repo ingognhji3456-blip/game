@@ -1,3 +1,68 @@
+# 게임 모음
+
+이 저장소에는 설치 없이 브라우저에서 바로 하는 게임 두 개가 들어 있습니다.
+
+| 게임 | 장르 | 바로 하기 (파일 하나) |
+|---|---|---|
+| 🛩️ **하늘 사냥꾼** | 픽셀 아트 종스크롤 슈팅 · 기계 보스 결전 | [`dist/sky-hunter.html`](dist/sky-hunter.html) |
+| 🃏 **카드 원정대** | 로그라이크 덱빌딩 카드 배틀 | [`dist/card-expedition.html`](dist/card-expedition.html) |
+
+---
+
+# 하늘 사냥꾼 (Sky Hunter)
+
+작은 전투기를 몰고 하늘을 뒤덮은 거대한 기계 요새 **「강철 요새 타이탄」** 과 일대일로 싸우는 **픽셀 아트 슈팅 게임**입니다.
+타이틀·메뉴·점수판까지 모두 게임 화면 안에 픽셀로 그려지고, 휴대폰에서는 화면을 끌기만 하면 됩니다.
+
+| 타이틀 | 1단계: 포탑 파괴 | 3단계: 쌍둥이 레이저 | 4단계: 폭주 모드 |
+|---|---|---|---|
+| ![타이틀](docs/screenshots/shooter-title.png) | ![포탑](docs/screenshots/shooter-turrets.png) | ![레이저](docs/screenshots/shooter-laser.png) | ![폭주](docs/screenshots/shooter-berserk.png) |
+
+### 하는 법
+
+[`dist/sky-hunter.html`](dist/sky-hunter.html) 파일 하나를 브라우저로 여세요. (저장소를 받았다면 `shooter/index.html`)
+
+| | 휴대폰 | PC |
+|---|---|---|
+| 이동 | 화면 아무 데나 대고 끌기 (손가락에 비행기가 안 가려짐) | 방향키 / WASD, `Shift` 천천히 |
+| 공격 | 자동 발사 | 자동 발사 |
+| 폭탄 | 오른쪽 아래 폭탄 버튼, 또는 끄는 중에 두 번째 손가락으로 톡 | `X` / `Space` |
+| 일시정지 | 오른쪽 위 버튼 | `Esc` / `P` |
+
+- 비행기 **가운데 빨간 점**에만 맞지 않으면 됩니다.
+- **1단계** 코어가 방어막으로 덮여 있어요. 양쪽 **포탑**부터 부수세요.
+- **2~3단계** 코어가 열리면 진짜 싸움. 빨간 점선은 **레이저가 지나갈 자리**입니다. 미리 피하세요.
+  빨간 **미사일**은 총으로 쏴서 터뜨릴 수 있습니다.
+- **4단계 폭주 모드** — 경보가 울리고 모든 공격이 빨라집니다.
+- 포탑을 부수거나 단계가 바뀔 때마다 **파워 아이템(P)** 이 나옵니다. 아이템 색이 몇 초마다 바뀌는데, 먹은 색의 무기로 바뀝니다.
+  주황 = 확산탄, 파랑 = 관통 레이저, 초록 = 유도 미사일. 화면 위쪽으로 가면 아이템이 모두 빨려 옵니다.
+- 폭탄은 화면의 탄을 모두 지우고 잠깐 무적이 됩니다. 목숨이 다하면 10초 안에 **이어하기**를 고를 수 있습니다.
+- 깨면 다음 **회차(LOOP)** 에 도전할 수 있습니다. 보스가 더 단단하고 빨라집니다. 최고 점수 5위까지 저장됩니다.
+
+### 구조
+
+```
+shooter/index.html        진입점 (캔버스 하나)
+shooter/js/util.js        공용 도우미 · 논리 화면 크기(450×800)
+shooter/js/data.js        무기 · 보스(부품 · 단계 · 공격 패턴) — 숫자만 고쳐도 밸런스 조절
+shooter/js/game.js        게임 엔진 (DOM 없음, Node 에서 테스트)
+shooter/js/pix.js         픽셀 그림 엔진 (글자 그림 / 코드 그림, 5×7 픽셀 글꼴)
+shooter/js/sprites/       비행기·탄·아이템, 기계 보스, 효과·배경, 제목·버튼 그림
+shooter/js/render.js      225×400 픽셀 버퍼에 그린 뒤 번짐 없이 확대
+shooter/js/ui.js          타이틀·메뉴·이어하기·결과 화면 (모두 캔버스 안)
+shooter/js/fx.js · audio.js · input.js · main.js   효과 · 합성 소리 · 입력 · 루프
+tools/sprite-sheet.js     그림 미리보기 PNG 만들기 (Playwright)
+tests/shooter.test.js     규칙 검사 + 봇이 끝까지 플레이하는 시뮬레이션
+```
+
+그림을 고치거나 더할 때는 [`shooter/SPRITES.md`](shooter/SPRITES.md) 를 보고, 미리보기로 확인하세요.
+
+```bash
+node tools/sprite-sheet.js preview.png --only=titan,turret
+```
+
+---
+
 # 카드 원정대 (Deck Expedition)
 
 브라우저에서 바로 즐기는 **로그라이크 덱빌딩 카드 배틀 게임**입니다.
@@ -127,7 +192,7 @@ fireSlash: {
 
 ## 한 파일로 만들기
 
-코드를 고친 뒤 아래 명령을 실행하면 모든 CSS/JS 를 합친 `dist/card-expedition.html` 이 다시 만들어집니다.
+코드를 고친 뒤 아래 명령을 실행하면 모든 CSS/JS 를 합친 `dist/card-expedition.html` 과 `dist/sky-hunter.html` 이 다시 만들어집니다.
 
 ```bash
 node tools/build.js
@@ -137,6 +202,10 @@ node tools/build.js
 
 ```bash
 node tests/engine.test.js
+```
+
+```bash
+node tests/shooter.test.js
 ```
 
 ```bash
