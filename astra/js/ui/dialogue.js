@@ -63,6 +63,7 @@ AZ.ui.dialogue = (() => {
       const a = e.target.closest('[data-a]');
       if (a) {
         e.stopPropagation();
+        if (a.blur) a.blur();
         const act = a.dataset.a;
         if (act === 'skip') skip();
         if (act === 'auto') toggleAuto();
@@ -219,6 +220,13 @@ AZ.ui.dialogue = (() => {
   function showChoice(c) {
     state.skipping = false;
     state.choosing = true;
+    state.typing = false;
+    const lastLine = state.log.slice().reverse().find((l) => l.who !== 'choice');
+    if (lastLine) {
+      els.name.textContent = lastLine.name || '';
+      els.name.classList.toggle('hidden', !lastLine.name);
+      els.text.textContent = lastLine.text;
+    }
     els.choices.innerHTML = '';
     els.next.classList.remove('show');
     c.options.forEach((opt, idx) => {

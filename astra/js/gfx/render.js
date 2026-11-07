@@ -22,6 +22,7 @@ AZ.gfx.render = (() => {
   let touchMode = false;
   let hudState = { bossHpTrail: 1, hpTrail: 1, comboPop: 0, lastCombo: 0, focusFull: 0 };
   const ghosts = [];
+  const skip = {};
 
   /* ───────────── 테마 ───────────── */
   const THEMES = {
@@ -58,13 +59,16 @@ AZ.gfx.render = (() => {
   }
 
   /** 하늘 + 원경 도시 (화면 크기) */
-  function getSky(theme) {
-    if (skyCache[theme]) return skyCache[theme];
+  function getSky(theme, scale) {
+    const k = scale || 1;
+    const key = theme + '@' + k.toFixed(3);
+    if (skyCache[key]) return skyCache[key];
     const T = THEMES[theme] || THEMES.ruins;
-    const c = makeCanvas(VW * 1.4, VH);
+    const c = makeCanvas(VW * 1.4 * k, VH * k);
     if (!c) return null;
     const g = c.getContext('2d');
-    const w = c.width;
+    g.scale(k, k);
+    const w = VW * 1.4;
     const grd = g.createLinearGradient(0, 0, 0, VH);
     grd.addColorStop(0, T.sky[0]);
     grd.addColorStop(0.55, T.sky[1]);
@@ -205,7 +209,9 @@ AZ.gfx.render = (() => {
         g.stroke();
       }
     }
-    skyCache[theme] = c;
+    // 같은 테마의 다른 배율은 버림 (메모리 절약)
+    for (const kk of Object.keys(skyCache)) if (kk.startsWith(theme + '@') && kk !== theme + '@1.000' && kk !== key) delete skyCache[kk];
+    skyCache[key] = c;
     return c;
   }
 
@@ -379,16 +385,22 @@ AZ.gfx.render = (() => {
       ty += (focus.y - p.y) * 0.32;
     }
     const big = focus && focus.def.big;
-    const wantZoom = (big ? 0.88 : 0.96) * (touchMode ? 0.92 : 1);
-    cam.zoom = snap ? wantZoom : U.lerp(cam.zoom, wantZoom, Math.min(1, dt * 2));
+    cam.zoom = (big ? 0.88 : 0.96) * (touchMode ? 0.92 : 1);
     const halfW = VW / 2 / cam.zoom;
     const halfH = VH / 2 / cam.zoom / YS;
     const minX = halfW - 60;
     const maxX = W.w - halfW + 60;
     tx = minX > maxX ? W.w / 2 : U.clamp(tx, minX, maxX);
-    const minY = halfH - 240;
+    const minY = halfH - 360;
     const maxY = W.h - halfH + 120;
     ty = minY > maxY ? W.h / 2 : U.clamp(ty, minY, maxY);
+    if (focus) {
+      // 보스 머리가 HUD 아래로 숨지 않게 — 단, 플레이어가 화면 아래로 벗어나지는 않게
+      const H = (focus.z || 0) + focus.r * (focus.def.big ? 3.4 : 2.8);
+      const bossLimit = focus.y - ((120 - VH / 2) / cam.zoom + H) / YS;
+      const playerLimit = p.y - (VH / 2 - 100) / (YS * cam.zoom);
+      if (ty > bossLimit) ty = Math.max(bossLimit, playerLimit, minY);
+    }
     if (snap) { cam.x = tx; cam.y = ty; } else {
       const k = Math.min(1, dt * 5);
       cam.x = U.lerp(cam.x, tx, k);
@@ -924,6 +936,7 @@ AZ.gfx.render = (() => {
       items.push({ x: h.x, y: h.y, color: '#ff4d6d' });
     }
     if (W.boss && !W.boss.dead) items.push({ x: W.boss.x, y: W.boss.y, color: '#ffffff', boss: true });
+    for (const e of W.enemies) if (e.kind === 'enemy' && !e.dead && !e.clone) items.push({ x: e.x, y: e.y, color: '#ffb0c0', small: true });
     for (const it of items) {
       const c = proj(it.x, it.y, 0);
       if (c.x > 20 && c.x < VW - 20 && c.y > 20 && c.y < VH - 20) continue;
@@ -935,10 +948,11 @@ AZ.gfx.render = (() => {
       g.rotate(a);
       g.fillStyle = it.color;
       g.globalAlpha = it.boss ? 0.8 : 0.9;
+      const sc = it.small ? 0.6 : 1;
       g.beginPath();
-      g.moveTo(14, 0);
-      g.lineTo(-8, -10);
-      g.lineTo(-8, 10);
+      g.moveTo(14 * sc, 0);
+      g.lineTo(-8 * sc, -10 * sc);
+      g.lineTo(-8 * sc, 10 * sc);
       g.closePath();
       g.fill();
       g.restore();
@@ -946,58 +960,77 @@ AZ.gfx.render = (() => {
   }
 
   /* ───────────── 화면 효과 ───────────── */
+  const vignetteCache = {};
+  /** 화면 가장자리 어둡게(색) — 미리 그려 둔 캔버스 */
+  function getVignette(kind, k) {
+    const key = kind + '@' + k.toFixed(3);
+    if (vignetteCache[key]) return vignetteCache[key];
+    const c = makeCanvas(VW * k, VH * k);
+    if (!c) return null;
+    const g = c.getContext('2d');
+    g.scale(k, k);
+    const grd = g.createRadialGradient(VW / 2, VH / 2, VH * (kind === 'red' ? 0.4 : 0.45), VW / 2, VH / 2, VH * (kind === 'red' ? 0.9 : 0.95));
+    grd.addColorStop(0, 'rgba(0,0,0,0)');
+    grd.addColorStop(1, kind === 'red' ? 'rgba(255,0,40,1)' : 'rgba(0,0,8,0.55)');
+    g.fillStyle = grd;
+    g.fillRect(0, 0, VW, VH);
+    for (const kk of Object.keys(vignetteCache)) if (kk.startsWith(kind + '@')) delete vignetteCache[kk];
+    vignetteCache[key] = c;
+    return c;
+  }
+  function blitFull(g, c, alpha) {
+    if (!c) return;
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalAlpha = alpha;
+    g.drawImage(c, 0, 0);
+    g.restore();
+  }
+
   function drawOverlays(g, W, t) {
     const fxs = FX().state;
-    // 비네트
-    const vg = g.createRadialGradient(VW / 2, VH / 2, VH * 0.45, VW / 2, VH / 2, VH * 0.95);
-    vg.addColorStop(0, 'rgba(0,0,0,0)');
-    vg.addColorStop(1, 'rgba(0,0,8,0.55)');
-    g.fillStyle = vg;
-    g.fillRect(0, 0, VW, VH);
+    const k = g.getTransform ? g.getTransform().a : 1;
+    blitFull(g, getVignette('dark', k), 1);
 
     const p = W.player;
-    if (p.hp / p.maxHp < 0.3 && !p.dead) {
-      const a = 0.25 + 0.15 * Math.sin(t * 6);
-      const rg = g.createRadialGradient(VW / 2, VH / 2, VH * 0.4, VW / 2, VH / 2, VH * 0.9);
-      rg.addColorStop(0, 'rgba(255,0,40,0)');
-      rg.addColorStop(1, `rgba(255,0,40,${a})`);
-      g.fillStyle = rg;
-      g.fillRect(0, 0, VW, VH);
-    }
-    const desat = (amount, tint) => {
+    if (p.hp / p.maxHp < 0.3 && !p.dead) blitFull(g, getVignette('red', k), 0.25 + 0.15 * Math.sin(t * 6));
+    // 색 바꾸기: 곱하기(빠름)로 차가운 색조
+    const tint = (mul, amount, add) => {
       g.save();
-      g.globalCompositeOperation = 'saturation';
+      g.globalCompositeOperation = 'multiply';
       g.globalAlpha = amount;
-      g.fillStyle = '#808080';
+      g.fillStyle = mul;
       g.fillRect(0, 0, VW, VH);
       g.restore();
-      if (tint) {
+      if (add) {
         g.save();
-        g.fillStyle = tint;
+        g.globalCompositeOperation = 'screen';
+        g.fillStyle = add;
         g.fillRect(0, 0, VW, VH);
         g.restore();
       }
     };
     if (W.zero > 0) {
-      const k = Math.min(1, (W.zeroMax - W.zero) / 0.2, W.zero / 0.3);
-      desat(0.7 * k, `rgba(40,120,255,${0.13 * k})`);
+      const kz = Math.min(1, (W.zeroMax - W.zero) / 0.2, W.zero / 0.3);
+      tint('#6f8fd0', 0.75 * kz, `rgba(30,90,200,${0.12 * kz})`);
       // 속도선
       g.save();
       g.globalCompositeOperation = 'lighter';
-      g.strokeStyle = `rgba(150,220,255,${0.2 * k})`;
+      g.strokeStyle = `rgba(150,220,255,${0.2 * kz})`;
       g.lineWidth = 2;
+      g.beginPath();
       for (let i = 0; i < 26; i++) {
         const a = i * 0.8 + Math.floor(t * 12) * 0.37;
         const r0 = VH * (0.55 + ((i * 37) % 10) / 30);
-        g.beginPath();
         g.moveTo(VW / 2 + Math.cos(a) * r0, VH / 2 + Math.sin(a) * r0);
         g.lineTo(VW / 2 + Math.cos(a) * VW, VH / 2 + Math.sin(a) * VW);
-        g.stroke();
       }
+      g.stroke();
       g.restore();
     } else if (W.timeStop > 0) {
-      desat(0.85, 'rgba(120,80,220,0.12)');
+      tint('#a294d8', 0.8, 'rgba(80,40,160,0.08)');
     }
+    const desat = (amount, color) => tint('#a8a8b8', amount, color);
     if (fxs.freeze > 0) {
       desat(1, 'rgba(200,200,220,0.12)');
       g.save();
@@ -1529,32 +1562,48 @@ AZ.gfx.render = (() => {
       hudState = { bossHpTrail: 1, hpTrail: 1, comboPop: 0, lastCombo: 0 };
       ghosts.length = 0;
     } else updateCamera(W, dt, false);
-    // 배경
-    const sky = getSky(theme);
+    // 배경: 경기장 위로 보이는 하늘 띠만 1:1 로 복사 (확대/축소 없이 → 빠름)
+    const k = g.getTransform ? g.getTransform().a : 1;
+    const T = THEMES[theme] || THEMES.ruins;
+    g.fillStyle = '#03040a';
+    g.fillRect(0, 0, VW, VH);
     const arenaTop = proj(0, 0, 0).y;
-    if (sky) {
-      const par = ((cam.x / W.w) - 0.5) * (sky.width - VW) * 0.8;
+    const sky = skip.sky ? null : getSky(theme, k);
+    if (sky && arenaTop > 0) {
+      const lw = VW * 1.4;
+      const par = ((cam.x / W.w) - 0.5) * (lw - VW) * 0.8;
+      const sxL = (lw - VW) / 2 + par;
       const offY = Math.min(0, arenaTop - VH * 0.62) * 0.5;
-      g.drawImage(sky, -((sky.width - VW) / 2) - par, offY, sky.width, VH);
-      if (offY < 0) {
-        g.fillStyle = (THEMES[theme] || THEMES.ruins).sky[2];
-        g.fillRect(0, VH + offY, VW, -offY + 1);
+      const visH = Math.min(VH, arenaTop + 2);
+      const srcY = Math.max(0, Math.round(-offY * k));
+      const h = Math.min(Math.round(visH * k), sky.height - srcY);
+      const sx = U.clamp(Math.round(sxL * k), 0, sky.width - Math.round(VW * k));
+      if (h > 0) {
+        g.save();
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.drawImage(sky, sx, srcY, Math.round(VW * k), h, 0, 0, Math.round(VW * k), h);
+        g.restore();
       }
-    } else {
-      g.fillStyle = '#05060f';
-      g.fillRect(0, 0, VW, VH);
+      if (offY < 0 && visH * k > h) {
+        g.fillStyle = T.sky[2];
+        g.fillRect(0, h / k, VW, visH - h / k);
+      }
     }
-    // 바닥
-    const scale = Math.min(1.5, (g.getTransform ? g.getTransform().a : 1));
+    // 바닥: 화면 배율 그대로 만들어 둔 그림을 정수 픽셀 위치에 1:1 로 복사
+    const fscale = Math.min(2, k * cam.zoom);
     const fkey = theme + W.w + 'x' + W.h;
-    if (!floorCache || floorCache.key !== fkey || Math.abs(floorCache.scale - scale) > 0.3) floorCache = buildFloor(W, theme, scale);
+    if (!floorCache || floorCache.key !== fkey || Math.abs(floorCache.scale - fscale) > 0.001) floorCache = buildFloor(W, theme, fscale);
     const tl = proj(0, 0, 0);
-    if (floorCache) {
-      // 경기장 아래쪽은 어둡게
-      g.fillStyle = '#03040a';
+    if (floorCache && !skip.floor) {
       const br = proj(W.w, W.h, 0);
-      g.fillRect(tl.x - 2000, br.y, VW + 4000, VH);
-      g.drawImage(floorCache.canvas, tl.x, tl.y, floorCache.w * cam.zoom, floorCache.h * cam.zoom);
+      if (Math.abs(fscale - k * cam.zoom) < 0.001) {
+        g.save();
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.drawImage(floorCache.canvas, Math.round(tl.x * k), Math.round(tl.y * k));
+        g.restore();
+      } else {
+        g.drawImage(floorCache.canvas, tl.x, tl.y, floorCache.w * cam.zoom, floorCache.h * cam.zoom);
+      }
       // 경기장 앞 가장자리 두께
       g.fillStyle = 'rgba(8,12,26,0.95)';
       g.fillRect(tl.x, br.y, W.w * cam.zoom, 26 * cam.zoom);
@@ -1603,9 +1652,9 @@ AZ.gfx.render = (() => {
     FX().drawWorldAbove(g, proj, cam.zoom);
     drawOffscreen(g, W);
     // 화면 효과
-    drawOverlays(g, W, t);
+    if (!skip.overlays) drawOverlays(g, W, t);
     // HUD (흔들림 없이)
-    drawHud(g, W, t, dt, input);
+    if (!skip.hud) drawHud(g, W, t, dt, input);
     FX().drawScreen(g, W, VW, VH);
     if (W.state === 'intro') {
       g.save();
@@ -1616,7 +1665,7 @@ AZ.gfx.render = (() => {
   }
 
   return {
-    VW, VH, YS, drawBattle, drawIcon, proj, THEMES, getSky,
+    VW, VH, YS, drawBattle, skip, drawIcon, proj, THEMES, getSky,
     setTouchMode: (v) => { touchMode = !!v; },
     get touchMode() { return touchMode; },
     get buttons() { return buttons; },

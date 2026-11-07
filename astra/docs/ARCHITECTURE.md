@@ -173,3 +173,15 @@ AZ.audio.duck(amount, seconds)        // 잠시 음악 줄이기(보스 등장 �
 - 판정은 모두 월드 좌표의 원/부채꼴/직사각형으로 합니다.
 - 각도는 라디안, `0` = +x(오른쪽), 시계 방향(+y 아래쪽)으로 증가.
 - 적의 시간은 `battle.enemyScale`(ZERO FRAME 0.25, 시간 정지 0) 배로 흐릅니다. 플레이어·동료는 1배.
+
+## 7. 스프라이트 — `AZ.gfx.sprites` (`js/gfx/sprites.js`)
+
+```js
+AZ.gfx.sprites.draw(g, ent, W, t)        // g: 엔티티 발밑(비행체는 높이 z 를 뺀 위치)이 (0,0), 카메라 배율이 이미 걸린 상태
+AZ.gfx.sprites.drawPortraitIcon(g, id, size)
+```
+
+- `ent.kind` 로 나눠 그립니다: `player` / `ally`(`ent.ally`) / `enemy`(`ent.type`) / `boss`(`ent.bossId`). 모르는 것은 기본 실루엣.
+- 그림자, 선택 표시, 방벽, 체력 바, 피격 번쩍임(`g.filter`), 투명도(`alpha`, 등장·사망 페이드)는 `render.js` 가 맡습니다.
+- 동작은 엔티티 필드로만 정해집니다: `anim` + `animT`, `facing`, `st`(플레이어 공격 단계), `exposed`, `broken`, `stance`,
+  `charging`, `parts.arm`, `airborne`, `phase`, `dead`/`deadT`, `shieldDown`, `haste`, `counterReady` 등.

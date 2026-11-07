@@ -479,7 +479,7 @@ AZ.battle = (() => {
     }
 
     // 플레이어 쪽 보상
-    if (!isAlly && !o.noCombo) {
+    if (!isAlly && !o.noCombo && o.kind !== 'ult') {
       p.combo += 1;
       p.comboT = 2.6;
       if (p.combo > W.stats.maxCombo) W.stats.maxCombo = p.combo;
@@ -651,13 +651,14 @@ AZ.battle = (() => {
         }
       }
       const d = U.dist(a.x, a.y, tx, ty);
+      const acting = (a.anim === 'cast' || a.anim === 'attack') && a.animT < 0.3;
       if (d > 6) {
         const ang = U.angleTo(a.x, a.y, tx, ty);
         const step = Math.min(d, speed * dt * (d < 60 ? d / 60 : 1));
         a.x += Math.cos(ang) * step;
         a.y += Math.sin(ang) * step;
-        a.anim = 'move';
-      } else a.anim = 'idle';
+        if (!acting) a.anim = 'move';
+      } else if (!acting) a.anim = 'idle';
       a.x += a.vx * dt;
       a.y += a.vy * dt;
       a.vx *= Math.pow(0.02, dt);
@@ -811,6 +812,17 @@ AZ.battle = (() => {
     W.ending = { outcome, t: delay || 0 };
   }
 
+  /** 히트스톱 동안 눌린 버튼을 다음 프레임으로 넘김 */
+  function mergeInput(a, b) {
+    if (!b) return a || null;
+    if (!a) return Object.assign({}, b, { skills: (b.skills || []).slice(), cmds: (b.cmds || []).slice() });
+    const out = Object.assign({}, b);
+    for (const k of ['attack', 'heavy', 'dodge', 'ult', 'chain']) out[k] = !!(a[k] || b[k]);
+    out.skills = [0, 1, 2].map((i) => !!((a.skills && a.skills[i]) || (b.skills && b.skills[i])));
+    out.cmds = [0, 1, 2].map((i) => !!((a.cmds && a.cmds[i]) || (b.cmds && b.cmds[i])));
+    return out;
+  }
+
   /* ───────────── 메인 스텝 ───────────── */
   function step(W, realDt, input) {
     const dtCap = Math.min(realDt, 1 / 30);
@@ -828,7 +840,12 @@ AZ.battle = (() => {
 
     if (W.hitstop > 0) {
       W.hitstop -= dtCap;
+      W.pendingInput = mergeInput(W.pendingInput, input);
       return;
+    }
+    if (W.pendingInput) {
+      input = mergeInput(W.pendingInput, input);
+      W.pendingInput = null;
     }
     // 느린 화면(처치 연출)
     if (W.slowT > 0) {

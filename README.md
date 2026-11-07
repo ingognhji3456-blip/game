@@ -1,4 +1,17 @@
-# 카드 원정대 (Deck Expedition)
+# 브라우저 게임 모음
+
+이 저장소에는 설치 없이 브라우저에서 바로 즐기는 게임 두 개가 들어 있습니다. 둘 다 파일 하나만 열면 실행됩니다.
+
+| 게임 | 장르 | 한 파일 실행 | 소스·설명 |
+|---|---|---|---|
+| **ASTRA : ZERO PROTOCOL** (아스트라 : 제로 프로토콜) | SF 스토리 액션 RPG — 실시간 전투, 보스 10종, 10개 챕터, 다중 엔딩 | [`dist/astra-zero-protocol.html`](dist/astra-zero-protocol.html) | [`astra/`](astra/README.md) |
+| **카드 원정대** (Deck Expedition) | 로그라이크 덱빌딩 카드 배틀 | [`dist/card-expedition.html`](dist/card-expedition.html) | 아래 설명 |
+
+![ASTRA : ZERO PROTOCOL](astra/docs/screenshots/battle.jpg)
+
+---
+
+## 카드 원정대 (Deck Expedition)
 
 브라우저에서 바로 즐기는 **로그라이크 덱빌딩 카드 배틀 게임**입니다.
 덱을 쌓고, 갈림길을 고르고, 세 개의 막을 지나 심연의 끝에 있는 **태고의 용**을 쓰러뜨리세요.
@@ -11,7 +24,7 @@
 | **전투 (보스: 리치 왕)** | **이벤트** |
 | ![전투](docs/screenshots/battle.png) | ![이벤트](docs/screenshots/event.png) |
 
-## 실행 방법
+### 실행 방법
 
 **가장 간단한 방법:** [`dist/card-expedition.html`](dist/card-expedition.html) 파일 하나만 내려받아 브라우저(Chrome, Edge, Firefox, Safari)로 여세요. 게임 전체가 이 파일 하나에 들어 있습니다.
 
@@ -25,7 +38,7 @@ python3 -m http.server 8000
 
 그다음 브라우저에서 `http://localhost:8000` 을 엽니다.
 
-## 플레이 방법
+### 플레이 방법
 
 1. **지도**: 아래에서 위로 길을 골라 나아갑니다. 빛나는 칸만 고를 수 있습니다.
    - ⚔️ 전투 · 😈 정예(유물 보상) · ❓ 미지의 장소(이벤트) · 🔥 휴식처 · 💰 상점 · 🎁 보물 상자 · 👑 보스
@@ -37,7 +50,7 @@ python3 -m http.server 8000
    휴식처에서 카드를 **강화**하고, 상점에서 필요 없는 카드를 **제거**해 덱을 날카롭게 다듬으세요.
 4. 1막(속삭이는 숲) → 2막(잊혀진 폐허) → 3막(불타는 심연)의 보스를 모두 쓰러뜨리면 승리!
 
-### 조작
+#### 조작
 
 | 입력 | 동작 |
 |---|---|
@@ -52,7 +65,7 @@ python3 -m http.server 8000
 
 진행 상황은 자동으로 저장되며, 타이틀 화면의 **이어하기**로 이어서 할 수 있습니다.
 
-## 주요 특징
+### 주요 특징
 
 - **카드 50여 장**: 힘/큰 한 방, 방어/요새, 독, 연타(이번 턴 사용한 카드 수), 소멸 시너지, 드로우/에너지 등 여러 빌드
 - **적 22종**: 막마다 다른 적, 정예, 그리고 체력이 절반이 되면 **2페이즈**에 돌입하는 보스 3종 (리치 왕은 해골을 소환)
@@ -63,7 +76,7 @@ python3 -m http.server 8000
 - 화면별 배경음악과 효과음 (설정에서 음량 조절, 빠른 연출, 화면 흔들림 끄기)
 - 데스크톱과 휴대폰 화면 모두 지원
 
-## 프로젝트 구조
+### 프로젝트 구조
 
 ```
 index.html          진입점 (스크립트 로드 순서가 중요합니다)
@@ -81,11 +94,11 @@ tests/              Node 로 돌리는 엔진 테스트와 전체 런 시뮬레�
 docs/ARCHITECTURE.md  모듈 간 계약(API, 데이터 형식, 이벤트 타입)
 ```
 
-## 콘텐츠 추가하기
+### 콘텐츠 추가하기
 
 데이터 파일만 고치면 새 카드·적·유물을 넣을 수 있습니다. 카드 설명 문구는 효과를 보고 **자동으로 만들어집니다.**
 
-### 카드 (`js/data/cards.js`)
+#### 카드 (`js/data/cards.js`)
 
 ```js
 fireSlash: {
@@ -100,7 +113,7 @@ fireSlash: {
 - 키워드: `exhaust`(소멸), `retain`(보존), `ethereal`(휘발), `innate`(선천)
 - `art`: 카드 그림 아이콘 이름 (`slash`, `shield`, `fire`, `poison` … — `docs/ARCHITECTURE.md` §5.2)
 
-### 효과 종류
+#### 효과 종류
 
 | 효과 | 설명 |
 |---|---|
@@ -115,17 +128,17 @@ fireSlash: {
 
 전체 목록과 규칙은 `docs/ARCHITECTURE.md` 를 참고하세요.
 
-### 적 (`js/data/enemies.js`)
+#### 적 (`js/data/enemies.js`)
 
 기술(`moves`)과 행동 패턴(`pattern`: 순서대로 `cycle` 또는 가중치 `random`)을 정하고, `CB.data.encounters` 에 조우 그룹으로 등록합니다. 새 적의 그림은 `js/art/enemies.js` 에 추가합니다(없으면 기본 실루엣이 나옵니다).
 
-### 유물·물약·이벤트
+#### 유물·물약·이벤트
 
 - 유물(`js/data/relics.js`): `triggers`(전투 시작, 턴 시작, 카드 사용 시 등)와 `modifiers`(에너지 +1, 상점 할인 등)로 정의
 - 물약(`js/data/potions.js`): 전투 중 한 번 쓰는 효과
 - 이벤트(`js/data/events.js`): 장면 그림, 본문, 선택지와 결과(확률 분기 가능)
 
-## 한 파일로 만들기
+### 한 파일로 만들기
 
 코드를 고친 뒤 아래 명령을 실행하면 모든 CSS/JS 를 합친 `dist/card-expedition.html` 이 다시 만들어집니다.
 
@@ -133,7 +146,7 @@ fireSlash: {
 node tools/build.js
 ```
 
-## 테스트
+### 테스트
 
 ```bash
 node tests/engine.test.js

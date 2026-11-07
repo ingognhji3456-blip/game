@@ -49,6 +49,8 @@ AZ.input = (() => {
       const a = KEYMAP[e.code];
       if (!a) return;
       if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+      // 대화 중에는 포커스된 버튼이 Space/Enter 로 눌리지 않게
+      if (AZ.ui.dialogue && AZ.ui.dialogue.active && (a === 'dodge' || a === 'confirm')) e.preventDefault();
       if (!e.repeat) pressed.add(a);
       held.add(a);
       if (opts.forced !== true && touchMode && AZ.game && AZ.game.settings && AZ.game.settings.touch === 'auto') setTouch(false);

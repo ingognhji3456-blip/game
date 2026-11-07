@@ -647,7 +647,7 @@ AZ.gfx.fx = (() => {
     const tw = g.measureText(b.text).width;
     const w = Math.min(VW - 200, tw + 110);
     const x = VW / 2 - w / 2;
-    const y = 92;
+    const y = 102;
     g.fillStyle = 'rgba(5,10,26,0.72)';
     roundRect(g, x, y, w, 46, 10);
     g.fill();

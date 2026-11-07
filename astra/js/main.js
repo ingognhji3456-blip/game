@@ -253,7 +253,7 @@ AZ.game = (() => {
     AZ.ui.screens.hide();
     AZ.ui.screens.hideOverlay();
     const mems = chapterMemories(chId);
-    const gained = { exp: 0, credits: 0, memories: [], time: 0 };
+    const gained = { exp: 0, credits: 0, memories: [], time: 0, levelBefore: s.level };
     const dlgMusic = [6, 7, 10].includes(chId) ? 'memory' : 'hub';
 
     if (!bossOnly) {
@@ -296,7 +296,7 @@ AZ.game = (() => {
     const exp = P.bossExp(chId) * (firstClear ? 1 : 0.6) + res.exp;
     const credits = P.bossCredits(chId) * (firstClear ? 1 : 0.6) + res.credits;
     const lvBefore = s.level;
-    const lv = P.addExp(s, exp);
+    P.addExp(s, exp);
     s.credits += Math.round(credits);
     const challenge = P.checkChallenge(ch, Object.assign({}, res, { score: rec.score }));
     const mems = chapterMemories(chId);
@@ -323,8 +323,8 @@ AZ.game = (() => {
         boss: true, title: `${chId}장 ${ch.name} — ${D.bosses[ch.boss].name}`, rank: rec.rank, newBest: rec.newBest, place: rec.place,
         time: res.time, par: P.parTime(chId), damageTaken: res.damageTaken, hitsTaken: res.hitsTaken, zeroFrames: res.zeroFrames,
         breaks: res.breaks, maxCombo: res.maxCombo, weakHits: res.weakHits,
-        exp: exp + gained.exp, credits: credits + gained.credits, levelUp: s.level - lvBefore + 0 || lv, level: s.level,
-        challenge, challengeDesc: ch.challenge.desc, rewards, memories: memList.slice(gained.memories.length).concat([]),
+        exp: exp + gained.exp, credits: credits + gained.credits, levelUp: s.level - (gained.levelBefore || lvBefore), level: s.level,
+        challenge, challengeDesc: ch.challenge.desc, rewards, memories: memList,
       });
       if (AZ.audio) AZ.audio.sfx('victory');
     });

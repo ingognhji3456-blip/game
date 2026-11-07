@@ -93,7 +93,7 @@ AZ.player = (() => {
   function atkSpeed(p) { return p.haste > 0 ? 1.4 : 1; }
 
   /* ── 공격 ── */
-  function startAttack(W, p, inp, heavy) {
+  function startAttack(W, p, inp, heavy, chained) {
     const wpn = p.stats.weapon;
     let step;
     let idx = 0;
@@ -101,7 +101,7 @@ AZ.player = (() => {
       step = wpn.heavy;
       p.comboIdx = 0;
     } else {
-      idx = p.comboWin > 0 ? p.comboIdx : 0;
+      idx = p.comboWin > 0 || chained ? p.comboIdx : 0;
       if (idx >= wpn.combo.length) idx = 0;
       step = wpn.combo[idx];
       p.comboIdx = idx + 1;
@@ -150,7 +150,7 @@ AZ.player = (() => {
       if (tryActions(W, p, inp, true)) return;
       if (chainOK) {
         if (p.buf.heavy > 0 && !st.heavy) return startAttack(W, p, inp, true);
-        if (p.buf.attack > 0 && !st.heavy && p.comboIdx < wpn.combo.length) return startAttack(W, p, inp, false);
+        if (p.buf.attack > 0 && !st.heavy && p.comboIdx < wpn.combo.length) return startAttack(W, p, inp, false, true);
       }
     }
     if (st.t >= step.dur) {

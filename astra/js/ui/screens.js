@@ -248,7 +248,7 @@ AZ.ui.screens = (() => {
           </div>
         </div>
         <div class="hub-lia">
-          <img src="${D().assets[line.who === 'zero' ? 'zero' : 'lia']}" alt="">
+          ${line.who === 'system' ? '<div class="sys-badge">SYS</div>' : `<img src="${D().assets[line.who === 'zero' ? 'zero' : 'lia']}" alt="">`}
           <div><b>${line.who === 'zero' ? '제로' : line.who === 'system' ? 'SYSTEM' : '리아'}</b><p>${esc(line.text)}</p></div>
         </div>
       </div>`);

@@ -24,7 +24,7 @@ AZ.ai = (() => {
   function spawnBoss(W, id) {
     const def = AZ.data.bosses[id];
     const P = AZ.progress;
-    const e = baseEntity(W, 'boss', W.w / 2, W.h * 0.3, def.r);
+    const e = baseEntity(W, 'boss', W.w / 2, W.h * (def.big ? 0.4 : 0.3), def.r);
     e.bossId = id;
     e.def = def;
     e.maxHp = Math.round(P.bossHp(W.cfg.chapterId, def.hpMul) * W.diff.hp);
