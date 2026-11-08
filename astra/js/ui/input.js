@@ -26,7 +26,7 @@ AZ.input = (() => {
     KeyJ: 'attack', KeyK: 'heavy', Space: 'dodge', ShiftLeft: 'dodge', ShiftRight: 'dodge',
     KeyU: 'skill0', KeyI: 'skill1', KeyO: 'skill2', Digit1: 'skill0', Digit2: 'skill1', Digit3: 'skill2',
     KeyL: 'ult', Digit4: 'ult', KeyF: 'chain', KeyZ: 'cmd0', KeyX: 'cmd1', KeyC: 'cmd2',
-    Escape: 'pause', KeyP: 'pause', Enter: 'confirm', NumpadEnter: 'confirm', Backspace: 'back',
+    Escape: 'pause', KeyP: 'pause', Enter: 'confirm', NumpadEnter: 'confirm', Backspace: 'back', KeyE: 'interact', KeyG: 'interact',
   };
   const keyLabels = { skills: ['U', 'I', 'O'], ult: 'L', chain: 'F', cmds: ['Z', 'X', 'C'] };
 
@@ -152,6 +152,7 @@ AZ.input = (() => {
     if (edge(11)) out.cmds[1] = true;      // R3
     if (edge(8)) out.cmds[2] = true;       // Back/Select
     if (edge(9) && AZ.game && AZ.game.onKey) AZ.game.onKey('pause', null);
+    if (edge(12) && b[12]) out.interact = true;
     if (b.some(Boolean)) lastPadUse = Date.now();
     padPrev = b;
   }
@@ -167,6 +168,7 @@ AZ.input = (() => {
       ult: pressed.has('ult') || pressedButtons.has('ult'),
       chain: pressed.has('chain') || pressedButtons.has('chain'),
       cmds: [0, 1, 2].map((i) => pressed.has('cmd' + i) || pressedButtons.has('cmd' + i)),
+      interact: pressed.has('interact') || pressedButtons.has('interact'),
       aim: null,
       stick: touchMode ? stick : null,
       keyLabels,

@@ -17,6 +17,15 @@ AZ.game = (() => {
   let last = 0;
   let time = 0;
   let audioReady = false;
+  let scene3dCanvas = null;
+  let scene3dTried = false;
+  function initScene3d() {
+    scene3dTried = true;
+    if (!scene3dCanvas || !AZ.gfx.scene3d) return false;
+    const okk = AZ.gfx.scene3d.init(scene3dCanvas);
+    if (okk) resize();
+    return okk;
+  }
 
   const game = {
     save: null,
@@ -49,6 +58,10 @@ AZ.game = (() => {
     backing = Math.min(2, Math.max(0.75, scale * dpr));
     canvas.width = Math.round(VW * backing);
     canvas.height = Math.round(VH * backing);
+    if (AZ.gfx.scene3d && AZ.gfx.scene3d.available) {
+      const b3 = Math.min(backing, 1.5);
+      AZ.gfx.scene3d.resize(Math.round(VW * b3), Math.round(VH * b3));
+    }
     if (AZ.gfx.render) AZ.gfx.render.resetCaches();
     document.body.classList.toggle('portrait', window.innerHeight > window.innerWidth * 1.1);
   }
@@ -65,6 +78,10 @@ AZ.game = (() => {
       AZ.audio.setMuted(!!s.muted);
     }
     AZ.gfx.fx.setSettings({ shake: s.shake, flashes: s.flashes, damageNumbers: s.damageNumbers });
+    if (s.bg3d !== false && AZ.gfx.scene3d && !AZ.gfx.scene3d.available && scene3dCanvas && !scene3dTried) initScene3d();
+    AZ.gfx.render.setUse3d(s.bg3d !== false);
+    document.body.classList.toggle('bg3d', s.bg3d !== false && !!(AZ.gfx.scene3d && AZ.gfx.scene3d.available));
+    if (scene3dCanvas) scene3dCanvas.style.visibility = s.bg3d !== false && AZ.gfx.scene3d && AZ.gfx.scene3d.available ? 'visible' : 'hidden';
     if (s.touch === 'on') setTouch(true);
     else if (s.touch === 'off') setTouch(false);
     if (game.W) {
@@ -128,7 +145,7 @@ AZ.game = (() => {
   /* ───────── 전투 ───────── */
   function inBattle() { return !!game.W && !game.paused; }
 
-  function runBattle(cfg) {
+  function runBattle(cfg, ctx) {
     return new Promise((resolve) => {
       const s = game.save;
       const stats = AZ.progress.computeStats(s);
@@ -137,6 +154,7 @@ AZ.game = (() => {
       W.autoAim = game.settings.autoAim;
       W.settingsDamageNumbers = game.settings.damageNumbers;
       W._resolve = resolve;
+      W._ctx = ctx || {};
       AZ.gfx.fx.reset();
       AZ.input.clear();
       AZ.ui.screens.hide();
@@ -151,6 +169,7 @@ AZ.game = (() => {
     W._finished = true;
     const res = W.result || Object.assign({}, W.stats, { outcome, maxHp: W.player.maxHp });
     res.outcome = outcome;
+    if (W.stage && res.checkpoint == null) res.checkpoint = W.stage.bossTriggered ? 'boss' : W.stage.cpReached ? 'cp' : 0;
     game.W = null;
     game.paused = false;
     document.body.classList.remove('in-battle');
@@ -180,7 +199,8 @@ AZ.game = (() => {
   function battleTitle() {
     const W = game.W;
     if (!W) return '';
-    return `${W.ch.id}장 ${W.ch.name} — ${W.mode === 'boss' ? AZ.data.bosses[W.cfg.bossId].name : '작전 구역'}`;
+    const where = W.mode === 'boss' || (W.stage && W.stage.bossPhase) ? AZ.data.bosses[W.cfg.bossId].name : (W.stage && W.stage.region) || '작전 구역';
+    return `${W.ch.id}장 ${W.ch.name} — ${where}`;
   }
   function retryFromPause() { finishBattle('retry'); }
   function quitBattle() {
@@ -242,6 +262,56 @@ AZ.game = (() => {
     return ((AZ.data.story || {}).memories || []).filter((m) => m.chapter === chId);
   }
 
+  /* ───────── 스테이지: 길을 따라 걸어서 보스까지 (화면 전환 없음) ───────── */
+  /** 스테이지 안에서 생기는 일 — 세계는 멈추고(W.hold) 화면은 그대로 보이며 대사/연출이 겹쳐 나옴 */
+  async function stageEvent(W, e) {
+    const ctx = W._ctx || {};
+    const resume = () => { if (game.W === W) { W.hold = false; AZ.input.clear(); } };
+    if (e.type === 'storyEvent') {
+      const story = (AZ.data.story && AZ.data.story.chapters && AZ.data.story.chapters[W.cfg.chapterId]) || {};
+      if (!ctx.skipStory && story.preBoss && story.preBoss.length) {
+        await AZ.ui.dialogue.play(story.preBoss, { flags: game.save.flags, onFlag: () => persist() });
+      }
+      resume();
+    } else if (e.type === 'npcTalk') {
+      const lines = (e.lines || []).map((t) => (typeof t === 'string' ? { who: 'npc', name: e.name, text: t } : t));
+      if (lines.length) await AZ.ui.dialogue.play(lines, { flags: game.save.flags });
+      resume();
+    } else if (e.type === 'bossApproach') {
+      markSeen(W.cfg.bossId);
+      if (AZ.audio) AZ.audio.duck(0.7, 2.5);
+      await AZ.ui.screens.card('boss', { bossId: W.cfg.bossId });
+      if (game.W !== W) return;
+      setMusic(AZ.data.bosses[W.cfg.bossId].music);
+      AZ.battle.startBoss(W);
+      AZ.input.clear();
+    }
+  }
+
+  /** 스테이지 반복 (실패하면 체크포인트부터) → 승리 결과 or null */
+  async function stageLoop(chId, token, opts) {
+    const s = game.save;
+    const ch = AZ.data.chapters[chId - 1];
+    const mems = chapterMemories(chId);
+    let checkpoint = opts.bossOnly ? 'boss' : 0;
+    for (;;) {
+      setMusic(checkpoint === 'boss' ? 'none' : ch.music);
+      const res = await runBattle({
+        chapterId: chId, mode: 'stage', bossId: ch.boss, checkpoint, tutorial: chId === 1 && checkpoint === 0,
+        memoryCollected: !!(mems[0] && s.memories.includes(mems[0].id)),
+      }, { skipStory: opts.bossOnly || checkpoint !== 0 });
+      if (game.flow !== token) return null;
+      if (res.outcome === 'victory') return res;
+      if (res.outcome === 'quit') return null;
+      if (res.outcome === 'retry') { checkpoint = res.checkpoint || checkpoint; continue; }
+      const where = res.checkpoint === 'boss' ? '보스 구역부터' : res.checkpoint === 'cp' ? '체크포인트부터' : '지역 입구부터';
+      const choice = await askDefeat(`${chId}장 ${ch.name} — 다시 도전하면 ${where}`);
+      if (game.flow !== token) return null;
+      if (choice !== 'retry') return null;
+      checkpoint = res.checkpoint || 0;
+    }
+  }
+
   /** 챕터 진행 */
   async function startChapter(chId, bossOnly) {
     const s = game.save;
@@ -253,7 +323,7 @@ AZ.game = (() => {
     AZ.ui.screens.hide();
     AZ.ui.screens.hideOverlay();
     const mems = chapterMemories(chId);
-    const gained = { exp: 0, credits: 0, memories: [], time: 0, levelBefore: s.level };
+    const gained = { exp: 0, credits: 0, memories: [], time: 0, levelBefore: s.level, rewards: [] };
     const dlgMusic = [6, 7, 10].includes(chId) ? 'memory' : 'hub';
 
     if (!bossOnly) {
@@ -262,25 +332,26 @@ AZ.game = (() => {
       if (game.flow !== token) return;
       await talk(story.intro, ch.theme, dlgMusic);
       if (game.flow !== token) return;
-      const wave = await battleLoop({ chapterId: chId, mode: 'wave', tutorial: chId === 1 }, `${chId}장 작전 구역`, token);
-      if (!wave) return toHub();
-      gained.exp += wave.exp;
-      gained.credits += wave.credits;
-      gained.time += wave.time;
-      if (mems[0] && AZ.progress.addMemory(s, mems[0].id)) {
-        gained.memories.push(mems[0].title);
-        AZ.ui.screens.toast(`기억 파편 회수 — 「${mems[0].title}」`, 'mem');
-      }
-      AZ.progress.addExp(s, wave.exp);
-      s.credits += Math.round(wave.credits);
-      persist();
-      await talk(story.preBoss, ch.theme, dlgMusic);
-      if (game.flow !== token) return;
     }
-
-    const res = await battleLoop({ chapterId: chId, mode: 'boss', bossId: ch.boss }, `${chId}장 보스전`, token);
+    const res = await stageLoop(chId, token, { bossOnly });
     if (!res) return toHub();
-    gained.time += res.time;
+    gained.time = res.stageTime || res.time;
+    if (res.memoryFound && mems[0] && AZ.progress.addMemory(s, mems[0].id)) gained.memories.push(mems[0].title);
+    if (res.chest) {
+      s.chests = s.chests || {};
+      if (!s.chests[chId]) {
+        s.chests[chId] = true;
+        const pool = Object.keys(D.modules).filter((m) => !s.modules.includes(m));
+        if (pool.length) {
+          const m = pool[(chId * 5) % pool.length];
+          s.modules.push(m);
+          const empty = s.equippedModules.indexOf(null);
+          if (empty >= 0) s.equippedModules[empty] = m;
+          gained.rewards.push(`숨겨진 장비: ${D.modules[m].name}`);
+        }
+      }
+    }
+    persist();
     await afterBoss(chId, res, gained, bossOnly, token);
   }
 
@@ -302,9 +373,10 @@ AZ.game = (() => {
     const mems = chapterMemories(chId);
     const memList = gained.memories.slice();
     if (challenge && mems[1] && P.addMemory(s, mems[1].id)) memList.push(mems[1].title);
-    let rewards = [];
+    let rewards = bossOnly ? (gained.rewards || []).slice() : [];
     if (!bossOnly) {
       rewards = P.grantChapterRewards(s, chId);
+      rewards = rewards.concat(gained.rewards || []);
       if (!s.chapterBest[chId] || gained.time < s.chapterBest[chId]) s.chapterBest[chId] = Math.round(gained.time * 100) / 100;
     }
     persist();
@@ -340,14 +412,14 @@ AZ.game = (() => {
     toHub();
   }
 
-  /** 보스 도감에서 재도전 */
+  /** 보스 도감에서 재도전 — 보스 구역부터 */
   async function startBossReplay(bossId) {
     const b = AZ.data.bosses[bossId];
     const token = { chId: b.chapter, bossOnly: true, returnTo: 'codex' };
     game.flow = token;
-    const res = await battleLoop({ chapterId: b.chapter, mode: 'boss', bossId }, `보스 재도전 — ${b.name}`, token);
+    const res = await stageLoop(b.chapter, token, { bossOnly: true });
     if (!res) { if (game.flow === token) { game.flow = null; AZ.ui.screens.codex(); setMusic('hub'); } return; }
-    await afterBoss(b.chapter, res, { exp: 0, credits: 0, memories: [], time: res.time }, true, token);
+    await afterBoss(b.chapter, res, { exp: 0, credits: 0, memories: [], time: res.time, rewards: [] }, true, token);
   }
 
   /** 최종 선택 → 엔딩 */
@@ -392,6 +464,10 @@ AZ.game = (() => {
       }
       return;
     }
+    if (AZ.ui.screens.current === 'hub' && (a === 'left' || a === 'right' || a === 'up' || a === 'down')) {
+      AZ.ui.screens.hubStep(a === 'right' || a === 'up' ? 1 : -1);
+      return;
+    }
     if (a === 'pause' || a === 'back') {
       const cur = AZ.ui.screens.current;
       if (cur && cur !== 'hub' && cur !== 'title' && cur !== 'results' && cur !== 'defeat' && game.save) AZ.ui.screens.hub();
@@ -399,8 +475,14 @@ AZ.game = (() => {
   }
 
   /* ───────── 루프 ───────── */
-  function drawMenuBackground(dt) {
+  function drawMenuBackground(dt, theme) {
     g.setTransform(backing, 0, 0, backing, 0, 0);
+    const wm = !AZ.ui.dialogue.active && AZ.ui.screens.worldMap;
+    if (wm) {
+      const pos = AZ.gfx.render.drawWorldMap(g, time, dt, wm);
+      if (pos) { AZ.ui.screens.placeWorld(pos); return; }
+    }
+    if (AZ.gfx.render.drawCinematic(g, theme || 'ruins', time, dt)) return;
     const sky = AZ.gfx.render.getSky('void');
     if (sky) {
       const off = (time * 6) % (sky.width - VW);
@@ -436,6 +518,7 @@ AZ.game = (() => {
         if (!game.paused) {
           const inp = AZ.input.frame();
           AZ.battle.step(W, dt, inp);
+          for (const e of W.events) if (e.type === 'storyEvent' || e.type === 'bossApproach' || e.type === 'npcTalk') stageEvent(W, e);
           AZ.gfx.fx.consume(W);
           AZ.gfx.fx.update(dt);
           g.setTransform(backing, 0, 0, backing, 0, 0);
@@ -444,7 +527,9 @@ AZ.game = (() => {
           if (W.state === 'victory' || W.state === 'defeat') finishBattle(W.state);
         }
       } else if (!AZ.ui.dialogue.active) {
-        drawMenuBackground(dt);
+        drawMenuBackground(dt, AZ.ui.screens.menuTheme);
+      } else if (game.cineTheme) {
+        drawMenuBackground(dt, game.cineTheme);
       }
       AZ.ui.dialogue.update(dt);
       if (game.save && !game.paused) game.save.playTime += dt;
@@ -459,7 +544,9 @@ AZ.game = (() => {
     stage = document.getElementById('stage');
     canvas = document.getElementById('game');
     g = canvas.getContext('2d');
+    scene3dCanvas = document.getElementById('scene3d');
     game.settings = AZ.save.loadSettings();
+    if (game.settings.bg3d !== false) initScene3d();
     AZ.ui.screens.init(stage);
     AZ.input.init({
       canvas, toLogical,

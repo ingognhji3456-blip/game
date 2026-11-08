@@ -79,6 +79,7 @@ AZ.ui.screens = (() => {
 
   /* ───────── 타이틀 ───────── */
   function title() {
+    menuTheme = 'ruins';
     const has = AZ.save.hasSave();
     show('title', `
       <div class="title-art" style="background-image:url(${D().assets.keyart})"></div>
@@ -155,12 +156,14 @@ AZ.ui.screens = (() => {
 
   /* ───────── 작전 터미널 ───────── */
   let hubSel = null;
+  let menuTheme = 'ruins';
   function hub(selChapter) {
     const s = G().save;
     const st = P().computeStats(s);
     const chs = D().chapters;
     if (selChapter != null) hubSel = selChapter;
     if (hubSel == null || hubSel > s.unlockedChapter) hubSel = Math.min(s.unlockedChapter, 10);
+    menuTheme = chs[hubSel - 1].theme;
     const story = D().story || {};
     const line = pickHubLine(s);
     const expNeed = P().expToNext(s.level);
@@ -172,6 +175,7 @@ AZ.ui.screens = (() => {
     const memIds = (story.memories || []).filter((m) => m.chapter === ch.id).map((m) => m.id);
     const memGot = memIds.filter((id) => s.memories.includes(id)).length;
     const party = P().partyFor(s, ch.id);
+    const map = AZ.gfx.render.can3d;
     const rw = [];
     if (!s.cleared[ch.id]) {
       if (ch.reward.weapon) rw.push(`무기 「${D().weapons[ch.reward.weapon].name}」`);
@@ -210,9 +214,21 @@ AZ.ui.screens = (() => {
             <button class="btn ghost" data-act="title">타이틀로</button>
           </div>
         </div>
-        <div class="hub-center">
-          <div class="hub-head"><b>작전 터미널</b><span>${esc(D().difficulties[s.difficulty].name)} · 플레이 ${U.fmtDuration(s.playTime)}${s.endings.length ? ` · 엔딩 ${s.endings.length}/3` : ''}</span></div>
-          <div class="chapter-list">
+        <div class="hub-center ${map ? 'map' : ''}">
+          <div class="hub-head"><b>${map ? '월드맵' : '작전 터미널'}</b><span>${esc(D().difficulties[s.difficulty].name)} · 플레이 ${U.fmtDuration(s.playTime)}${s.endings.length ? ` · 엔딩 ${s.endings.length}/3` : ''}</span></div>
+          ${map ? `<div class="world-map">
+            ${chs.map((c) => {
+              const st = wmState(s, c.id);
+              const r = (s.records[c.boss] || [])[0];
+              const mp = D().maps && D().maps[c.theme];
+              return `<button class="wm-node ${st} ${c.id === hubSel ? 'sel' : ''}" ${st === 'locked' ? 'disabled' : ''} data-act="sel-ch" data-ch="${c.id}" aria-label="챕터 ${c.id}">
+                <i>${st === 'locked' ? '🔒' : String(c.id).padStart(2, '0')}</i>
+                <span>${st === 'locked' ? '미개방 지역' : `${esc(c.name)}${c.id === hubSel && mp ? `<small>${esc(mp.name)}</small>` : ''}`}</span>
+                ${st === 'cleared' ? `<em class="r${r ? r.rank : ''}">${r ? r.rank : '✓'}</em>` : st === 'open' ? '<em class="new">NEW</em>' : ''}
+              </button>`;
+            }).join('')}
+            <div class="wm-hint">섬을 고르면 지역 정보가 열립니다 · ← → 로 이동</div>
+          </div>` : `<div class="chapter-list">
             ${chs.map((c) => {
               const locked = c.id > s.unlockedChapter;
               const cleared = !!s.cleared[c.id];
@@ -223,12 +239,13 @@ AZ.ui.screens = (() => {
                 ${cleared ? `<span class="ch-rank r${r ? r.rank : ''}">${r ? r.rank : '✓'}</span>` : locked ? '<span class="ch-lock">🔒</span>' : '<span class="ch-new">NEW</span>'}
               </button>`;
             }).join('')}
-          </div>
+          </div>`}
         </div>
         <div class="hub-right panel">
           <div class="ch-detail">
             <div class="cd-head"><span>CHAPTER ${ch.id}</span><b>${esc(ch.name)}</b></div>
             <p class="cd-sum">${esc((story.chapterSummaries || {})[ch.id] || '')}</p>
+            ${D().maps && D().maps[ch.theme] ? `<div class="cd-map"><b>맵 · ${esc(D().maps[ch.theme].name)}</b>${D().maps[ch.theme].tags.slice(0, 2).map((t) => `<span>${esc(t)}</span>`).join('')}</div>` : ''}
             <div class="cd-boss">
               <img src="${D().assets['boss_' + ch.boss]}" alt="" class="${cx && cx.seen ? '' : 'unknown'}">
               <div><span>목표</span><b>${cx && cx.seen ? esc(boss.name) : '???'}</b><small>${cx && cx.seen ? esc(boss.title) : '미확인 개체'}</small></div>
@@ -252,6 +269,44 @@ AZ.ui.screens = (() => {
           <div><b>${line.who === 'zero' ? '제로' : line.who === 'system' ? 'SYSTEM' : '리아'}</b><p>${esc(line.text)}</p></div>
         </div>
       </div>`);
+  }
+
+  const wmState = (s, id) => (s.cleared[id] ? 'cleared' : id <= s.unlockedChapter ? 'open' : 'locked');
+  /** 월드맵을 그릴 때 필요한 정보 (작전 터미널이 월드맵 모드일 때만) */
+  function worldMap() {
+    if (current !== 'hub' || !screenEl.querySelector('.world-map')) return null;
+    const s = G().save;
+    const chs = D().chapters;
+    return { sel: hubSel, status: chs.map((c) => wmState(s, c.id)), themes: chs.map((c) => c.theme) };
+  }
+  /** 3D 섬 위치에 노드 버튼을 맞춤 (pos: 논리 좌표 1280×720) */
+  function placeWorld(pos) {
+    const box = screenEl.querySelector('.world-map');
+    if (!box) return;
+    const stageRect = host.parentNode.getBoundingClientRect();
+    const sc = stageRect.width / 1280 || 1;
+    const r = box.getBoundingClientRect();
+    const ox = (r.left - stageRect.left) / sc;
+    const oy = (r.top - stageRect.top) / sc;
+    const bw = r.width / sc;
+    const bh = r.height / sc;
+    const nodes = box.querySelectorAll('.wm-node');
+    nodes.forEach((n, i) => {
+      const p = pos[i];
+      if (!p) return;
+      const x = p.x - ox;
+      const y = p.y - oy;
+      const vis = !p.behind && x > 10 && x < bw - 10 && y > 16 && y < bh - 30;
+      n.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) scale(${U.clamp(0.55 + p.k * 0.8, 0.6, 1.15).toFixed(3)})`;
+      n.style.opacity = vis ? '' : '0';
+      n.style.pointerEvents = vis ? '' : 'none';
+      n.style.zIndex = String(Math.round(p.y));
+    });
+  }
+  function hubStep(d) {
+    const s = G().save;
+    const n = U.clamp((hubSel || 1) + d, 1, Math.min(s.unlockedChapter, 10));
+    if (n !== hubSel) { sfx('ui'); hub(n); }
   }
 
   function pickHubLine(s) {
@@ -455,7 +510,7 @@ AZ.ui.screens = (() => {
             return `<button class="mem-item ${got ? 'got' : ''} ${memSel === x.id ? 'sel' : ''}" ${got ? '' : 'disabled'} data-act="sel-mem" data-id="${x.id}">
               <span class="no">${String(i + 1).padStart(2, '0')}</span>
               <b>${got ? esc(x.title) : '봉인된 기억'}</b>
-              <small>${got ? `${x.chapter}장 · ${esc(ch.name)}` : second ? `${x.chapter}장 도전 과제: ${esc(ch.challenge.desc)}` : `${x.chapter}장 작전 구역에서 회수`}</small>
+              <small>${got ? `${x.chapter}장 · ${esc(ch.name)}` : second ? `${x.chapter}장 도전 과제: ${esc(ch.challenge.desc)}` : `${x.chapter}장 숨겨진 구역(갈림길)의 보물 옆에서 회수`}</small>
             </button>`;
           }).join('')}
         </div>
@@ -513,7 +568,7 @@ AZ.ui.screens = (() => {
           ${slider('master', '전체 음량')}${slider('music', '배경음악')}${slider('sfx', '효과음')}${toggle('muted', '음소거')}
         </div>
         <div class="set-group"><h3>화면</h3>
-          ${toggle('shake', '화면 흔들림')}${toggle('flashes', '번쩍임 효과')}${toggle('damageNumbers', '피해 숫자 표시')}
+          ${toggle('bg3d', '3D 배경 (느리면 끄기)')}${toggle('shake', '화면 흔들림')}${toggle('flashes', '번쩍임 효과')}${toggle('damageNumbers', '피해 숫자 표시')}
           <label class="set-row"><span>대사 속도</span><select data-set="textSpeed">
             ${[[0.6, '느림'], [1, '보통'], [1.6, '빠름'], [3, '매우 빠름']].map(([v, n]) => `<option value="${v}" ${Number(st.textSpeed) === v ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
         </div>
@@ -627,7 +682,7 @@ AZ.ui.screens = (() => {
         <p class="muted">${esc(info.title || '')}</p>
         <div class="col">
           <button class="btn primary big" data-act="resume">계속하기</button>
-          <button class="btn" data-act="pause-retry">처음부터 다시</button>
+          <button class="btn" data-act="pause-retry">체크포인트부터 다시</button>
           <button class="btn" data-act="pause-settings">설정</button>
           <button class="btn" data-act="pause-howto">조작법</button>
           <button class="btn ghost" data-act="pause-quit">작전 포기 (터미널로)</button>
@@ -817,5 +872,8 @@ AZ.ui.screens = (() => {
     init, hide, title, newGame, hub, loadout, skills, codex, memories, records, settings, results, defeat, credits,
     pause, hideOverlay, confirm, toast, card, howto, iconURL,
     get current() { return current; },
+    get menuTheme() { return menuTheme; },
+    get worldMap() { return worldMap(); },
+    placeWorld, hubStep,
   };
 })();

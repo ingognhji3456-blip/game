@@ -118,6 +118,9 @@ AZ.gfx.fx = (() => {
       case 'astraFreeze':
         S.freeze = e.t;
         break;
+      case 'region':
+        S.region = { text: e.text, sub: e.sub || '', t: 0, life: 3 };
+        break;
       case 'skillName':
         S.skillName = { name: e.name, t: 0, life: 0.9 };
         break;
@@ -207,6 +210,7 @@ AZ.gfx.fx = (() => {
     if (S.flash) { S.flash.t += dt; if (S.flash.t >= S.flash.life) S.flash = null; }
     if (S.skillName) { S.skillName.t += dt; if (S.skillName.t >= S.skillName.life) S.skillName = null; }
     if (S.bossDown) { S.bossDown.t += dt; if (S.bossDown.t >= S.bossDown.life) S.bossDown = null; }
+    if (S.region) { S.region.t += dt; if (S.region.t >= S.region.life) S.region = null; }
     S.shake = Math.max(0, S.shake - dt * 40);
     S.glitch = Math.max(0, S.glitch - dt);
     S.freeze = Math.max(0, S.freeze - dt);
@@ -225,14 +229,14 @@ AZ.gfx.fx = (() => {
     g.globalCompositeOperation = 'lighter';
     for (const r of S.rings) {
       const k = r.t / r.life;
-      const rad = U.lerp(r.r0, r.r1, U.ease.outCubic(k)) * zoom;
       const c = proj(r.x, r.y, 0);
+      const rad = U.lerp(r.r0, r.r1, U.ease.outCubic(k)) * c.k;
       g.save();
       g.translate(c.x, c.y);
-      g.scale(1, YS);
+      g.scale(1, c.fy);
       g.globalAlpha = (1 - k) * 0.9;
       g.strokeStyle = r.color;
-      g.lineWidth = (r.thick ? 14 : 6) * (1 - k * 0.6) * zoom;
+      g.lineWidth = (r.thick ? 14 : 6) * (1 - k * 0.6) * c.k;
       g.beginPath();
       g.arc(0, 0, Math.max(1, rad), 0, U.TAU);
       g.stroke();
@@ -247,14 +251,14 @@ AZ.gfx.fx = (() => {
       const c = proj(b.x, b.y, 0);
       g.save();
       g.translate(c.x, c.y);
-      g.scale(1, YS);
-      const grd = g.createRadialGradient(0, 0, 0, 0, 0, b.r * zoom);
+      g.scale(1, c.fy);
+      const grd = g.createRadialGradient(0, 0, 0, 0, 0, b.r * c.k);
       grd.addColorStop(0, `rgba(255,255,255,${0.7 * (1 - k)})`);
       grd.addColorStop(0.4, colorA(b.color, 0.5 * (1 - k)));
       grd.addColorStop(1, colorA(b.color, 0));
       g.fillStyle = grd;
       g.beginPath();
-      g.arc(0, 0, b.r * zoom * (0.6 + k * 0.5), 0, U.TAU);
+      g.arc(0, 0, b.r * c.k * (0.6 + k * 0.5), 0, U.TAU);
       g.fill();
       g.restore();
     }
@@ -263,12 +267,12 @@ AZ.gfx.fx = (() => {
       const c = proj(s.x, s.y, 0);
       g.save();
       g.translate(c.x, c.y);
-      g.scale(1, YS);
+      g.scale(1, c.fy);
       g.globalAlpha = 1 - k;
       g.strokeStyle = '#7cf7ff';
       g.lineWidth = 3;
       g.beginPath();
-      g.arc(0, 0, k * 900 * zoom, 0, U.TAU);
+      g.arc(0, 0, k * 900 * c.k, 0, U.TAU);
       g.stroke();
       g.restore();
     }
@@ -286,12 +290,12 @@ AZ.gfx.fx = (() => {
       g.globalAlpha = (1 - k) * 0.85;
       g.strokeStyle = tr.color;
       g.lineCap = 'round';
-      g.lineWidth = 18 * (1 - k) * zoom;
+      g.lineWidth = 18 * (1 - k) * a.k;
       g.beginPath();
       g.moveTo(a.x, a.y);
       g.lineTo(b.x, b.y);
       g.stroke();
-      g.lineWidth = 5 * (1 - k) * zoom;
+      g.lineWidth = 5 * (1 - k) * a.k;
       g.strokeStyle = '#ffffff';
       g.stroke();
     }
@@ -302,7 +306,7 @@ AZ.gfx.fx = (() => {
       const ex = bm.x + Math.cos(bm.ang) * bm.len;
       const ey = bm.y + Math.sin(bm.ang) * bm.len;
       const b = proj(ex, ey, 26);
-      const w = bm.w * zoom * (1 - k * 0.7);
+      const w = bm.w * a.k * (1 - k * 0.7);
       g.globalAlpha = 1 - k;
       g.lineCap = 'round';
       g.strokeStyle = colorA(bm.color, 0.45);
@@ -319,13 +323,13 @@ AZ.gfx.fx = (() => {
       g.stroke();
     }
     // 베기 궤적
-    for (const s of S.slashes) drawSlash(g, s, proj, zoom);
+    for (const s of S.slashes) drawSlash(g, s, proj);
     // 공중 폭발
     for (const b of S.bursts) {
       if (b.ground) continue;
       const k = b.t / b.life;
       const c = proj(b.x, b.y, b.z != null ? b.z : 24);
-      const r = b.r * zoom * (0.4 + U.ease.outCubic(k) * 0.8);
+      const r = b.r * c.k * (0.4 + U.ease.outCubic(k) * 0.8);
       const grd = g.createRadialGradient(c.x, c.y, 0, c.x, c.y, r);
       grd.addColorStop(0, `rgba(255,255,255,${0.95 * (1 - k)})`);
       grd.addColorStop(0.35, colorA(b.color, 0.75 * (1 - k)));
@@ -337,9 +341,9 @@ AZ.gfx.fx = (() => {
       g.fill();
       if (b.big) {
         g.strokeStyle = colorA(b.color, 0.8 * (1 - k));
-        g.lineWidth = 4 * zoom;
+        g.lineWidth = 4 * c.k;
         g.beginPath();
-        g.ellipse(c.x, c.y + 20, r * 1.3, r * 1.3 * YS, 0, 0, U.TAU);
+        g.ellipse(c.x, c.y + 20 * c.k, r * 1.3, r * 1.3 * c.fy, 0, 0, U.TAU);
         g.stroke();
       }
     }
@@ -347,12 +351,12 @@ AZ.gfx.fx = (() => {
       const c = proj(m.x, m.y, 28);
       const k = m.t / m.life;
       g.globalAlpha = 1 - k;
-      const grd = g.createRadialGradient(c.x, c.y, 0, c.x, c.y, 26 * zoom);
+      const grd = g.createRadialGradient(c.x, c.y, 0, c.x, c.y, 26 * c.k);
       grd.addColorStop(0, '#ffffff');
       grd.addColorStop(1, colorA(m.color, 0));
       g.fillStyle = grd;
       g.beginPath();
-      g.arc(c.x, c.y, 26 * zoom, 0, U.TAU);
+      g.arc(c.x, c.y, 26 * c.k, 0, U.TAU);
       g.fill();
     }
     // 파티클
@@ -364,13 +368,13 @@ AZ.gfx.fx = (() => {
         g.globalAlpha = (1 - k) * 0.35;
         g.fillStyle = p.color;
         g.beginPath();
-        g.arc(c.x, c.y, p.size * (0.6 + k) * zoom, 0, U.TAU);
+        g.arc(c.x, c.y, p.size * (0.6 + k) * c.k, 0, U.TAU);
         g.fill();
         g.globalCompositeOperation = 'lighter';
       } else {
         g.globalAlpha = 1 - k;
         g.fillStyle = p.color;
-        const sz = p.size * zoom;
+        const sz = p.size * c.k;
         g.fillRect(c.x - sz / 2, c.y - sz / 2, sz, sz);
         g.globalAlpha = (1 - k) * 0.4;
         g.fillRect(c.x - sz, c.y - sz, sz * 2, sz * 2);
@@ -386,7 +390,7 @@ AZ.gfx.fx = (() => {
       const k = t.t / t.life;
       const c = proj(t.x, t.y, t.z);
       const pop = t.t < 0.1 ? 1 + (1 - t.t / 0.1) * 0.6 : 1;
-      const size = t.size * pop * Math.min(1.2, Math.max(0.8, zoom));
+      const size = t.size * pop * Math.min(1.25, Math.max(0.75, c.k));
       g.globalAlpha = k > 0.7 ? (1 - k) / 0.3 : 1;
       g.font = `${t.crit || t.tag ? '900 italic' : '800'} ${size}px "Pretendard","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif`;
       g.lineWidth = 4;
@@ -398,13 +402,14 @@ AZ.gfx.fx = (() => {
     g.restore();
   }
 
-  function drawSlash(g, s, proj, zoom) {
+  function drawSlash(g, s, proj) {
     const k = s.t / s.life;
     const c = proj(s.x, s.y, 28);
-    const range = s.range * zoom;
+    const range = s.range * c.k;
+    const zoom = c.k;
     g.save();
     g.translate(c.x, c.y);
-    g.scale(1, YS);
+    g.scale(1, c.fy);
     g.globalAlpha = 1 - k * k;
     const color = s.color || '#9ae6ff';
     if (s.fx === 'thrust') {
@@ -477,6 +482,7 @@ AZ.gfx.fx = (() => {
       g.fillRect(0, 0, VW, VH);
       g.restore();
     }
+    if (S.region) drawRegion(g, S.region, VW, VH);
     if (S.banner) drawBanner(g, S.banner, VW, VH);
     if (S.cutin) drawCutin(g, S.cutin, VW, VH);
     if (S.bark) drawBark(g, S.bark, VW);
@@ -573,6 +579,37 @@ AZ.gfx.fx = (() => {
         g.arc(VW / 2, cy - 4, 120 + i * 40 + k * 60, 0, U.TAU);
         g.stroke();
       }
+    }
+    g.restore();
+  }
+
+  /** 지역 이름 (들어설 때) */
+  function drawRegion(g, r, VW) {
+    const k = r.t / r.life;
+    const a = r.t < 0.4 ? r.t / 0.4 : k > 0.8 ? (1 - k) / 0.2 : 1;
+    g.save();
+    g.globalAlpha = a;
+    const y = 214;
+    const w = 420 * U.ease.outCubic(Math.min(1, r.t / 0.5));
+    const grd = g.createLinearGradient(VW / 2 - w, 0, VW / 2 + w, 0);
+    grd.addColorStop(0, 'rgba(124,232,255,0)');
+    grd.addColorStop(0.5, 'rgba(124,232,255,0.9)');
+    grd.addColorStop(1, 'rgba(124,232,255,0)');
+    g.fillStyle = grd;
+    g.fillRect(VW / 2 - w, y - 28, w * 2, 1.5);
+    g.fillRect(VW / 2 - w, y + 22, w * 2, 1.5);
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.font = `900 30px ${FONT}`;
+    g.lineWidth = 5;
+    g.strokeStyle = 'rgba(0,0,10,0.6)';
+    g.strokeText(r.text, VW / 2, y - 2);
+    g.fillStyle = '#ffffff';
+    g.fillText(r.text, VW / 2, y - 2);
+    if (r.sub) {
+      g.font = `800 13px ${FONT}`;
+      g.fillStyle = '#9fe8ff';
+      g.fillText(r.sub, VW / 2, y + 38);
     }
     g.restore();
   }

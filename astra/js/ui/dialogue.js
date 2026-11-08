@@ -81,6 +81,14 @@ AZ.ui.dialogue = (() => {
   function drawBg(id) {
     const g = els.bg.getContext('2d');
     g.setTransform(1, 0, 0, 1, 0, 0);
+    // 3D 배경을 쓸 수 있으면 장면 테마를 3D 로 (이 캔버스는 투명하게 비움)
+    const S3 = AZ.gfx.scene3d;
+    if (BG_THEME[id] && S3 && S3.available && AZ.game && AZ.game.settings && AZ.game.settings.bg3d !== false) {
+      g.clearRect(0, 0, 1280, 720);
+      AZ.game.cineTheme = BG_THEME[id];
+      return;
+    }
+    if (AZ.game) AZ.game.cineTheme = null;
     if (id === 'black') {
       g.fillStyle = '#000';
       g.fillRect(0, 0, 1280, 720);

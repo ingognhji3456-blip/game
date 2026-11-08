@@ -367,12 +367,26 @@ AZ.gfx.render = (() => {
     return { canvas: c, w: fw, h: fh, scale, key: theme + W.w + 'x' + W.h };
   }
 
-  /* ───────────── 카메라 ───────────── */
+  /* ───────────── 카메라 ─────────────
+   * persp = true : 3D 배경과 같은 원근 카메라 (AZ.gfx.cam3d)
+   * persp = false: 예전 2D 비스듬한 평행 투영 (WebGL 이 없을 때)
+   * proj() → { x, y, k(월드 1 = k 픽셀), fy(바닥 세로 축소율) } */
+  let persp = false;
+  let curLevel = null;
+  const PERSP = { pitch: 0.26, fov: 0.86 };
   function proj(x, y, z) {
+    if (persp) return AZ.gfx.cam3d.project(x, y, (z || 0) + (curLevel ? AZ.level.floorZ(curLevel, x, y) : 0));
     return {
       x: (x - cam.x) * cam.zoom + VW / 2 + cam.sx,
       y: ((y - cam.y) * YS - (z || 0)) * cam.zoom + VH / 2 + cam.sy,
+      k: cam.zoom, fy: YS,
     };
+  }
+  function setPerspCamera(tx, ty) {
+    const f = 1 / Math.tan(PERSP.fov / 2);
+    const lz = curLevel ? AZ.level.floorZ(curLevel, tx, ty) : 0;
+    cam.lz = cam.lz == null ? lz : U.lerp(cam.lz, lz, 0.12);
+    AZ.gfx.cam3d.set({ tx, ty, pitch: PERSP.pitch, yaw: 0, fov: PERSP.fov, dist: (VH / 2) * f / cam.zoom, shakeX: cam.sx, shakeY: cam.sy, lookZ: cam.lz });
   }
 
   function updateCamera(W, dt, snap) {
@@ -385,6 +399,55 @@ AZ.gfx.render = (() => {
       ty += (focus.y - p.y) * 0.32;
     }
     const big = focus && focus.def.big;
+    const sh = FX().shakeOffset();
+    cam.sx = sh.x;
+    cam.sy = sh.y;
+    if (persp) {
+      cam.zoom = (big ? 1.0 : 1.14) * (touchMode ? 0.9 : 1);
+      if (W.level && !(W.boss && !W.boss.dead)) {
+        // 탐색 중: 플레이어와 길 앞쪽을 함께 보도록
+        const gd = AZ.level.guide(W.level, p.x, p.y, 260);
+        if (gd && !(W.stage && W.stage.active)) {
+          let ox = (gd.x - p.x) * 0.45;
+          let oy = (gd.y - p.y) * 0.45;
+          const om = Math.hypot(ox, oy);
+          if (om > 200) { ox *= 200 / om; oy *= 200 / om; }
+          tx = p.x + ox; ty = p.y + oy;
+        }
+        if (W.stage && W.stage.active) { const a = W.stage.active.area; tx = p.x * 0.6 + (a.x0 + a.x1) * 0.2; ty = p.y * 0.6 + (a.y0 + a.y1) * 0.2; }
+      } else {
+        tx = U.clamp(tx, Math.min(W.w / 2, 520), Math.max(W.w / 2, W.w - 520));
+        ty = U.clamp(ty, W.h * 0.3, W.h * 0.78);
+      }
+      // 체크포인트 재시작처럼 멀리 순간 이동했으면 바로 따라붙기
+      if (snap || !(Math.hypot(cam.x - tx, cam.y - ty) < 900)) { cam.x = tx; cam.y = ty; cam.lz = null; } else {
+        const k = Math.min(1, dt * 5);
+        cam.x = U.lerp(cam.x, tx, k);
+        cam.y = U.lerp(cam.y, ty, k);
+      }
+      // 플레이어는 화면 안에, 거대 보스는 머리까지 보이게
+      for (let i = 0; i < 3; i++) {
+        setPerspCamera(cam.x, cam.y);
+        const pp = proj(p.x, p.y, 0);
+        if (pp.behind) { cam.x = tx; cam.y = ty; cam.lz = null; break; }
+        let dy = 0;
+        if (pp.y > VH - 110) dy = (pp.y - (VH - 110)) / (pp.k * pp.fy);
+        else if (pp.y < 300) dy = (pp.y - 300) / (pp.k * pp.fy);
+        else if (focus) {
+          const H = (focus.z || 0) + focus.r * (focus.def.big ? 3.4 : 2.8);
+          const top = proj(focus.x, focus.y, H);
+          if (top.y < 118) dy = Math.max((top.y - 118) / (top.k * 0.8), -(VH - 110 - pp.y) / (pp.k * pp.fy));
+        }
+        let dx = 0;
+        if (pp.x < 220) dx = (pp.x - 220) / pp.k;
+        else if (pp.x > VW - 220) dx = (pp.x - (VW - 220)) / pp.k;
+        if (Math.abs(dy) < 0.5 && Math.abs(dx) < 0.5) break;
+        cam.y += U.clamp(dy, -220, 220);
+        cam.x += U.clamp(dx, -220, 220);
+      }
+      setPerspCamera(cam.x, cam.y);
+      return;
+    }
     cam.zoom = (big ? 0.88 : 0.96) * (touchMode ? 0.92 : 1);
     const halfW = VW / 2 / cam.zoom;
     const halfH = VH / 2 / cam.zoom / YS;
@@ -395,7 +458,6 @@ AZ.gfx.render = (() => {
     const maxY = W.h - halfH + 120;
     ty = minY > maxY ? W.h / 2 : U.clamp(ty, minY, maxY);
     if (focus) {
-      // 보스 머리가 HUD 아래로 숨지 않게 — 단, 플레이어가 화면 아래로 벗어나지는 않게
       const H = (focus.z || 0) + focus.r * (focus.def.big ? 3.4 : 2.8);
       const bossLimit = focus.y - ((120 - VH / 2) / cam.zoom + H) / YS;
       const playerLimit = p.y - (VH / 2 - 100) / (YS * cam.zoom);
@@ -406,39 +468,351 @@ AZ.gfx.render = (() => {
       cam.x = U.lerp(cam.x, tx, k);
       cam.y = U.lerp(cam.y, ty, k);
     }
-    const sh = FX().shakeOffset();
-    cam.sx = sh.x;
-    cam.sy = sh.y;
   }
 
-  /* ───────────── 위험 지역 ───────────── */
-  function shapePath(g, h, W) {
+  /* ───────────── 스테이지: 방벽, 길 안내, 목표 ───────────── */
+  function drawStageGround(g, W, t) {
+    const st = W.stage;
+    if (!st) return;
+    // 길 안내 화살표 (전투 중이 아닐 때)
+    if (!st.active && !st.bossTriggered) {
+      const gd = AZ.level.guide(W.level, W.player.x, W.player.y, 900);
+      if (gd) {
+        const pts = gd.pts;
+        let acc = 0;
+        const stepD = 110;
+        let next = 80 - ((t * 120) % stepD);
+        for (let i = 0; i < pts.length - 1; i++) {
+          const [ax, ay] = pts[i];
+          const [bx, by] = pts[i + 1];
+          const L = Math.hypot(bx - ax, by - ay);
+          while (next < acc + L) {
+            const k = (next - acc) / L;
+            const x = ax + (bx - ax) * k;
+            const y = ay + (by - ay) * k;
+            const ang = Math.atan2(by - ay, bx - ax);
+            const fade = Math.min(1, next / 200) * Math.max(0, 1 - next / 900);
+            const c = (dx, dy) => proj(x + Math.cos(ang) * dx - Math.sin(ang) * dy, y + Math.sin(ang) * dx + Math.cos(ang) * dy, 2);
+            const a = c(26, 0);
+            const b = c(-10, 26);
+            const m = c(2, 0);
+            const d = c(-10, -26);
+            g.save();
+            g.globalCompositeOperation = 'lighter';
+            g.globalAlpha = 0.55 * fade;
+            g.fillStyle = '#7cf7ff';
+            g.beginPath();
+            g.moveTo(a.x, a.y);
+            g.lineTo(b.x, b.y);
+            g.lineTo(m.x, m.y);
+            g.lineTo(d.x, d.y);
+            g.closePath();
+            g.fill();
+            g.restore();
+            next += stepD;
+          }
+          acc += L;
+        }
+      }
+    }
+    // NPC
+    for (const o of st.objects || []) if (o.kind === 'npc') drawNpc(g, W, o, t);
+    // 관문: 단말기를 쓰기 전까지 붉은 에너지 벽
+    const gate = W.level.gate;
+    if (gate) {
+      if (st.gateOpen) st.gateFade = Math.max(0, (st.gateFade == null ? 1 : st.gateFade) - 0.03);
+      const a = st.gateOpen ? st.gateFade : 1;
+      if (a > 0.01) energyWall(g, [[gate.x0, gate.y, gate.x1, gate.y]], '#ff2f5a', 150 * (0.4 + 0.6 * a), t, a);
+    }
+    // 봉쇄 방벽
+    const lock = st.lock;
+    if (lock && (st.active || st.bossPhase || st.bossTriggered)) {
+      const col = st.bossTriggered ? '#ff3d6e' : '#ff9b3d';
+      const edges = [[lock.x0, lock.y0, lock.x1, lock.y0], [lock.x1, lock.y0, lock.x1, lock.y1], [lock.x1, lock.y1, lock.x0, lock.y1], [lock.x0, lock.y1, lock.x0, lock.y0]];
+      energyWall(g, edges, col, 90, t, 1);
+    }
+  }
+
+  /** 바닥에서 솟은 빛의 벽 */
+  function energyWall(g, edges, col, h, t, alpha) {
+    g.save();
+    g.globalCompositeOperation = 'lighter';
+    g.globalAlpha = alpha;
+    for (const [ax, ay, bx, by] of edges) {
+      const n = 10;
+      for (let i = 0; i < n; i++) {
+        const x0 = ax + (bx - ax) * (i / n);
+        const y0 = ay + (by - ay) * (i / n);
+        const x1 = ax + (bx - ax) * ((i + 1) / n);
+        const y1 = ay + (by - ay) * ((i + 1) / n);
+        const p0 = proj(x0, y0, 0);
+        const p1 = proj(x1, y1, 0);
+        if (p0.behind || p1.behind) continue;
+        const q1 = proj(x1, y1, h);
+        const q0 = proj(x0, y0, h);
+        const grd = g.createLinearGradient(p0.x, p0.y, q0.x, q0.y);
+        grd.addColorStop(0, FX().colorA(col, 0.45));
+        grd.addColorStop(1, FX().colorA(col, 0));
+        g.fillStyle = grd;
+        g.beginPath();
+        g.moveTo(p0.x, p0.y);
+        g.lineTo(p1.x, p1.y);
+        g.lineTo(q1.x, q1.y);
+        g.lineTo(q0.x, q0.y);
+        g.closePath();
+        g.fill();
+        g.strokeStyle = FX().colorA(col, 0.8 + 0.2 * Math.sin(t * 8 + i));
+        g.lineWidth = 2;
+        g.beginPath();
+        g.moveTo(p0.x, p0.y);
+        g.lineTo(p1.x, p1.y);
+        g.stroke();
+      }
+    }
+    g.restore();
+  }
+
+  /** 탐험 구역의 인물: 망토 두른 실루엣 + 네온 테두리 */
+  function drawNpc(g, W, o, t) {
+    const b = proj(o.x, o.y, 0);
+    if (b.behind || b.y < -80 || b.y > VH + 80) return;
+    const k = b.k;
+    const H = 74 * k;
+    const sway = Math.sin(t * 1.6 + o.x) * 1.5 * k;
+    g.save();
+    g.fillStyle = 'rgba(0,0,0,0.4)';
+    g.beginPath();
+    g.ellipse(b.x, b.y, 22 * k, 22 * k * b.fy, 0, 0, U.TAU);
+    g.fill();
+    g.translate(b.x, b.y);
+    // 망토
+    g.fillStyle = '#1b1830';
+    g.beginPath();
+    g.moveTo(-15 * k, 0);
+    g.quadraticCurveTo(-17 * k, -H * 0.55, -9 * k + sway, -H * 0.78);
+    g.lineTo(9 * k + sway, -H * 0.78);
+    g.quadraticCurveTo(17 * k, -H * 0.55, 15 * k, 0);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = '#ffb36b';
+    g.lineWidth = Math.max(1, 1.6 * k);
+    g.stroke();
+    // 머리와 후드
+    g.fillStyle = '#2a2440';
+    g.beginPath();
+    g.arc(sway, -H * 0.86, 10 * k, 0, U.TAU);
+    g.fill();
+    g.stroke();
+    // 눈빛 고글
+    g.globalCompositeOperation = 'lighter';
+    g.fillStyle = '#ffd08a';
+    g.fillRect(sway - 6 * k, -H * 0.88, 12 * k, 2.6 * k);
+    // 손에 든 등불
+    const lx = 16 * k;
+    const ly = -H * 0.42 + Math.sin(t * 2.2) * 2 * k;
+    const grd = g.createRadialGradient(lx, ly, 0, lx, ly, 26 * k);
+    grd.addColorStop(0, 'rgba(255,214,150,0.9)');
+    grd.addColorStop(1, 'rgba(255,160,80,0)');
+    g.fillStyle = grd;
+    g.beginPath();
+    g.arc(lx, ly, 26 * k, 0, U.TAU);
+    g.fill();
+    g.restore();
+  }
+
+  function drawObjective(g, W, t) {
+    const st = W.stage;
+    if (!st || !st.objective || st.active) return;
+    const o = st.objective;
+    const c = proj(o.x, o.y, 150 + Math.sin(t * 3) * 10);
+    const gd = AZ.level.guide(W.level, W.player.x, W.player.y, 10);
+    const dist = gd ? Math.round(gd.remain / 10) : 0;
+    const onScreen = c.x > 40 && c.x < VW - 40 && c.y > 110 && c.y < VH - 60;
+    let y = U.clamp(c.y, onScreen ? 120 : 160, VH - (onScreen ? 80 : 150));
+    const x = U.clamp(c.x, onScreen ? 60 : 90, VW - (onScreen || y > 300 ? 60 : 200));
+    g.save();
+    const boss = o.label === '보스 구역';
+    const col = boss ? '#ff5470' : '#7cf7ff';
+    g.translate(x, y);
+    if (onScreen) {
+      g.fillStyle = col;
+      g.beginPath();
+      g.moveTo(0, 14);
+      g.lineTo(-11, -4);
+      g.lineTo(11, -4);
+      g.closePath();
+      g.fill();
+    } else {
+      const a = Math.atan2(c.y - VH / 2, c.x - VW / 2);
+      g.rotate(a);
+      g.fillStyle = col;
+      g.beginPath();
+      g.moveTo(16, 0);
+      g.lineTo(-8, -11);
+      g.lineTo(-8, 11);
+      g.closePath();
+      g.fill();
+      g.rotate(-a);
+    }
+    g.textAlign = 'center';
+    g.font = `900 14px ${FONT}`;
+    g.lineWidth = 4;
+    g.strokeStyle = 'rgba(0,0,0,0.7)';
+    const label = boss && W.stage.cleared >= 3 ? `보스 구역 · ${dist}m` : `${o.label} · ${dist}m`;
+    g.strokeText(label, 0, -14);
+    g.fillStyle = '#ffffff';
+    g.fillText(label, 0, -14);
+    g.restore();
+  }
+
+  /** WebGL 이 없을 때: 길과 구역을 단순한 판으로 */
+  function drawFlatLevel(g, W) {
+    const L = W.level;
+    g.save();
+    g.fillStyle = '#1a1c30';
+    g.strokeStyle = 'rgba(124,200,255,0.5)';
+    g.lineWidth = 2;
+    for (const sg of L.segs) {
+      const a = Math.atan2(sg.by - sg.ay, sg.bx - sg.ax);
+      const nx = -Math.sin(a) * sg.w / 2;
+      const ny = Math.cos(a) * sg.w / 2;
+      const pts = [proj(sg.ax + nx, sg.ay + ny, 0), proj(sg.bx + nx, sg.by + ny, 0), proj(sg.bx - nx, sg.by - ny, 0), proj(sg.ax - nx, sg.ay - ny, 0)];
+      g.beginPath();
+      polyTo(g, pts);
+      g.fill();
+    }
+    for (const a of L.areas) {
+      if (a.kind === 'boss') continue;
+      const pts = [proj(a.x0, a.y0, 0), proj(a.x1, a.y0, 0), proj(a.x1, a.y1, 0), proj(a.x0, a.y1, 0)];
+      g.beginPath();
+      polyTo(g, pts);
+      g.fill();
+      g.stroke();
+    }
+    g.restore();
+  }
+
+  /** 상호작용 (NPC·장치) 안내 */
+  function drawInteract(g, W, t) {
+    const it = W.stage.near;
+    const p = W.player;
+    for (const o of W.stage.objects || []) {
+      if (o.used && o.kind !== 'npc') continue;
+      const d = Math.hypot(o.x - p.x, o.y - p.y);
+      if (d > 760) continue;
+      const c = proj(o.x, o.y, o.kind === 'npc' ? 96 : 70);
+      if (c.behind) continue;
+      g.save();
+      g.textAlign = 'center';
+      g.font = `900 13px ${FONT}`;
+      g.globalAlpha = o === it ? 1 : 0.75 * U.clamp((760 - d) / 220, 0, 1);
+      g.fillStyle = o.kind === 'npc' ? '#ffd6a0' : '#7cf7ff';
+      g.fillText(o.kind === 'npc' ? o.name : o.label, c.x, c.y - 8 + Math.sin(t * 3) * 3);
+      if (o === it) {
+        const key = AZ.gfx.render.touchMode ? '터치' : 'E';
+        g.fillStyle = 'rgba(4,10,26,0.8)';
+        FX().roundRect(g, c.x - 62, c.y + 2, 124, 26, 8);
+        g.fill();
+        g.fillStyle = '#ffffff';
+        g.font = `800 13px ${FONT}`;
+        g.fillText(`[${key}] ${o.kind === 'npc' ? '대화' : o.verb || '작동'}`, c.x, c.y + 20);
+      }
+      g.restore();
+    }
+  }
+
+  function drawMinimap(g, W) {
+    const L = W.level;
+    if (!L) return;
+    const bx = VW - 168;
+    const by = 118;
+    const bw = 150;
+    const bh = 150;
+    const b = L.bounds;
+    const sc = Math.min(bw / (b.x1 - b.x0), bh / (b.y1 - b.y0));
+    const ox = bx + (bw - (b.x1 - b.x0) * sc) / 2;
+    const oy = by + (bh - (b.y1 - b.y0) * sc) / 2;
+    const T = (x, y) => [ox + (x - b.x0) * sc, oy + (y - b.y0) * sc];
+    g.save();
+    g.fillStyle = 'rgba(4,10,26,0.6)';
+    FX().roundRect(g, bx - 8, by - 8, bw + 16, bh + 16, 10);
+    g.fill();
+    g.lineCap = 'round';
+    for (const sgm of L.segs) {
+      const [ax, ay] = T(sgm.ax, sgm.ay);
+      const [ex, ey] = T(sgm.bx, sgm.by);
+      g.strokeStyle = sgm.branch ? 'rgba(255,224,102,0.6)' : 'rgba(140,190,255,0.55)';
+      g.lineWidth = Math.max(2, sgm.w * sc);
+      g.beginPath();
+      g.moveTo(ax, ay);
+      g.lineTo(ex, ey);
+      g.stroke();
+    }
+    const st = W.stage;
+    for (const a of L.areas) {
+      const [x0, y0] = T(a.x0, a.y0);
+      const [x1, y1] = T(a.x1, a.y1);
+      const e = st && st.enc.find((q) => q.area === a);
+      g.fillStyle = a.kind === 'boss' ? 'rgba(255,61,110,0.5)' : a.kind === 'start' ? 'rgba(124,247,160,0.35)' : e && e.state === 'cleared' ? 'rgba(124,247,212,0.3)' : a.kind === 'reward' ? 'rgba(255,224,102,0.45)' : 'rgba(255,155,61,0.5)';
+      g.fillRect(x0, y0, x1 - x0, y1 - y0);
+    }
+    const [px, py] = T(W.player.x, W.player.y);
+    g.fillStyle = '#ffffff';
+    g.beginPath();
+    g.arc(px, py, 3.5, 0, U.TAU);
+    g.fill();
+    g.restore();
+  }
+
+  /* ───────────── 바닥 위 도형 (점마다 투영 → 원근에서도 정확) ───────────── */
+  function circlePts(cx, cy, r, a0, a1, n) {
+    const pts = [];
+    const steps = n || Math.max(16, Math.min(64, Math.round(r / 6)));
+    for (let i = 0; i <= steps; i++) {
+      const a = a0 + (a1 - a0) * (i / steps);
+      pts.push(proj(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 0));
+    }
+    return pts;
+  }
+  function polyTo(g, pts, reverse) {
+    const list = reverse ? pts.slice().reverse() : pts;
+    list.forEach((p, i) => (i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)));
+    g.closePath();
+  }
+  function groundCircle(g, x, y, r) { g.beginPath(); polyTo(g, circlePts(x, y, r, 0, U.TAU)); }
+  function linePts(h, len) {
+    const ca = Math.cos(h.ang), sa = Math.sin(h.ang);
+    const nx = -sa * h.w / 2, ny = ca * h.w / 2;
+    const L = len != null ? len : h.len;
+    return [proj(h.x + nx, h.y + ny, 0), proj(h.x + ca * L + nx, h.y + sa * L + ny, 0), proj(h.x + ca * L - nx, h.y + sa * L - ny, 0), proj(h.x - nx, h.y - ny, 0)];
+  }
+  function shapePath(g, h, W, scale) {
+    const s = scale == null ? 1 : scale;
     g.beginPath();
     switch (h.shape) {
       case 'circle':
-        g.arc(0, 0, h.r, 0, U.TAU);
+        polyTo(g, circlePts(h.x, h.y, h.r * s, 0, U.TAU));
         break;
       case 'ring':
-        g.arc(0, 0, Math.max(1, h.r1), 0, U.TAU);
-        g.arc(0, 0, Math.max(0.5, h.r0), 0, U.TAU, true);
+        polyTo(g, circlePts(h.x, h.y, Math.max(1, h.r1), 0, U.TAU));
+        polyTo(g, circlePts(h.x, h.y, Math.max(0.5, h.r0), 0, U.TAU), true);
         break;
-      case 'sector':
-        g.moveTo(0, 0);
-        g.arc(0, 0, h.r, h.ang - h.arc / 2, h.ang + h.arc / 2);
-        g.closePath();
+      case 'sector': {
+        const pts = [proj(h.x, h.y, 0)].concat(circlePts(h.x, h.y, h.r * s, h.ang - h.arc / 2, h.ang + h.arc / 2));
+        polyTo(g, pts);
         break;
+      }
       case 'line':
-        g.save();
-        g.rotate(h.ang);
-        g.rect(0, -h.w / 2, h.len, h.w);
-        g.restore();
+        polyTo(g, linePts(h, h.len * s));
         break;
       case 'outside':
-      case 'all':
-        g.rect(-h.x - 400, -h.y - 400, W.w + 800, W.h + 800);
-        if (h.shape === 'outside') g.arc(0, 0, h.r, 0, U.TAU, true);
-        if (h.safe) for (const s of h.safe) { g.moveTo(s.x - h.x + s.r, s.y - h.y); g.arc(s.x - h.x, s.y - h.y, s.r, 0, U.TAU, true); }
+      case 'all': {
+        const m = 300;
+        polyTo(g, [proj(-m, -m, 0), proj(W.w + m, -m, 0), proj(W.w + m, W.h + m, 0), proj(-m, W.h + m, 0)]);
+        if (h.shape === 'outside') polyTo(g, circlePts(h.x, h.y, h.r, 0, U.TAU), true);
+        if (h.safe) for (const sz of h.safe) polyTo(g, circlePts(sz.x, sz.y, sz.r, 0, U.TAU), true);
         break;
+      }
       default:
         break;
     }
@@ -448,29 +822,25 @@ AZ.gfx.render = (() => {
     const scan = W.scan > 0;
     for (const h of W.hazards) {
       if (h.dmg <= 0 && h.visual !== 'aim') continue;
-      const c = proj(h.x, h.y, 0);
       const color = FX().hazardColor(h);
-      g.save();
-      g.translate(c.x, c.y);
-      g.scale(cam.zoom, cam.zoom * YS);
       let alpha = 1;
       if (h.done) alpha = Math.max(0, h.fade / 0.25);
+      g.save();
       g.globalAlpha = alpha;
       if (h.visual === 'aim' || h.visual === 'snipe') {
-        // 조준선
         const k = Math.min(1, h.t / h.warn);
-        g.rotate(h.ang);
+        const a = proj(h.x, h.y, 0);
+        const b = proj(h.x + Math.cos(h.ang) * h.len, h.y + Math.sin(h.ang) * h.len, 0);
         g.strokeStyle = FX().colorA(color, 0.35 + k * 0.5);
         g.lineWidth = h.visual === 'snipe' ? 2 + k * 3 : 1.5;
         g.beginPath();
-        g.moveTo(0, 0);
-        g.lineTo(h.len, 0);
+        g.moveTo(a.x, a.y);
+        g.lineTo(b.x, b.y);
         g.stroke();
         if (h.active && h.visual === 'snipe') {
-          g.strokeStyle = '#ffffff';
-          g.lineWidth = h.w;
-          g.globalAlpha = alpha * 0.8;
-          g.stroke();
+          g.fillStyle = 'rgba(255,255,255,0.8)';
+          shapePath(g, h, W);
+          g.fill();
         }
         g.restore();
         continue;
@@ -478,47 +848,28 @@ AZ.gfx.render = (() => {
       if (!h.active) {
         const k = Math.min(1, h.t / h.warn);
         const pulse = 0.5 + 0.5 * Math.sin(t * 18);
-        // 바탕
         shapePath(g, h, W);
-        g.fillStyle = FX().colorA(color, (h.shape === 'all' || h.shape === 'outside' ? 0.1 : 0.12) + k * 0.16);
+        g.fillStyle = FX().colorA(color, (h.shape === 'all' || h.shape === 'outside' ? 0.1 : 0.14) + k * 0.16);
         g.fill('evenodd');
-        // 차오르는 안쪽
-        if (h.shape === 'circle') {
-          g.beginPath();
-          g.arc(0, 0, h.r * k, 0, U.TAU);
-          g.fillStyle = FX().colorA(color, 0.22);
-          g.fill();
-        } else if (h.shape === 'line') {
-          g.save();
-          g.rotate(h.ang);
-          g.fillStyle = FX().colorA(color, 0.22);
-          g.fillRect(0, -h.w / 2, h.len * k, h.w);
-          g.restore();
-        } else if (h.shape === 'sector') {
-          g.beginPath();
-          g.moveTo(0, 0);
-          g.arc(0, 0, h.r * k, h.ang - h.arc / 2, h.ang + h.arc / 2);
-          g.closePath();
-          g.fillStyle = FX().colorA(color, 0.22);
+        if (h.shape === 'circle' || h.shape === 'line' || h.shape === 'sector') {
+          shapePath(g, h, W, k);
+          g.fillStyle = FX().colorA(color, 0.24);
           g.fill();
         }
-        // 테두리
         shapePath(g, h, W);
-        g.strokeStyle = FX().colorA(k > 0.75 ? '#ffffff' : color, 0.55 + pulse * 0.35 * k + (scan ? 0.2 : 0));
-        g.lineWidth = (scan ? 4 : 2.5) / cam.zoom;
+        g.strokeStyle = FX().colorA(k > 0.75 ? '#ffffff' : color, 0.6 + pulse * 0.35 * k + (scan ? 0.2 : 0));
+        g.lineWidth = scan ? 3.5 : 2.5;
         if (scan) g.setLineDash([14, 8]);
         g.stroke();
         g.setLineDash([]);
-        // 안전 지대
         if (h.safe || h.shape === 'outside') {
-          const list = h.safe ? h.safe.map((s) => ({ x: s.x - h.x, y: s.y - h.y, r: s.r })) : [{ x: 0, y: 0, r: h.r }];
+          const list = h.safe ? h.safe : [{ x: h.x, y: h.y, r: h.r }];
           for (const s of list) {
-            g.beginPath();
-            g.arc(s.x, s.y, s.r, 0, U.TAU);
+            groundCircle(g, s.x, s.y, s.r);
             g.fillStyle = `rgba(80,255,160,${0.12 + pulse * 0.1})`;
             g.fill();
             g.strokeStyle = 'rgba(120,255,180,0.9)';
-            g.lineWidth = 4 / cam.zoom;
+            g.lineWidth = 4;
             g.stroke();
           }
         }
@@ -531,11 +882,11 @@ AZ.gfx.render = (() => {
         g.fillStyle = FX().colorA(color, steady ? 0.38 + 0.12 * Math.sin(t * 40) : 0.7 * (1 - kk) + 0.15);
         g.fill('evenodd');
         if (h.shape === 'line') {
-          g.save();
-          g.rotate(h.ang);
+          const core = Object.assign({}, h, { w: h.w * 0.36 });
+          g.beginPath();
+          polyTo(g, linePts(core));
           g.fillStyle = `rgba(255,255,255,${steady ? 0.55 : 0.8 * (1 - kk)})`;
-          g.fillRect(0, -h.w * 0.18, h.len, h.w * 0.36);
-          g.restore();
+          g.fill();
         }
       }
       g.restore();
@@ -546,7 +897,7 @@ AZ.gfx.render = (() => {
         if (['missile', 'meteor', 'fireball', 'star', 'debris'].includes(h.visual)) {
           const z = (1 - k) * 520;
           const p = proj(h.x, h.y, z);
-          const r = (h.visual === 'meteor' ? 26 : 14) * cam.zoom;
+          const r = (h.visual === 'meteor' ? 26 : 14) * p.k;
           g.save();
           g.globalCompositeOperation = 'lighter';
           const grd = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.5);
@@ -557,11 +908,12 @@ AZ.gfx.render = (() => {
           g.beginPath();
           g.arc(p.x, p.y, r * 2.5, 0, U.TAU);
           g.fill();
+          const tail = proj(h.x, h.y, z + 90);
           g.strokeStyle = FX().colorA(color, 0.5);
           g.lineWidth = r * 0.8;
           g.beginPath();
           g.moveTo(p.x, p.y);
-          g.lineTo(p.x, p.y - 80 * cam.zoom);
+          g.lineTo(tail.x, tail.y);
           g.stroke();
           g.restore();
         }
@@ -581,7 +933,6 @@ AZ.gfx.render = (() => {
           g.fillText(str, lx, ly);
           g.restore();
         }
-        // 분석 모드: 보스 → 공격 지점 예측선
         if (scan && h.owner && h.owner.kind === 'boss' && (h.shape === 'circle' || h.shape === 'line' || h.shape === 'sector')) {
           const a = proj(h.owner.x, h.owner.y, 0);
           const b = h.shape === 'line' ? proj(h.x + Math.cos(h.ang) * Math.min(h.len, 300), h.y + Math.sin(h.ang) * Math.min(h.len, 300), 0) : proj(h.x, h.y, 0);
@@ -602,11 +953,11 @@ AZ.gfx.render = (() => {
   /* ───────────── 엔티티 ───────────── */
   function drawShadow(g, e) {
     const c = proj(e.x, e.y, 0);
-    const r = e.r * cam.zoom * (e.kind === 'boss' ? 1.15 : 1.05);
+    const r = e.r * c.k * (e.kind === 'boss' ? 1.15 : 1.05);
     const lift = Math.min(1, (e.z || 0) / 160);
-    g.fillStyle = `rgba(0,0,0,${0.42 - lift * 0.2})`;
+    g.fillStyle = `rgba(0,0,0,${(persp ? 0.5 : 0.42) - lift * 0.2})`;
     g.beginPath();
-    g.ellipse(c.x, c.y, r * (1 - lift * 0.3), r * YS * 0.8 * (1 - lift * 0.3), 0, 0, U.TAU);
+    g.ellipse(c.x, c.y, r * (1 - lift * 0.3), r * c.fy * 0.8 * (1 - lift * 0.3), 0, 0, U.TAU);
     g.fill();
   }
 
@@ -639,7 +990,7 @@ AZ.gfx.render = (() => {
     const c = proj(e.x, e.y, e.z || 0);
     g.save();
     g.translate(c.x, c.y);
-    g.scale(cam.zoom, cam.zoom);
+    g.scale(c.k, c.k);
     let alpha = e.alpha != null ? e.alpha : 1;
     if (e.untargetable && e.kind === 'boss') alpha *= 0.35;
     if (e.spawnT > 0) alpha *= Math.max(0, 1 - e.spawnT / 0.5);
@@ -667,10 +1018,10 @@ AZ.gfx.render = (() => {
     g.strokeStyle = FX().colorA(e.def.color || '#ff5470', 1 - k);
     g.lineWidth = 3;
     g.beginPath();
-    g.ellipse(c.x, c.y, e.r * 2 * (1 - k * 0.5) * cam.zoom, e.r * 2 * YS * (1 - k * 0.5) * cam.zoom, 0, 0, U.TAU);
+    g.ellipse(c.x, c.y, e.r * 2 * (1 - k * 0.5) * c.k, e.r * 2 * c.fy * (1 - k * 0.5) * c.k, 0, 0, U.TAU);
     g.stroke();
     g.fillStyle = FX().colorA(e.def.color || '#ff5470', 0.25 * (1 - k));
-    g.fillRect(c.x - e.r * cam.zoom, c.y - 120 * cam.zoom, e.r * 2 * cam.zoom, 120 * cam.zoom);
+    g.fillRect(c.x - e.r * c.k, c.y - 120 * c.k, e.r * 2 * c.k, 120 * c.k);
     g.restore();
   }
 
@@ -682,7 +1033,7 @@ AZ.gfx.render = (() => {
     const weak = e.def.weak || {};
     g.save();
     g.translate(c.x, c.y);
-    g.scale(cam.zoom, cam.zoom * YS);
+    g.scale(c.k, c.k * c.fy);
     if (weak.back && !weak.exposedOnly && !e.broken) {
       const a = e.facing + Math.PI;
       g.globalAlpha = show ? 0.75 + 0.25 * Math.sin(t * 8) : 0.28;
@@ -722,7 +1073,7 @@ AZ.gfx.render = (() => {
         const core = proj(e.x, e.y, (e.z || 0) + e.r * 1.1);
         g.save();
         g.globalCompositeOperation = 'lighter';
-        const pr = (20 + Math.sin(t * 10) * 4) * cam.zoom;
+        const pr = (20 + Math.sin(t * 10) * 4) * core.k;
         g.strokeStyle = '#7cf7ff';
         g.lineWidth = 3;
         g.beginPath();
@@ -768,7 +1119,7 @@ AZ.gfx.render = (() => {
       }
     } else if (e.kind === 'enemy' && !e.clone) {
       if (e.hp < e.maxHp && e.spawnT <= 0) {
-        const w = Math.max(30, e.r * 2.2) * cam.zoom;
+        const w = Math.max(30, e.r * 2.2) * top.k;
         g.fillStyle = 'rgba(0,0,0,0.6)';
         g.fillRect(top.x - w / 2, top.y, w, 5);
         g.fillStyle = e.def.color || '#ff5470';
@@ -789,10 +1140,10 @@ AZ.gfx.render = (() => {
     const e = p.target;
     if (!e || e.dead || e.untargetable) return;
     const c = proj(e.x, e.y, 0);
-    const r = (e.r + 12) * cam.zoom;
+    const r = (e.r + 12) * c.k;
     g.save();
     g.translate(c.x, c.y);
-    g.scale(1, YS);
+    g.scale(1, c.fy);
     g.rotate(t * 1.5);
     g.strokeStyle = e.kind === 'boss' ? 'rgba(255,90,120,0.8)' : 'rgba(255,255,255,0.6)';
     g.lineWidth = 3;
@@ -807,7 +1158,7 @@ AZ.gfx.render = (() => {
   function drawShieldBubble(g, e, t) {
     if (!(e.shield > 0)) return;
     const c = proj(e.x, e.y, (e.z || 0) + e.r * 1.5);
-    const r = e.r * 2.1 * cam.zoom;
+    const r = e.r * 2.1 * c.k;
     g.save();
     g.globalCompositeOperation = 'lighter';
     const grd = g.createRadialGradient(c.x, c.y, r * 0.5, c.x, c.y, r);
@@ -829,7 +1180,7 @@ AZ.gfx.render = (() => {
     g.strokeStyle = `rgba(150,230,255,${0.6 + 0.3 * Math.sin(t * 20)})`;
     g.lineWidth = 3;
     g.beginPath();
-    g.arc(c.x, c.y, 44 * cam.zoom, 0, U.TAU);
+    g.arc(c.x, c.y, 44 * c.k, 0, U.TAU);
     g.stroke();
     g.restore();
   }
@@ -840,8 +1191,8 @@ AZ.gfx.render = (() => {
     g.globalCompositeOperation = 'lighter';
     for (const b of W.bullets) {
       const c = proj(b.x, b.y, b.delay > 0 ? 40 : 26);
-      const r = b.r * cam.zoom;
-      const ang = Math.atan2(b.vy * YS, b.vx);
+      const r = b.r * c.k;
+      const ang = Math.atan2(b.vy * c.fy, b.vx);
       if (b.kind === 'crescent') {
         g.save();
         g.translate(c.x, c.y);
@@ -880,13 +1231,17 @@ AZ.gfx.render = (() => {
 
   function drawPickups(g, W, t) {
     for (const k of W.pickups) {
+      if (k.hidden || k.taken) continue;
       const bob = Math.sin(t * 3 + k.x) * 6;
       const c = proj(k.x, k.y, 26 + bob);
+      if (c.behind || c.y < -60 || c.y > VH + 60) continue;
       const base = proj(k.x, k.y, 0);
+      const s = U.clamp(c.k / 1.2, 0.3, 1.1);
+      const far = Math.hypot(k.x - W.player.x, k.y - W.player.y);
       g.save();
       g.fillStyle = 'rgba(0,0,0,0.35)';
       g.beginPath();
-      g.ellipse(base.x, base.y, 14 * cam.zoom, 8 * cam.zoom, 0, 0, U.TAU);
+      g.ellipse(base.x, base.y, 14 * base.k, 14 * base.k * base.fy, 0, 0, U.TAU);
       g.fill();
       g.globalCompositeOperation = 'lighter';
       if (k.kind === 'memory') {
@@ -894,10 +1249,11 @@ AZ.gfx.render = (() => {
         pillar.addColorStop(0, 'rgba(200,180,255,0)');
         pillar.addColorStop(1, 'rgba(200,180,255,0.35)');
         g.fillStyle = pillar;
-        g.fillRect(c.x - 18 * cam.zoom, c.y - 300, 36 * cam.zoom, base.y - c.y + 300);
+        g.fillRect(c.x - 18 * c.k, c.y - 300, 36 * c.k, base.y - c.y + 300);
         g.save();
         g.translate(c.x, c.y);
         g.rotate(t * 1.2);
+        g.scale(s, s);
         g.fillStyle = '#e2d4ff';
         g.beginPath();
         g.moveTo(0, -24);
@@ -910,19 +1266,29 @@ AZ.gfx.render = (() => {
         g.font = `800 14px ${FONT}`;
         g.textAlign = 'center';
         g.fillStyle = '#e2d4ff';
-        g.fillText('기억 파편', c.x, c.y - 40);
+        if (far < 900) g.fillText('기억 파편', c.x, c.y - 40 * s);
       } else {
-        const grd = g.createRadialGradient(c.x, c.y, 0, c.x, c.y, 22);
+        g.translate(c.x, c.y);
+        g.scale(s, s);
+        const credit = k.kind === 'credit';
+        const grd = g.createRadialGradient(0, 0, 0, 0, 0, 22);
         grd.addColorStop(0, '#ffffff');
-        grd.addColorStop(0.4, '#5fff9a');
-        grd.addColorStop(1, 'rgba(95,255,154,0)');
+        grd.addColorStop(0.4, credit ? '#8fe0ff' : '#5fff9a');
+        grd.addColorStop(1, credit ? 'rgba(143,224,255,0)' : 'rgba(95,255,154,0)');
         g.fillStyle = grd;
         g.beginPath();
-        g.arc(c.x, c.y, 22, 0, U.TAU);
+        g.arc(0, 0, 22, 0, U.TAU);
         g.fill();
         g.fillStyle = '#ffffff';
-        g.fillRect(c.x - 2, c.y - 7, 4, 14);
-        g.fillRect(c.x - 7, c.y - 2, 14, 4);
+        if (credit) {
+          g.beginPath();
+          g.moveTo(0, -8); g.lineTo(6, 0); g.lineTo(0, 8); g.lineTo(-6, 0);
+          g.closePath();
+          g.fill();
+        } else {
+          g.fillRect(-2, -7, 4, 14);
+          g.fillRect(-7, -2, 14, 4);
+        }
       }
       g.restore();
     }
@@ -1012,7 +1378,13 @@ AZ.gfx.render = (() => {
     };
     if (W.zero > 0) {
       const kz = Math.min(1, (W.zeroMax - W.zero) / 0.2, W.zero / 0.3);
-      tint('#6f8fd0', 0.75 * kz, `rgba(30,90,200,${0.12 * kz})`);
+      if (!persp) tint('#6f8fd0', 0.75 * kz, `rgba(30,90,200,${0.12 * kz})`);
+      else {
+        g.save();
+        g.fillStyle = `rgba(30,90,200,${0.08 * kz})`;
+        g.fillRect(0, 0, VW, VH);
+        g.restore();
+      }
       // 속도선
       g.save();
       g.globalCompositeOperation = 'lighter';
@@ -1027,10 +1399,10 @@ AZ.gfx.render = (() => {
       }
       g.stroke();
       g.restore();
-    } else if (W.timeStop > 0) {
+    } else if (W.timeStop > 0 && !persp) {
       tint('#a294d8', 0.8, 'rgba(80,40,160,0.08)');
     }
-    const desat = (amount, color) => tint('#a8a8b8', amount, color);
+    const desat = (amount, color) => { if (!persp) tint('#a8a8b8', amount, color); };
     if (fxs.freeze > 0) {
       desat(1, 'rgba(200,200,220,0.12)');
       g.save();
@@ -1374,6 +1746,23 @@ AZ.gfx.render = (() => {
         bar(g, x0 + bw / 2 - 140, 76, 280, 5, W.zero / W.zeroMax, '#7ce8ff');
         txt(g, 'ZERO FRAME', x0 + bw / 2, 90, 12, '#bfefff', 'center', 900);
       }
+    } else if (W.stage) {
+      const st = W.stage;
+      const elite = W.enemies.find((m) => m.elite && !m.dead && m.spawnT <= 0);
+      if (elite) {
+        const bw = 420;
+        const x0 = VW / 2 - bw / 2;
+        txt(g, elite.eliteName, x0, 24, 16, '#ffd0a0', 'left', 900);
+        txt(g, '중간 보스', x0 + bw, 24, 12, '#ffb35c', 'right', 800);
+        bar(g, x0, 36, bw, 12, elite.hp / elite.maxHp, '#ff9b3d');
+      } else {
+        const region = st.region ? st.region : '';
+        txt(g, region, VW / 2, 24, 19, '#ffffff', 'center', 900);
+        const alive = W.enemies.filter((m) => !m.dead && !m.clone && m.kind === 'enemy').length;
+        const sub = st.active ? `교전 중 — 남은 적 ${alive}` : st.objective ? `목표: ${st.objective.label}` : '';
+        txt(g, sub, VW / 2, 48, 13, st.active ? '#ffb0a0' : '#9fe8ff', 'center', 800);
+      }
+      drawMinimap(g, W);
     } else if (W.waves) {
       const alive = W.enemies.filter((m) => !m.dead && !m.clone).length;
       txt(g, W.memorySpawned ? '기억 파편을 회수하세요' : `WAVE ${Math.max(1, W.waveIdx + 1)} / ${W.waves.length}`, VW / 2, 26, 20, '#ffffff', 'center', 900);
@@ -1465,6 +1854,7 @@ AZ.gfx.render = (() => {
       });
       if (chainReady && !touchMode) txt(g, '연계!', cx, cy - cr - 12, 12, '#ff9ef0', 'center', 900);
     }
+    if (touchMode && W.stage && W.stage.near) roundBtn(g, VW / 2, VH - 90, 34, { id: 'interact', label: W.stage.near.kind === 'npc' ? '대화' : '작동', labelSize: 14, ring: '#7cf7ff' });
     if (touchMode) {
       const [ax, ay2, ar] = lay.attack;
       roundBtn(g, ax, ay2, ar, { id: 'attack', label: '공격', labelSize: 18 });
@@ -1554,14 +1944,65 @@ AZ.gfx.render = (() => {
   };
 
   /* ───────────── 메인 ───────────── */
+  /** 3D 배경의 조명 — 보스 등장·페이즈·필살기 충전·ZERO FRAME 에 따라 바뀜 */
+  function moodFor(W) {
+    const e = W.boss && !W.boss.dead ? W.boss : null;
+    const charging = e && e.charging > 0;
+    const bigWarn = W.hazards.some((h) => !h.active && !h.done && h.shape === 'all');
+    const col = e ? hexRgb(e.def.color) : [0, 0, 0];
+    return {
+      tint: [1, 1, 1],
+      boss: col.map((c) => c * 0.6),
+      bossAmt: e ? (W.state === 'intro' ? 0.3 : 0.7) : 0,
+      alarm: charging || bigWarn ? 1 : e && e.phase >= 2 ? 0.3 : 0,
+      zero: W.zero > 0 ? 1 : 0,
+      stop: W.timeStop > 0 || FX().state.freeze > 0 ? 1 : 0,
+      vortex: e && e.bossId === 'astra' ? (e.phase - 1) * 0.5 : 0,
+    };
+  }
+  const hexRgb = (h) => {
+    const n = parseInt(String(h || '#000000').slice(1), 16);
+    return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+  };
+
+  let use3d = true;
   function drawBattle(g, W, t, dt, input) {
     const theme = W.ch.theme;
+    const S3 = AZ.gfx.scene3d;
+    persp = !!(use3d && S3 && S3.available);
+    curLevel = persp ? W.level || null : null;
     if (!W._camInit) {
       updateCamera(W, dt, true);
       W._camInit = true;
       hudState = { bossHpTrail: 1, hpTrail: 1, comboPop: 0, lastCombo: 0 };
       ghosts.length = 0;
     } else updateCamera(W, dt, false);
+    if (persp) {
+      S3.ensure(theme, W.w, W.h, W.level);
+      S3.setMood(moodFor(W));
+      const e = W.boss;
+      if (e && W._lastPhase !== e.phase) {
+        if (W._lastPhase) S3.explode(7);
+        W._lastPhase = e.phase;
+      }
+      if (S3.scene) {
+        const dl = [[W.player.x, W.player.y, 170, 0.22, [0.45, 0.8, 1]]];
+        if (e && !e.dead) dl.push([e.x, e.y, e.r * 4, e.exposed > 0 || e.charging > 0 ? 0.5 : 0.25, hexRgb(e.def.color)]);
+        S3.scene.dynLights = dl;
+      }
+      // 플레이어를 가리는 구조물은 비쳐 보이게
+      const p = W.player;
+      const pz = (curLevel ? AZ.level.floorZ(curLevel, p.x, p.y) : 0) + 40;
+      const pp = AZ.gfx.cam3d.project(p.x, p.y, pz);
+      const eye = AZ.gfx.cam3d.st.eye;
+      S3.setFocus(pp.x, pp.y, pp.behind ? 0 : Math.max(70, 120 * pp.k), Math.hypot(eye[0] - p.x, eye[1] - pz, eye[2] - p.y));
+      S3.render(t, dt);
+      g.clearRect(0, 0, VW, VH);
+    } else drawFlatBackground(g, W, theme);
+    drawWorld(g, W, t, dt, input);
+  }
+
+  function drawFlatBackground(g, W, theme) {
     // 배경: 경기장 위로 보이는 하늘 띠만 1:1 로 복사 (확대/축소 없이 → 빠름)
     const k = g.getTransform ? g.getTransform().a : 1;
     const T = THEMES[theme] || THEMES.ruins;
@@ -1610,7 +2051,12 @@ AZ.gfx.render = (() => {
       g.fillStyle = FX().colorA((THEMES[theme] || THEMES.ruins).edge, 0.5);
       g.fillRect(tl.x, br.y, W.w * cam.zoom, 2);
     }
+  }
+
+  function drawWorld(g, W, t, dt, input) {
     // 바닥 레이어
+    if (W.level && !persp) drawFlatLevel(g, W);
+    if (W.stage) drawStageGround(g, W, t);
     drawHazards(g, W, t);
     FX().drawWorldBelow(g, proj, cam.zoom);
     drawPickups(g, W, t);
@@ -1636,7 +2082,7 @@ AZ.gfx.render = (() => {
       g.globalAlpha = 0.3 * (1 - gh.t / 0.25);
       g.fillStyle = W.zero > 0 ? '#7ce8ff' : '#4a8cff';
       g.beginPath();
-      g.ellipse(c.x, c.y - 30 * cam.zoom, 12 * cam.zoom, 30 * cam.zoom, 0, 0, U.TAU);
+      g.ellipse(c.x, c.y - 30 * c.k, 12 * c.k, 30 * c.k, 0, 0, U.TAU);
       g.fill();
       g.restore();
     }
@@ -1650,6 +2096,7 @@ AZ.gfx.render = (() => {
     drawBullets(g, W, t);
     for (const e of W.enemies) drawOverheadMarkers(g, W, e, t);
     FX().drawWorldAbove(g, proj, cam.zoom);
+    if (W.stage) { drawObjective(g, W, t); drawInteract(g, W, t); }
     drawOffscreen(g, W);
     // 화면 효과
     if (!skip.overlays) drawOverlays(g, W, t);
@@ -1664,8 +2111,61 @@ AZ.gfx.render = (() => {
     }
   }
 
+  /** 메뉴·대화 뒤의 3D 장면 (천천히 움직이는 카메라). 3D 를 못 쓰면 false */
+  function drawCinematic(g, theme, t, dt, opt) {
+    const S3 = AZ.gfx.scene3d;
+    if (!(use3d && S3 && S3.available)) return false;
+    if (S3.setFocus) S3.setFocus(0, 0, 0, 0);
+    const o = opt || {};
+    const aw = 1700;
+    const ah = 1100;
+    S3.ensure(theme, aw, ah);
+    AZ.gfx.cam3d.set({
+      tx: aw / 2 + Math.sin(t * 0.06) * 260, ty: ah * 0.35, pitch: o.pitch != null ? o.pitch : 0.16,
+      yaw: Math.sin(t * 0.045) * 0.28, fov: 0.95, dist: o.dist || 1250, lookZ: o.lookZ != null ? o.lookZ : 260,
+    });
+    S3.setMood({ tint: [1, 1, 1], alarm: 0, zero: 0, stop: 0, bossAmt: 0, boss: [0, 0, 0], vortex: 0 });
+    if (S3.scene) S3.scene.dynLights = [];
+    S3.render(t, dt);
+    g.clearRect(0, 0, VW, VH);
+    return true;
+  }
+
+  /* ───────────── 월드맵 (작전 터미널) ─────────────
+   * wm: { sel, status[], themes[] } → 섬마다 노드 버튼 자리 [{ x, y, k, behind }] */
+  const wcam = { x: null, y: 0, z: 0 };
+  function drawWorldMap(g, t, dt, wm) {
+    const S3 = AZ.gfx.scene3d;
+    if (!(use3d && S3 && S3.available)) return null;
+    S3.ensure('world', 1, 1, null, { key: 'w:' + wm.status.join(','), status: wm.status, themes: wm.themes });
+    S3.setFocus(0, 0, 0, 0);
+    const WD = S3.WORLD;
+    const I = WD[U.clamp(wm.sel - 1, 0, WD.length - 1)];
+    // 고른 섬은 화면 아래쪽에, 앞으로 갈 섬들은 위로 보이게
+    const tx = I.x * 0.75 + 30;
+    const ty = I.y - 140;
+    const tz = I.z + 40;
+    if (wcam.x == null) { wcam.x = tx; wcam.y = ty; wcam.z = tz; }
+    const k = Math.min(1, (dt || 0) * 2.4);
+    wcam.x += (tx - wcam.x) * k;
+    wcam.y += (ty - wcam.y) * k;
+    wcam.z += (tz - wcam.z) * k;
+    AZ.gfx.cam3d.set({ tx: wcam.x, ty: wcam.y, pitch: 0.52, yaw: Math.sin(t * 0.07) * 0.06, fov: 0.8, dist: 1650, lookZ: wcam.z });
+    S3.setMood({ tint: [1, 1, 1], alarm: 0, zero: 0, stop: 0, bossAmt: 0, boss: [0, 0, 0], vortex: 0 });
+    if (S3.scene) S3.scene.dynLights = [];
+    S3.render(t, dt);
+    g.clearRect(0, 0, VW, VH);
+    return WD.map((W) => {
+      const p = AZ.gfx.cam3d.project(W.x, W.y, W.z + Math.sin(t * W.spd + W.ph) * W.bob + 30);
+      return { x: p.x, y: p.y, k: p.k, behind: !!p.behind };
+    });
+  }
+
   return {
-    VW, VH, YS, drawBattle, skip, drawIcon, proj, THEMES, getSky,
+    VW, VH, YS, drawBattle, drawCinematic, drawWorldMap, skip, PERSP,
+    get can3d() { const S3 = AZ.gfx.scene3d; return !!(use3d && S3 && S3.available); },
+    setUse3d: (v) => { use3d = !!v; },
+    get persp() { return persp; }, drawIcon, proj, THEMES, getSky,
     setTouchMode: (v) => { touchMode = !!v; },
     get touchMode() { return touchMode; },
     get buttons() { return buttons; },

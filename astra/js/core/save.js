@@ -13,7 +13,7 @@ AZ.save = (() => {
 
   const DEFAULT_SETTINGS = {
     master: 0.8, music: 0.55, sfx: 0.8, muted: false,
-    shake: true, flashes: true, textSpeed: 1, damageNumbers: true, touch: 'auto', autoAim: true,
+    shake: true, flashes: true, textSpeed: 1, damageNumbers: true, touch: 'auto', autoAim: true, bg3d: true,
   };
 
   function storage() {

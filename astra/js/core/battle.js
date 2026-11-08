@@ -51,23 +51,243 @@ AZ.battle = (() => {
         weakHits: 0, scans: 0, countered: 0, dmgDealt: 0, kills: 0, exp: 0, credits: 0, byKind: {},
       },
       memoryFound: false,
+      found: { chest: false },
       result: null,
     };
+    W.bounds = { x0: 0, y0: 0, x1: aw, y1: ah };
     W.player = AZ.player.create(W, cfg.stats);
     W.player.x = aw / 2;
     W.player.y = ah * 0.72;
     W.player.facing = -Math.PI / 2;
+    if (cfg.mode === 'stage') setupStage(W, cfg);
 
     if (cfg.party && cfg.party.lia) W.allies.push(makeAlly(W, 'lia'));
     if (cfg.party && cfg.party.zero) W.allies.push(makeAlly(W, 'zero'));
 
     if (cfg.mode === 'boss') {
       W.boss = AZ.ai.spawnBoss(W, cfg.bossId);
+    } else if (cfg.mode === 'stage') {
+      // 보스는 플레이어가 보스 구역에 들어서면 startBoss() 로 등장
     } else {
       W.waves = cfg.waves || ch.waves;
       W.waveDelay = 0.6;
     }
     return W;
+  }
+
+  /* ───────────── 스테이지 (지역 입구 → … → 챕터 보스) ───────────── */
+  function setupStage(W, cfg) {
+    const L = AZ.level.generate(cfg.chapterId, W.w, W.h, cfg.waves || W.ch.waves);
+    W.level = L;
+    W.bounds = { x0: L.bounds.x0 - 300, y0: L.bounds.y0 - 300, x1: L.bounds.x1 + 300, y1: L.bounds.y1 + 300 };
+    const cp = cfg.checkpoint || 0;
+    const enc = L.encounters.map((e) => Object.assign({}, e, { state: 'idle', spawned: false }));
+    const events = L.events.map((e) => Object.assign({}, e, { done: false }));
+    const objects = (L.objects || []).map((o) => Object.assign({}, o, { used: false }));
+    const mapInfo = (AZ.data.maps && AZ.data.maps[W.ch.theme]) || {};
+    for (const o of objects) if (o.kind === 'npc') { o.name = (mapInfo.npc && mapInfo.npc.name) || '생존자'; o.lines = (mapInfo.npc && mapInfo.npc.lines) || []; }
+    W.stage = { enc, events, objects, active: null, lock: null, bossTriggered: false, bossPhase: false, objective: null, cleared: 0, cpReached: false, gateOpen: cp === 'boss', near: null, region: '', regionKey: null };
+    const p = W.player;
+    if (cp === 'cp' || cp === 'boss') {
+      for (const e of enc) if (e.id !== 'final' || cp === 'boss') e.state = 'cleared';
+      for (const e of events) e.done = true;
+      W.stage.cpReached = true;
+      W.stage.cleared = cp === 'boss' ? 3 : 2;
+      const at = cp === 'boss' ? L.bossEntry : L.checkpointPos;
+      p.x = at.x;
+      p.y = at.y + (cp === 'boss' ? 60 : 0);
+    } else {
+      p.x = L.start.x;
+      p.y = L.start.y;
+    }
+    p.facing = -Math.PI / 2;
+    for (const k of L.pickups) {
+      if (k.kind === 'memory' && cfg.memoryCollected) continue;
+      if (cp && k.kind !== 'memory' && k.kind !== 'credit') continue;
+      W.pickups.push(Object.assign({ t: 0, permanent: true }, k));
+    }
+  }
+
+  const STAGE_MILESTONES = [
+    ['battle1', '일반 전투 ①'], ['story', '합류 지점'], ['midboss', '중간 보스'], ['checkpoint', '체크포인트'], ['final', '최종 전투 구역'],
+  ];
+
+  function updateStage(W, dt) {
+    if (W.mode !== 'stage' || W.state !== 'fight' || W.ending) return;
+    const st = W.stage;
+    const p = W.player;
+    const L = W.level;
+    if (st.active) {
+      const e = st.active;
+      const alive = W.enemies.some((m) => !m.dead && m.kind === 'enemy' && !m.clone);
+      if (e.spawned && !alive) {
+        e.state = 'cleared';
+        st.active = null;
+        st.lock = null;
+        if (!e.optional) st.cleared += 1;
+        for (const k of W.pickups) if (k.area === e.area.id) k.hidden = false;
+        const sub = e.id === 'lab' ? '숨겨진 연구실 확보 — 위쪽 보물을 찾아보세요' : e.elite ? '중간 보스 격파 — 체크포인트로' : e.id === 'final' ? '보스 구역으로 올라가세요' : '길을 따라 계속';
+        ev(W, { type: 'banner', kind: 'chance', text: e.elite ? '정예 격파' : '구역 확보', sub });
+        sfx(W, 'victory', { vol: 0.45 });
+      }
+    } else if (!st.bossTriggered) {
+      for (const e of st.enc) {
+        if (e.state !== 'idle' || !AZ.level.inArea(e.area, p.x, p.y, 70)) continue;
+        // 두 갈래 중 하나를 고르면 다른 갈래의 교전은 사라짐
+        if (e.optional) for (const o of st.enc) if (o !== e && o.optional && o.order === e.order && o.state === 'idle') o.state = 'skipped';
+        e.state = 'active';
+        st.active = e;
+        st.lock = e.area;
+        spawnEncounter(W, e);
+        ev(W, { type: 'banner', kind: 'warn', text: e.elite ? '중간 보스' : e.id === 'lab' ? '연구실 경비 병기' : e.id === 'final' ? '최종 전투 구역' : '교전 구역', sub: '방벽 봉쇄 — 적을 모두 쓰러뜨려라' });
+        sfx(W, 'alarm', { vol: 0.5 });
+        break;
+      }
+      for (const evn of st.events) {
+        if (evn.done || !AZ.level.inArea(evn.area, p.x, p.y, 60)) continue;
+        evn.done = true;
+        if (evn.kind === 'story') {
+          W.hold = true;
+          ev(W, { type: 'storyEvent' });
+        } else if (evn.kind === 'checkpoint') {
+          st.cpReached = true;
+          const amt = Math.round(p.maxHp * 0.4);
+          p.hp = Math.min(p.maxHp, p.hp + amt);
+          for (const a of W.allies) { if (a.down > 0) { a.down = 0; a.hp = a.maxHp * 0.6; } else a.hp = Math.min(a.maxHp, a.hp + a.maxHp * 0.4); }
+          text(W, p.x, p.y - 60, `+${amt}`, '#7cf7a0', 22);
+          ev(W, { type: 'banner', kind: 'chance', text: '체크포인트', sub: '진행 상황 저장 · 체력 회복' });
+          ev(W, { type: 'ring', x: p.x, y: p.y, r0: 20, r1: 260, color: '#7cf7d4', t: 0.6 });
+          sfx(W, 'heal');
+        }
+      }
+      const bossArea = L.areas[0];
+      if (!st.active && !W.hold && AZ.level.inArea(bossArea, p.x, p.y, 120)) {
+        st.bossTriggered = true;
+        st.lock = bossArea;
+        W.hold = true;
+        ev(W, { type: 'bossApproach' });
+      }
+    }
+    // 지금 있는 지역 이름
+    const here = L.areas.find((a) => AZ.level.inArea(a, p.x, p.y, 0));
+    if (here && here.id !== st.regionKey) {
+      st.regionKey = here.id;
+      const n = L.regionOf[here.id] || 1;
+      const names = ((AZ.data.maps && AZ.data.maps[W.ch.theme]) || {}).regions || [];
+      const name = n >= 8 ? AZ.data.bosses[W.cfg.bossId].name : names[n - 1] || here.label || '';
+      const label = `${W.ch.id}-${n} ${name}`;
+      if (label !== st.region) {
+        st.region = label;
+        if (W.stats.time > 1 && !(st.active && st.active.area === here)) ev(W, { type: 'region', text: label, sub: here.label && here.kind !== 'boss' ? here.label : '' });
+      }
+    }
+    // 가까운 상호작용 대상
+    st.near = null;
+    let nd = 120;
+    for (const o of st.objects) {
+      if (o.used && o.kind !== 'npc') continue;
+      const d = U.dist(p.x, p.y, o.x, o.y);
+      if (d < nd) { nd = d; st.near = o; }
+    }
+    // 다음 목표 (안내 표시)
+    st.objective = null;
+    if (!st.active && !st.bossTriggered) {
+      for (const [id, label] of STAGE_MILESTONES) {
+        const e = st.enc.find((q) => q.id === id);
+        const evn = st.events.find((q) => q.id === id);
+        const a = e ? e.area : evn ? evn.area : null;
+        const done = e ? e.state === 'cleared' : evn ? evn.done : true;
+        if (a && !done) { st.objective = { x: (a.x0 + a.x1) / 2, y: (a.y0 + a.y1) / 2, label }; break; }
+      }
+      if (!st.objective) {
+        const gate = st.objects.find((o) => o.kind === 'gate');
+        st.objective = !st.gateOpen && gate ? { x: gate.x, y: gate.y, label: '관문 단말기' } : { x: L.aw / 2, y: L.ah * 0.5, label: '보스 구역' };
+      }
+    }
+  }
+
+  function interact(W) {
+    const st = W.stage;
+    const o = st && st.near;
+    if (!o || st.active) return;
+    const p = W.player;
+    if (o.kind === 'npc') {
+      W.hold = true;
+      ev(W, { type: 'npcTalk', name: o.name, lines: o.lines });
+      o.used = true;
+    } else if (o.kind === 'chest' && !o.used) {
+      o.used = true;
+      W.found.chest = true;
+      W.stats.credits += 250;
+      ev(W, { type: 'banner', kind: 'memory', text: '숨겨진 보물', sub: '크레딧 +250 · 장비 획득' });
+      ev(W, { type: 'burst', x: o.x, y: o.y, z: 30, r: 120, color: '#ffe066' });
+      text(W, p.x, p.y - 70, '+250 ◈', '#ffe066', 24);
+      sfx(W, 'pickup');
+      sfx(W, 'levelup', { vol: 0.5 });
+    } else if (o.kind === 'gate' && !o.used) {
+      const fin = st.enc.find((e) => e.id === 'final');
+      if (fin && fin.state !== 'cleared') { text(W, o.x, o.y - 80, '구역을 먼저 확보하라', '#ff9aa8', 16); sfx(W, 'uiBack'); return; }
+      o.used = true;
+      st.gateOpen = true;
+      ev(W, { type: 'banner', kind: 'warn', text: 'ASTRA 관문 개방', sub: '보스 구역으로 가는 길이 열렸다' });
+      ev(W, { type: 'ring', x: o.x, y: o.y, r0: 10, r1: 400, color: '#ff5470', t: 0.8 });
+      sfx(W, 'alarm');
+      shake(W, 8);
+    }
+  }
+
+  function spawnEncounter(W, e) {
+    const a = e.area;
+    const p = W.player;
+    let n = 0;
+    const place = () => {
+      let x;
+      let y;
+      let tries = 0;
+      do {
+        const side = (n + tries) % 4;
+        const m = 70;
+        if (side === 0) { x = U.rand(a.x0 + m, a.x1 - m); y = a.y0 + m; } else if (side === 1) { x = a.x1 - m; y = U.rand(a.y0 + m, a.y1 - m); } else if (side === 2) { x = U.rand(a.x0 + m, a.x1 - m); y = a.y1 - m; } else { x = a.x0 + m; y = U.rand(a.y0 + m, a.y1 - m); }
+        tries++;
+      } while (tries < 8 && U.dist(x, y, p.x, p.y) < 260);
+      return [x, y];
+    };
+    if (e.elite) {
+      const [type] = e.wave[0];
+      const el = AZ.ai.spawnMinion(W, type, (a.x0 + a.x1) / 2, a.y0 + (a.y1 - a.y0) * 0.35, { delay: 0.8, elite: true });
+      ev(W, { type: 'burst', x: el.x, y: el.y, z: 30, r: 160, color: el.def.color, big: true });
+      for (const [t2, c2] of e.escorts || []) for (let i = 0; i < c2; i++) { const [x, y] = place(); AZ.ai.spawnMinion(W, t2, x, y, { delay: 1 + n * 0.15 }); n += 1; }
+    } else {
+      for (const [type, count] of e.wave) {
+        for (let i = 0; i < count; i++) {
+          const [x, y] = place();
+          AZ.ai.spawnMinion(W, type, x, y, { delay: 0.35 + n * 0.12 });
+          n += 1;
+        }
+      }
+    }
+    e.spawned = true;
+  }
+
+  /** 보스 구역 진입 연출이 끝나면 호출 — 같은 자리에서 보스 등장 */
+  function startBoss(W) {
+    const st = W.stage;
+    W.hold = false;
+    if (!st || st.bossPhase) return;
+    st.bossPhase = true;
+    st.lock = W.level.areas[0];
+    W.stageStats = Object.assign({}, W.stats);
+    const keep = { exp: W.stats.exp, credits: W.stats.credits, kills: W.stats.kills };
+    W.stats = Object.assign({
+      time: 0, damageTaken: 0, hitsTaken: 0, zeroFrames: 0, breaks: 0, maxCombo: 0,
+      weakHits: 0, scans: 0, countered: 0, dmgDealt: 0, byKind: {},
+    }, keep);
+    W.boss = AZ.ai.spawnBoss(W, W.cfg.bossId);
+    W.boss.spawnT = 0.9;
+    W.state = 'intro';
+    W.stateT = 0.4;
+    ev(W, { type: 'burst', x: W.boss.x, y: W.boss.y, z: 40, r: W.boss.r * 3, color: W.boss.def.color, big: true });
+    shake(W, 14);
   }
 
   function makeAlly(W, kind) {
@@ -261,7 +481,7 @@ AZ.battle = (() => {
       }
       b.x += b.vx * bdt;
       b.y += b.vy * bdt;
-      if (b.t > b.life || b.x < -80 || b.y < -80 || b.x > W.w + 80 || b.y > W.h + 80) {
+      if (b.t > b.life || b.x < W.bounds.x0 - 80 || b.y < W.bounds.y0 - 80 || b.x > W.bounds.x1 + 80 || b.y > W.bounds.y1 + 80) {
         b.dead = true;
         continue;
       }
@@ -691,6 +911,14 @@ AZ.battle = (() => {
   }
 
   function clampToArena(W, e) {
+    if (W.level && e.kind !== 'boss') {
+      const q = AZ.level.constrain(W.level, e.x, e.y, Math.min(e.r, 30) * 0.8, W.stage && W.stage.lock);
+      e.x = q.x;
+      e.y = q.y;
+      const gt = W.level.gate;
+      if (gt && W.stage && !W.stage.gateOpen && !W.stage.lock && e.y < gt.y + 24 && e.y > gt.y - 400 && e.x > gt.x0 - 200 && e.x < gt.x1 + 200) e.y = gt.y + 24;
+      return;
+    }
     const m = e.r + 10;
     e.x = U.clamp(e.x, m, W.w - m);
     e.y = U.clamp(e.y, m, W.h - m);
@@ -780,10 +1008,10 @@ AZ.battle = (() => {
     const p = W.player;
     for (const k of W.pickups) {
       k.t += dt;
-      if (k.taken) continue;
+      if (k.taken || k.hidden) continue;
       const d = U.dist(p.x, p.y, k.x, k.y);
       // 가까우면 끌려옴
-      if (d < 160 && k.kind === 'heal') {
+      if (d < 160 && (k.kind === 'heal' || (k.kind === 'credit' && !k.big))) {
         const a = U.angleTo(k.x, k.y, p.x, p.y);
         k.x += Math.cos(a) * 300 * dt;
         k.y += Math.sin(a) * 300 * dt;
@@ -795,16 +1023,21 @@ AZ.battle = (() => {
           p.hp = Math.min(p.maxHp, p.hp + amt);
           text(W, p.x, p.y - 60, `+${amt}`, '#7cf7a0', 20);
           sfx(W, 'heal', { vol: 0.6 });
+        } else if (k.kind === 'credit') {
+          W.stats.credits += k.amount || 50;
+          text(W, p.x, p.y - 60, `+${k.amount || 50} ◈`, '#9fe8ff', k.big ? 26 : 20);
+          sfx(W, 'pickup', { vol: 0.5, pitch: k.big ? 0.8 : 1.3 });
+          if (k.big) ev(W, { type: 'banner', kind: 'memory', text: '보물 획득', sub: `크레딧 +${k.amount}` });
         } else if (k.kind === 'memory') {
           W.memoryFound = true;
           sfx(W, 'pickup');
           ev(W, { type: 'flash', color: 'rgba(200,230,255,0.6)', t: 0.4 });
-          ev(W, { type: 'banner', kind: 'memory', text: '기억 파편 회수', sub: '' });
-          endBattle(W, 'victory', 1.4);
+          ev(W, { type: 'banner', kind: 'memory', text: '기억 파편 회수', sub: W.mode === 'stage' ? '갈림길 끝의 기억' : '' });
+          if (W.mode !== 'stage') endBattle(W, 'victory', 1.4);
         }
       }
     }
-    W.pickups = W.pickups.filter((k) => !k.taken && k.t < 30);
+    W.pickups = W.pickups.filter((k) => !k.taken && (k.permanent || k.t < 30));
   }
 
   function endBattle(W, outcome, delay) {
@@ -828,12 +1061,13 @@ AZ.battle = (() => {
     const dtCap = Math.min(realDt, 1 / 30);
     W.stateT += dtCap;
     if (W.state === 'done') return;
+    if (W.hold) return;
 
     if (W.state === 'intro') {
-      if (W.stateT >= (W.mode === 'boss' ? 1.4 : 0.8)) {
+      if (W.stateT >= (W.boss ? 1.4 : 0.8)) {
         W.state = 'fight';
         W.stateT = 0;
-        ev(W, { type: 'banner', kind: 'start', text: W.mode === 'boss' ? 'ENGAGE' : 'MISSION START', sub: '' });
+        ev(W, { type: 'banner', kind: 'start', text: W.boss ? 'ENGAGE' : 'MISSION START', sub: W.boss ? '' : W.mode === 'stage' ? '길을 따라 보스 구역으로' : '' });
         if (W.boss) bark(W, W.boss.bossId, 'start');
       }
     }
@@ -868,6 +1102,7 @@ AZ.battle = (() => {
     for (let i = 0; i < 3; i++) if (W.cmdCd[i] > 0) W.cmdCd[i] -= dt;
 
     const controllable = W.state === 'fight' && !W.ending;
+    if (controllable && input && input.interact && W.stage) interact(W);
     AZ.player.update(W, dt, controllable ? input : null);
     if (W.state === 'fight' || W.state === 'intro') {
       updateAllies(W, dt);
@@ -877,6 +1112,7 @@ AZ.battle = (() => {
     updateBullets(W, dt, edt);
     separate(W);
     updateWaves(W, dt);
+    updateStage(W, dt);
     updatePickups(W, dt);
 
     if (W.ending) {
@@ -885,12 +1121,17 @@ AZ.battle = (() => {
         W.state = W.ending.outcome;
         W.stateT = 0;
         W.result = Object.assign({}, W.stats, { outcome: W.ending.outcome, maxHp: W.player.maxHp, memoryFound: W.memoryFound });
+        W.result.chest = W.found.chest;
+        if (W.stage) {
+          W.result.stageTime = (W.stageStats ? W.stageStats.time : 0) + W.stats.time;
+          W.result.checkpoint = W.stage.bossTriggered ? 'boss' : W.stage.cpReached ? 'cp' : 0;
+        }
       }
     }
   }
 
   return {
-    create, step, addHazard, addBullet, hurt, hitEnemy, damageBreak, breakBoss, triggerZeroFrame,
+    create, step, startBoss, addHazard, addBullet, hurt, hitEnemy, damageBreak, breakBoss, triggerZeroFrame,
     killEnemy, nearestEnemy, livingEnemies, inShape, clampToArena, endBattle, cancelOwnedWarnings,
     ev, sfx, text, shake, bark, hitAngleInfo,
   };

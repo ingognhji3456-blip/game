@@ -9,8 +9,8 @@ const ROOT = path.resolve(__dirname, '..');
 const FILES = [
   'js/core/util.js', 'js/data/assets.js',
   'js/data/weapons.js', 'js/data/skills.js', 'js/data/modules.js', 'js/data/enemies.js',
-  'js/data/bosses.js', 'js/data/chapters.js', 'js/data/story.js',
-  'js/core/save.js', 'js/core/progress.js', 'js/core/battle.js', 'js/core/player.js', 'js/core/ai.js',
+  'js/data/bosses.js', 'js/data/chapters.js', 'js/data/story.js', 'js/data/maps.js',
+  'js/core/save.js', 'js/core/progress.js', 'js/core/level.js', 'js/core/battle.js', 'js/core/player.js', 'js/core/ai.js',
   'js/audio/audio.js',
 ];
 

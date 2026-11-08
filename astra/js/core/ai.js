@@ -60,6 +60,18 @@ AZ.ai = (() => {
     e.untargetable = true;
     e.brain.rest = 0.8 + Math.random() * 0.8;
     e.facing = U.angleTo(x, y, W.player.x, W.player.y);
+    if (opts && opts.elite) {
+      // 중간 보스: 같은 적의 강화판
+      e.elite = true;
+      e.maxHp = Math.round(e.maxHp * 12);
+      e.hp = e.maxHp;
+      e.r = Math.round(def.r * 1.7);
+      e.superArmor = true;
+      e.speed *= 0.9;
+      e.eliteDmg = 1.5;
+      e.eliteName = `정예 ${def.name}`;
+      e.def = Object.assign({}, def, { exp: def.exp * 8, credits: def.credits * 10 });
+    }
     W.enemies.push(e);
     return e;
   }
@@ -71,7 +83,7 @@ AZ.ai = (() => {
     const own = (o, dmgDefault) => {
       const out = Object.assign({ owner: e }, o);
       if (out.dmg == null) out.dmg = dmgDefault != null ? dmgDefault : 1;
-      if (e.kind === 'enemy') out.dmg *= e.def.dmg;
+      if (e.kind === 'enemy') out.dmg *= e.def.dmg * (e.eliteDmg || 1);
       if (out.dmg >= 1.6 && e.kind === 'boss') e.alert = Math.max(e.alert, 0.7);
       return out;
     };
@@ -87,7 +99,7 @@ AZ.ai = (() => {
       line: (x, y, ang, len, w, o) => b.addHazard(W, 'line', { x, y, ang, len, w }, own(o)),
       outside: (x, y, r, o) => b.addHazard(W, 'outside', { x, y, r }, own(o)),
       all: (safe, o) => b.addHazard(W, 'all', { x: W.w / 2, y: W.h / 2, safe }, own(o)),
-      bullet: (o) => b.addBullet(W, Object.assign({ owner: e, team: 'enemy' }, o, { dmg: (o.dmg || 1) * (e.kind === 'enemy' ? e.def.dmg : 1) })),
+      bullet: (o) => b.addBullet(W, Object.assign({ owner: e, team: 'enemy' }, o, { dmg: (o.dmg || 1) * (e.kind === 'enemy' ? e.def.dmg * (e.eliteDmg || 1) : 1) })),
       dash: (ang, len, time, dmg) => {
         e.dash = { vx: Math.cos(ang) * len / time, vy: Math.sin(ang) * len / time, t: time, dmg: dmg || 0, hit: new Set() };
         e.facing = ang;

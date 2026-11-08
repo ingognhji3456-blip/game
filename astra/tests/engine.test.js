@@ -379,5 +379,147 @@ test('모든 보스가 오류 없이 30초 동안 공격 패턴을 펼친다 (�
   eq(errors.length, 0, errors.join('\n'));
 });
 
+/* ───────── 이어진 스테이지 (지역 입구 → 보스 구역) ───────── */
+function stageWorld(ch, checkpoint) {
+  const s = freshSave(30);
+  const stats = P.computeStats(s);
+  const c = D.chapters[ch - 1];
+  const W = AZ.battle.create({ chapterId: ch, mode: 'stage', bossId: c.boss, difficulty: 'normal', stats, party: { lia: true, zero: false }, checkpoint: checkpoint || 0 });
+  W.state = 'fight';
+  return W;
+}
+
+test('모든 챕터의 지도가 지역 흐름(입구 → 갈림길 → 합류 → 보스)을 따른다', () => {
+  for (const c of D.chapters) {
+    const W = stageWorld(c.id);
+    const L = W.level;
+    const kinds = L.areas.map((a) => a.id);
+    for (const k of ['start', 'explore', 'battle1', 'branch', 'battle2', 'lab', 'treasure', 'story', 'midboss', 'checkpoint', 'final', 'boss']) ok(kinds.includes(k), `${c.id}장: ${k} 구역 없음`);
+    eq(L.areas[0].kind, 'boss', `${c.id}장 첫 구역`);
+    // 길 안내선의 모든 점은 걸을 수 있는 곳
+    for (const [x, y] of L.route) {
+      const q = AZ.level.constrain(L, x, y, 10, null);
+      ok(Math.hypot(q.x - x, q.y - y) < 1, `${c.id}장: 경로 점 (${x | 0}, ${y | 0}) 이 길 밖`);
+    }
+    const last = L.route[L.route.length - 1];
+    ok(AZ.level.inArea(L.areas[0], last[0], last[1], 0), `${c.id}장: 경로가 보스 구역에서 끝나지 않음`);
+    // 보물 구역은 갈림길보다 높은 곳 (위로 올라가는 길)
+    const z = (id) => L.areas.find((a) => a.id === id).z;
+    ok(z('treasure') > z('lab'), `${c.id}장: 보물 구역이 높지 않음`);
+    ok(z('boss') > z('start'), `${c.id}장: 보스 구역이 입구보다 높지 않음`);
+    ok(L.objects.some((o) => o.kind === 'npc') && L.objects.some((o) => o.kind === 'chest') && L.objects.some((o) => o.kind === 'gate'), `${c.id}장: NPC·상자·관문 단말기`);
+    ok((D.maps[c.theme].regions || []).length === 7, `${c.id}장: 지역 이름 7개`);
+  }
+});
+
+/** 길 안내를 따라 걷고, 교전은 즉시 정리하고, 관문 단말기를 작동시키며 보스까지 */
+function walkStage(W, maxSec, opt) {
+  const o = opt || {};
+  const st = W.stage;
+  const seen = { regions: new Set(), story: false, elite: false, cp: false, gate: false };
+  const side = { on: false, i: 0, wps: [] };
+  for (const sg of W.level.segs) if (sg.branch) side.wps.push([sg.ax, sg.ay], [sg.bx, sg.by]);
+  for (let i = 0; i < 60 * maxSec; i++) {
+    W.events.length = 0;
+    const p = W.player;
+    const inp = idle();
+    if (st.active) {
+      if (st.active.elite) seen.elite = true;
+      for (const m of W.enemies) if (!m.dead && m.kind === 'enemy' && m.spawnT <= 0) AZ.battle.killEnemy(W, m);
+    } else {
+      const gate = st.objects.find((q) => q.kind === 'gate');
+      const fin = st.enc.find((q) => q.id === 'final');
+      let tx;
+      let ty;
+      if (!st.gateOpen && fin.state === 'cleared') { tx = gate.x; ty = gate.y; inp.interact = st.near === gate; } else {
+        const gd = AZ.level.guide(W.level, p.x, p.y, 120);
+        tx = gd.x; ty = gd.y;
+      }
+      // 옆길: 분기점에서 연구실 → 오르막 → 보물 구역 → 스토리 순서로 갈래 길을 따라감
+      if (o.side && side.i < side.wps.length && (side.on || st.regionKey === 'branch')) {
+        side.on = true;
+        const [wx, wy] = side.wps[side.i];
+        tx = wx; ty = wy;
+        if (Math.hypot(wx - p.x, wy - p.y) < 30) side.i += 1;
+        const chest = st.objects.find((q) => q.kind === 'chest');
+        if (st.near === chest && !chest.used) inp.interact = true;
+      }
+      const d = Math.hypot(tx - p.x, ty - p.y);
+      if (d > 4) { inp.mx = (tx - p.x) / d; inp.my = (ty - p.y) / d; }
+    }
+    AZ.battle.step(W, 1 / 60, inp);
+    for (const e of W.events) {
+      if (e.type === 'region') seen.regions.add(e.text);
+      if (e.type === 'storyEvent') { seen.story = true; W.hold = false; }
+      if (e.type === 'npcTalk') W.hold = false;
+      if (e.type === 'bossApproach') return Object.assign(seen, { time: i / 60, gate: st.gateOpen, cp: st.cpReached });
+    }
+  }
+  return Object.assign(seen, { time: -1, gate: st.gateOpen, cp: st.cpReached });
+}
+test('모든 챕터: 몬스터를 정리하며 길을 따라가면 끊김 없이 보스 구역에 닿는다', () => {
+  for (const c of D.chapters) {
+    const W = stageWorld(c.id);
+    const r = walkStage(W, 240);
+    ok(r.time > 0, `${c.id}장: 보스 구역에 닿지 못함 (위치 ${W.player.x | 0}, ${W.player.y | 0})`);
+    ok(r.story, `${c.id}장: 스토리 이벤트 없음`);
+    ok(r.elite, `${c.id}장: 중간 보스 없음`);
+    ok(r.cp, `${c.id}장: 체크포인트 안 지남`);
+    ok(r.gate, `${c.id}장: 관문 단말기 미작동`);
+    ok(r.regions.size >= 5, `${c.id}장: 지역 이름 변화 ${r.regions.size}`);
+    // 보스 등장
+    AZ.battle.startBoss(W);
+    ok(W.boss && !W.boss.dead, `${c.id}장: 보스 없음`);
+    ok(W.stageStats && W.stageStats.kills > 0, `${c.id}장: 스테이지 처치 기록`);
+    stepN(W, 120);
+    ok(isFinite(W.player.x) && isFinite(W.boss.x), `${c.id}장: 위치 NaN`);
+  }
+  eq(errors.length, 0, errors.join('\n'));
+});
+
+test('갈림길: 연구실로 가면 일반 전투②는 사라지고 보물 상자를 열 수 있다', () => {
+  const W = stageWorld(1);
+  const r = walkStage(W, 240, { side: true });
+  ok(r.time > 0, '보스 구역 도착');
+  const lab = W.stage.enc.find((q) => q.id === 'lab');
+  const b2 = W.stage.enc.find((q) => q.id === 'battle2');
+  eq(lab.state, 'cleared', '연구실');
+  eq(b2.state, 'skipped', '일반 전투②');
+  ok(W.found.chest, '보물 상자');
+});
+
+test('체크포인트에서 다시 시작하면 앞 구역은 정리된 상태', () => {
+  const W = stageWorld(3, 'cp');
+  const st = W.stage;
+  ok(st.cpReached);
+  ok(st.enc.filter((e) => e.id !== 'final').every((e) => e.state === 'cleared'), '앞 교전 정리');
+  eq(st.enc.find((e) => e.id === 'final').state, 'idle', '최종 구역은 남음');
+  ok(Math.hypot(W.player.x - W.level.checkpointPos.x, W.player.y - W.level.checkpointPos.y) < 2, '체크포인트 위치');
+  const r = walkStage(W, 120);
+  ok(r.time > 0 && r.time < 60, `체크포인트 → 보스 ${r.time}`);
+  const B = stageWorld(3, 'boss');
+  ok(B.stage.gateOpen, '보스 체크포인트: 관문 열림');
+  const rb = walkStage(B, 30);
+  ok(rb.time >= 0 && rb.time < 6, `보스 체크포인트 → 보스 구역 ${rb.time}`);
+});
+
+test('관문은 최종 구역을 정리하기 전에는 열리지 않고, 닫힌 관문은 통과할 수 없다', () => {
+  const W = stageWorld(2, 'cp');
+  const st = W.stage;
+  const gate = st.objects.find((o) => o.kind === 'gate');
+  W.player.x = gate.x;
+  W.player.y = gate.y + 20;
+  stepN(W, 2);
+  eq(st.near, gate, '단말기 근처');
+  AZ.battle.step(W, 1 / 60, Object.assign(idle(), { interact: true }));
+  ok(!st.gateOpen, '최종 구역 전에는 닫힘');
+  // 관문 너머로 밀어 넣어도 막힘
+  const gy = W.level.gate.y;
+  W.player.x = (W.level.gate.x0 + W.level.gate.x1) / 2;
+  W.player.y = gy - 60;
+  stepN(W, 2);
+  ok(W.player.y >= gy, `닫힌 관문 통과 ${W.player.y | 0} < ${gy | 0}`);
+});
+
 console.log(`\n${passed}개 통과, ${failed}개 실패`);
 process.exit(failed ? 1 : 0);
