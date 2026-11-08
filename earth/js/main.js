@@ -514,6 +514,11 @@
       $('btn-sound').textContent = EC.audio.isMuted() ? '🔇' : '🔊';
       save();
     });
+    $('btn-universe').addEventListener('click', () => {
+      save();
+      const single = /earth-chronicle\.html$/i.test(location.pathname);
+      location.href = `${single ? 'universe-chronicle.html' : '../universe/index.html'}?t=${app.t.toFixed(4)}&from=earth`;
+    });
     $('btn-help').addEventListener('click', () => { $('help').hidden = false; });
 
     window.addEventListener('keydown', (e) => {

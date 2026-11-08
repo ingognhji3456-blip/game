@@ -6,6 +6,7 @@
  *   node tools/build.js
  *   - index.html       → dist/card-expedition.html (카드 원정대)
  *   - earth/index.html → dist/earth-chronicle.html (지구 연대기)
+ *   - universe/index.html → dist/universe-chronicle.html (우주 연대기)
  */
 const fs = require('fs');
 const path = require('path');
@@ -49,3 +50,4 @@ function build(entryRel, outName) {
 
 build('index.html', 'card-expedition.html');
 build('earth/index.html', 'earth-chronicle.html');
+build('universe/index.html', 'universe-chronicle.html');

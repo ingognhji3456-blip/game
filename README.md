@@ -1,6 +1,8 @@
 # 카드 원정대 (Deck Expedition)
 
-> 🌍 이 저장소에는 두 번째 작품 **[지구 연대기](earth/README.md)** 도 있습니다. 지구의 탄생부터 먼 미래까지 시간을 돌려 보고 역사를 바꿔 보는 시뮬레이션입니다. → [`dist/earth-chronicle.html`](dist/earth-chronicle.html)
+> 이 저장소에는 시뮬레이션 두 편도 있습니다. 서로 이어져 있어 우주에서 지구로, 지구에서 우주로 오갈 수 있습니다.
+> - 🌌 **[우주 연대기](universe/README.md)**: 빅뱅부터 우주의 끝까지, 우주 → 은하 → 태양계로 확대하며 우주의 운명을 바꿔 보는 시뮬레이션 → [`dist/universe-chronicle.html`](dist/universe-chronicle.html)
+> - 🌍 **[지구 연대기](earth/README.md)**: 지구의 탄생부터 먼 미래까지 시간을 돌려 보고 역사를 바꿔 보는 시뮬레이션 → [`dist/earth-chronicle.html`](dist/earth-chronicle.html)
 
 브라우저에서 바로 즐기는 **로그라이크 덱빌딩 카드 배틀 게임**입니다.
 덱을 쌓고, 갈림길을 고르고, 세 개의 막을 지나 심연의 끝에 있는 **태고의 용**을 쓰러뜨리세요.

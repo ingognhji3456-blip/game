@@ -17,6 +17,8 @@ WebGL2를 지원하는 최신 Chrome, Edge, Firefox, Safari가 필요합니다. 
 
 저장소를 받았다면 `earth/index.html` 을 바로 열어도 됩니다.
 
+오른쪽 위 🌌 버튼을 누르면 **[우주 연대기](../universe/README.md)** 에서 같은 시대의 태양계·은하·우주를 볼 수 있고, 우주 연대기의 태양계에서 지구를 누르면 다시 이곳으로 돌아옵니다. 한 파일 버전은 `dist/earth-chronicle.html` 과 `dist/universe-chronicle.html` 을 같은 폴더에 두면 서로 이어집니다.
+
 ## 할 수 있는 것
 
 ### 시간 여행
@@ -122,7 +124,7 @@ tools/                개발용 도구 (판 지도 디버그, 렌더 테스트, 
 node tools/build.js
 ```
 
-`dist/card-expedition.html` 과 `dist/earth-chronicle.html` 이 함께 다시 만들어집니다.
+`dist/card-expedition.html`, `dist/earth-chronicle.html`, `dist/universe-chronicle.html` 이 함께 다시 만들어집니다.
 
 ## 테스트
 
