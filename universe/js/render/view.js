@@ -109,7 +109,7 @@
     const D = Math.pow(10, L);
     const gs = galaxyState(app, tau);
     const sunWorld = gs.sun;
-    const focus = lerp3(gs.focus, sunWorld, U.smoothstep(5.2, 3.6, L));
+    const focus = app.focusOverride || lerp3(gs.focus, sunWorld, U.smoothstep(5.2, 3.6, L));
     const fr = camFrame(L);
     const cp = Math.cos(cam.pitch);
     const dir = [0, 1, 2].map((j) => cp * (Math.cos(cam.yaw) * fr.e1[j] + Math.sin(cam.yaw) * fr.e2[j]) + Math.sin(cam.pitch) * fr.up[j]);

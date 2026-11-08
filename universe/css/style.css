@@ -487,6 +487,25 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
 .flyout { width: 214px; }
 .size b { font-size: 13px; }
 
+/* ---------- 은하 문명 ---------- */
+.civ-only { display: none !important; }
+body.civ .civ-only { display: flex !important; }
+body.civ .cosmic-only, body.civ .levels { display: none !important; }
+body.civ .rail-group + .rail-group { border-top: 0; padding-top: 0; margin-top: 0; }
+.civ-list { display: flex; flex-direction: column; gap: 2px; }
+.civ-row { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 6px; border-radius: 10px; text-align: left; }
+.civ-row:hover { background: rgba(255, 255, 255, 0.06); }
+.civ-row.dead { opacity: 0.45; }
+.cdot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.cicon { width: 20px; text-align: center; font-size: 15px; }
+.cname { flex: 1; min-width: 0; font-size: 13px; }
+.cname small { display: block; color: var(--faint); font-size: 11px; }
+.cbar { width: 64px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.07); overflow: hidden; flex-shrink: 0; }
+.cbar i { display: block; height: 100%; border-radius: 3px; }
+.log-row { width: 100%; text-align: left; }
+.log-row:hover { background: rgba(255, 255, 255, 0.05); }
+body.civ .rail { top: calc(16px + var(--safe-t) + 4px); }
+
 /* ---------- 휴대폰 ---------- */
 @media (max-width: 760px) {
   :root { --gap: 10px; --dock-h: 58px; }
@@ -543,6 +562,7 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
   .scale-note { display: none; }
   .view-note { bottom: calc(var(--dock-h) + var(--gap) * 2 + var(--safe-b) + 54px); font-size: 11px; }
   .rail { top: 50%; transform: translateY(-50%); }
+  body.civ .rail { top: 50%; }
   .intro-box { padding: 26px 22px 22px; }
   .intro-box h1 { font-size: 34px; }
   .intro-lead { font-size: 14px; }

@@ -107,6 +107,14 @@
     save();
   };
   app.play = () => {
+    if (UC.civMode.active) {
+      UC.civMode.onPlay();
+      app.playing = true;
+      $('btn-play').textContent = '❚❚';
+      $('btn-play').setAttribute('aria-label', '멈춤');
+      UC.audio.init();
+      return;
+    }
     if (app.t >= app.scale.tEnd - Math.max(1, app.scale.tEnd * 1e-12)) app.seek(app.scale.tStart);
     app.playing = true;
     $('btn-play').textContent = '❚❚';
@@ -180,7 +188,8 @@
   }
   function zoomBy(dL) {
     app.cam.fly = null;
-    app.cam.L = U.clamp(app.cam.L + dL, V.L_MIN, V.L_MAX);
+    const R = UC.civMode.active ? UC.civMode.L_RANGE : [V.L_MIN, V.L_MAX];
+    app.cam.L = U.clamp(app.cam.L + dL, R[0], R[1]);
   }
 
   /* ---------- 이름표 ---------- */
@@ -193,6 +202,9 @@
       if (p.x < -40 || p.y < -20 || p.x > window.innerWidth + 40 || p.y > window.innerHeight + 20) return;
       out.push({ x: p.x, y: p.y, text, sub, kind, obj, pri });
     };
+    if (UC.civMode.active) {
+      return UC.civMode.labels((pos) => renderer.project(pos)).filter((l) => l.x > -40 && l.y > -20 && l.x < window.innerWidth + 40 && l.y < window.innerHeight + 20);
+    }
     const tau = view.tau;
     const st = view.st;
     if (st.T > 3000 || (st.ended && app.run.endType === 'rip')) return out;
@@ -239,7 +251,7 @@
     labels = [];
     c.textBaseline = 'middle';
     for (const l of list) {
-      c.font = l.kind === 'earth' || l.kind === 'galaxy' ? '600 13px system-ui, sans-serif' : '12px system-ui, sans-serif';
+      c.font = l.kind === 'earth' || l.kind === 'galaxy' || l.kind === 'civ' ? '600 13px system-ui, sans-serif' : '12px system-ui, sans-serif';
       const tw = c.measureText(l.text).width;
       c.font = '10.5px system-ui, sans-serif';
       const sw = l.sub ? c.measureText(l.sub).width : 0;
@@ -251,7 +263,7 @@
       if (boxes.some((b) => bx < b.x + b.w && bx + w > b.x && by < b.y + b.h && by + h > b.y)) continue;
       boxes.push({ x: bx, y: by, w, h });
       labels.push(Object.assign({ bx, by, bw: w, bh: h }, l));
-      const col = l.kind === 'earth' ? '#8be3ad' : l.kind === 'sun' ? '#ffd27a' : l.kind === 'galaxy' || l.kind === 'here' ? '#bcd6ff' : '#e6ecf8';
+      const col = l.color || (l.kind === 'earth' ? '#8be3ad' : l.kind === 'sun' ? '#ffd27a' : l.kind === 'galaxy' || l.kind === 'here' ? '#bcd6ff' : '#e6ecf8');
       c.strokeStyle = col;
       c.globalAlpha = 0.75;
       c.lineWidth = 1.2;
@@ -262,7 +274,7 @@
       c.shadowColor = 'rgba(0,0,0,0.9)';
       c.shadowBlur = 5;
       c.fillStyle = col;
-      c.font = l.kind === 'earth' || l.kind === 'galaxy' ? '600 13px system-ui, sans-serif' : '12px system-ui, sans-serif';
+      c.font = l.kind === 'earth' || l.kind === 'galaxy' || l.kind === 'civ' ? '600 13px system-ui, sans-serif' : '12px system-ui, sans-serif';
       c.fillText(l.text, bx + 4, l.sub ? l.y - 6 : l.y);
       if (l.sub) {
         c.font = '10.5px system-ui, sans-serif';
@@ -281,6 +293,7 @@
       const d = inBox ? 0 : Math.hypot(l.x - x, l.y - y);
       if (d < bd) { bd = d; best = l; }
     }
+    if (UC.civMode.active) return UC.civMode.pick(x, y, (pos) => renderer.project(pos), best && best.obj);
     if (best) showObject(best.obj);
     return !!best;
   }
@@ -419,7 +432,9 @@
     lastFrame = tnow;
     app.wallT += dt;
     if (resizePending) doResize();
-    step(dt);
+    const civOn = UC.civMode.active;
+    if (civOn) UC.civMode.frame(dt);
+    else step(dt);
     camStep(dt);
 
     /* 충돌 계산은 가까워지면 미리 조금씩 */
@@ -432,12 +447,20 @@
 
     const view = V.build(app, { w: window.innerWidth, h: window.innerHeight });
     app.state = view;
+    if (civOn) {
+      view.civ = UC.civMode.renderData();
+      view.gal.mwAlpha *= 0.5;
+      view.gal.m31Alpha *= 0.5;
+    }
     renderer.render(view);
     drawLabels(collectLabels(view));
-    timeline.draw(app.t);
+    timeline.draw(civOn ? UC.civMode.t : app.t);
 
     hudTimer -= dt;
-    if (hudTimer <= 0 || hudForce) {
+    if (civOn && hudTimer <= 0) {
+      hudTimer = 0.15;
+      UC.civMode.updateHud();
+    } else if (!civOn && (hudTimer <= 0 || hudForce)) {
       hudTimer = 0.12;
       hudForce = false;
       const diverged = app.interventions.length > 0 && app.interventions.some((v) => v.t <= app.t);
@@ -567,6 +590,7 @@
     document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => { $(b.dataset.close).hidden = true; }));
     $('card-close').addEventListener('click', () => UC.ui.panels.hideCard());
     const nav = (dir) => {
+      if (UC.civMode.active) { UC.civMode.nav(dir); return; }
       const list = app.events.filter((e) => !e.prevented || e.kind === 'intervention');
       const cur = app.cardEvent ? app.cardEvent.t : app.t;
       const e = dir > 0 ? list.find((x) => x.t > cur * (1 + 1e-12) + 1e-60) : list.slice().reverse().find((x) => x.t < cur * (1 - 1e-12));
@@ -585,6 +609,8 @@
       addIntervention(b.dataset.tool);
     }));
     $('btn-history').addEventListener('click', () => { $('history-panel').hidden = !$('history-panel').hidden; $('chart-panel').hidden = true; UC.ui.panels.renderHistory(app); });
+    $('btn-civ').addEventListener('click', () => UC.civMode.enter({ app, timeline, onExit: () => { timeline.setEvents(app.events); hudForce = true; } }));
+    UC.civMode.bind({ app, timeline, onExit: () => { timeline.setEvents(app.events); hudForce = true; } });
     $('btn-chart').addEventListener('click', () => { $('chart-panel').hidden = !$('chart-panel').hidden; $('history-panel').hidden = true; chartDirty = true; });
     document.querySelectorAll('#chart-tabs button').forEach((b) => b.addEventListener('click', () => {
       document.querySelectorAll('#chart-tabs button').forEach((x) => x.classList.toggle('on', x === b));
@@ -622,6 +648,8 @@
         $('help').hidden = true;
         $('chart-panel').hidden = true;
         $('history-panel').hidden = true;
+        $('civ-list-panel').hidden = true;
+        $('civ-log-panel').hidden = true;
       }
     });
     window.addEventListener('resize', () => { resizePending = true; });

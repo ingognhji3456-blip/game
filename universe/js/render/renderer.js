@@ -35,6 +35,8 @@
         down: G.program(gl, SH.QUAD_VS, SH.DOWN_FS, 'down'),
         blur: G.program(gl, SH.QUAD_VS, SH.BLUR_FS, 'blur'),
         comp: G.program(gl, SH.QUAD_VS, SH.COMPOSITE_FS, 'composite'),
+        civ: G.program(gl, SH.CIV_VS, SH.CIV_FS, 'civ'),
+        line2: G.program(gl, SH.LINE2_VS, SH.LINE2_FS, 'line2'),
       };
       this.emptyVao = gl.createVertexArray();
       this.quad = G.vao(gl, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), [[0, 2]]);
@@ -220,6 +222,9 @@
       /* --- 은하 --- */
       if (!opaque && w.galaxy > 0.001 && this.mw) this.drawGalaxies(view, projPx, pxScale, kpix, minPx);
 
+      /* --- 은하 문명 --- */
+      if (!opaque && view.civ) this.drawCiv(view, projPx, pxScale);
+
       /* --- 이웃 별 --- */
       if (!opaque && w.local > 0.001 && this.localVao) {
         const p = this.P.simple;
@@ -339,6 +344,65 @@
           this.body(v, rad, { uKind: 4, uColor: [1, 0.62, 0.32], uIntensity: 2.2 * g.bh, uTime: view.wallT }, c.D);
         }
       }
+    }
+
+
+    /* 은하 문명: 매 프레임 바뀌는 작은 버퍼 */
+    dynVao(key, data, layout) {
+      const gl = this.gl;
+      let o = this[key];
+      if (!o) {
+        const v = gl.createVertexArray();
+        gl.bindVertexArray(v);
+        const b = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, b);
+        const stride = layout.reduce((a, l) => a + l[1], 0) * 4;
+        let off = 0;
+        for (const [loc, size] of layout) {
+          gl.enableVertexAttribArray(loc);
+          gl.vertexAttribPointer(loc, size, gl.FLOAT, false, stride, off);
+          off += size * 4;
+        }
+        gl.bindVertexArray(null);
+        o = this[key] = { vao: v, buf: b, stride: stride / 4 };
+      }
+      gl.bindBuffer(gl.ARRAY_BUFFER, o.buf);
+      gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
+      return { vao: o.vao, count: data.length / o.stride };
+    }
+
+    drawCiv(view, projPx, pxScale) {
+      const gl = this.gl;
+      const c = view.cam;
+      const d = view.civ;
+      const mv = this.mv([0, 0, 0], 1);
+      const P = this.proj(c.D * 1e-5, c.D * 1e7);
+      const lay = [[0, 3], [1, 4], [2, 2]];
+      const p = this.P.civ;
+      gl.useProgram(p.p);
+      const base = { uMV: mv, uP: P, uProj: projPx, uPx: pxScale, uMaxPx: 180 * pxScale };
+      const draw = (key, data, mode, blend) => {
+        if (!data || !data.length) return;
+        const v = this.dynVao(key, data, lay);
+        if (blend === 'alpha') gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        else gl.blendFunc(gl.ONE, gl.ONE);
+        G.setUniforms(gl, p, Object.assign({ uMode: mode }, base));
+        gl.bindVertexArray(v.vao);
+        gl.drawArrays(gl.POINTS, 0, v.count);
+      };
+      draw('civHalo', d.halo, 0, 'alpha');
+      if (d.lines && d.lines.length) {
+        const lp = this.P.line2;
+        gl.useProgram(lp.p);
+        gl.blendFunc(gl.ONE, gl.ONE);
+        const v = this.dynVao('civLines', d.lines, [[0, 3], [1, 4]]);
+        G.setUniforms(gl, lp, { uMV: mv, uP: P });
+        gl.bindVertexArray(v.vao);
+        gl.drawArrays(gl.LINES, 0, v.count);
+        gl.useProgram(p.p);
+      }
+      draw('civDots', d.dots, 1, 'add');
+      draw('civFlash', d.flash, 2, 'add');
     }
 
     body(center, radius, u, D, blend) {

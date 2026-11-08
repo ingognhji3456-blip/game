@@ -91,7 +91,7 @@
       const m = this.hover.marker;
       const x = m ? this.xOf(m.t) : this.hover.x;
       const t = m ? m.t : this.tOf(this.hover.x);
-      let html = `<small>${U.escapeHtml(UC.time.shortText(t))}</small>`;
+      let html = `<small>${U.escapeHtml((this.app.shortText || UC.time.shortText)(t))}</small>`;
       if (m) {
         const pre = m.kind === 'intervention' ? '' : m.prevented ? '일어나지 않음 · ' : '';
         html = `<b>${U.escapeHtml(pre + m.title)}</b><br>${html}`;
@@ -117,7 +117,7 @@
       const px = this.xOf(t);
       const tEnd = this.scale.tEnd;
 
-      for (const e of UC.data.AGES) {
+      for (const e of this.app.ages || UC.data.AGES) {
         if (e.from >= tEnd) continue;
         const x0 = this.xOf(Math.max(e.from, this.scale.tStart));
         const x1 = this.xOf(Math.min(e.to, tEnd));
@@ -165,7 +165,7 @@
       c.textBaseline = 'alphabetic';
       c.fillStyle = 'rgba(200,210,235,0.5)';
       let lastX = -999;
-      for (const [tt, label] of UC.time.TICKS) {
+      for (const [tt, label] of this.app.ticks || UC.time.TICKS) {
         if (tt > tEnd) continue;
         const x = this.xOf(tt);
         const w = c.measureText(label).width;
@@ -183,7 +183,7 @@
       c.shadowBlur = 0;
 
       this.el.setAttribute('aria-valuenow', String(Math.round(this.scale.toS(t) * 1000)));
-      this.el.setAttribute('aria-valuetext', UC.time.clockText(t));
+      this.el.setAttribute('aria-valuetext', (this.app.clockText || UC.time.clockText)(t));
     }
   }
 

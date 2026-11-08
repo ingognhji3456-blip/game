@@ -8,7 +8,7 @@ const vm = require('vm');
 const ROOT = path.resolve(__dirname, '..');
 const FILES = [
   'js/core/util.js', 'js/sim/cosmo.js', 'js/data/epochs.js', 'js/data/events.js', 'js/data/stars.js',
-  'js/sim/history.js', 'js/sim/web.js', 'js/sim/galaxy.js', 'js/sim/solar.js', 'js/render/view.js',
+  'js/sim/history.js', 'js/sim/web.js', 'js/sim/galaxy.js', 'js/sim/solar.js', 'js/sim/civ.js', 'js/render/view.js',
 ];
 
 /* 계산이 무거운 충돌 모형 때문에 격리된 vm 대신 이 프로세스 안에서 실행합니다 */

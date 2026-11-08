@@ -479,8 +479,62 @@ void main() {
   o = vec4(col, 1.0);
 }`;
 
+
+  /* ---------- 은하 문명: 영역의 빛, 별 점, 이주선, 전투 섬광 ---------- */
+  const CIV_VS = `#version 300 es
+precision highp float;
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec4 aCol;
+layout(location = 2) in vec2 aSize;
+uniform mat4 uMV;
+uniform mat4 uP;
+uniform float uProj, uMaxPx, uPx;
+out vec4 vCol;
+void main() {
+  vec4 vp = uMV * vec4(aPos, 1.0);
+  float d = max(length(vp.xyz), 1e-6);
+  float size = clamp(aSize.x * uProj / d, aSize.y * uPx, uMaxPx);
+  gl_Position = uP * vp;
+  gl_PointSize = size * 2.0;
+  vCol = aCol;
+}`;
+  const CIV_FS = `#version 300 es
+precision highp float;
+in vec4 vCol;
+uniform float uMode;
+out vec4 o;
+void main() {
+  vec2 c = gl_PointCoord * 2.0 - 1.0;
+  float r2 = dot(c, c);
+  if (r2 > 1.0) discard;
+  float r = sqrt(r2);
+  if (uMode < 0.5) {
+    float a = vCol.a * (1.0 - smoothstep(0.25, 1.0, r));
+    o = vec4(vCol.rgb * a, a);
+  } else if (uMode < 1.5) {
+    o = vec4(vCol.rgb * vCol.a * (exp(-r2 * 6.0) + exp(-r2 * 40.0)), 0.0);
+  } else {
+    float ring = exp(-pow((r - 0.72) / 0.1, 2.0)) + exp(-r2 * 10.0) * 0.7;
+    o = vec4(vCol.rgb * vCol.a * ring, 0.0);
+  }
+}`;
+  const LINE2_VS = `#version 300 es
+precision highp float;
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec4 aCol;
+uniform mat4 uMV;
+uniform mat4 uP;
+out vec4 vCol;
+void main() { vCol = aCol; gl_Position = uP * (uMV * vec4(aPos, 1.0)); }`;
+  const LINE2_FS = `#version 300 es
+precision highp float;
+in vec4 vCol;
+out vec4 o;
+void main() { o = vec4(vCol.rgb * vCol.a, 0.0); }`;
+
   UC.shaders = {
     STAR_VS, POINT_FS, WEB_VS, SIMPLE_VS, BELT_VS, NEB_VS, LINE_VS, LINE_FS,
     BODY_VS, BODY_FS, QUAD_VS, DOWN_FS, BLUR_FS, COMPOSITE_FS,
+    CIV_VS, CIV_FS, LINE2_VS, LINE2_FS,
   };
 })();

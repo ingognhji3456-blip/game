@@ -496,6 +496,25 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
 .flyout { width: 214px; }
 .size b { font-size: 13px; }
 
+/* ---------- 은하 문명 ---------- */
+.civ-only { display: none !important; }
+body.civ .civ-only { display: flex !important; }
+body.civ .cosmic-only, body.civ .levels { display: none !important; }
+body.civ .rail-group + .rail-group { border-top: 0; padding-top: 0; margin-top: 0; }
+.civ-list { display: flex; flex-direction: column; gap: 2px; }
+.civ-row { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 6px; border-radius: 10px; text-align: left; }
+.civ-row:hover { background: rgba(255, 255, 255, 0.06); }
+.civ-row.dead { opacity: 0.45; }
+.cdot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.cicon { width: 20px; text-align: center; font-size: 15px; }
+.cname { flex: 1; min-width: 0; font-size: 13px; }
+.cname small { display: block; color: var(--faint); font-size: 11px; }
+.cbar { width: 64px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.07); overflow: hidden; flex-shrink: 0; }
+.cbar i { display: block; height: 100%; border-radius: 3px; }
+.log-row { width: 100%; text-align: left; }
+.log-row:hover { background: rgba(255, 255, 255, 0.05); }
+body.civ .rail { top: calc(16px + var(--safe-t) + 4px); }
+
 /* ---------- 휴대폰 ---------- */
 @media (max-width: 760px) {
   :root { --gap: 10px; --dock-h: 58px; }
@@ -552,6 +571,7 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
   .scale-note { display: none; }
   .view-note { bottom: calc(var(--dock-h) + var(--gap) * 2 + var(--safe-b) + 54px); font-size: 11px; }
   .rail { top: 50%; transform: translateY(-50%); }
+  body.civ .rail { top: 50%; }
   .intro-box { padding: 26px 22px 22px; }
   .intro-box h1 { font-size: 34px; }
   .intro-lead { font-size: 14px; }
@@ -594,10 +614,16 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
     </aside>
 
     <nav id="tools" class="rail" aria-label="개입 도구">
-      <div class="rail-group">
+      <div class="rail-group cosmic-only">
         <button id="btn-fate" class="rail-btn" aria-label="우주의 운명 바꾸기"><span>🌪️</span><em>우주의 운명 바꾸기</em></button>
         <button id="btn-history" class="rail-btn" aria-label="바뀐 역사"><span>📜</span><em>바뀐 역사</em><b id="history-count" class="count" hidden>0</b></button>
         <button id="btn-chart" class="rail-btn" aria-label="그래프"><span>📈</span><em>우주의 크기 그래프</em></button>
+        <button id="btn-civ" class="rail-btn" aria-label="은하 문명"><span>👽</span><em>은하 문명 보기</em></button>
+      </div>
+      <div class="rail-group civ-only">
+        <button id="btn-civ-exit" class="rail-btn" aria-label="우주로 돌아가기"><span>🌌</span><em>우주로 돌아가기</em></button>
+        <button id="btn-civ-list" class="rail-btn" aria-label="문명 목록"><span>📊</span><em>문명 목록</em></button>
+        <button id="btn-civ-log" class="rail-btn" aria-label="사건 기록"><span>📜</span><em>사건 기록</em></button>
       </div>
       <div id="fate-menu" class="flyout" hidden>
         <div class="flyout-title">지금 이 순간부터 암흑 에너지를…</div>
@@ -641,6 +667,22 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
       <div class="legend"><span class="lg-you"></span>당신의 우주 <span class="lg-base"></span>실제 우주</div>
     </section>
 
+    <section id="civ-list-panel" class="sheet" hidden>
+      <div class="sheet-head">
+        <div class="sheet-title">은하의 문명들</div>
+        <button class="icon-btn ghost small" data-close="civ-list-panel" aria-label="닫기">✕</button>
+      </div>
+      <div id="civ-list-body" class="civ-list"></div>
+    </section>
+
+    <section id="civ-log-panel" class="sheet" hidden>
+      <div class="sheet-head">
+        <div class="sheet-title">사건 기록</div>
+        <button class="icon-btn ghost small" data-close="civ-log-panel" aria-label="닫기">✕</button>
+      </div>
+      <div id="civ-log-body" class="history-body"></div>
+    </section>
+
     <section id="history-panel" class="sheet" hidden>
       <div class="sheet-head">
         <div class="sheet-title">바뀐 역사</div>
@@ -669,6 +711,7 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
         <li><span>🔍</span>휠·두 손가락으로 우주 → 은하 → 이웃 별 → 태양계까지 확대</li>
         <li><span>🌍</span>태양계에서 지구를 누르면 지구 연대기로 이어집니다</li>
         <li><span>🌪️</span>암흑 에너지를 바꿔 빅 립·빅 크런치를 일으켜 보기</li>
+        <li><span>👽</span>우리 은하에 퍼지는 외계 문명들의 흥망을 지켜보고 개입하기</li>
       </ul>
       <p class="intro-note">표준 우주론(플랑크 위성 관측값)과 항성 진화 모형으로 계산했습니다. 은하와 별의 모습은 실제 사진이 아니라 계산으로 그린 것이고, 아주 먼 미래는 지금 아는 물리학으로 본 예측입니다.</p>
       <div class="intro-actions">
@@ -688,6 +731,7 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
         <tr><td>왼쪽 위 버튼</td><td>보는 범위로 바로 날아가기</td></tr>
         <tr><td>천체 누르기</td><td>설명 보기 (지구는 지구 연대기로)</td></tr>
         <tr><td>타임라인 끌기</td><td>시간 이동</td></tr>
+        <tr><td>👽 버튼</td><td>은하 문명 모드 (문명·별을 눌러 개입)</td></tr>
         <tr><td><kbd>스페이스</kbd></td><td>재생 / 멈춤</td></tr>
         <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>이전 / 다음 사건</td></tr>
         <tr><td><kbd>+</kbd> <kbd>-</kbd></td><td>재생 속도</td></tr>
@@ -2686,6 +2730,619 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
 })();
 
 </script>
+  <script>/* js/sim/civ.js */
+'use strict';
+
+/*
+ * 은하 문명: 우리 은하의 "생명이 살 만한 영역"에 별 640개를 고르고, 그 별들의 행성에서
+ * 문명이 태어나고, 기술이 자라고, 이주선을 보내 영역을 넓히고, 이웃을 만나 전쟁하거나 평화롭게 지내고,
+ * 갈라지고, 멸망하고, 초월하는 이야기를 계산합니다.
+ *
+ * 같은 시작점과 같은 개입이면 언제나 같은 역사가 나옵니다(결정적). 개입하면 그 순간부터 역사가 갈라집니다.
+ * 시간 단위: 이 모드를 시작한 순간부터 흐른 햇수. 거리: 광년.
+ *
+ * 외계 문명은 아직 하나도 발견되지 않았습니다. 이 모드는 "만약 은하에 문명이 많다면?"을 상상해 보는 놀이입니다.
+ */
+(function () {
+  const UC = (window.UC = window.UC || {});
+  const U = UC.util;
+
+  const DURATION = 40e6; // 4천만 년
+  const DT = 20000; // 한 걸음 2만 년
+  const STEPS = Math.round(DURATION / DT);
+  const N_SYS = 640;
+  const TECH_EVERY = 10; // 기술 기록 간격(걸음)
+
+  const SPECIES = [
+    { id: 'reptile', icon: '🦎', name: '파충류형', text: '비늘 피부를 가진 냉혈 종족. 따뜻한 바다 행성에서 진화했습니다.' },
+    { id: 'insect', icon: '🐜', name: '곤충형', text: '여왕을 중심으로 수십억 개체가 하나처럼 움직이는 종족입니다.' },
+    { id: 'ocean', icon: '🐙', name: '수중 생명', text: '얼음 위성의 두꺼운 얼음 밑 바다에서 진화한 촉수 종족입니다.' },
+    { id: 'crystal', icon: '💎', name: '결정 생명', text: '규소 결정으로 된 몸을 가졌고 한 개체가 수천 년을 삽니다.' },
+    { id: 'gas', icon: '☁️', name: '가스 생명', text: '거대 가스 행성의 대기 속을 떠다니며 사는 존재입니다.' },
+    { id: 'fungus', icon: '🍄', name: '균류 집합체', text: '행성 전체를 덮은 하나의 거대한 균사 네트워크가 생각합니다.' },
+    { id: 'machine', icon: '🤖', name: '기계 지성', text: '창조자를 넘어서 스스로 진화하는 인공 지능 문명입니다.' },
+    { id: 'avian', icon: '🦅', name: '조류형', text: '날개를 가진 종족. 높은 산꼭대기에 도시를 짓습니다.' },
+    { id: 'mammal', icon: '🐒', name: '포유류형', text: '털로 덮인, 무리를 지어 사는 사회적 종족입니다.' },
+  ];
+  const HUMAN = { id: 'human', icon: '🧑', name: '인류', text: '지구에서 태어난 우리. 30만 년 전에 나타나, 막 우주로 나가기 시작했습니다.' };
+
+  const STAGES = [
+    { min: 0, name: '행성 문명', k: '카르다쇼프 0~1형', text: '아직 자기 행성을 벗어나지 못했습니다.' },
+    { min: 1.5, name: '항성계 문명', k: '카르다쇼프 1~2형', text: '이웃 별로 이주선을 보내기 시작했습니다.' },
+    { min: 3, name: '성간 문명', k: '카르다쇼프 2형', text: '여러 항성계를 다스리며 별의 에너지를 씁니다.' },
+    { min: 6, name: '은하 문명', k: '카르다쇼프 2~3형', text: '은하의 넓은 영역에 퍼져 있습니다.' },
+    { min: 9, name: '초월 직전', k: '카르다쇼프 3형', text: '물질의 한계를 넘어서려 하고 있습니다.' },
+  ];
+  const stageOf = (tech) => STAGES.filter((s) => tech >= s.min).pop();
+
+  const SYL = ['카', '르', '시', '아', '노', '벨', '타', '린', '오', '스', '미', '라', '네', '온', '드', '우', '엘', '하', '제', '토', '베', '니', '쿠', '리', '모', '사', '펠', '안', '케', '로', '바', '주', '틴', '솔', '그', '무', '레', '디', '헬', '보'];
+  function makeName(r, n) {
+    let s = '';
+    const k = n || 2 + Math.floor(r() * 2);
+    for (let i = 0; i < k; i++) s += SYL[Math.floor(r() * SYL.length)];
+    return s;
+  }
+
+  function hsl(h, s, l) {
+    const f = (n) => {
+      const k = (n + h * 12) % 12;
+      const a = s * Math.min(l, 1 - l);
+      return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    };
+    return [f(0), f(8), f(4)];
+  }
+
+  /* ---------- 별 (항성계) ---------- */
+  let SYSTEMS = null;
+  function systems() {
+    if (SYSTEMS) return SYSTEMS;
+    const G = UC.galaxy;
+    G.init();
+    const mw = G.mw;
+    const r = U.rng(4242);
+    const out = [{ id: 0, pos: G.SUN0.slice(), name: '태양계', star: 'G', T: 5772, earth: true, hab: 1 }];
+    const cell = 700;
+    const grid = new Map();
+    const key = (x, z) => `${Math.floor(x / cell)},${Math.floor(z / cell)}`;
+    const tooClose = (p) => {
+      const cx = Math.floor(p[0] / cell), cz = Math.floor(p[2] / cell);
+      for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+        for (const q of grid.get(`${cx + dx},${cz + dz}`) || []) if (Math.hypot(q[0] - p[0], q[2] - p[2]) < 650) return true;
+      }
+      return false;
+    };
+    const addGrid = (p) => { const k = key(p[0], p[2]); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(p); };
+    addGrid(out[0].pos);
+    const STARS = [['M', 3300, 0.5], ['K', 4500, 0.25], ['G', 5800, 0.18], ['F', 6700, 0.07]];
+    const used = new Set();
+    let tries = 0;
+    while (out.length < N_SYS && tries < 200000) {
+      tries++;
+      const i = Math.floor(r() * mw.stars);
+      if (used.has(i)) continue;
+      const o = i * G.STRIDE;
+      const type = mw.data[o + 3];
+      if (type !== G.TYPE.THIN && type !== G.TYPE.YOUNG && type !== G.TYPE.THICK) continue;
+      const p = [mw.data[o], mw.data[o + 1], mw.data[o + 2]];
+      const rad = Math.hypot(p[0], p[2]);
+      if (rad < 7000 || rad > 47000) continue;
+      /* 은하의 생명 가능 지대: 중심은 초신성과 감마선이 잦고, 바깥은 무거운 원소가 모자람 */
+      const hab = Math.exp(-Math.pow((rad - 25000) / 11000, 2));
+      if (r() > 0.25 + 0.75 * hab) continue;
+      if (tooClose(p)) continue;
+      used.add(i);
+      addGrid(p);
+      let u = r();
+      let st = STARS[0];
+      for (const s of STARS) { if (u < s[2]) { st = s; break; } u -= s[2]; }
+      out.push({ id: out.length, pos: p, name: makeName(r), star: st[0], T: st[1] + (r() - 0.5) * 300, hab });
+    }
+    SYSTEMS = out;
+    return out;
+  }
+
+  /* 별마다 가까운 별 목록 (거리순, 1만 광년 안). 한 번만 만들어 둠 */
+  let NEIGH = null;
+  function neighbors(sys) {
+    if (NEIGH) return NEIGH;
+    const R = 10000;
+    NEIGH = sys.map((a) => {
+      const list = [];
+      for (const b of sys) {
+        if (b.id === a.id) continue;
+        const d = Math.hypot(a.pos[0] - b.pos[0], (a.pos[1] - b.pos[1]) * 0.5, a.pos[2] - b.pos[2]);
+        if (d <= R) list.push([b.id, d]);
+      }
+      list.sort((x, y) => x[1] - y[1]);
+      return { ids: Int16Array.from(list.map((x) => x[0])), d: Float32Array.from(list.map((x) => x[1])) };
+    });
+    return NEIGH;
+  }
+
+  /* 받침에 맞는 조사: josa('인류', '이', '가') → '인류가' */
+  function josa(word, withB, withoutB) {
+    const c = word.charCodeAt(word.length - 1);
+    const has = c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 !== 0;
+    return word + (has ? withB : withoutB);
+  }
+
+  const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+
+  /*
+   * 역사 계산. opts: { tau0: 우주 나이, interventions: [{ t, type, sys?, civ? }], humans: bool }
+   * 개입 종류: seed(sys) · gift(civ) · peace(civ) · war(civ) · supernova(sys)
+   */
+  function simulate(opts) {
+    const sys = systems();
+    const S = sys.length;
+    const NB = neighbors(sys);
+    /* s 둘레 R 광년 안의 별: [[id, 거리], ...] (자신 포함) */
+    const idx = {
+      near(s0, R) {
+        const out = [[s0, 0]];
+        const nb = NB[s0];
+        for (let k = 0; k < nb.ids.length && nb.d[k] <= R; k++) out.push([nb.ids[k], nb.d[k]]);
+        return out;
+      },
+      count(s0, R, id) {
+        let n = owner[s0] === id ? 1 : 0;
+        const nb = NB[s0];
+        for (let k = 0; k < nb.ids.length && nb.d[k] <= R; k++) if (owner[nb.ids[k]] === id) n++;
+        return n;
+      },
+    };
+    const seed = Math.floor((opts.tau0 / 1e6) % 100000) * 7 + 13;
+    const r = U.rng(seed);
+    const ivs = (opts.interventions || []).slice().sort((a, b) => a.t - b.t);
+    let ivi = 0;
+
+    const owner = new Int16Array(S).fill(-1);
+    const ruin = new Uint8Array(S);
+    const claimed = new Int16Array(S).fill(-1); // 이주선이 향하는 중
+    const civs = [];
+    const events = [];
+    const ships = [];
+    const pending = [];
+    const battles = [];
+    const owners = new Array(STEPS + 1);
+    const techLog = [];
+    const rel = new Map(); // "a,b" → { state: 'peace'|'war', since }
+    const relKey = (a, b) => (a < b ? `${a},${b}` : `${b},${a}`);
+    const usedNames = new Set();
+    let hueN = 0;
+
+    const ev = (t, type, civ, extra, major) => events.push(Object.assign({ t, type, civ, major: !!major }, extra || {}));
+
+    function newCiv(t, home, o) {
+      const id = civs.length;
+      const sp = o && o.species ? o.species : o && o.human ? HUMAN : SPECIES[Math.floor(r() * SPECIES.length)];
+      const agg = o && o.agg !== undefined ? o.agg : Math.pow(r(), 1.3);
+      let base = o && o.name;
+      if (!base) {
+        do base = makeName(r); while (usedNames.has(base));
+      }
+      usedNames.add(base);
+      const form = o && o.human ? '' : sp.id === 'human' ? (agg > 0.6 ? '제국' : '연방') : sp.id === 'insect' ? '군락' : sp.id === 'fungus' ? '집합체' : sp.id === 'machine' ? '연산체' : agg > 0.6 ? (r() < 0.5 ? '제국' : '왕국') : agg < 0.3 ? (r() < 0.5 ? '연방' : '공화국') : '연합';
+      const hue = o && o.human ? 0.56 : (0.07 + hueN++ * 0.61803) % 1;
+      const c = {
+        id,
+        name: form ? `${base} ${form}` : base,
+        species: sp,
+        color: hsl(hue, o && o.human ? 0.85 : 0.75, 0.6),
+        home,
+        capital: home,
+        born: t,
+        agg,
+        expand: 0.6 + r() * 1.0,
+        growth: o && o.growth !== undefined ? o.growth : 0.06 + r() * 0.2,
+        tech: o && o.tech !== undefined ? o.tech : 1 + r() * 0.4,
+        human: !!(o && o.human),
+        seeded: !!(o && o.seeded),
+        parent: o && o.parent !== undefined ? o.parent : null,
+        alive: true,
+        end: null,
+        endType: null,
+        n: 0,
+        nextShip: t + 2e5 * r(),
+        peak: 0,
+        active: 0,
+      };
+      civs.push(c);
+      claim(home, id, t, true);
+      return c;
+    }
+
+    function claim(s, id, t, quiet) {
+      const prev = owner[s];
+      if (prev >= 0) civs[prev].n--;
+      owner[s] = id;
+      claimed[s] = -1;
+      ruin[s] = 0;
+      if (id >= 0) {
+        civs[id].n++;
+        civs[id].peak = Math.max(civs[id].peak, civs[id].n);
+      }
+      if (prev >= 0 && civs[prev].n <= 0 && civs[prev].alive) {
+        endCiv(prev, t, 'extinct', id);
+      } else if (prev >= 0 && civs[prev].capital === s) {
+        /* 수도를 잃으면 다른 곳으로 옮김 */
+        let best = -1;
+        let bd = Infinity;
+        for (let k = 0; k < S; k++) if (owner[k] === prev) { const d = dist(sys[k].pos, sys[s].pos); if (d < bd) { bd = d; best = k; } }
+        if (best >= 0) civs[prev].capital = best;
+      }
+      return quiet;
+    }
+
+    function endCiv(id, t, type, by) {
+      const c = civs[id];
+      if (!c.alive) return;
+      c.alive = false;
+      c.end = t;
+      c.endType = type;
+      for (let k = 0; k < S; k++) {
+        if (owner[k] === id) { owner[k] = -1; ruin[k] = 1; }
+        if (claimed[k] === id) claimed[k] = -1;
+      }
+      c.n = 0;
+      for (const [k, v] of rel) {
+        const [a, b] = k.split(',').map(Number);
+        if ((a === id || b === id) && v.state === 'war') v.state = 'over';
+      }
+      const big = c.peak >= 8 || c.human;
+      if (type === 'extinct') ev(t, 'extinct', id, { by, sys: c.home }, big);
+      else if (type === 'transcend') ev(t, 'transcend', id, { sys: c.capital }, true);
+      else if (type === 'selfdestroy') ev(t, 'selfdestroy', id, { sys: c.home }, c.human);
+    }
+
+    const alive = () => civs.filter((c) => c.alive);
+    const ownedBy = (id) => {
+      const out = [];
+      for (let k = 0; k < S; k++) if (owner[k] === id) out.push(k);
+      return out;
+    };
+
+    function supernova(t, s, R, natural) {
+      const hit = idx.near(s, R);
+      const victims = new Set();
+      for (const [k] of hit) {
+        if (owner[k] >= 0) victims.add(owner[k]);
+        const o = owner[k];
+        if (o >= 0) {
+          civs[o].n--;
+          owner[k] = -1;
+          ruin[k] = 1;
+          if (civs[o].n <= 0) endCiv(o, t, 'extinct', -2);
+        }
+      }
+      ev(t, 'supernova', -1, { sys: s, natural, victims: [...victims], R }, !natural || victims.size > 0);
+    }
+
+    function applyIv(iv, t) {
+      if (iv.type === 'seed' && owner[iv.sys] < 0) {
+        const c = newCiv(t, iv.sys, { seeded: true, tech: 1.1, growth: 0.16 });
+        ev(t, 'born', c.id, { sys: iv.sys, seeded: true, iv: iv.id }, true);
+      } else if (iv.type === 'gift' && civs[iv.civ] && civs[iv.civ].alive) {
+        civs[iv.civ].tech += 3;
+        ev(t, 'gift', iv.civ, { iv: iv.id }, true);
+      } else if (iv.type === 'peace' && civs[iv.civ] && civs[iv.civ].alive) {
+        civs[iv.civ].agg = 0.03;
+        for (const [k, v] of rel) {
+          const [a, b] = k.split(',').map(Number);
+          if ((a === iv.civ || b === iv.civ) && v.state === 'war') { v.state = 'peace'; v.since = t; ev(t, 'peace', a, { other: b }, true); }
+        }
+        ev(t, 'calm', iv.civ, { iv: iv.id }, true);
+      } else if (iv.type === 'war' && civs[iv.civ] && civs[iv.civ].alive) {
+        civs[iv.civ].agg = 1;
+        for (const [k, v] of rel) {
+          const [a, b] = k.split(',').map(Number);
+          if ((a === iv.civ || b === iv.civ) && v.state === 'peace' && civs[a].alive && civs[b].alive) { v.state = 'war'; v.since = t; ev(t, 'war', iv.civ, { other: a === iv.civ ? b : a }, true); }
+        }
+        ev(t, 'rage', iv.civ, { iv: iv.id }, true);
+      } else if (iv.type === 'supernova') {
+        supernova(t, iv.sys, 700, false);
+      }
+    }
+
+    /* ---------- 처음 은하 ---------- */
+    const habPick = () => {
+      for (let k = 0; k < 50; k++) {
+        const s = 1 + Math.floor(r() * (S - 1));
+        if (owner[s] < 0 && claimed[s] < 0 && r() < sys[s].hab) return s;
+      }
+      return -1;
+    };
+    if (opts.humans) {
+      const h = newCiv(0, 0, { human: true, name: '인류', tech: 1.4, growth: 0.2, agg: 0.45 });
+      ev(0, 'born', h.id, { sys: 0, human: true }, false);
+    }
+    const K0 = 7;
+    for (let k = 0; k < K0; k++) {
+      const s = habPick();
+      if (s < 0) continue;
+      const tech = 1 + Math.pow(r(), 1.5) * 3.2;
+      const c = newCiv(0, s, { tech });
+      /* 오래된 문명은 이미 이웃 별로 퍼져 있음 */
+      const extra = Math.floor((tech - 1.3) * 3);
+      if (extra > 0) {
+        const near = idx.near(s, 1500 + 600 * tech).filter(([q]) => owner[q] < 0).slice(0, extra);
+        for (const [q] of near) claim(q, c.id, 0, true);
+      }
+    }
+
+    /* ---------- 한 걸음씩 ---------- */
+    for (let step = 0; step <= STEPS; step++) {
+      const t = step * DT;
+      while (ivi < ivs.length && ivs[ivi].t <= t + 1e-6) applyIv(ivs[ivi++], t);
+
+      /* 새 문명 */
+      if (r() < DT / 2.2e6) {
+        const s = habPick();
+        if (s >= 0) {
+          const c = newCiv(t, s);
+          ev(t, 'born', c.id, { sys: s }, false);
+        }
+      }
+      /* 자연 초신성 */
+      if (r() < DT / 6e6) {
+        const s = Math.floor(r() * S);
+        supernova(t, s, 350, true);
+      }
+
+      const live = alive();
+      for (const c of live) {
+        const n = Math.max(c.n, 1);
+        c.tech += c.growth * (DT / 1e6) * (0.6 + 0.15 * Math.log2(1 + n));
+        /* 초월 */
+        if (c.tech >= 10 && r() < 0.004) { endCiv(c.id, t, 'transcend'); continue; }
+        /* 스스로 무너짐 (젊은 문명의 위험) */
+        if (c.tech < 2.2 && !c.seeded && r() < (c.human ? 1.5e-4 : 3e-4)) { endCiv(c.id, t, 'selfdestroy'); continue; }
+        /* 내전으로 갈라짐 */
+        if (c.n >= 14 && r() < 1.2e-4 * (1 + c.n / 50)) {
+          const own = ownedBy(c.id);
+          const cap = sys[c.capital].pos;
+          own.sort((a, b) => dist(sys[b].pos, cap) - dist(sys[a].pos, cap));
+          const part = own.slice(0, Math.floor(own.length * (0.3 + r() * 0.2)));
+          if (part.length >= 3) {
+            const nc = newCiv(t, part[0], { tech: c.tech * 0.95, growth: c.growth, agg: Math.min(1, c.agg + 0.2), parent: c.id, species: c.species });
+            for (const q of part.slice(1)) claim(q, nc.id, t, true);
+            rel.set(relKey(c.id, nc.id), { state: 'war', since: t });
+            ev(t, 'split', nc.id, { other: c.id, sys: part[0] }, c.n + nc.n >= 15 || c.human);
+          }
+        }
+        /* 이주선 */
+        if (c.tech >= 1.5 && t >= c.nextShip) {
+          if (c.active < 2 + Math.floor(c.tech)) {
+            const own = ownedBy(c.id);
+            const range = 1300 + 800 * c.tech;
+            let best = null;
+            for (let tries = 0; tries < 4 && !best; tries++) {
+              const from = own[Math.floor(r() * own.length)];
+              const cand = idx.near(from, range).filter(([q, d]) => owner[q] < 0 && claimed[q] < 0 && d > 1);
+              if (cand.length) {
+                cand.sort((a, b) => a[1] - b[1] - (sys[b[0]].hab - sys[a[0]].hab) * 400);
+                const pickI = Math.min(cand.length - 1, Math.floor(Math.pow(r(), 2) * 3));
+                best = { from, to: cand[pickI][0], d: cand[pickI][1] };
+              }
+            }
+            if (best) {
+              const v = 0.004 + 0.003 * c.tech;
+              const sh = { civ: c.id, from: best.from, to: best.to, t0: t, t1: t + best.d / v };
+              ships.push(sh);
+              pending.push(sh);
+              c.active++;
+              claimed[best.to] = c.id;
+            }
+          }
+          c.nextShip = t + 4e5 / c.expand / (0.4 + c.tech * 0.25) * (0.6 + 0.8 * r());
+        }
+      }
+      /* 도착한 이주선 */
+      for (let k = pending.length - 1; k >= 0; k--) {
+        const sh = pending[k];
+        if (sh.t1 > t) continue;
+        pending.splice(k, 1);
+        const c = civs[sh.civ];
+        c.active--;
+        if (claimed[sh.to] === sh.civ) claimed[sh.to] = -1;
+        if (!c.alive) { sh.fate = 'lost'; continue; }
+        if (owner[sh.to] < 0) { claim(sh.to, sh.civ, t); sh.fate = 'settled'; }
+        else sh.fate = 'blocked';
+      }
+
+      /* 만남과 관계 (5걸음 = 10만 년마다) */
+      if (step % 5 === 0) {
+        const touch = new Map();
+        for (let k = 0; k < S; k++) {
+          const a = owner[k];
+          if (a < 0) continue;
+          const Ra = 1100 + 450 * civs[a].tech;
+          const nb = NB[k];
+          for (let m = 0; m < nb.ids.length && nb.d[m] <= Ra; m++) {
+            const q = nb.ids[m];
+            const d = nb.d[m];
+            const b = owner[q];
+            if (b < 0 || b === a) continue;
+            const key = relKey(a, b);
+            const cur = touch.get(key);
+            if (!cur || d < cur.d) touch.set(key, { d, sa: a === Math.min(a, b) ? k : q, sb: a === Math.min(a, b) ? q : k });
+          }
+        }
+        for (const [key, tc] of touch) {
+          const [a, b] = key.split(',').map(Number);
+          const A = civs[a];
+          const B = civs[b];
+          if (!A.alive || !B.alive) continue;
+          let R = rel.get(key);
+          if (!R) {
+            R = { state: 'peace', since: t };
+            rel.set(key, R);
+            ev(t, 'contact', a, { other: b, sys: tc.sa }, A.human || B.human);
+          }
+          R.front = tc;
+          if (R.state === 'peace' || R.state === 'over') {
+            const pWar = 0.012 * (A.agg + B.agg) * (A.agg + B.agg) * (R.state === 'over' ? 0.5 : 1);
+            if (t - R.since > 4e5 && r() < pWar) {
+              R.state = 'war';
+              R.since = t;
+              const aggressor = A.agg >= B.agg ? a : b;
+              ev(t, 'war', aggressor, { other: aggressor === a ? b : a, sys: tc.sa }, A.human || B.human || A.n + B.n >= 12);
+            }
+          } else if (R.state === 'war') {
+            const years = (t - R.since) / 1e6;
+            const pPeace = 0.02 + 0.04 * years * (1.2 - Math.max(A.agg, B.agg));
+            if (r() < pPeace) {
+              R.state = 'peace';
+              R.since = t;
+              ev(t, 'peace', a, { other: b, sys: tc.sa }, A.human || B.human || A.n + B.n >= 12);
+            }
+          }
+        }
+      }
+
+      /* 전투 */
+      for (const [key, R] of rel) {
+        if (R.state !== 'war' || !R.front) continue;
+        const [a, b] = key.split(',').map(Number);
+        const A = civs[a];
+        const B = civs[b];
+        if (!A.alive || !B.alive) { R.state = 'over'; continue; }
+        if (r() > DT / 1.2e5) continue;
+        const sa = R.front.sa;
+        const sb = R.front.sb;
+        if (owner[sa] !== a || owner[sb] !== b) { R.front = null; continue; }
+        const local = (id, s0) => idx.count(s0, 4000, id);
+        /* 더 호전적인 쪽이 더 자주 공격 */
+        const atk = r() < 0.5 + 0.35 * (A.agg - B.agg) ? a : b;
+        const def = atk === a ? b : a;
+        const from = atk === a ? sa : sb;
+        const target = atk === a ? sb : sa;
+        const pAtk = Math.pow(civs[atk].tech, 1.6) * (1 + 0.35 * local(atk, from));
+        const pDef = Math.pow(civs[def].tech, 1.6) * (1 + 0.35 * local(def, target)) * (civs[def].capital === target ? 1.5 : 1.15);
+        const won = r() < pAtk / (pAtk + pDef);
+        battles.push({ t, sys: target, from, atk, def, won });
+        if (won) {
+          const wasLast = civs[def].n <= 1;
+          claim(target, atk, t);
+          if (!wasLast && civs[def].home === target && civs[def].alive) ev(t, 'homefall', def, { by: atk, sys: target }, civs[def].human || civs[def].peak >= 10);
+        }
+        R.front = null;
+      }
+
+      owners[step] = Int16Array.from(owner);
+      if (step % TECH_EVERY === 0) techLog.push(Float32Array.from(civs.map((c) => c.tech)));
+    }
+
+    /* 은하의 주인 */
+    let leader = -1;
+    for (let step = 0; step <= STEPS; step += 25) {
+      const cnt = new Map();
+      for (const o of owners[step]) if (o >= 0) cnt.set(o, (cnt.get(o) || 0) + 1);
+      for (const [id, n] of cnt) {
+        if (n > S * 0.4 && leader !== id) {
+          leader = id;
+          ev(step * DT, 'dominant', id, {}, true);
+        }
+      }
+    }
+    events.sort((x, y) => x.t - y.t);
+    return { tau0: opts.tau0, humans: !!opts.humans, civs, events, ships, battles, owners, techLog, rel, systems: sys, interventions: ivs };
+  }
+
+  /* ---------- 묻기 ---------- */
+  const stepOf = (t) => U.clamp(Math.floor(t / DT), 0, STEPS);
+  function ownerAt(h, t) { return h.owners[stepOf(t)]; }
+  function techAt(h, id, t) {
+    const i = U.clamp(t / (DT * TECH_EVERY), 0, h.techLog.length - 1);
+    const a = Math.floor(i);
+    const b = Math.min(a + 1, h.techLog.length - 1);
+    const va = id < h.techLog[a].length ? h.techLog[a][id] : null;
+    const vb = id < h.techLog[b].length ? h.techLog[b][id] : va;
+    if (va === null) return vb === null ? h.civs[id].tech : vb;
+    return U.lerp(va, vb, i - a);
+  }
+  function countAt(h, t) {
+    const cnt = new Map();
+    for (const o of ownerAt(h, t)) if (o >= 0) cnt.set(o, (cnt.get(o) || 0) + 1);
+    return cnt;
+  }
+  function shipsAt(h, t) {
+    return h.ships.filter((s) => s.t0 <= t && s.t1 > t);
+  }
+  function battlesAt(h, t, win) {
+    return h.battles.filter((b) => b.t <= t && b.t > t - win);
+  }
+  /* 문명 하나의 그때 상태 */
+  function statusAt(h, id, t) {
+    const c = h.civs[id];
+    if (t < c.born) return '아직 없음';
+    if (c.end !== null && t >= c.end) return c.endType === 'transcend' ? '초월함' : '멸망함';
+    if (relationsAt(h, id, t).war.length) return '전쟁 중';
+    return '번성';
+  }
+  function relationsAt(h, id, t) {
+    const state = new Map();
+    for (const e of h.events) {
+      if (e.t > t) break;
+      if (!['contact', 'war', 'peace', 'split'].includes(e.type)) continue;
+      const a = e.civ;
+      const b = e.other;
+      if (a !== id && b !== id) continue;
+      const o = a === id ? b : a;
+      if (e.type === 'contact') state.set(o, state.get(o) || 'peace');
+      else if (e.type === 'war' || e.type === 'split') state.set(o, 'war');
+      else if (e.type === 'peace') state.set(o, 'peace');
+    }
+    const war = [];
+    const peace = [];
+    for (const [o, s] of state) {
+      const oc = h.civs[o];
+      if (oc.end !== null && t >= oc.end) continue;
+      if (s === 'war') war.push(o);
+      else peace.push(o);
+    }
+    return { war, peace };
+  }
+
+  /* 사건 문장 */
+  function eventText(h, e) {
+    const C = (id) => (id >= 0 && h.civs[id] ? h.civs[id].name : '');
+    const S = (s) => (s >= 0 && h.systems[s] ? h.systems[s].name : '');
+    const ga = (w) => josa(w, '이', '가');
+    const wa = (w) => josa(w, '과', '와');
+    const reul = (w) => josa(w, '을', '를');
+    const ui = (w) => `${w}의`;
+    switch (e.type) {
+      case 'born': return e.human ? '인류가 지구에서 우주를 바라보고 있습니다.' : e.seeded ? `당신이 ${S(e.sys)}에 생명의 씨앗을 뿌려 ${ga(C(e.civ))} 태어났습니다.` : `${S(e.sys)}에서 ${ga(C(e.civ))} 태어났습니다.`;
+      case 'contact': return `${wa(C(e.civ))} ${ga(C(e.other))} 처음 만났습니다.`;
+      case 'war': return `${ga(C(e.civ))} ${C(e.other)}에 전쟁을 선포했습니다.`;
+      case 'peace': return `${wa(C(e.civ))} ${ga(C(e.other))} 평화 조약을 맺었습니다.`;
+      case 'split': return `${C(e.other)}에서 내전이 일어나 ${ga(C(e.civ))} 갈라져 나왔습니다.`;
+      case 'homefall': return `${ui(C(e.civ))} 고향 행성 ${ga(S(e.sys))} ${C(e.by)}에 함락되었습니다.`;
+      case 'extinct': return e.by === -2 ? `${ga(C(e.civ))} 초신성 폭발로 사라졌습니다.` : e.by >= 0 ? `${ga(C(e.civ))} ${C(e.by)}에 의해 멸망했습니다.` : `${ga(C(e.civ))} 멸망했습니다.`;
+      case 'selfdestroy': return `${ga(C(e.civ))} 우주로 나가기 전에 스스로 무너졌습니다.`;
+      case 'transcend': return `${ga(C(e.civ))} 물질의 한계를 넘어 초월했습니다. 그들의 별에는 빈 도시만 남았습니다.`;
+      case 'supernova': {
+        const v = (e.victims || []).map(C).filter(Boolean);
+        if (e.natural) return `${S(e.sys)} 근처에서 초신성이 터졌습니다.${v.length ? ` ${v.join(', ')}의 행성들이 휩쓸렸습니다.` : ''}`;
+        return `당신이 ${S(e.sys)} 근처의 별을 초신성으로 터뜨렸습니다.${v.length ? ` ${ga(v.join(', '))} 피해를 입었습니다.` : ''}`;
+      }
+      case 'gift': return `당신이 ${C(e.civ)}에게 앞선 기술을 선물했습니다.`;
+      case 'calm': return `당신이 ${reul(C(e.civ))} 평화를 사랑하는 문명으로 바꾸었습니다.`;
+      case 'rage': return `당신이 ${reul(C(e.civ))} 호전적인 문명으로 바꾸었습니다.`;
+      case 'dominant': return `${ga(C(e.civ))} 은하의 별 40% 이상을 차지했습니다.`;
+      default: return '';
+    }
+  }
+  const EVENT_ICON = { born: '🌱', contact: '🤝', war: '⚔️', peace: '🕊️', split: '💔', homefall: '🏚️', extinct: '💀', selfdestroy: '☢️', transcend: '✨', supernova: '💥', gift: '💡', calm: '🕊️', rage: '🔥', dominant: '👑' };
+
+  UC.civ = {
+    DURATION, DT, STEPS, SPECIES, HUMAN, STAGES, stageOf, systems, simulate,
+    ownerAt, techAt, countAt, shipsAt, battlesAt, statusAt, relationsAt, eventText, EVENT_ICON, josa,
+  };
+})();
+
+</script>
   <script>/* js/render/gl.js */
 'use strict';
 
@@ -3282,9 +3939,63 @@ void main() {
   o = vec4(col, 1.0);
 }`;
 
+
+  /* ---------- 은하 문명: 영역의 빛, 별 점, 이주선, 전투 섬광 ---------- */
+  const CIV_VS = `#version 300 es
+precision highp float;
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec4 aCol;
+layout(location = 2) in vec2 aSize;
+uniform mat4 uMV;
+uniform mat4 uP;
+uniform float uProj, uMaxPx, uPx;
+out vec4 vCol;
+void main() {
+  vec4 vp = uMV * vec4(aPos, 1.0);
+  float d = max(length(vp.xyz), 1e-6);
+  float size = clamp(aSize.x * uProj / d, aSize.y * uPx, uMaxPx);
+  gl_Position = uP * vp;
+  gl_PointSize = size * 2.0;
+  vCol = aCol;
+}`;
+  const CIV_FS = `#version 300 es
+precision highp float;
+in vec4 vCol;
+uniform float uMode;
+out vec4 o;
+void main() {
+  vec2 c = gl_PointCoord * 2.0 - 1.0;
+  float r2 = dot(c, c);
+  if (r2 > 1.0) discard;
+  float r = sqrt(r2);
+  if (uMode < 0.5) {
+    float a = vCol.a * (1.0 - smoothstep(0.25, 1.0, r));
+    o = vec4(vCol.rgb * a, a);
+  } else if (uMode < 1.5) {
+    o = vec4(vCol.rgb * vCol.a * (exp(-r2 * 6.0) + exp(-r2 * 40.0)), 0.0);
+  } else {
+    float ring = exp(-pow((r - 0.72) / 0.1, 2.0)) + exp(-r2 * 10.0) * 0.7;
+    o = vec4(vCol.rgb * vCol.a * ring, 0.0);
+  }
+}`;
+  const LINE2_VS = `#version 300 es
+precision highp float;
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec4 aCol;
+uniform mat4 uMV;
+uniform mat4 uP;
+out vec4 vCol;
+void main() { vCol = aCol; gl_Position = uP * (uMV * vec4(aPos, 1.0)); }`;
+  const LINE2_FS = `#version 300 es
+precision highp float;
+in vec4 vCol;
+out vec4 o;
+void main() { o = vec4(vCol.rgb * vCol.a, 0.0); }`;
+
   UC.shaders = {
     STAR_VS, POINT_FS, WEB_VS, SIMPLE_VS, BELT_VS, NEB_VS, LINE_VS, LINE_FS,
     BODY_VS, BODY_FS, QUAD_VS, DOWN_FS, BLUR_FS, COMPOSITE_FS,
+    CIV_VS, CIV_FS, LINE2_VS, LINE2_FS,
   };
 })();
 
@@ -3327,6 +4038,8 @@ void main() {
         down: G.program(gl, SH.QUAD_VS, SH.DOWN_FS, 'down'),
         blur: G.program(gl, SH.QUAD_VS, SH.BLUR_FS, 'blur'),
         comp: G.program(gl, SH.QUAD_VS, SH.COMPOSITE_FS, 'composite'),
+        civ: G.program(gl, SH.CIV_VS, SH.CIV_FS, 'civ'),
+        line2: G.program(gl, SH.LINE2_VS, SH.LINE2_FS, 'line2'),
       };
       this.emptyVao = gl.createVertexArray();
       this.quad = G.vao(gl, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), [[0, 2]]);
@@ -3512,6 +4225,9 @@ void main() {
       /* --- 은하 --- */
       if (!opaque && w.galaxy > 0.001 && this.mw) this.drawGalaxies(view, projPx, pxScale, kpix, minPx);
 
+      /* --- 은하 문명 --- */
+      if (!opaque && view.civ) this.drawCiv(view, projPx, pxScale);
+
       /* --- 이웃 별 --- */
       if (!opaque && w.local > 0.001 && this.localVao) {
         const p = this.P.simple;
@@ -3631,6 +4347,65 @@ void main() {
           this.body(v, rad, { uKind: 4, uColor: [1, 0.62, 0.32], uIntensity: 2.2 * g.bh, uTime: view.wallT }, c.D);
         }
       }
+    }
+
+
+    /* 은하 문명: 매 프레임 바뀌는 작은 버퍼 */
+    dynVao(key, data, layout) {
+      const gl = this.gl;
+      let o = this[key];
+      if (!o) {
+        const v = gl.createVertexArray();
+        gl.bindVertexArray(v);
+        const b = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, b);
+        const stride = layout.reduce((a, l) => a + l[1], 0) * 4;
+        let off = 0;
+        for (const [loc, size] of layout) {
+          gl.enableVertexAttribArray(loc);
+          gl.vertexAttribPointer(loc, size, gl.FLOAT, false, stride, off);
+          off += size * 4;
+        }
+        gl.bindVertexArray(null);
+        o = this[key] = { vao: v, buf: b, stride: stride / 4 };
+      }
+      gl.bindBuffer(gl.ARRAY_BUFFER, o.buf);
+      gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
+      return { vao: o.vao, count: data.length / o.stride };
+    }
+
+    drawCiv(view, projPx, pxScale) {
+      const gl = this.gl;
+      const c = view.cam;
+      const d = view.civ;
+      const mv = this.mv([0, 0, 0], 1);
+      const P = this.proj(c.D * 1e-5, c.D * 1e7);
+      const lay = [[0, 3], [1, 4], [2, 2]];
+      const p = this.P.civ;
+      gl.useProgram(p.p);
+      const base = { uMV: mv, uP: P, uProj: projPx, uPx: pxScale, uMaxPx: 180 * pxScale };
+      const draw = (key, data, mode, blend) => {
+        if (!data || !data.length) return;
+        const v = this.dynVao(key, data, lay);
+        if (blend === 'alpha') gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        else gl.blendFunc(gl.ONE, gl.ONE);
+        G.setUniforms(gl, p, Object.assign({ uMode: mode }, base));
+        gl.bindVertexArray(v.vao);
+        gl.drawArrays(gl.POINTS, 0, v.count);
+      };
+      draw('civHalo', d.halo, 0, 'alpha');
+      if (d.lines && d.lines.length) {
+        const lp = this.P.line2;
+        gl.useProgram(lp.p);
+        gl.blendFunc(gl.ONE, gl.ONE);
+        const v = this.dynVao('civLines', d.lines, [[0, 3], [1, 4]]);
+        G.setUniforms(gl, lp, { uMV: mv, uP: P });
+        gl.bindVertexArray(v.vao);
+        gl.drawArrays(gl.LINES, 0, v.count);
+        gl.useProgram(p.p);
+      }
+      draw('civDots', d.dots, 1, 'add');
+      draw('civFlash', d.flash, 2, 'add');
     }
 
     body(center, radius, u, D, blend) {
@@ -3851,7 +4626,7 @@ void main() {
     const D = Math.pow(10, L);
     const gs = galaxyState(app, tau);
     const sunWorld = gs.sun;
-    const focus = lerp3(gs.focus, sunWorld, U.smoothstep(5.2, 3.6, L));
+    const focus = app.focusOverride || lerp3(gs.focus, sunWorld, U.smoothstep(5.2, 3.6, L));
     const fr = camFrame(L);
     const cp = Math.cos(cam.pitch);
     const dir = [0, 1, 2].map((j) => cp * (Math.cos(cam.yaw) * fr.e1[j] + Math.sin(cam.yaw) * fr.e2[j]) + Math.sin(cam.pitch) * fr.up[j]);
@@ -4267,7 +5042,7 @@ void main() {
       const m = this.hover.marker;
       const x = m ? this.xOf(m.t) : this.hover.x;
       const t = m ? m.t : this.tOf(this.hover.x);
-      let html = `<small>${U.escapeHtml(UC.time.shortText(t))}</small>`;
+      let html = `<small>${U.escapeHtml((this.app.shortText || UC.time.shortText)(t))}</small>`;
       if (m) {
         const pre = m.kind === 'intervention' ? '' : m.prevented ? '일어나지 않음 · ' : '';
         html = `<b>${U.escapeHtml(pre + m.title)}</b><br>${html}`;
@@ -4293,7 +5068,7 @@ void main() {
       const px = this.xOf(t);
       const tEnd = this.scale.tEnd;
 
-      for (const e of UC.data.AGES) {
+      for (const e of this.app.ages || UC.data.AGES) {
         if (e.from >= tEnd) continue;
         const x0 = this.xOf(Math.max(e.from, this.scale.tStart));
         const x1 = this.xOf(Math.min(e.to, tEnd));
@@ -4341,7 +5116,7 @@ void main() {
       c.textBaseline = 'alphabetic';
       c.fillStyle = 'rgba(200,210,235,0.5)';
       let lastX = -999;
-      for (const [tt, label] of UC.time.TICKS) {
+      for (const [tt, label] of this.app.ticks || UC.time.TICKS) {
         if (tt > tEnd) continue;
         const x = this.xOf(tt);
         const w = c.measureText(label).width;
@@ -4359,7 +5134,7 @@ void main() {
       c.shadowBlur = 0;
 
       this.el.setAttribute('aria-valuenow', String(Math.round(this.scale.toS(t) * 1000)));
-      this.el.setAttribute('aria-valuetext', UC.time.clockText(t));
+      this.el.setAttribute('aria-valuetext', (this.app.clockText || UC.time.clockText)(t));
     }
   }
 
@@ -4716,6 +5491,468 @@ void main() {
 })();
 
 </script>
+  <script>/* js/ui/civmode.js */
+'use strict';
+
+/*
+ * 은하 문명 모드: 지금 보고 있는 시대의 우리 은하에서 4천만 년 동안 문명들이 퍼지고 다투는 모습을 봅니다.
+ * 별이나 문명을 눌러 알아보고, 씨앗 뿌리기 · 기술 선물 · 평화 · 전쟁 · 초신성으로 개입합니다.
+ * 타임라인·재생·시계·상태 패널이 이 모드의 시간(시작부터 흐른 햇수)으로 바뀝니다.
+ */
+(function () {
+  const UC = (window.UC = window.UC || {});
+  const U = UC.util;
+  const CV = UC.civ;
+  const $ = (id) => document.getElementById(id);
+  const esc = U.escapeHtml;
+
+  const SPEEDS_Y = [30000, 120000, 400000, 1200000]; // 1초에 흐르는 햇수 (보통: 4천만 년을 약 5분 30초에)
+  const L_RANGE = [2.6, 6.2];
+
+  Object.assign(UC.data.KIND_COLOR, { cborn: '#7ee0a1', cwar: '#ff6b5c', cpeace: '#7cc4ff', cdeath: '#9aa3b8', ctrans: '#ffd27a', cnova: '#e8f0ff' });
+  const KIND_OF = { born: 'cborn', contact: 'cpeace', war: 'cwar', peace: 'cpeace', split: 'cwar', homefall: 'cwar', extinct: 'cdeath', selfdestroy: 'cdeath', transcend: 'ctrans', supernova: 'cnova', gift: 'intervention', calm: 'intervention', rage: 'intervention', dominant: 'ctrans' };
+
+  const M = {
+    active: false,
+    h: null,
+    t: 0,
+    tau0: 0,
+    ivs: [],
+    nextId: 1,
+    follow: null,
+    events: [],
+    deps: null,
+    focus: null,
+    savedL: null,
+  };
+
+  const fmtY = (y) => (y < 1e4 ? `${U.formatNumber(Math.round(y / 100) * 100)}년` : `${U.formatYears(y)} 년`);
+  const civName = (id) => (id >= 0 && M.h.civs[id] ? M.h.civs[id].name : '');
+  const colorCss = (c, a) => `rgba(${Math.round(c[0] * 255)},${Math.round(c[1] * 255)},${Math.round(c[2] * 255)},${a === undefined ? 1 : a})`;
+  const lin = (c) => c.map((x) => Math.pow(x, 2.2));
+
+  /* 타임라인이 이 모드에서 쓰는 값들 */
+  const adapter = {
+    scale: { toS: (t) => t / CV.DURATION, fromS: (s) => s * CV.DURATION, tStart: 0, tEnd: CV.DURATION },
+    ages: [
+      { name: '초기', from: 0, to: 10e6, color: '#7cc4ff' },
+      { name: '중기', from: 10e6, to: 25e6, color: '#b39dff' },
+      { name: '후기', from: 25e6, to: Infinity, color: '#ff9b7a' },
+    ],
+    ticks: [[0, '시작'], [5e6, '500만'], [10e6, '1천만'], [20e6, '2천만'], [30e6, '3천만'], [40e6, '4천만 년']],
+    shortText: (t) => `${fmtY(t)}째`,
+    clockText: (t) => `${fmtY(t)}째`,
+    seek: (t) => { M.t = U.clamp(t, 0, CV.DURATION); },
+    beginScrub: () => M.deps.app.pause(),
+    endScrub: () => {},
+    jumpToEvent: (e) => jumpTo(e),
+  };
+
+  function available(app) {
+    const t = app.t;
+    if (app.state && app.state.st.ended) return { ok: false, why: '우주가 이미 끝났어요.' };
+    if (t < 6e9) return { ok: false, why: '이 시대의 우리 은하는 아직 자라는 중이고 무거운 원소도 모자라 문명이 생기기 어려워요. 빅뱅 후 60억 년(약 78억 년 전) 이후로 옮겨 보세요.' };
+    if (t >= UC.galaxy.SIM.t0 - 1e8) return { ok: false, why: '이 시대에는 안드로메다와의 충돌이 가까워 은하가 크게 흔들립니다. 지금부터 29억 년 뒤까지의 우리 은하에서 볼 수 있어요.' };
+    return { ok: true };
+  }
+
+  function recompute() {
+    const t0 = performance.now();
+    M.h = CV.simulate({ tau0: M.tau0, humans: M.humans, interventions: M.ivs });
+    M.calcMs = performance.now() - t0;
+    M.events = M.h.events
+      .filter((e) => e.major || ['war', 'peace', 'born', 'extinct', 'transcend', 'split', 'supernova'].includes(e.type))
+      .map((e) => ({ t: e.t, kind: e.iv ? 'intervention' : KIND_OF[e.type] || 'cpeace', icon: CV.EVENT_ICON[e.type], title: `${titleOf(e)}${e.civ >= 0 && !e.iv ? ` · ${civName(e.civ)}` : ''}`, text: CV.eventText(M.h, e), major: !!e.major, ev: e }));
+    M.deps.timeline.setEvents(M.events);
+    renderList(true);
+    renderLog();
+  }
+
+  function enter(deps) {
+    M.deps = deps;
+    const app = deps.app;
+    const ok = available(app);
+    if (!ok.ok) {
+      UC.ui.panels.showInfo(app, { icon: '👽', title: '여기서는 은하 문명을 볼 수 없어요', text: ok.why });
+      return false;
+    }
+    app.pause();
+    M.active = true;
+    M.tau0 = app.t;
+    M.humans = Math.abs(app.t - UC.cosmo.T_NOW) < 2e7;
+    M.ivs = [];
+    M.t = 0;
+    M.follow = null;
+    M.focus = null;
+    M.savedL = app.cam.L;
+    recompute();
+    document.body.classList.add('civ');
+    deps.timeline.app = adapter;
+    deps.timeline.dirty = true;
+    app.cam.fly = { L0: app.cam.L, L1: 5.0, p0: app.cam.pitch, p1: 1.05, t: 0, dur: 1.4 };
+    $('stats-body').innerHTML = '';
+    UC.ui.panels.hideCard();
+    ['history-panel', 'chart-panel', 'fate-menu'].forEach((id) => { $(id).hidden = true; });
+    const humanText = M.humans
+      ? '지금의 은하에서 시작하므로 <b>인류</b>(하늘색)도 지구에서 막 우주로 나서고 있습니다.'
+      : '이 시대의 지구에는 아직 문명이 없습니다. 태양계를 눌러 지구에 문명의 씨앗을 뿌려 볼 수도 있어요.';
+    UC.ui.panels.showInfo(app, {
+      icon: '👽', title: '은하 문명',
+      sub: `${UC.time.shortText(M.tau0)}의 우리 은하에서 4천만 년`,
+      html: `<p>생명이 살 만한 별 ${M.h.systems.length}개에서 문명이 태어나 이주선을 보내고, 이웃을 만나 전쟁하거나 평화롭게 지내고, 갈라지고, 멸망하거나 초월합니다. 색이 칠해진 곳이 각 문명의 영역입니다.</p><p>${humanText}</p><p class="compare">외계 문명은 아직 하나도 발견되지 않았습니다. "만약 은하에 문명이 많다면?"을 상상해 보는 놀이입니다.</p>`,
+      actions: [{ label: '▶ 시작', cls: 'primary', fn: () => { UC.ui.panels.hideCard(); app.play(); } }],
+    });
+    return true;
+  }
+
+  function exit() {
+    const app = M.deps.app;
+    M.active = false;
+    app.pause();
+    document.body.classList.remove('civ');
+    M.deps.timeline.app = app;
+    M.deps.timeline.setEvents(app.events);
+    app.focusOverride = null;
+    ['civ-list-panel', 'civ-log-panel'].forEach((id) => { $(id).hidden = true; });
+    UC.ui.panels.hideCard();
+    UC.ui.hud.init();
+    M.deps.onExit();
+    app.cam.fly = { L0: app.cam.L, L1: 5.05, p0: app.cam.pitch, p1: 0.62, t: 0, dur: 1.2 };
+  }
+
+  /* ---------- 시간 ---------- */
+  function frame(dt) {
+    const app = M.deps.app;
+    if (app.playing) {
+      const t0 = M.t;
+      const t1 = Math.min(CV.DURATION, t0 + dt * SPEEDS_Y[app.speedIdx]);
+      if (app.autoPause) {
+        const e = M.events.find((x) => x.major && x.t > t0 && x.t <= t1);
+        if (e) {
+          M.t = e.t;
+          app.pause();
+          showEvent(e);
+          UC.audio.chime(e.kind === 'cwar' ? 'end' : e.kind === 'cborn' ? 'earth' : 'galaxy');
+          if (app.follow && e.ev.sys !== undefined) M.focus = M.h.systems[e.ev.sys].pos.slice();
+          return;
+        }
+      }
+      M.t = t1;
+      if (t1 >= CV.DURATION) app.pause();
+    }
+    /* 카메라: 따라가는 문명의 중심, 아니면 사건 자리, 아니면 은하 중심 */
+    let target = [0, 0, 0];
+    if (M.follow !== null) {
+      const c = centroid(M.follow);
+      if (c) target = c;
+      else M.follow = null;
+    } else if (M.focus) target = M.focus;
+    const cur = app.focusOverride || [0, 0, 0];
+    const k = 1 - Math.exp(-dt * 3);
+    app.focusOverride = cur.map((v, j) => v + (target[j] - v) * k);
+    app.cam.L = U.clamp(app.cam.L, L_RANGE[0], L_RANGE[1]);
+  }
+
+  function centroid(id) {
+    const own = CV.ownerAt(M.h, M.t);
+    let x = 0, y = 0, z = 0, n = 0;
+    for (let k = 0; k < own.length; k++) {
+      if (own[k] !== id) continue;
+      const p = M.h.systems[k].pos;
+      x += p[0]; y += p[1]; z += p[2]; n++;
+    }
+    return n ? [x / n, y / n, z / n] : null;
+  }
+  function capitalOf(id) {
+    const c = M.h.civs[id];
+    const own = CV.ownerAt(M.h, M.t);
+    if (own[c.home] === id) return c.home;
+    const cen = centroid(id);
+    if (!cen) return -1;
+    let best = -1;
+    let bd = Infinity;
+    for (let k = 0; k < own.length; k++) {
+      if (own[k] !== id) continue;
+      const p = M.h.systems[k].pos;
+      const d = Math.hypot(p[0] - cen[0], p[2] - cen[2]);
+      if (d < bd) { bd = d; best = k; }
+    }
+    return best;
+  }
+
+  /* ---------- 그릴 것 ---------- */
+  function renderData() {
+    const h = M.h;
+    const t = M.t;
+    const own = CV.ownerAt(h, t);
+    const S = h.systems;
+    const halo = [];
+    const dots = [];
+    const flash = [];
+    const lines = [];
+    const caps = new Set(h.civs.map((c) => (own[c.home] === c.id ? c.home : -1)));
+    for (let k = 0; k < S.length; k++) {
+      const p = S[k].pos;
+      const o = own[k];
+      if (o >= 0) {
+        const col = lin(h.civs[o].color);
+        halo.push(p[0], p[1], p[2], col[0], col[1], col[2], caps.has(k) ? 0.3 : 0.2, 2000, 2.5);
+        dots.push(p[0], p[1], p[2], col[0], col[1], col[2], caps.has(k) ? 4 : 2.2, 120, caps.has(k) ? 3.2 : 2.2);
+      } else {
+        const bb = U.blackbody(S[k].T).map((x) => Math.pow(x, 2.2));
+        dots.push(p[0], p[1], p[2], bb[0], bb[1], bb[2], k === 0 ? 1.6 : 0.55, 80, k === 0 ? 2.4 : 1.4);
+      }
+    }
+    for (const sh of CV.shipsAt(h, t)) {
+      const c = lin(h.civs[sh.civ].color);
+      const a = S[sh.from].pos;
+      const b = S[sh.to].pos;
+      const f = (t - sh.t0) / (sh.t1 - sh.t0);
+      const q = [0, 1, 2].map((j) => a[j] + (b[j] - a[j]) * f);
+      lines.push(a[0], a[1], a[2], c[0], c[1], c[2], 0.05, q[0], q[1], q[2], c[0], c[1], c[2], 0.7);
+      dots.push(q[0], q[1], q[2], c[0] * 0.6 + 0.4, c[1] * 0.6 + 0.4, c[2] * 0.6 + 0.4, 3.5, 50, 1.8);
+    }
+    const W = 1.6e5;
+    for (const b of CV.battlesAt(h, t, W)) {
+      const age = (t - b.t) / W;
+      const p = S[b.sys].pos;
+      flash.push(p[0], p[1], p[2], 1, 0.5, 0.2, 3.5 * (1 - age), 500 + 900 * age, 5);
+    }
+    for (const e of h.events) {
+      if (e.type !== 'supernova' || e.t > t || e.t < t - 6e5) continue;
+      const age = (t - e.t) / 6e5;
+      const p = S[e.sys].pos;
+      flash.push(p[0], p[1], p[2], 0.7, 0.85, 1, 4 * (1 - age), e.R * (0.3 + 1.2 * age), 8);
+    }
+    return { halo: Float32Array.from(halo), dots: Float32Array.from(dots), flash: Float32Array.from(flash), lines: Float32Array.from(lines) };
+  }
+
+  function labels(project) {
+    const h = M.h;
+    const cnt = CV.countAt(h, M.t);
+    const out = [];
+    const top = [...cnt.entries()].sort((a, b) => b[1] - a[1]).slice(0, 9);
+    for (const [id, n] of top) {
+      const s = capitalOf(id);
+      if (s < 0) continue;
+      const p = project(h.systems[s].pos);
+      if (!p) continue;
+      const c = h.civs[id];
+      out.push({ x: p.x, y: p.y, text: `${c.species.icon} ${c.name}`, sub: `별 ${n}개 · ${CV.statusAt(h, id, M.t)}`, kind: c.human ? 'earth' : 'civ', color: colorCss(c.color), obj: { type: 'civ', id }, pri: c.human ? 9 : 4 + n / 100 });
+    }
+    if (!cnt.has(h.civs.findIndex((c) => c.human))) {
+      const p = project(h.systems[0].pos);
+      if (p) out.push({ x: p.x, y: p.y, text: '태양계', sub: M.humans ? '' : '아직 문명 없음', kind: 'sun', obj: { type: 'sys', id: 0 }, pri: 3 });
+    }
+    return out;
+  }
+
+  /* ---------- 누르기 ---------- */
+  function pick(x, y, project, labelHit) {
+    if (labelHit) {
+      if (labelHit.type === 'civ') showCiv(labelHit.id);
+      else showSystem(labelHit.id);
+      return true;
+    }
+    let best = -1;
+    let bd = 22;
+    M.h.systems.forEach((s, k) => {
+      const p = project(s.pos);
+      if (!p) return;
+      const d = Math.hypot(p.x - x, p.y - y);
+      if (d < bd) { bd = d; best = k; }
+    });
+    if (best >= 0) { showSystem(best); return true; }
+    return false;
+  }
+
+  function sysLine(k) {
+    const s = M.h.systems[k];
+    return `${s.name} · ${s.star}형 별`;
+  }
+
+  function showSystem(k) {
+    const o = CV.ownerAt(M.h, M.t)[k];
+    if (o >= 0) { showCiv(o, k); return; }
+    const s = M.h.systems[k];
+    const app = M.deps.app;
+    const wasOwned = M.h.civs.find((c) => c.home === k && c.born <= M.t);
+    const txt = k === 0
+      ? (M.humans ? '인류의 고향, 태양계입니다.' : '아직 문명이 없는 태양계. 세 번째 행성에는 생명이 가득합니다.')
+      : wasOwned ? `한때 ${wasOwned.name}의 고향이었던 별. 지금은 빈 도시의 폐허만 남아 있습니다.`
+        : '아직 아무도 살지 않는 별입니다. 행성 가운데 하나는 생명이 살 수 있을지도 모릅니다.';
+    UC.ui.panels.showInfo(app, {
+      icon: '⭐', title: s.name + (k === 0 ? ' (지구)' : ''), sub: `${s.star}형 별 · 은하 중심에서 ${U.formatNumber(Math.round(Math.hypot(s.pos[0], s.pos[2]) / 100) * 100)} 광년`,
+      text: txt,
+      actions: [
+        { label: '🌱 여기에 문명 탄생시키기', cls: 'primary', fn: () => addIv('seed', { sys: k }) },
+        { label: '💥 초신성 일으키기', cls: 'warn', fn: () => addIv('supernova', { sys: k }) },
+      ],
+    });
+  }
+
+  function showCiv(id, k) {
+    const h = M.h;
+    const c = h.civs[id];
+    const app = M.deps.app;
+    const t = M.t;
+    const status = CV.statusAt(h, id, t);
+    const tech = CV.techAt(h, id, t);
+    const st = CV.stageOf(tech);
+    const n = CV.countAt(h, t).get(id) || 0;
+    const rel = CV.relationsAt(h, id, t);
+    const age = t - c.born;
+    const alive = status !== '멸망함' && status !== '초월함' && status !== '아직 없음';
+    let html = `<p><b>${esc(c.species.icon)} ${esc(c.species.name)}</b> · ${esc(c.species.text)}</p>`;
+    html += '<div class="conseq"><ul>';
+    html += `<li>상태: <b>${esc(status)}</b>${alive ? ` · 다스리는 별 <b>${n}개</b>` : ''}</li>`;
+    if (alive) html += `<li>기술: <b>${esc(st.name)}</b> (${esc(st.k)}) — ${esc(st.text)}</li>`;
+    html += `<li>${c.born > 0 ? `${fmtY(c.born)}째에 ${esc(h.systems[c.home].name)}에서 태어남` : `처음부터 있던 문명 · 고향 ${esc(h.systems[c.home].name)}`}${alive && c.born > 0 ? ` (${fmtY(age)} 전)` : ''}</li>`;
+    if (c.parent !== null) html += `<li>${esc(civName(c.parent))}에서 갈라져 나옴</li>`;
+    if (rel.war.length) html += `<li>전쟁 중: ${rel.war.map((o) => `<b style="color:${colorCss(h.civs[o].color)}">${esc(civName(o))}</b>`).join(', ')}</li>`;
+    if (rel.peace.length) html += `<li>평화: ${rel.peace.slice(0, 6).map((o) => esc(civName(o))).join(', ')}${rel.peace.length > 6 ? ` 외 ${rel.peace.length - 6}` : ''}</li>`;
+    html += `<li>성격: ${c.agg > 0.66 ? '호전적' : c.agg < 0.3 ? '평화로움' : '신중함'}</li>`;
+    html += '</ul></div>';
+    if (c.end !== null && t >= c.end) html += `<p class="compare">${esc(CV.eventText(h, h.events.find((e) => e.civ === id && (e.type === 'extinct' || e.type === 'transcend' || e.type === 'selfdestroy')) || { type: '' }))}</p>`;
+    const actions = [];
+    if (alive) {
+      actions.push({ label: '💡 기술 선물', cls: '', fn: () => addIv('gift', { civ: id }) });
+      actions.push({ label: '🕊️ 평화롭게', cls: '', fn: () => addIv('peace', { civ: id }) });
+      actions.push({ label: '⚔️ 호전적으로', cls: 'warn', fn: () => addIv('war', { civ: id }) });
+      actions.push({ label: M.follow === id ? '따라가기 그만' : '🔭 따라가기', cls: 'ghost', fn: () => { M.follow = M.follow === id ? null : id; M.focus = null; showCiv(id, k); } });
+    }
+    if (k !== undefined) actions.push({ label: '💥 이 별에 초신성', cls: 'ghost', fn: () => addIv('supernova', { sys: k }) });
+    UC.ui.panels.showInfo(app, {
+      icon: c.species.icon, title: c.name, sub: k !== undefined ? sysLine(k) : `${fmtY(t)}째`,
+      html, actions,
+    });
+    $('card-title').innerHTML = `<span style="color:${colorCss(c.color)}">●</span> ${esc(c.name)}`;
+  }
+
+  function showEvent(e) {
+    const app = M.deps.app;
+    const ev = e.ev;
+    const actions = [];
+    if (ev.civ >= 0 && M.h.civs[ev.civ]) actions.push({ label: `${M.h.civs[ev.civ].species.icon} ${M.h.civs[ev.civ].name} 보기`, cls: '', fn: () => showCiv(ev.civ) });
+    if (ev.iv) actions.push({ label: '이 개입 취소', cls: 'warn', fn: () => { M.ivs = M.ivs.filter((v) => v.id !== ev.iv); recompute(); UC.ui.panels.hideCard(); } });
+    if (!app.playing && M.t < CV.DURATION) actions.push({ label: '▶ 계속', cls: 'primary', fn: () => { UC.ui.panels.hideCard(); app.play(); } });
+    UC.ui.panels.showInfo(app, { icon: e.icon || '•', title: titleOf(ev), sub: `${fmtY(ev.t)}째`, text: e.text, actions });
+  }
+  function titleOf(ev) {
+    return { born: '새 문명', contact: '첫 만남', war: '전쟁', peace: '평화 조약', split: '내전', homefall: '고향 함락', extinct: '멸망', selfdestroy: '자멸', transcend: '초월', supernova: '초신성', gift: '당신의 개입 · 기술 선물', calm: '당신의 개입 · 평화', rage: '당신의 개입 · 전쟁', dominant: '은하의 패자' }[ev.type] || '사건';
+  }
+
+  function jumpTo(e) {
+    M.deps.app.pause();
+    M.t = e.t;
+    if (e.ev.sys !== undefined) M.focus = M.h.systems[e.ev.sys].pos.slice();
+    showEvent(e);
+  }
+
+  function nav(dir) {
+    const list = M.events;
+    const e = dir > 0 ? list.find((x) => x.t > M.t + 1) : list.slice().reverse().find((x) => x.t < M.t - 1);
+    if (e) jumpTo(e);
+  }
+
+  /* ---------- 개입 ---------- */
+  function addIv(type, target) {
+    const iv = Object.assign({ id: M.nextId++, t: Math.round(M.t / CV.DT) * CV.DT, type }, target);
+    M.ivs.push(iv);
+    recompute();
+    UC.audio.init();
+    UC.audio.chime('intervention');
+    const e = M.events.find((x) => x.ev.iv === iv.id) || M.events.find((x) => x.ev.type === 'supernova' && x.t === iv.t && !x.ev.natural);
+    if (e) showEvent(e);
+    else UC.ui.panels.showInfo(M.deps.app, { icon: 'ℹ️', title: '아무 일도 일어나지 않았어요', text: '이미 다른 문명이 살고 있거나, 그 문명이 이 순간에는 없습니다.' });
+  }
+
+  /* ---------- 상태 패널 · 목록 · 기록 ---------- */
+  let hudKey = '';
+  function updateHud() {
+    const h = M.h;
+    const t = M.t;
+    $('clock-time').textContent = `${fmtY(t)}째`;
+    const key = `${M.tau0}`;
+    if (key !== hudKey) {
+      hudKey = key;
+      $('clock-era').innerHTML = `<span class="chip" style="background:#7ee0a1"></span>👽 은하 문명 · ${esc(UC.time.shortText(M.tau0))}의 우리 은하`;
+    }
+    const cnt = CV.countAt(h, t);
+    let wars = 0;
+    for (const id of cnt.keys()) wars += CV.relationsAt(h, id, t).war.filter((o) => o > id).length;
+    const top = [...cnt.entries()].sort((a, b) => b[1] - a[1])[0];
+    const owned = [...cnt.values()].reduce((a, b) => a + b, 0);
+    const hi = h.civs.findIndex((c) => c.human);
+    const rows = [
+      ['살아 있는 문명', `${cnt.size}개`],
+      ['진행 중인 전쟁', `${wars}건`],
+      ['가장 큰 문명', top ? `${h.civs[top[0]].name} (${top[1]})` : '—'],
+      ['은하 점유', `${Math.round((owned / h.systems.length) * 100)}%`],
+    ];
+    if (hi >= 0) rows.push(['인류', `${CV.statusAt(h, hi, t)}${cnt.get(hi) ? ` · 별 ${cnt.get(hi)}개` : ''}`]);
+    $('stats-body').innerHTML = rows.map(([a, b]) => `<div class="stat"><span class="sl">${a}</span><span class="stat-v"><span class="sv">${esc(b)}</span></span></div>`).join('');
+    $('stats-toggle').textContent = `👽 문명 ${cnt.size} · 전쟁 ${wars}`;
+    $('view-note').textContent = '색이 칠해진 곳이 문명의 영역 · 선은 이주선 · 주황 섬광은 전투 · 별이나 문명을 눌러 보세요';
+    if (!$('civ-list-panel').hidden) renderList();
+    if (!$('civ-log-panel').hidden && M.logT !== Math.floor(M.t / 2e5)) { M.logT = Math.floor(M.t / 2e5); renderLog(); }
+  }
+
+  let listSig = '';
+  let listAt = 0;
+  function renderList(force) {
+    if (!M.h || $('civ-list-panel').hidden) return;
+    const now = performance.now();
+    if (!force && now - listAt < 1000) return;
+    const h = M.h;
+    const t = M.t;
+    const cnt = CV.countAt(h, t);
+    const rows = h.civs.filter((c) => c.born <= t).map((c) => ({ c, n: cnt.get(c.id) || 0, st: CV.statusAt(h, c.id, t) }));
+    rows.sort((a, b) => b.n - a.n || a.c.id - b.c.id);
+    const sig = rows.map((r) => `${r.c.id}:${r.n}:${r.st}`).join('|') + h.civs.length;
+    if (!force && sig === listSig) return;
+    listSig = sig;
+    listAt = now;
+    const max = Math.max(1, ...rows.map((r) => r.n));
+    $('civ-list-body').innerHTML = rows.map((r) => `<button class="civ-row${r.n ? '' : ' dead'}" data-civ="${r.c.id}">
+      <span class="cdot" style="background:${colorCss(r.c.color)}"></span><span class="cicon">${r.c.species.icon}</span>
+      <span class="cname">${esc(r.c.name)}<small>${esc(r.st)}${r.n ? ` · 별 ${r.n}` : ''}</small></span>
+      <span class="cbar"><i style="width:${Math.round((r.n / max) * 100)}%;background:${colorCss(r.c.color)}"></i></span></button>`).join('') || '<p class="hist-empty">아직 문명이 없습니다.</p>';
+    $('civ-list-body').querySelectorAll('[data-civ]').forEach((b) => b.addEventListener('click', () => {
+      const id = +b.dataset.civ;
+      M.follow = CV.countAt(M.h, M.t).get(id) ? id : null;
+      showCiv(id);
+    }));
+  }
+
+  function renderLog() {
+    if (!M.h) return;
+    const list = M.events.filter((e) => e.t <= M.t).slice(-60).reverse();
+    $('civ-log-body').innerHTML = list.map((e, i) => `<button class="hist-item log-row" data-i="${M.events.indexOf(e)}"><span class="hi">${e.icon}</span><span class="ht">${esc(e.text)}<small>${fmtY(e.t)}째</small></span></button>`).join('') || '<p class="hist-empty">아직 기록된 사건이 없습니다. ▶ 를 눌러 시간을 흘려 보세요.</p>';
+    $('civ-log-body').querySelectorAll('[data-i]').forEach((b) => b.addEventListener('click', () => jumpTo(M.events[+b.dataset.i])));
+  }
+
+  function bind(deps) {
+    M.deps = deps;
+    $('btn-civ-exit').addEventListener('click', exit);
+    $('btn-civ-list').addEventListener('click', () => { $('civ-list-panel').hidden = !$('civ-list-panel').hidden; $('civ-log-panel').hidden = true; renderList(true); });
+    $('btn-civ-log').addEventListener('click', () => { $('civ-log-panel').hidden = !$('civ-log-panel').hidden; $('civ-list-panel').hidden = true; renderLog(); });
+  }
+
+  function onPlay() {
+    if (M.t >= CV.DURATION - 1) M.t = 0;
+  }
+
+  UC.civMode = {
+    get active() { return M.active; },
+    get t() { return M.t; },
+    get h() { return M.h; },
+    available, enter, exit, frame, renderData, labels, pick, nav, updateHud, bind, onPlay, adapter, renderLog, L_RANGE,
+    showCiv, showSystem, addIv, M,
+  };
+})();
+
+</script>
   <script>/* js/main.js */
 'use strict';
 
@@ -4826,6 +6063,14 @@ void main() {
     save();
   };
   app.play = () => {
+    if (UC.civMode.active) {
+      UC.civMode.onPlay();
+      app.playing = true;
+      $('btn-play').textContent = '❚❚';
+      $('btn-play').setAttribute('aria-label', '멈춤');
+      UC.audio.init();
+      return;
+    }
     if (app.t >= app.scale.tEnd - Math.max(1, app.scale.tEnd * 1e-12)) app.seek(app.scale.tStart);
     app.playing = true;
     $('btn-play').textContent = '❚❚';
@@ -4899,7 +6144,8 @@ void main() {
   }
   function zoomBy(dL) {
     app.cam.fly = null;
-    app.cam.L = U.clamp(app.cam.L + dL, V.L_MIN, V.L_MAX);
+    const R = UC.civMode.active ? UC.civMode.L_RANGE : [V.L_MIN, V.L_MAX];
+    app.cam.L = U.clamp(app.cam.L + dL, R[0], R[1]);
   }
 
   /* ---------- 이름표 ---------- */
@@ -4912,6 +6158,9 @@ void main() {
       if (p.x < -40 || p.y < -20 || p.x > window.innerWidth + 40 || p.y > window.innerHeight + 20) return;
       out.push({ x: p.x, y: p.y, text, sub, kind, obj, pri });
     };
+    if (UC.civMode.active) {
+      return UC.civMode.labels((pos) => renderer.project(pos)).filter((l) => l.x > -40 && l.y > -20 && l.x < window.innerWidth + 40 && l.y < window.innerHeight + 20);
+    }
     const tau = view.tau;
     const st = view.st;
     if (st.T > 3000 || (st.ended && app.run.endType === 'rip')) return out;
@@ -4958,7 +6207,7 @@ void main() {
     labels = [];
     c.textBaseline = 'middle';
     for (const l of list) {
-      c.font = l.kind === 'earth' || l.kind === 'galaxy' ? '600 13px system-ui, sans-serif' : '12px system-ui, sans-serif';
+      c.font = l.kind === 'earth' || l.kind === 'galaxy' || l.kind === 'civ' ? '600 13px system-ui, sans-serif' : '12px system-ui, sans-serif';
       const tw = c.measureText(l.text).width;
       c.font = '10.5px system-ui, sans-serif';
       const sw = l.sub ? c.measureText(l.sub).width : 0;
@@ -4970,7 +6219,7 @@ void main() {
       if (boxes.some((b) => bx < b.x + b.w && bx + w > b.x && by < b.y + b.h && by + h > b.y)) continue;
       boxes.push({ x: bx, y: by, w, h });
       labels.push(Object.assign({ bx, by, bw: w, bh: h }, l));
-      const col = l.kind === 'earth' ? '#8be3ad' : l.kind === 'sun' ? '#ffd27a' : l.kind === 'galaxy' || l.kind === 'here' ? '#bcd6ff' : '#e6ecf8';
+      const col = l.color || (l.kind === 'earth' ? '#8be3ad' : l.kind === 'sun' ? '#ffd27a' : l.kind === 'galaxy' || l.kind === 'here' ? '#bcd6ff' : '#e6ecf8');
       c.strokeStyle = col;
       c.globalAlpha = 0.75;
       c.lineWidth = 1.2;
@@ -4981,7 +6230,7 @@ void main() {
       c.shadowColor = 'rgba(0,0,0,0.9)';
       c.shadowBlur = 5;
       c.fillStyle = col;
-      c.font = l.kind === 'earth' || l.kind === 'galaxy' ? '600 13px system-ui, sans-serif' : '12px system-ui, sans-serif';
+      c.font = l.kind === 'earth' || l.kind === 'galaxy' || l.kind === 'civ' ? '600 13px system-ui, sans-serif' : '12px system-ui, sans-serif';
       c.fillText(l.text, bx + 4, l.sub ? l.y - 6 : l.y);
       if (l.sub) {
         c.font = '10.5px system-ui, sans-serif';
@@ -5000,6 +6249,7 @@ void main() {
       const d = inBox ? 0 : Math.hypot(l.x - x, l.y - y);
       if (d < bd) { bd = d; best = l; }
     }
+    if (UC.civMode.active) return UC.civMode.pick(x, y, (pos) => renderer.project(pos), best && best.obj);
     if (best) showObject(best.obj);
     return !!best;
   }
@@ -5138,7 +6388,9 @@ void main() {
     lastFrame = tnow;
     app.wallT += dt;
     if (resizePending) doResize();
-    step(dt);
+    const civOn = UC.civMode.active;
+    if (civOn) UC.civMode.frame(dt);
+    else step(dt);
     camStep(dt);
 
     /* 충돌 계산은 가까워지면 미리 조금씩 */
@@ -5151,12 +6403,20 @@ void main() {
 
     const view = V.build(app, { w: window.innerWidth, h: window.innerHeight });
     app.state = view;
+    if (civOn) {
+      view.civ = UC.civMode.renderData();
+      view.gal.mwAlpha *= 0.5;
+      view.gal.m31Alpha *= 0.5;
+    }
     renderer.render(view);
     drawLabels(collectLabels(view));
-    timeline.draw(app.t);
+    timeline.draw(civOn ? UC.civMode.t : app.t);
 
     hudTimer -= dt;
-    if (hudTimer <= 0 || hudForce) {
+    if (civOn && hudTimer <= 0) {
+      hudTimer = 0.15;
+      UC.civMode.updateHud();
+    } else if (!civOn && (hudTimer <= 0 || hudForce)) {
       hudTimer = 0.12;
       hudForce = false;
       const diverged = app.interventions.length > 0 && app.interventions.some((v) => v.t <= app.t);
@@ -5286,6 +6546,7 @@ void main() {
     document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => { $(b.dataset.close).hidden = true; }));
     $('card-close').addEventListener('click', () => UC.ui.panels.hideCard());
     const nav = (dir) => {
+      if (UC.civMode.active) { UC.civMode.nav(dir); return; }
       const list = app.events.filter((e) => !e.prevented || e.kind === 'intervention');
       const cur = app.cardEvent ? app.cardEvent.t : app.t;
       const e = dir > 0 ? list.find((x) => x.t > cur * (1 + 1e-12) + 1e-60) : list.slice().reverse().find((x) => x.t < cur * (1 - 1e-12));
@@ -5304,6 +6565,8 @@ void main() {
       addIntervention(b.dataset.tool);
     }));
     $('btn-history').addEventListener('click', () => { $('history-panel').hidden = !$('history-panel').hidden; $('chart-panel').hidden = true; UC.ui.panels.renderHistory(app); });
+    $('btn-civ').addEventListener('click', () => UC.civMode.enter({ app, timeline, onExit: () => { timeline.setEvents(app.events); hudForce = true; } }));
+    UC.civMode.bind({ app, timeline, onExit: () => { timeline.setEvents(app.events); hudForce = true; } });
     $('btn-chart').addEventListener('click', () => { $('chart-panel').hidden = !$('chart-panel').hidden; $('history-panel').hidden = true; chartDirty = true; });
     document.querySelectorAll('#chart-tabs button').forEach((b) => b.addEventListener('click', () => {
       document.querySelectorAll('#chart-tabs button').forEach((x) => x.classList.toggle('on', x === b));
@@ -5341,6 +6604,8 @@ void main() {
         $('help').hidden = true;
         $('chart-panel').hidden = true;
         $('history-panel').hidden = true;
+        $('civ-list-panel').hidden = true;
+        $('civ-log-panel').hidden = true;
       }
     });
     window.addEventListener('resize', () => { resizePending = true; });

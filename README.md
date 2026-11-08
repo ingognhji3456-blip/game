@@ -1,7 +1,7 @@
 # 카드 원정대 (Deck Expedition)
 
 > 이 저장소에는 시뮬레이션 두 편도 있습니다. 서로 이어져 있어 우주에서 지구로, 지구에서 우주로 오갈 수 있습니다.
-> - 🌌 **[우주 연대기](universe/README.md)**: 빅뱅부터 우주의 끝까지, 우주 → 은하 → 태양계로 확대하며 우주의 운명을 바꿔 보는 시뮬레이션 → [`dist/universe-chronicle.html`](dist/universe-chronicle.html)
+> - 🌌 **[우주 연대기](universe/README.md)**: 빅뱅부터 우주의 끝까지, 우주 → 은하 → 태양계로 확대하며 우주의 운명을 바꾸고, 은하에 퍼지는 외계 문명들의 전쟁과 흥망을 지켜보는 시뮬레이션 → [`dist/universe-chronicle.html`](dist/universe-chronicle.html)
 > - 🌍 **[지구 연대기](earth/README.md)**: 지구의 탄생부터 먼 미래까지 시간을 돌려 보고 역사를 바꿔 보는 시뮬레이션 → [`dist/earth-chronicle.html`](dist/earth-chronicle.html)
 
 브라우저에서 바로 즐기는 **로그라이크 덱빌딩 카드 배틀 게임**입니다.

@@ -40,10 +40,16 @@
     </aside>
 
     <nav id="tools" class="rail" aria-label="개입 도구">
-      <div class="rail-group">
+      <div class="rail-group cosmic-only">
         <button id="btn-fate" class="rail-btn" aria-label="우주의 운명 바꾸기"><span>🌪️</span><em>우주의 운명 바꾸기</em></button>
         <button id="btn-history" class="rail-btn" aria-label="바뀐 역사"><span>📜</span><em>바뀐 역사</em><b id="history-count" class="count" hidden>0</b></button>
         <button id="btn-chart" class="rail-btn" aria-label="그래프"><span>📈</span><em>우주의 크기 그래프</em></button>
+        <button id="btn-civ" class="rail-btn" aria-label="은하 문명"><span>👽</span><em>은하 문명 보기</em></button>
+      </div>
+      <div class="rail-group civ-only">
+        <button id="btn-civ-exit" class="rail-btn" aria-label="우주로 돌아가기"><span>🌌</span><em>우주로 돌아가기</em></button>
+        <button id="btn-civ-list" class="rail-btn" aria-label="문명 목록"><span>📊</span><em>문명 목록</em></button>
+        <button id="btn-civ-log" class="rail-btn" aria-label="사건 기록"><span>📜</span><em>사건 기록</em></button>
       </div>
       <div id="fate-menu" class="flyout" hidden>
         <div class="flyout-title">지금 이 순간부터 암흑 에너지를…</div>
@@ -87,6 +93,22 @@
       <div class="legend"><span class="lg-you"></span>당신의 우주 <span class="lg-base"></span>실제 우주</div>
     </section>
 
+    <section id="civ-list-panel" class="sheet" hidden>
+      <div class="sheet-head">
+        <div class="sheet-title">은하의 문명들</div>
+        <button class="icon-btn ghost small" data-close="civ-list-panel" aria-label="닫기">✕</button>
+      </div>
+      <div id="civ-list-body" class="civ-list"></div>
+    </section>
+
+    <section id="civ-log-panel" class="sheet" hidden>
+      <div class="sheet-head">
+        <div class="sheet-title">사건 기록</div>
+        <button class="icon-btn ghost small" data-close="civ-log-panel" aria-label="닫기">✕</button>
+      </div>
+      <div id="civ-log-body" class="history-body"></div>
+    </section>
+
     <section id="history-panel" class="sheet" hidden>
       <div class="sheet-head">
         <div class="sheet-title">바뀐 역사</div>
@@ -115,6 +137,7 @@
         <li><span>🔍</span>휠·두 손가락으로 우주 → 은하 → 이웃 별 → 태양계까지 확대</li>
         <li><span>🌍</span>태양계에서 지구를 누르면 지구 연대기로 이어집니다</li>
         <li><span>🌪️</span>암흑 에너지를 바꿔 빅 립·빅 크런치를 일으켜 보기</li>
+        <li><span>👽</span>우리 은하에 퍼지는 외계 문명들의 흥망을 지켜보고 개입하기</li>
       </ul>
       <p class="intro-note">표준 우주론(플랑크 위성 관측값)과 항성 진화 모형으로 계산했습니다. 은하와 별의 모습은 실제 사진이 아니라 계산으로 그린 것이고, 아주 먼 미래는 지금 아는 물리학으로 본 예측입니다.</p>
       <div class="intro-actions">
@@ -134,6 +157,7 @@
         <tr><td>왼쪽 위 버튼</td><td>보는 범위로 바로 날아가기</td></tr>
         <tr><td>천체 누르기</td><td>설명 보기 (지구는 지구 연대기로)</td></tr>
         <tr><td>타임라인 끌기</td><td>시간 이동</td></tr>
+        <tr><td>👽 버튼</td><td>은하 문명 모드 (문명·별을 눌러 개입)</td></tr>
         <tr><td><kbd>스페이스</kbd></td><td>재생 / 멈춤</td></tr>
         <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>이전 / 다음 사건</td></tr>
         <tr><td><kbd>+</kbd> <kbd>-</kbd></td><td>재생 속도</td></tr>
@@ -169,6 +193,7 @@
   <script src="js/sim/web.js"></script>
   <script src="js/sim/galaxy.js"></script>
   <script src="js/sim/solar.js"></script>
+  <script src="js/sim/civ.js"></script>
   <script src="js/render/gl.js"></script>
   <script src="js/render/shaders.js"></script>
   <script src="js/render/renderer.js"></script>
@@ -178,6 +203,7 @@
   <script src="js/ui/hud.js"></script>
   <script src="js/ui/chart.js"></script>
   <script src="js/ui/panels.js"></script>
+  <script src="js/ui/civmode.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>
