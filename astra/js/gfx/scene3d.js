@@ -128,8 +128,8 @@ AZ.gfx.scene3d = (() => {
 
   const MESH_VS = `
   attribute vec3 aPos; attribute vec3 aCenter; attribute vec3 aNormal; attribute vec4 aColor; attribute vec4 aEmit; attribute vec4 aAnim; attribute vec2 aUV;
-  uniform mat4 uVP; uniform float uTime; uniform vec2 uShake;
-  varying vec3 vWorld; varying vec3 vNormal; varying vec4 vColor; varying vec4 vEmit; varying vec2 vUV; varying float vSeed;
+  uniform mat4 uVP; uniform float uTime; uniform vec2 uShake; uniform float uOutline;
+  varying vec3 vWorld; varying vec3 vNormal; varying vec4 vColor; varying vec4 vEmit; varying vec2 vUV; varying float vSeed; varying float vFade;
   vec3 rotY(vec3 p, float a){ float c = cos(a); float s = sin(a); return vec3(c*p.x + s*p.z, p.y, -s*p.x + c*p.z); }
   vec3 rotX(vec3 p, float a){ float c = cos(a); float s = sin(a); return vec3(p.x, c*p.y - s*p.z, s*p.y + c*p.z); }
   vec3 rotZ(vec3 p, float a){ float c = cos(a); float s = sin(a); return vec3(c*p.x - s*p.y, s*p.x + c*p.y, p.z); }
@@ -144,7 +144,13 @@ AZ.gfx.scene3d = (() => {
     else if (ty > 5.5 && ty < 6.5) { p = rotZ(p, t); n = rotZ(n, t); }
     else if (ty > 6.5) { p = rotX(p, t); n = rotX(n, t); }
     vec3 w = c + p;
+    // 외곽선 패스: 캐릭터 면을 법선 방향으로 부풀림 (앞면은 잘라 내고 뒷면만 그림)
+    if (uOutline > 0.0) {
+      if (aColor.a > 9.5 || (aColor.a > 5.5 && aColor.a < 6.5)) w += normalize(n) * uOutline;
+      else { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }
+    }
     vWorld = w; vNormal = n; vColor = aColor; vEmit = aEmit; vUV = aUV;
+    vFade = ty < 0.5 ? aAnim.z : 0.0;
     vSeed = fract(sin(dot(aCenter.xz + aCenter.y, vec2(12.9898, 78.233))) * 43758.5453);
     gl_Position = uVP * vec4(w, 1.0);
     gl_Position.xy += uShake * gl_Position.w;
@@ -153,7 +159,9 @@ AZ.gfx.scene3d = (() => {
   const MESH_FS = () => PREC() + COMMON + `
   uniform vec3 uEye; uniform vec3 uFog; uniform float uFogDen; uniform vec3 uAbyss; uniform float uAbyssY;
   uniform vec3 uLightDir; uniform vec3 uKey; uniform vec3 uAmb; uniform float uTime;
-  varying vec3 vWorld; varying vec3 vNormal; varying vec4 vColor; varying vec4 vEmit; varying vec2 vUV; varying float vSeed;
+  varying vec3 vWorld; varying vec3 vNormal; varying vec4 vColor; varying vec4 vEmit; varying vec2 vUV; varying float vSeed; varying float vFade;
+  float bayer2(vec2 a){ a = floor(a); return fract(dot(a, vec2(0.5, a.y * 0.75))); }
+  float bayer4(vec2 a){ return bayer2(0.5 * a) * 0.25 + bayer2(a); }
   vec3 billboard(vec2 uv, float seed, vec3 col){
     float typ = floor(seed * 5.0);
     float inner = step(0.05, uv.x) * step(uv.x, 0.95) * step(0.05, uv.y) * step(uv.y, 0.95);
@@ -168,9 +176,13 @@ AZ.gfx.scene3d = (() => {
     return c * 1.35;
   }
   uniform vec4 uFocus; // 플레이어 화면 위치(px), 반경(px), 카메라와의 거리
+  uniform float uOutline;
   void main(){
+    // 반투명(등장·사망·잔상): 점무늬로 비우기
+    if (vFade > 0.0 && bayer4(gl_FragCoord.xy) < vFade) discard;
+    if (uOutline > 0.0) { gl_FragColor = vec4(0.025, 0.03, 0.06, 1.0); return; }
     // 카메라와 플레이어 사이를 가리는 구조물은 점무늬로 비쳐 보이게
-    if (uFocus.z > 0.0 && distance(vWorld, uEye) < uFocus.w - 90.0) {
+    if (uFocus.z > 0.0 && vColor.a < 9.5 && distance(vWorld, uEye) < uFocus.w - 90.0) {
       vec2 sd = gl_FragCoord.xy - uFocus.xy;
       float r = length(sd * vec2(1.0, 0.75)) / uFocus.z;
       float th = smoothstep(1.0, 0.55, r) * 0.82;
@@ -265,6 +277,15 @@ AZ.gfx.scene3d = (() => {
       vec3 r = reflect(-V, n);
       col = base * 0.35 + mix(uAmb * 0.25, uKey * 0.7 + vec3(0.05, 0.06, 0.1), clamp(r.y * 0.6 + 0.4, 0.0, 1.0)) * 0.55;
       col += uKey * pow(max(dot(n, normalize(uLightDir + V)), 0.0), 60.0) * 0.9;
+    } else if (kind > 9.5) {
+      // 캐릭터: 셀 셰이딩(두 단계 명암) + 테두리 빛 + 자체 발광
+      vec3 V = normalize(uEye - vWorld);
+      float d = dot(n, normalize(vec3(0.35, 0.85, 0.55)));
+      float band = 0.62 + 0.4 * smoothstep(-0.1, 0.05, d) + 0.28 * smoothstep(0.6, 0.7, d);
+      float rimc = pow(1.0 - max(dot(n, V), 0.0), 2.6);
+      col = base * band * (vec3(1.05) + uKey * 0.4) + base * 0.12;
+      col += (uKey * 0.6 + vec3(0.3, 0.42, 0.6)) * rimc * (0.55 + dot(base, vec3(0.33)) * 0.6);
+      emit = vEmit.rgb * vEmit.a;
     } else if (kind > 3.5) {
       vec2 f = fract(vUV / vec2(60.0, 48.0));
       float seam = step(f.x, 0.03) + step(f.y, 0.04);
@@ -667,6 +688,16 @@ AZ.gfx.scene3d = (() => {
     }
     return s;
   }
+  /* 캐릭터 발밑 그림자 (곱하기 합성) */
+  const SHADOW_VS = `
+  attribute vec3 aPos; attribute vec3 aUA;
+  uniform mat4 uVP; uniform vec2 uShake;
+  varying vec3 vU;
+  void main(){ vU = aUA; gl_Position = uVP * vec4(aPos, 1.0); gl_Position.xy += uShake * gl_Position.w; }`;
+  const SHADOW_FS = () => PREC() + `
+  varying vec3 vU;
+  void main(){ float r = length(vU.xy); float a = smoothstep(1.0, 0.2, r) * vU.z; gl_FragColor = vec4(vec3(1.0 - a), 1.0); }`;
+
   function program(vs, fs, attrs) {
     const p = gl.createProgram();
     gl.attachShader(p, compile(gl.VERTEX_SHADER, vs));
@@ -2305,6 +2336,10 @@ AZ.gfx.scene3d = (() => {
       P.sky = program(SKY_VS, SKY_FS(), ['aPos']);
       P.part = program(PART_VS, PART_FS(), ['aBase', 'aVel', 'aParam', 'aColor']);
       P.dyn = program(DYN_VS, DYN_FS(), ['aPos', 'aColor', 'aSize']);
+      P.shadow = program(SHADOW_VS, SHADOW_FS(), ['aPos', 'aUA']);
+      dynBufs.mesh = gl.createBuffer();
+      dynBufs.glow = gl.createBuffer();
+      dynBufs.shadow = gl.createBuffer();
       P.skyBuf = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, P.skyBuf);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
@@ -2329,6 +2364,11 @@ AZ.gfx.scene3d = (() => {
     }
     return true;
   }
+
+  /** 매 프레임 바뀌는 캐릭터·몬스터 (js/gfx/models3d.js 가 만듦) */
+  const dynBufs = {};
+  let dynamic = null;
+  function setDynamic(d) { dynamic = d; }
 
   /** 가림 방지 초점: (x, y) 논리 화면 좌표, r 반경(논리 px), d 카메라~플레이어 거리. r = 0 이면 끔 */
   const focus = { x: 0, y: 0, r: 0, d: 0 };
@@ -2480,11 +2520,41 @@ AZ.gfx.scene3d = (() => {
     gl.uniform1f(mu.uAbyssY, s.cfg.abyssY);
     gl.uniform3fv(mu.uLightDir, s.light.dir);
     gl.uniform4f(mu.uFocus, focus.x, focus.y, focus.r, focus.d);
+    gl.uniform1f(mu.uOutline, 0);
     gl.uniform3fv(mu.uKey, s.light.key);
     gl.uniform3fv(mu.uAmb, s.light.amb);
     gl.bindBuffer(gl.ARRAY_BUFFER, s.opaque.buf);
     bindAttribs(P.mesh, MESH_LAYOUT, MESH_STRIDE);
     gl.drawArrays(gl.TRIANGLES, 0, s.opaque.count);
+    const dy = dynamic;
+    // 캐릭터 그림자 (곱하기)
+    if (dy && dy.shadowCount) {
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.DST_COLOR, gl.ZERO);
+      gl.depthMask(false);
+      gl.useProgram(P.shadow.p);
+      common(P.shadow, t);
+      gl.bindBuffer(gl.ARRAY_BUFFER, dynBufs.shadow);
+      gl.bufferData(gl.ARRAY_BUFFER, dy.shadow, gl.DYNAMIC_DRAW);
+      bindAttribs(P.shadow, [3, 3], 6);
+      gl.drawArrays(gl.TRIANGLES, 0, dy.shadowCount);
+      gl.disable(gl.BLEND);
+      gl.depthMask(true);
+    }
+    // 캐릭터·몬스터 (불투명)
+    if (dy && dy.meshCount) {
+      gl.useProgram(P.mesh.p);
+      gl.bindBuffer(gl.ARRAY_BUFFER, dynBufs.mesh);
+      gl.bufferData(gl.ARRAY_BUFFER, dy.mesh, gl.DYNAMIC_DRAW);
+      bindAttribs(P.mesh, MESH_LAYOUT, MESH_STRIDE);
+      gl.enable(gl.CULL_FACE);
+      gl.cullFace(gl.FRONT);
+      gl.uniform1f(mu.uOutline, dy.outline || 1.1);
+      gl.drawArrays(gl.TRIANGLES, 0, dy.meshCount);
+      gl.disable(gl.CULL_FACE);
+      gl.uniform1f(mu.uOutline, 0);
+      gl.drawArrays(gl.TRIANGLES, 0, dy.meshCount);
+    }
 
     // 빛 (더하기)
     gl.enable(gl.BLEND);
@@ -2497,6 +2567,15 @@ AZ.gfx.scene3d = (() => {
       gl.bindBuffer(gl.ARRAY_BUFFER, s.add.buf);
       bindAttribs(P.add, MESH_LAYOUT, MESH_STRIDE);
       gl.drawArrays(gl.TRIANGLES, 0, s.add.count);
+    }
+    if (dy && dy.glowCount) {
+      gl.useProgram(P.add.p);
+      common(P.add, t);
+      gl.uniform1f(P.add.u.uFogDen, s.cfg.fogDen);
+      gl.bindBuffer(gl.ARRAY_BUFFER, dynBufs.glow);
+      gl.bufferData(gl.ARRAY_BUFFER, dy.glow, gl.DYNAMIC_DRAW);
+      bindAttribs(P.add, MESH_LAYOUT, MESH_STRIDE);
+      gl.drawArrays(gl.TRIANGLES, 0, dy.glowCount);
     }
     // 입자
     const px = (canvas.height / 2) * C.st.f;
@@ -2542,7 +2621,7 @@ AZ.gfx.scene3d = (() => {
   }
 
   return {
-    init, ensure, render, resize, setMood, explode, setFocus,
+    init, ensure, render, resize, setMood, explode, setFocus, setDynamic,
     get available() { return ok && !failed; },
     get scene() { return scene; },
     BUILDERS, WORLD,

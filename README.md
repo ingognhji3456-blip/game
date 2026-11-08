@@ -4,10 +4,10 @@
 
 | 게임 | 장르 | 한 파일 실행 | 소스·설명 |
 |---|---|---|---|
-| **ASTRA : ZERO PROTOCOL** (아스트라 : 제로 프로토콜) | SF 스토리 액션 RPG — 실시간 전투, 보스 10종, 10개 챕터, 다중 엔딩 | [`dist/astra-zero-protocol.html`](dist/astra-zero-protocol.html) | [`astra/`](astra/README.md) |
+| **ASTRA : ZERO PROTOCOL** (아스트라 : 제로 프로토콜) | SF 스토리 액션 RPG — 3D 네온 도시, 이어진 스테이지와 월드맵, 실시간 전투, 보스 10종, 다중 엔딩 | [`dist/astra-zero-protocol.html`](dist/astra-zero-protocol.html) | [`astra/`](astra/README.md) |
 | **카드 원정대** (Deck Expedition) | 로그라이크 덱빌딩 카드 배틀 | [`dist/card-expedition.html`](dist/card-expedition.html) | 아래 설명 |
 
-![ASTRA : ZERO PROTOCOL](astra/docs/screenshots/battle.jpg)
+![ASTRA : ZERO PROTOCOL](astra/docs/screenshots/stage.jpg)
 
 ---
 

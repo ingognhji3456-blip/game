@@ -373,6 +373,7 @@ AZ.gfx.render = (() => {
    * proj() → { x, y, k(월드 1 = k 픽셀), fy(바닥 세로 축소율) } */
   let persp = false;
   let curLevel = null;
+  let models3d = false; // 캐릭터를 3D 모델로 그리는 중
   const PERSP = { pitch: 0.26, fov: 0.86 };
   function proj(x, y, z) {
     if (persp) return AZ.gfx.cam3d.project(x, y, (z || 0) + (curLevel ? AZ.level.floorZ(curLevel, x, y) : 0));
@@ -403,7 +404,7 @@ AZ.gfx.render = (() => {
     cam.sx = sh.x;
     cam.sy = sh.y;
     if (persp) {
-      cam.zoom = (big ? 1.0 : 1.14) * (touchMode ? 0.9 : 1);
+      cam.zoom = (big ? 1.0 : 1.14) * (touchMode ? 0.9 : 1) * (PERSP.zoomMul || 1);
       if (W.level && !(W.boss && !W.boss.dead)) {
         // 탐색 중: 플레이어와 길 앞쪽을 함께 보도록
         const gd = AZ.level.guide(W.level, p.x, p.y, 260);
@@ -1006,6 +1007,45 @@ AZ.gfx.render = (() => {
       placeholder(g, e, t);
     }
     if (canFilter) g.filter = 'none';
+    g.restore();
+  }
+
+  /** 회피 잔상 기록 (3D 모델은 그 순간의 자세를 그대로 씀) */
+  let ghostLastT = -1;
+  function updateGhosts(W, dt) {
+    if (W.t === ghostLastT) return;
+    ghostLastT = W.t;
+    const p = W.player;
+    const moving = Math.hypot(p.vx || 0, p.vy || 0) > 90;
+    const last = ghosts[ghosts.length - 1];
+    const apart = !last || Math.hypot(last.x - p.x, last.y - p.y) > 10;
+    if ((p.state === 'dodge' || (p.state === 'skill' && p.st && (p.st.kind === 'ray' || p.st.kind === 'counter')) || (p.haste > 0 && moving)) && apart) {
+      ghosts.push({ x: p.x, y: p.y, t: 0, facing: p.facing, snap: { anim: p.anim, animT: p.animT, runT: p.runT, state: p.state, vx: p.vx, vy: p.vy, st: p.st ? Object.assign({}, p.st) : null } });
+      if (ghosts.length > 8) ghosts.shift();
+    }
+    for (const gh of ghosts) gh.t += dt;
+    while (ghosts.length && ghosts[0].t > 0.25) ghosts.shift();
+  }
+
+  /** 3D 모델일 때: 브레이크(무방비) 보스 머리 위를 도는 별 */
+  function drawDizzy(g, e, t) {
+    const H = (e.z || 0) + e.r * (e.def.big ? 3.0 : 2.7);
+    const c = proj(e.x, e.y, H);
+    if (c.behind) return;
+    g.save();
+    g.globalCompositeOperation = 'lighter';
+    g.fillStyle = 'rgba(255,230,120,0.95)';
+    for (let i = 0; i < 4; i++) {
+      const a = t * 4 + (i / 4) * U.TAU;
+      const x = c.x + Math.cos(a) * e.r * 0.45 * c.k;
+      const y = c.y + Math.sin(a) * e.r * 0.14 * c.k;
+      const q = Math.max(4, e.r * 0.09 * c.k);
+      g.beginPath();
+      g.moveTo(x, y - q); g.lineTo(x + q * 0.3, y - q * 0.3); g.lineTo(x + q, y); g.lineTo(x + q * 0.3, y + q * 0.3);
+      g.lineTo(x, y + q); g.lineTo(x - q * 0.3, y + q * 0.3); g.lineTo(x - q, y); g.lineTo(x - q * 0.3, y - q * 0.3);
+      g.closePath();
+      g.fill();
+    }
     g.restore();
   }
 
@@ -1996,9 +2036,15 @@ AZ.gfx.render = (() => {
       const pp = AZ.gfx.cam3d.project(p.x, p.y, pz);
       const eye = AZ.gfx.cam3d.st.eye;
       S3.setFocus(pp.x, pp.y, pp.behind ? 0 : Math.max(70, 120 * pp.k), Math.hypot(eye[0] - p.x, eye[1] - pz, eye[2] - p.y));
+      // 캐릭터·몬스터를 3D 모델로
+      models3d = !!(AZ.gfx.models3d && S3.setDynamic);
+      if (models3d) {
+        updateGhosts(W, dt);
+        try { S3.setDynamic(AZ.gfx.models3d.build(W, t, ghosts)); } catch (err) { models3d = false; S3.setDynamic(null); console.error(err); }
+      } else S3.setDynamic && S3.setDynamic(null);
       S3.render(t, dt);
       g.clearRect(0, 0, VW, VH);
-    } else drawFlatBackground(g, W, theme);
+    } else { models3d = false; drawFlatBackground(g, W, theme); }
     drawWorld(g, W, t, dt, input);
   }
 
@@ -2064,18 +2110,13 @@ AZ.gfx.render = (() => {
     drawTargetMarker(g, W, t);
     // 엔티티
     const list = [W.player, ...W.allies, ...W.enemies];
-    for (const e of list) if (!(e.dead && e.kind === 'enemy' && e.deadT > 1)) drawShadow(g, e);
+    if (!models3d) for (const e of list) if (!(e.dead && e.kind === 'enemy' && e.deadT > 1)) drawShadow(g, e);
     for (const e of W.enemies) drawSpawnRing(g, e);
     list.sort((a, b) => a.y - b.y);
     // 회피 잔상
     const p = W.player;
-    if (p.state === 'dodge' || (p.state === 'skill' && p.st && (p.st.kind === 'ray' || p.st.kind === 'counter')) || p.haste > 0) {
-      ghosts.push({ x: p.x, y: p.y, t: 0, facing: p.facing });
-      if (ghosts.length > 8) ghosts.shift();
-    }
-    for (const gh of ghosts) gh.t += dt;
-    while (ghosts.length && ghosts[0].t > 0.25) ghosts.shift();
-    for (const gh of ghosts) {
+    if (!models3d) updateGhosts(W, dt);
+    if (!models3d) for (const gh of ghosts) {
       const c = proj(gh.x, gh.y, 0);
       g.save();
       g.globalCompositeOperation = 'lighter';
@@ -2089,7 +2130,8 @@ AZ.gfx.render = (() => {
     for (const e of list) {
       if (e.dead && e.kind === 'enemy' && e.deadT > 1) continue;
       if (e.kind === 'boss' && e.dead && e.deadT > 3) continue;
-      drawEntity(g, e, W, t);
+      if (!models3d) drawEntity(g, e, W, t);
+      else if (e.kind === 'boss' && e.broken && !e.dead) drawDizzy(g, e, t);
       drawShieldBubble(g, e, t);
     }
     drawStanceAura(g, p, t);
@@ -2116,6 +2158,7 @@ AZ.gfx.render = (() => {
     const S3 = AZ.gfx.scene3d;
     if (!(use3d && S3 && S3.available)) return false;
     if (S3.setFocus) S3.setFocus(0, 0, 0, 0);
+    if (S3.setDynamic) S3.setDynamic(null);
     const o = opt || {};
     const aw = 1700;
     const ah = 1100;
@@ -2139,6 +2182,7 @@ AZ.gfx.render = (() => {
     if (!(use3d && S3 && S3.available)) return null;
     S3.ensure('world', 1, 1, null, { key: 'w:' + wm.status.join(','), status: wm.status, themes: wm.themes });
     S3.setFocus(0, 0, 0, 0);
+    S3.setDynamic(null);
     const WD = S3.WORLD;
     const I = WD[U.clamp(wm.sel - 1, 0, WD.length - 1)];
     // 고른 섬은 화면 아래쪽에, 앞으로 갈 섬들은 위로 보이게
