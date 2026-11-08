@@ -146,7 +146,7 @@ AZ.gfx.scene3d = (() => {
     vec3 w = c + p;
     // 외곽선 패스: 캐릭터 면을 법선 방향으로 부풀림 (앞면은 잘라 내고 뒷면만 그림)
     if (uOutline > 0.0) {
-      if (aColor.a > 9.5 || (aColor.a > 5.5 && aColor.a < 6.5)) w += normalize(n) * uOutline;
+      if ((aColor.a > 9.5 && aColor.a < 11.5) || (aColor.a > 5.5 && aColor.a < 6.5)) w += normalize(n) * uOutline;
       else { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }
     }
     vWorld = w; vNormal = n; vColor = aColor; vEmit = aEmit; vUV = aUV;
@@ -277,13 +277,24 @@ AZ.gfx.scene3d = (() => {
       vec3 r = reflect(-V, n);
       col = base * 0.35 + mix(uAmb * 0.25, uKey * 0.7 + vec3(0.05, 0.06, 0.1), clamp(r.y * 0.6 + 0.4, 0.0, 1.0)) * 0.55;
       col += uKey * pow(max(dot(n, normalize(uLightDir + V)), 0.0), 60.0) * 0.9;
+    } else if (kind > 10.5 && kind < 11.5) {
+      // 캐릭터의 금속(은색 갑옷): 셀 셰이딩 + 강한 반사광 + 하늘 반사
+      vec3 V = normalize(uEye - vWorld);
+      vec3 Ld = normalize(vec3(0.35, 0.85, 0.55));
+      float d = dot(n, Ld);
+      float band = 0.55 + 0.35 * smoothstep(-0.1, 0.05, d) + 0.25 * smoothstep(0.55, 0.65, d);
+      float spec = smoothstep(0.82, 0.9, dot(reflect(-Ld, n), V));
+      float env = clamp(reflect(-V, n).y * 0.5 + 0.5, 0.0, 1.0);
+      float rimc = pow(1.0 - max(dot(n, V), 0.0), 2.4);
+      col = base * band * 1.08 + base * env * 0.25 + vec3(1.0) * spec * 0.55 + (uKey * 0.5 + vec3(0.35, 0.45, 0.6)) * rimc * 0.6;
+      emit = vEmit.rgb * vEmit.a;
     } else if (kind > 9.5) {
-      // 캐릭터: 셀 셰이딩(두 단계 명암) + 테두리 빛 + 자체 발광
+      // 캐릭터: 셀 셰이딩(두 단계 명암) + 테두리 빛 + 자체 발광 (12 는 외곽선 없는 얼굴 부분)
       vec3 V = normalize(uEye - vWorld);
       float d = dot(n, normalize(vec3(0.35, 0.85, 0.55)));
-      float band = 0.62 + 0.4 * smoothstep(-0.1, 0.05, d) + 0.28 * smoothstep(0.6, 0.7, d);
+      float band = 0.52 + 0.3 * smoothstep(-0.1, 0.05, d) + 0.2 * smoothstep(0.6, 0.7, d);
       float rimc = pow(1.0 - max(dot(n, V), 0.0), 2.6);
-      col = base * band * (vec3(1.05) + uKey * 0.4) + base * 0.12;
+      col = base * band * (vec3(0.98) + uKey * 0.35) + base * 0.1;
       col += (uKey * 0.6 + vec3(0.3, 0.42, 0.6)) * rimc * (0.55 + dot(base, vec3(0.33)) * 0.6);
       emit = vEmit.rgb * vEmit.a;
     } else if (kind > 3.5) {

@@ -166,6 +166,17 @@
     K.prism(4, 4, 6, 8, '#ffffff', { kind: 2, ea: 2 });
     K.pop();
     K.glowL(0, 0, 40, 60 + open * 60, lens, 0.6 + open * 0.8 * (0.7 + 0.3 * A.pulse));
+    // 양옆의 거대한 장갑 포드 (원작의 어깨 장갑)
+    for (const sd of [1, -1]) {
+      K.push();
+      K.tr(sd * 50, -4 + Math.sin(t * 1.3 + sd) * 3, -4);
+      K.rz(sd * (0.2 + A.hot * 0.15));
+      K.ball(19, shell2, { kind: 6, sy: 1.2 }, 10, 6);
+      K.box(30, 10, 30, shell, { y: -14, kind: 6, tb: 0.7 });
+      for (let k = 0; k < 3; k++) K.box(3.4, 3.4, 1, A.hot ? '#ff9a3d' : lens, { kind: 2, x: -sd * 4 + sd * k * 4, y: 2, z: 17, ea: 1.5 });
+      K.push(); K.tr(sd * 6, -26, 6); K.rx(0.4); K.box(8, 26, 8, shell, { y: -10, kind: 6, tb: 0.6 }); K.box(10, 6, 12, shell2, { y: -24, kind: 6 }); K.pop();
+      K.pop();
+    }
     // 도는 고리와 위성
     K.push();
     K.ry(t * 0.7);
@@ -206,7 +217,7 @@
     if (A.an === 'cast') { P.shR = [0, 2.9, 0.1]; P.elbR = 0.2; P.wpR = 0.1; P.eye = 2; }
     if (A.slump) { P.crouch = 9; P.lean = 0.45; P.headPitch = 0.5; P.shR = [0, 0.1, 0.5]; P.wpR = 2.4; }
     K.sc((e.r || 24) / 20 * 1.02);
-    K.humanoid(K.ZERO, P, { type: 'blade', color: '#ff3355', len: 56 }, null);
+    K.humanoid(K.ZERO, P, { type: 'crystal', color: '#ff2a4a', len: 58 }, null);
     K.glowL(0, 40, 0, 110, '#ff3355', 0.12 + A.hot * 0.15);
   };
 
@@ -439,12 +450,20 @@
     K.push();
     K.tr(0, 120 + Math.sin(t * 1.2) * 8 - A.slump * 30, 0);
     const spin = t * (0.3 + ph * 0.15);
-    // 핵 (팔면체)
+    // 핵: 수정 껍질 안에 떠 있는 ASTRA 의 모습 (원작의 하얀 머리·후광·감은 눈)
     const op = A.ex ? 1 : 0;
     K.push();
-    K.ry(spin * 2);
-    K.prism(26, 0, 42, 6, '#e8f6ff', { y: 21, kind: 2, ea: 1.2 + op * 1.2 });
-    K.prism(0, 26, 42, 6, '#e8f6ff', { y: -21, kind: 2, ea: 1.2 + op * 1.2 });
+    K.tr(0, -38, 6);
+    K.sc(1.15);
+    const AP = K.ladyPose(Object.assign({}, e, { anim: A.an === 'cast' || A.hot ? 'cast' : 'idle', vx: 0, vy: 0, down: 0, dead: false }), t);
+    AP.shL = [-0.2, 0.5, 0.9]; AP.shR = [0.2, 0.5, 0.9]; AP.elbL = 0.3; AP.elbR = 0.3; AP.lift = 0;
+    if (A.hot) { AP.shL = [-0.1, 1.6, 0.4]; AP.shR = [0.1, 1.6, 0.4]; }
+    K.lady(M3.ASTRA_FORM, AP, t);
+    K.pop();
+    K.push();
+    K.ry(spin * 0.6);
+    K.prism(30, 0, 50, 8, '#cfe8ff', { y: 25, kind: 6, fade: 0.72 - op * 0.3, open: true });
+    K.prism(0, 30, 50, 8, '#cfe8ff', { y: -25, kind: 6, fade: 0.72 - op * 0.3, open: true });
     K.pop();
     K.glowL(0, 0, 0, 140 + op * 100, main, 0.6 + op * 0.8 * (0.7 + 0.3 * A.pulse));
     // 둘레의 수정 갑옷 판

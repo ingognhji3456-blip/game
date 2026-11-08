@@ -13304,7 +13304,7 @@ AZ.gfx.scene3d = (() => {
     vec3 w = c + p;
     // 외곽선 패스: 캐릭터 면을 법선 방향으로 부풀림 (앞면은 잘라 내고 뒷면만 그림)
     if (uOutline > 0.0) {
-      if (aColor.a > 9.5 || (aColor.a > 5.5 && aColor.a < 6.5)) w += normalize(n) * uOutline;
+      if ((aColor.a > 9.5 && aColor.a < 11.5) || (aColor.a > 5.5 && aColor.a < 6.5)) w += normalize(n) * uOutline;
       else { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }
     }
     vWorld = w; vNormal = n; vColor = aColor; vEmit = aEmit; vUV = aUV;
@@ -13435,13 +13435,24 @@ AZ.gfx.scene3d = (() => {
       vec3 r = reflect(-V, n);
       col = base * 0.35 + mix(uAmb * 0.25, uKey * 0.7 + vec3(0.05, 0.06, 0.1), clamp(r.y * 0.6 + 0.4, 0.0, 1.0)) * 0.55;
       col += uKey * pow(max(dot(n, normalize(uLightDir + V)), 0.0), 60.0) * 0.9;
+    } else if (kind > 10.5 && kind < 11.5) {
+      // 캐릭터의 금속(은색 갑옷): 셀 셰이딩 + 강한 반사광 + 하늘 반사
+      vec3 V = normalize(uEye - vWorld);
+      vec3 Ld = normalize(vec3(0.35, 0.85, 0.55));
+      float d = dot(n, Ld);
+      float band = 0.55 + 0.35 * smoothstep(-0.1, 0.05, d) + 0.25 * smoothstep(0.55, 0.65, d);
+      float spec = smoothstep(0.82, 0.9, dot(reflect(-Ld, n), V));
+      float env = clamp(reflect(-V, n).y * 0.5 + 0.5, 0.0, 1.0);
+      float rimc = pow(1.0 - max(dot(n, V), 0.0), 2.4);
+      col = base * band * 1.08 + base * env * 0.25 + vec3(1.0) * spec * 0.55 + (uKey * 0.5 + vec3(0.35, 0.45, 0.6)) * rimc * 0.6;
+      emit = vEmit.rgb * vEmit.a;
     } else if (kind > 9.5) {
-      // 캐릭터: 셀 셰이딩(두 단계 명암) + 테두리 빛 + 자체 발광
+      // 캐릭터: 셀 셰이딩(두 단계 명암) + 테두리 빛 + 자체 발광 (12 는 외곽선 없는 얼굴 부분)
       vec3 V = normalize(uEye - vWorld);
       float d = dot(n, normalize(vec3(0.35, 0.85, 0.55)));
-      float band = 0.62 + 0.4 * smoothstep(-0.1, 0.05, d) + 0.28 * smoothstep(0.6, 0.7, d);
+      float band = 0.52 + 0.3 * smoothstep(-0.1, 0.05, d) + 0.2 * smoothstep(0.6, 0.7, d);
       float rimc = pow(1.0 - max(dot(n, V), 0.0), 2.6);
-      col = base * band * (vec3(1.05) + uKey * 0.4) + base * 0.12;
+      col = base * band * (vec3(0.98) + uKey * 0.35) + base * 0.1;
       col += (uKey * 0.6 + vec3(0.3, 0.42, 0.6)) * rimc * (0.55 + dot(base, vec3(0.33)) * 0.6);
       emit = vEmit.rgb * vEmit.a;
     } else if (kind > 3.5) {
@@ -15876,6 +15887,7 @@ AZ.gfx.models3d = (() => {
   /* ───────── 재질 상태 (엔티티마다) ───────── */
   let FLASH = 0; // 피격 번쩍임
   let FADE = 0; // 0 불투명 ~ 1 사라짐
+  let LOD = 1; // 1: 주인공·보스(자세히), 0: 일반 적(가볍게)
   let TINT = null; // 잔상 색
   const NO = {};
   const KIND_TOON = 10;
@@ -15893,25 +15905,48 @@ AZ.gfx.models3d = (() => {
     mn += 1;
   }
   const WHITE = [1, 1, 1];
-  function quad(a, b, c, d, col, o) {
-    const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
-    const vx = d[0] - a[0], vy = d[1] - a[1], vz = d[2] - a[2];
-    let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
-    const l = Math.hypot(nx, ny, nz) || 1;
-    const n = [nx / l, ny / l, nz / l];
+  /** 재질 계산 (도형마다 한 번) */
+  function matOf(col, o) {
     let kind = o.kind != null ? o.kind : KIND_TOON;
+    if (kind === 6) kind = 11;
     let cc = hx(col);
     let em = o.em ? hx(o.em) : WHITE;
     let ea = o.em ? (o.ea != null ? o.ea : 1) : 0;
     if (kind === 2 && !o.em) { em = cc; ea = o.ea != null ? o.ea : 1.2; }
     if (TINT) { cc = [cc[0] * 0.2, cc[1] * 0.2, cc[2] * 0.25]; em = TINT; ea = 0.9; kind = KIND_TOON; }
     if (FLASH > 0) { em = [lerp(em[0], 1, FLASH), lerp(em[1], 1, FLASH), lerp(em[2], 1, FLASH)]; ea = Math.max(ea, FLASH * 1.3); if (kind !== 2) kind = KIND_TOON; }
-    const fade = Math.min(1, FADE + (o.fade || 0));
-    if (mn + 6 > mesh.length / STRIDE) mesh = grow(mesh, (mn + 600) * STRIDE);
-    vtx(a, n, cc, kind, em, ea, fade); vtx(b, n, cc, kind, em, ea, fade); vtx(c, n, cc, kind, em, ea, fade);
-    vtx(a, n, cc, kind, em, ea, fade); vtx(c, n, cc, kind, em, ea, fade); vtx(d, n, cc, kind, em, ea, fade);
+    return { cc, kind, em, ea, fade: Math.min(1, FADE + (o.fade || 0)) };
   }
-  function tri(a, b, c, col, o) { quad(a, b, c, c, col, o); }
+  function faceN(a, b, d) {
+    const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
+    const vx = d[0] - a[0], vy = d[1] - a[1], vz = d[2] - a[2];
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    const l = Math.hypot(nx, ny, nz) || 1;
+    return [nx / l, ny / l, nz / l];
+  }
+  /** 사각형 (ns: 꼭짓점별 법선 4개, 없으면 면 법선) */
+  function quadM(a, b, c, d, m, ns) {
+    if (mn + 6 > mesh.length / STRIDE) mesh = grow(mesh, (mn + 2000) * STRIDE);
+    let na, nb, nc, nd;
+    if (ns) { na = ns[0]; nb = ns[1]; nc = ns[2]; nd = ns[3]; } else { na = nb = nc = nd = faceN(a, b, d[0] === c[0] && d[1] === c[1] && d[2] === c[2] ? c : d); }
+    vtx(a, na, m.cc, m.kind, m.em, m.ea, m.fade); vtx(b, nb, m.cc, m.kind, m.em, m.ea, m.fade); vtx(c, nc, m.cc, m.kind, m.em, m.ea, m.fade);
+    vtx(a, na, m.cc, m.kind, m.em, m.ea, m.fade); vtx(c, nc, m.cc, m.kind, m.em, m.ea, m.fade); vtx(d, nd, m.cc, m.kind, m.em, m.ea, m.fade);
+  }
+  /** 삼각형 (정점 3개) */
+  function triM(a, b, c, m) {
+    if (mn + 3 > mesh.length / STRIDE) mesh = grow(mesh, (mn + 2000) * STRIDE);
+    const n = faceN(a, b, c);
+    vtx(a, n, m.cc, m.kind, m.em, m.ea, m.fade); vtx(b, n, m.cc, m.kind, m.em, m.ea, m.fade); vtx(c, n, m.cc, m.kind, m.em, m.ea, m.fade);
+  }
+  function quad(a, b, c, d, col, o) { quadM(a, b, c, d, matOf(col, o || NO)); }
+  function tri(a, b, c, col, o) { triM(a, b, c, matOf(col, o || NO)); }
+  /** 현재 좌표계의 방향 → 세계 방향 (정규화) */
+  function apN(x, y, z) {
+    const m = Mx;
+    const vx = m[0] * x + m[3] * y + m[6] * z, vy = m[1] * x + m[4] * y + m[7] * z, vz = m[2] * x + m[5] * y + m[8] * z;
+    const l = Math.hypot(vx, vy, vz) || 1;
+    return [vx / l, vy / l, vz / l];
+  }
 
   /**
    * 상자 (현재 원점 기준). o: { x, y, z: 중심 이동, tb: 아랫면 배율, tt: 윗면 배율, kind, em, ea, fade }
@@ -15923,53 +15958,84 @@ AZ.gfx.models3d = (() => {
   ];
   function box(w, h, d, col, o) {
     o = o || NO;
+    const m = matOf(col, o);
     const hw = w / 2, hh = h / 2, hd = d / 2;
     const tb = o.tb != null ? o.tb : 1, tt = o.tt != null ? o.tt : 1;
     const ox = o.x || 0, oy = o.y || 0, oz = o.z || 0;
-    const P = (v) => { const k = v[1] > 0 ? tt : tb; return ap(ox + v[0] * hw * k, oy + v[1] * hh, oz + v[2] * hd * k); };
-    for (const f of FACES) quad(P(f[0]), P(f[1]), P(f[2]), P(f[3]), col, o);
+    // 꼭짓점 8개를 한 번만 계산 (인덱스: x,y,z 부호 비트)
+    const C = BOXC;
+    for (let i = 0; i < 8; i++) {
+      const sxv = i & 1 ? 1 : -1, syv = i & 2 ? 1 : -1, szv = i & 4 ? 1 : -1;
+      const k = syv > 0 ? tt : tb;
+      C[i] = ap(ox + sxv * hw * k, oy + syv * hh, oz + szv * hd * k);
+    }
+    for (const f of FACES_I) quadM(C[f[0]], C[f[1]], C[f[2]], C[f[3]], m);
   }
-  /** Y 축 각기둥 (n 각). r0 아래 반지름, r1 위 반지름 */
+  const BOXC = new Array(8);
+  const FACES_I = FACES.map((f) => f.map((v) => (v[0] > 0 ? 1 : 0) | (v[1] > 0 ? 2 : 0) | (v[2] > 0 ? 4 : 0)));
+  /** Y 축 각기둥 (n 각). r0 아래 반지름, r1 위 반지름. 8각 이상은 부드러운 법선 (o.flat 으로 끔) */
   function prism(r0, r1, h, n, col, o) {
     o = o || NO;
+    const m = matOf(col, o);
     const oy = o.y || 0, ox = o.x || 0, oz = o.z || 0, ph = o.ph || 0;
     const sx = o.sx || 1, sz = o.sz || 1;
     const y0 = oy - h / 2, y1 = oy + h / 2;
-    const pts0 = [], pts1 = [];
+    if (LOD === 0 && n > 6) n = 6;
+    const smooth = !o.flat && n >= 6;
+    const slope = (r0 - r1) / (h || 1);
+    const pts0 = [], pts1 = [], nrm = [];
     for (let i = 0; i <= n; i++) {
       const a = ph + (i / n) * TAU;
-      const c = Math.cos(a) * sx, s = Math.sin(a) * sz;
-      pts0.push(ap(ox + c * r0, y0, oz + s * r0));
-      pts1.push(ap(ox + c * r1, y1, oz + s * r1));
+      const c = Math.cos(a), s = Math.sin(a);
+      pts0.push(ap(ox + c * sx * r0, y0, oz + s * sz * r0));
+      pts1.push(ap(ox + c * sx * r1, y1, oz + s * sz * r1));
+      if (smooth) nrm.push(apN(c / sx, slope, s / sz));
     }
-    for (let i = 0; i < n; i++) quad(pts0[i + 1], pts0[i], pts1[i], pts1[i + 1], col, o);
+    for (let i = 0; i < n; i++) quadM(pts0[i + 1], pts0[i], pts1[i], pts1[i + 1], m, smooth ? [nrm[i + 1], nrm[i], nrm[i], nrm[i + 1]] : null);
     if (!o.open) {
       const c1 = ap(ox, y1, oz), c0 = ap(ox, y0, oz);
-      for (let i = 0; i < n; i++) { if (r1 > 0.01) tri(pts1[i + 1], pts1[i], c1, col, o); if (r0 > 0.01) tri(pts0[i], pts0[i + 1], c0, col, o); }
+      for (let i = 0; i < n; i++) { if (r1 > 0.01) triM(pts1[i + 1], pts1[i], c1, m); if (r0 > 0.01) triM(pts0[i], pts0[i + 1], c0, m); }
     }
   }
   /** 팔다리: 원점에서 아래(-Y)로 h 만큼 내려가는 둥근 기둥 (r0 위, r1 아래) */
   function limb(r0, r1, h, col, o) {
-    prism(r1, r0, h, 8, col, Object.assign({ y: -h / 2, ph: Math.PI / 8 }, o || NO));
+    prism(r1, r0, h, LOD > 0 ? 10 : 6, col, Object.assign({ y: -h / 2, ph: Math.PI / 8, open: true }, o || NO));
   }
 
-  /** 낮은 다각형 공 (위도 rings, 경도 n) */
+  /** 공 (위도 rings, 경도 n) — 부드러운 법선 */
   function ball(r, col, o, n, rings) {
     o = o || NO;
+    const m = matOf(col, o);
     n = n || 8;
     rings = rings || 4;
+    if (LOD === 0) { n = Math.min(n, 6); rings = Math.min(rings, 3); }
     const ox = o.x || 0, oy = o.y || 0, oz = o.z || 0;
-    const sy = o.sy || 1;
+    const sy = o.sy || 1, sx = o.sx || 1, sz = o.sz || 1;
+    const th1 = o.half ? Math.PI * o.half : Math.PI;
     const P = (i, j) => {
-      const th = (j / rings) * Math.PI;
+      const th = (j / rings) * th1;
       const a = (i / n) * TAU;
-      return ap(ox + Math.sin(th) * Math.cos(a) * r, oy + Math.cos(th) * r * sy, oz + Math.sin(th) * Math.sin(a) * r);
+      return ap(ox + Math.sin(th) * Math.cos(a) * r * sx, oy + Math.cos(th) * r * sy, oz + Math.sin(th) * Math.sin(a) * r * sz);
     };
-    for (let j = 0; j < rings; j++) for (let i = 0; i < n; i++) quad(P(i + 1, j + 1), P(i, j + 1), P(i, j), P(i + 1, j), col, o);
+    const N = (i, j) => {
+      const th = (j / rings) * th1;
+      const a = (i / n) * TAU;
+      return apN(Math.sin(th) * Math.cos(a) / sx, Math.cos(th) / sy, Math.sin(th) * Math.sin(a) / sz);
+    };
+    for (let j = 0; j < rings; j++) {
+      for (let i = 0; i < n; i++) {
+        if (j === 0 && !o.half) { // 꼭대기는 삼각형
+          const a = P(i + 1, 1), b = P(i, 1), c = P(i, 0);
+          if (mn + 3 > mesh.length / STRIDE) mesh = grow(mesh, (mn + 2000) * STRIDE);
+          if (o.flat) triM(a, b, c, m); else { vtx(a, N(i + 1, 1), m.cc, m.kind, m.em, m.ea, m.fade); vtx(b, N(i, 1), m.cc, m.kind, m.em, m.ea, m.fade); vtx(c, N(i, 0), m.cc, m.kind, m.em, m.ea, m.fade); }
+          continue;
+        }
+        quadM(P(i + 1, j + 1), P(i, j + 1), P(i, j), P(i + 1, j), m, o.flat ? null : [N(i + 1, j + 1), N(i, j + 1), N(i, j), N(i + 1, j)]);
+      }
+    }
   }
   /** 고리 (XZ 평면, 반지름 R, 단면 t) */
   function ring(R, t, n, col, o) {
-    const pts = [];
     for (let i = 0; i < n; i++) {
       const a = (i / n) * TAU;
       push();
@@ -15978,7 +16044,35 @@ AZ.gfx.models3d = (() => {
       box(t, t, TAU * R / n * 1.04, col, o);
       pop();
     }
-    return pts;
+  }
+  /**
+   * 머리카락 다발: 원점에서 아래(-Y)로 len 만큼, segs 마디로 휘어 내려가며 가늘어짐.
+   * bx: 앞뒤로 휘는 정도(+ 는 뒤로), bz: 옆으로 휘는 정도, d: 두께 비율
+   */
+  function strand(len, w, segs, bx, bz, col, o, d) {
+    const sl = len / segs;
+    const oo = Object.assign({ sz: d || 0.55, open: true, ph: Math.PI / 4, y: -sl / 2, flat: LOD === 0 }, o || NO);
+    push();
+    for (let i = 0; i < segs; i++) {
+      const k0 = 1 - i / segs;
+      const k1 = Math.max(0.06, 1 - (i + 1) / segs);
+      rx(bx / segs);
+      rz(bz / segs);
+      prism(w * k1, w * k0, sl * 1.04, LOD > 0 ? 5 : 4, col, oo);
+      tr(0, -sl, 0);
+    }
+    pop();
+  }
+  /** 얇은 빛 줄 (회로 무늬) — 현재 좌표계의 a → b */
+  function line(a, b, w, col, ea) {
+    const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
+    const L = Math.hypot(dx, dy, dz) || 1;
+    push();
+    tr((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2);
+    ry(Math.atan2(dx, dz));
+    rx(-Math.atan2(dy, Math.hypot(dx, dz)));
+    box(w, w, L, col, { kind: 2, ea: ea != null ? ea : 1.2 });
+    pop();
   }
 
   /* ───────── 빛 (더하기) — 카메라를 향한 판 ───────── */
@@ -16039,47 +16133,77 @@ AZ.gfx.models3d = (() => {
     const I = P.wI;
     switch (type) {
       case 'great': {
-        box(3.2, 9, 3.2, '#1a1c24', { y: 1 });
-        box(14, 2.4, 4, '#2a2e3a', { y: -4, kind: 6 });
-        box(9, 60, 2.4, '#262a36', { y: -35, kind: 6, tb: 0.55 });
-        box(1.2, 60, 2.6, c, { kind: 2, x: 4.6, y: -35, ea: 1.3 * I, tb: 0.4 });
-        box(1.2, 60, 2.6, c, { kind: 2, x: -4.6, y: -35, ea: 1.3 * I, tb: 0.4 });
+        prism(1.5, 1.5, 9, 8, '#1a1c24', { y: 1.5 });
+        box(15, 2.6, 4.4, '#9aa6ba', { y: -4, kind: 6, tb: 0.8 });
+        box(4, 4, 4.6, c, { kind: 2, y: -4, ea: 1.3 * I });
+        box(9.6, 60, 2.2, '#2c3242', { y: -35, kind: 6, tb: 0.5 });
+        box(4, 56, 2.6, '#454e64', { y: -34, kind: 6, tb: 0.4 });
+        box(1.2, 60, 2.6, c, { kind: 2, x: 4.8, y: -35, ea: 1.3 * I, tb: 0.4 });
+        box(1.2, 60, 2.6, c, { kind: 2, x: -4.8, y: -35, ea: 1.3 * I, tb: 0.4 });
         for (let k = 0; k < 4; k++) glowL(0, -14 - k * 14, 0, 22, c, 0.5 * I);
         break;
       }
       case 'spear': {
-        box(2, 96, 2, '#2a2e3a', { y: -18, kind: 6 });
-        box(4.5, 18, 1.4, c, { kind: 2, y: -74, tb: 0.05, ea: 1.4 * I });
-        box(7, 2, 3, '#3a3e4a', { y: -64, kind: 6 });
+        prism(1, 1, 96, 8, '#2a2e3a', { y: -18, kind: 6 });
+        for (let k = 0; k < 3; k++) prism(1.3, 1.3, 2, 8, '#9aa6ba', { y: 8 - k * 18, kind: 6 });
+        box(5, 18, 1.4, c, { kind: 2, y: -75, tb: 0.05, ea: 1.4 * I });
+        box(1.6, 14, 1.8, '#ffffff', { kind: 2, y: -73, tb: 0.1, ea: 1.8 * I });
+        box(8, 2.4, 3, '#9aa6ba', { y: -64, kind: 6 });
         glowL(0, -74, 0, 26, c, 0.7 * I);
         break;
       }
       case 'rail': {
-        box(5, 30, 7, '#262a34', { y: -10, kind: 6 });
-        box(3, 26, 3, '#3a3e4a', { y: -36, kind: 6 });
-        box(1.4, 26, 1.4, c, { kind: 2, x: 2, y: -36, ea: 1.2 * I });
+        box(5.4, 30, 7, '#262a34', { y: -10, kind: 6 });
+        box(6, 12, 3, '#9aa6ba', { y: -8, z: 3, kind: 6 });
+        prism(1.6, 1.6, 26, 8, '#3a3e4a', { y: -36, kind: 6 });
+        box(1.4, 26, 1.4, c, { kind: 2, x: 2.2, y: -36, ea: 1.2 * I });
         box(5, 7, 4, '#1c1e26', { y: 6, z: -2 });
+        box(2.6, 6, 2.6, c, { kind: 2, y: -2, z: 4.2, ea: 1.0 * I });
         glowL(0, -50, 0, 18, c, 0.6 * I);
         break;
       }
       case 'rifle': {
         box(4, 24, 6, '#20242e', { y: -8, kind: 6 });
-        box(2.2, 16, 2.2, '#2e323c', { y: -27, kind: 6 });
+        box(4.4, 6, 4, '#3a4256', { y: -2, z: 3.6, kind: 6 });
+        prism(1.1, 1.1, 16, 6, '#2e323c', { y: -27, kind: 6 });
         box(1, 3, 1, c, { kind: 2, y: -36, ea: 1.4 });
         break;
       }
       case 'longrifle': {
         box(4, 30, 6, '#2a2520', { y: -10, kind: 6 });
-        box(2, 34, 2, '#3a342e', { y: -42, kind: 6 });
-        box(3, 9, 3, '#1a1816', { y: -6, z: 4 });
+        prism(1, 1, 34, 6, '#3a342e', { y: -42, kind: 6 });
+        prism(1.8, 1.8, 10, 8, '#1a1816', { y: -8, z: 4.6, kind: 6 });
         box(1, 3, 1, c, { kind: 2, y: -60, ea: 1.6 });
         break;
       }
+      case 'crystal': {
+        // 제로의 붉은 결정 검: 들쭉날쭉한 결정 조각이 이어진 칼날
+        prism(1.4, 1.4, 9, 8, '#140c12', { y: 1.5 });
+        box(10, 2.2, 3.6, '#2a1218', { y: -3.4, kind: 6, tb: 0.6 });
+        const L = len || 54;
+        const n = 6;
+        for (let k = 0; k < n; k++) {
+          const y = -6 - (k + 0.5) * (L / n);
+          push();
+          tr((k % 2 ? 0.8 : -0.8), y, 0);
+          rz((k % 2 ? 0.18 : -0.15));
+          box(2.6 + (n - k) * 0.25, L / n * 1.35, 3.2, c, { kind: 2, ea: 1.5 * I, tb: 0.35, tt: 0.6 });
+          box(1, L / n * 1.1, 3.4, '#ffd0d8', { kind: 2, ea: 1.8 * I, tb: 0.3 });
+          pop();
+          glowL(0, y, 0, 18, c, 0.55 * I);
+        }
+        push(); tr(1.6, -16, 0); rz(-0.7); box(1.6, 8, 2, c, { kind: 2, y: -4, ea: 1.4 * I, tb: 0.1 }); pop();
+        break;
+      }
       default: {
+        // 에너지 검: 은색 손잡이와 날밑, 하얀 심 + 푸른 빛 날
         const L = len || 48;
-        box(2.4, 9, 2.4, '#1a1e2a', { y: 1.5 });
-        box(9, 1.8, 3.4, '#2e3646', { y: -3.4, kind: 6 });
-        box(1.3, L, 3.8, c, { kind: 2, y: -4.5 - L / 2, ea: 1.5 * I, tb: 0.3 });
+        prism(1.25, 1.25, 9, 8, '#1a1e2a', { y: 1.5 });
+        prism(1.6, 1.6, 1.4, 8, '#b4c0d4', { y: 6, kind: 6 });
+        box(10, 1.8, 3.6, '#b4c0d4', { y: -3.4, kind: 6, tb: 0.7 });
+        box(3, 2.4, 4, c, { kind: 2, y: -3.4, ea: 1.4 * I });
+        box(1.5, L, 4.2, c, { kind: 2, y: -4.5 - L / 2, ea: 1.2 * I, tb: 0.3 });
+        box(0.7, L * 0.94, 1.8, '#f0fbff', { kind: 2, y: -4.5 - L / 2, ea: 1.8 * I, tb: 0.2 });
         const n = Math.max(2, Math.round(L / 13));
         for (let k = 0; k < n; k++) glowL(0, -8 - (k + 0.5) * (L / n), 0, 16, c, 0.55 * I);
       }
@@ -16087,58 +16211,140 @@ AZ.gfx.models3d = (() => {
     pop();
   }
 
-  /** 머리카락 */
-  function hair(S) {
-    const h = S.hair;
+  /* ───────── 얼굴 (머리 좌표: 가운데 0, 앞 +Z, 반지름 약 5.4) ───────── */
+  function face(S, P) {
+    const sk = S.skin;
+    ball(5.4, sk, { sy: 1.08, sz: 1.0 }, 10, 7);
+    ball(3.9, sk, { y: -2.7, z: 0.55, sx: 0.92, sy: 0.98 }, 8, 5);
+    box(1.2, 2.4, 1.4, sk, { x: 5.2, y: -0.3, z: -0.4 });
+    box(1.2, 2.4, 1.4, sk, { x: -5.2, y: -0.3, z: -0.4 });
+    if (S.mask) {
+      box(8.2, 3.2, 3.2, S.mask, { y: -3.7, z: 3.4, kind: 6, tb: 0.7 });
+      box(5.4, 0.5, 0.6, S.trim, { kind: 2, y: -3.3, z: 5.05, ea: 1.4 });
+    } else {
+      box(0.5, 0.6, 0.4, sk, { y: -1.7, z: 5.25, kind: 12 });
+      box(1.3, 0.28, 0.3, '#8a5a60', { y: -3.6, z: 4.6, kind: 12 });
+    }
+    const E = P.eye;
+    if (LOD === 0) {
+      for (const sd of [1, -1]) box(1.8, 1.8, 0.5, S.eye, { kind: 2, x: sd * 2.05, z: 5.05, ea: 1.2 * E });
+      return;
+    }
+    if (S.eyesClosed) {
+      for (const sd of [1, -1]) {
+        push(); tr(sd * 2.15, -0.2, 5.05); rz(sd * -0.18); box(2.6, 0.4, 0.5, '#2a2440', { kind: 12 }); pop();
+        push(); tr(sd * 2.2, 1.7, 5.0); rz(sd * 0.1); box(2.6, 0.35, 0.5, S.hairDk || '#888', { kind: 12 }); pop();
+      }
+      return;
+    }
+    for (const sd of [1, -1]) {
+      // 동그란 눈: 흰자 위에 큰 홍채, 동공, 반짝임, 위 속눈썹
+      ball(1.25, '#e4e8f4', { x: sd * 2.15, y: 0, z: 4.75, sx: 0.95, sy: 0.72, sz: 0.4, kind: 12 }, 8, 4);
+      ball(0.98, S.eye, { x: sd * 2.05, y: -0.08, z: 4.98, sx: 0.85, sy: 1.0, sz: 0.3, kind: 2, ea: 1.15 * E }, 8, 4);
+      ball(0.42, '#0a0e1a', { x: sd * 2.05, y: -0.12, z: 5.22, sx: 0.8, sy: 1.1, sz: 0.3, kind: 12 }, 6, 3);
+      box(0.4, 0.4, 0.4, '#ffffff', { kind: 2, x: sd * 2.38, y: 0.42, z: 5.3, ea: 2 });
+      push(); tr(sd * 2.15, 0.95, 5.0); rz(sd * -0.12); box(2.8, 0.42, 0.5, '#10121c', { kind: 12 }); pop();
+      push();
+      tr(sd * 2.2, 1.85, 5.0);
+      rz(sd * (S.browAngle != null ? S.browAngle : 0.12));
+      box(2.8, 0.45, 0.5, S.brow || S.hair || '#222', { kind: 12 });
+      pop();
+    }
+    if (E > 1.2) { glowL(2.1, 0.1, 6, 8, S.eye, 0.5 * E); glowL(-2.1, 0.1, 6, 8, S.eye, 0.5 * E); }
+  }
+
+  /* ───────── 머리카락 ───────── */
+  let TIME = 0;
+  function lock(x, y, z, ax, az, L, w, segs, bx, bz, col) {
+    push();
+    tr(x, y, z);
+    if (ax) rx(ax);
+    if (az) rz(az);
+    strand(L, w, segs, bx, bz, col);
+    pop();
+  }
+  function hairKai(S) {
+    const h = S.hair, hi = S.hairHi, dk = S.hairDk || h;
+    ball(6.0, h, { y: 1.3, z: -0.5, half: 0.5 }, 10, 4);
+    ball(5.8, dk, { y: -0.3, z: -1.6, sy: 1.05 }, 8, 5);
+    // 앞머리: 이마를 덮고 눈썹까지 흘러내림 (오른쪽으로 쏠림)
+    const bangs = [[-4.4, 0.45, 6.4], [-2.6, 0.22, 7.6], [-0.8, 0.05, 6.8], [1.0, -0.12, 8], [2.8, -0.28, 7], [4.5, -0.5, 6]];
+    bangs.forEach(([x, a, L], i) => lock(x, 4.6, 4.0, -0.62, a, L, 1.9, 3, 0.9, a * 0.7, i % 3 === 1 ? hi : h));
+    // 옆머리: 귀를 덮고 바깥으로 삐침
+    for (const sd of [1, -1]) {
+      lock(sd * 5.4, 2.8, 1.8, -0.12, sd * 0.32, 10.5, 1.8, 3, 0.25, sd * -0.25, h);
+      lock(sd * 5.6, 3.4, -0.6, 0.05, sd * 0.62, 9, 1.9, 3, 0.2, sd * -0.35, dk);
+      lock(sd * 5.0, 2.4, -2.8, 0.25, sd * 0.45, 9.5, 2.0, 3, 0.3, sd * 0.1, h);
+    }
+    // 정수리: 위로 솟았다가 사방으로 넘어가는 헝클어진 다발
+    const top = [[-2.8, 1.2, -0.4, 0.55], [0, 1.8, 0.5, 0], [2.6, 1.2, -0.4, -0.55], [-1.6, -1.2, -0.85, 0.5], [1.6, -1.2, -0.8, -0.5], [0, -2.4, -1.1, 0.1], [-3.6, -0.6, -0.6, 0.9], [3.6, -0.6, -0.6, -0.9]];
+    top.forEach(([x, z, ax, az], i) => lock(x, 5.7, z, Math.PI / 2 + 0.35 - ax * 0.4, az, 7.8, 2.4, 3, 0.9, az * 0.9, i % 3 === 1 ? hi : i % 3 === 2 ? dk : h));
+    // 뒷머리 (목덜미로 길게 삐침)
+    for (let i = 0; i < 7; i++) {
+      const x = -4.8 + i * 1.6;
+      lock(x, 1.6 - Math.abs(x) * 0.15, -5.0, 0.45, x * 0.09, 9.5 + (i % 2) * 2, 2.1, 3, 0.4, x * 0.05, i % 2 ? dk : h);
+    }
+    // 바보털
+    lock(0.6, 6.3, 0.8, Math.PI - 0.5, 0.2, 3.6, 0.6, 3, -1.6, 0.4, h);
+  }
+  function hairZero(S) {
+    const h = S.hair, hi = S.hairHi, dk = S.hairDk || h;
+    ball(6.1, h, { y: 1.3, z: -0.4, half: 0.5 }, 10, 4);
+    ball(5.9, dk, { y: -0.3, z: -1.5, sy: 1.05 }, 8, 5);
+    // 사방으로 뻗친 거친 붉은 머리 (뒤로 넘어가며 크게 펼쳐짐)
+    const spikes = [
+      [0, 6, 1, Math.PI - 0.95, 0, 10, 2.7], [2.6, 5.6, 0.6, Math.PI - 0.9, -0.7, 11, 2.6], [-2.6, 5.6, 0.6, Math.PI - 0.9, 0.7, 11, 2.6],
+      [4.4, 4.2, -0.6, Math.PI - 1.2, -1.0, 11.5, 2.5], [-4.4, 4.2, -0.6, Math.PI - 1.2, 1.0, 11.5, 2.5], [0, 5, -3, Math.PI - 1.45, 0, 13, 2.7],
+      [2.8, 3.6, -4, Math.PI - 1.85, -0.5, 13, 2.5], [-2.8, 3.6, -4, Math.PI - 1.85, 0.5, 13, 2.5], [0, 1.5, -5.2, 0.85, 0, 12, 2.5],
+      [3.8, 0.8, -4.2, 0.65, -0.7, 11, 2.3], [-3.8, 0.8, -4.2, 0.65, 0.7, 11, 2.3], [5.2, 2, -2, 0.2, -1.1, 10, 2.2], [-5.2, 2, -2, 0.2, 1.1, 10, 2.2],
+    ];
+    spikes.forEach(([x, y, z, ax, az, L, w], i) => lock(x, y, z, ax, az, L, w, 3, -0.45, az * 0.45, i % 4 === 0 ? hi : i % 3 === 0 ? dk : h));
+    const bangs = [[-3.8, 0.55, 7.5], [-1.6, 0.18, 9], [0.8, -0.18, 8.5], [3.4, -0.55, 7.5]];
+    bangs.forEach(([x, a, L], i) => lock(x, 4.6, 4.1, -0.85, a, L, 2.1, 3, 1.05, a * 0.6, i === 1 ? hi : h));
+    for (const sd of [1, -1]) lock(sd * 5.5, 2.6, 1.2, -0.1, sd * 0.45, 10, 1.9, 3, 0.2, sd * 0.3, h);
+  }
+  function hairOther(S) {
     if (S.hairStyle === 'helmet') {
-      box(12.6, 12.6, 12.6, S.helm, { y: 0.6, kind: 6 });
-      box(11, 2.6, 2, S.eye, { kind: 2, y: 0.5, z: 6.4, ea: 1.4 });
-      box(3, 6, 8, S.helmHi || S.helm, { y: 7, kind: 6 });
+      ball(6.5, S.helm, { y: 0.8, kind: 6, sy: 1.05 }, 10, 6);
+      box(11.6, 2.6, 2.4, '#0c1018', { y: 0.2, z: 5.6 });
+      box(10.6, 1.4, 1, S.eye, { kind: 2, y: 0.4, z: 6.7, ea: 1.5 });
+      box(3, 6, 9, S.helmHi || S.helm, { y: 6.2, z: -1, kind: 6, tt: 0.6 });
+      for (const sd of [1, -1]) box(1.6, 5, 5, S.helmHi || S.helm, { x: sd * 6.4, y: -0.5, kind: 6 });
       return;
     }
     if (S.hairStyle === 'hood') {
-      box(13.6, 13, 13.4, S.coat, { y: 1, z: -0.6, tt: 0.8 });
-      box(10, 4, 2, '#0a0a0c', { y: 0.4, z: 6 });
-      box(6.5, 1.2, 1, S.eye, { kind: 2, y: 0.9, z: 7, ea: 1.6 });
+      ball(6.9, S.coat, { y: 0.9, z: -0.8, sy: 1.08, half: 0.7 }, 10, 6);
+      box(10, 5, 2, '#0a0a0c', { y: -0.4, z: 5.6 });
+      box(7, 1.1, 1, S.eye, { kind: 2, y: 0.5, z: 6.7, ea: 1.7 });
+      box(13, 6, 9, S.coat, { y: -4, z: -2.2, tb: 1.25 });
       return;
     }
     if (S.hairStyle === 'knight') {
-      box(15, 15, 15, S.helm, { y: 1, kind: 6, tb: 0.9 });
-      box(12, 2.4, 2, S.eye, { kind: 2, y: 1, z: 7.6, ea: 1.6 });
-      box(3, 12, 16, S.trim, { kind: 2, y: 12, z: -2, tt: 0.4, ea: 1.2 });
-      return;
+      ball(7.4, S.helm, { y: 1, kind: 6, sy: 1.1 }, 12, 6);
+      box(13, 7, 4, S.helm, { y: -2.5, z: 5, kind: 6, tb: 0.6 });
+      box(12, 1.8, 1.4, S.eye, { kind: 2, y: 1, z: 7.4, ea: 1.7 });
+      box(2.4, 1.6, 6, S.eye, { kind: 2, y: 4.4, z: 5.4, ea: 1.2 });
+      for (let k = 0; k < 4; k++) lock(0, 7 - k * 0.6, 1 - k * 3, Math.PI - 0.4 - k * 0.3, 0, 9 - k, 1.8, 3, -0.5, 0, S.crest || S.trim);
+      for (const sd of [1, -1]) { push(); tr(sd * 6.6, 3, -1); rz(-sd * 0.5); box(1.4, 9, 3, S.helmHi || S.helm, { y: 4, kind: 6, tt: 0.2 }); pop(); }
     }
-    ball(6.3, h, { y: 1.9, z: -0.5, sy: 0.95 }, 8, 4);
-    box(12, 9, 4, h, { y: 0.5, z: -4.4, tb: 0.75 });
-    box(2.6, 8, 8, h, { x: 5.6, y: 0.5, z: -0.2, tb: 0.5 });
-    box(2.6, 8, 8, h, { x: -5.6, y: 0.5, z: -0.2, tb: 0.5 });
-    const spikes = S.hairStyle === 'zero'
-      ? [[0, 7, -2, -0.9, 0, 11], [3.5, 6, -3, -1.2, -0.5, 10], [-3.5, 6, -3, -1.2, 0.5, 10], [5, 4, -4, -1.6, -0.9, 9], [-5, 4, -4, -1.6, 0.9, 9], [0, 4, -5, -1.9, 0, 10], [2.5, 7, 2, -0.3, -0.3, 8], [-2.5, 7, 2, -0.3, 0.3, 8]]
-      : [[0, 7, -1, -0.55, 0, 9], [3.6, 6, -2, -0.9, -0.5, 8], [-3.6, 6, -2, -0.9, 0.5, 8], [5, 3.5, -3.5, -1.5, -0.8, 7], [-5, 3.5, -3.5, -1.5, 0.8, 7], [0, 4, -5.5, -1.8, 0, 8], [1.8, 5.5, 4.5, 2.4, -0.2, 6], [-2.2, 5.5, 4.5, 2.5, 0.25, 6], [4.5, 5, 3.5, 2.1, -0.6, 5]];
-    for (const [x, y, z, ax, az, L] of spikes) {
-      push();
-      tr(x, y, z);
-      rx(ax);
-      rz(az);
-      box(4.6, L, 4.6, h, { y: L / 2 - 1, tt: 0.08 });
-      pop();
-    }
-    if (S.hairHi) box(10, 1, 6, S.hairHi, { y: 8.1, z: 1, tt: 0.4 });
   }
 
   function head(S, P) {
-    box(4.2, 4, 4.2, S.skin, { y: 1.6 });
     push();
-    tr(0, 10, 0.4);
+    tr(0, 22.6, 0.3);
+    prism(2.4, 2.15, 5, 10, S.skin, { y: 2.2 });
+    tr(0, 4.6, 0);
     ry(P.headYaw);
     rx(P.headPitch);
-    sc(S.headScale || 1.18);
-    ball(5.6, S.skin, { sy: 1.08, y: 0.2 }, 8, 5);
-    box(7.4, 4.2, 4, S.skin, { y: -3.4, z: 2, tb: 0.55 });
-    box(2.1, 1.7, 0.6, S.eye, { kind: 2, x: 2.3, y: 0.2, z: 5.25, ea: 1.4 * P.eye });
-    box(2.1, 1.7, 0.6, S.eye, { kind: 2, x: -2.3, y: 0.2, z: 5.25, ea: 1.4 * P.eye });
-    if (P.eye > 1.2) { glowL(2.4, 0.4, 6, 8, S.eye, 0.5 * P.eye); glowL(-2.4, 0.4, 6, 8, S.eye, 0.5 * P.eye); }
-    hair(S);
+    tr(0, 5, 0.3);
+    sc(S.headScale || 1.12);
+    if (S.hairStyle === 'kai' || S.hairStyle === 'zero') {
+      face(S, P);
+      if (S.hairStyle === 'kai') hairKai(S); else hairZero(S);
+    } else {
+      if (S.hairStyle !== 'knight' && S.hairStyle !== 'helmet') face(S, P);
+      hairOther(S);
+    }
     pop();
   }
 
@@ -16146,19 +16352,47 @@ AZ.gfx.models3d = (() => {
   function arm(S, P, side, wpn) {
     const sh = side === 1 ? P.shL : P.shR;
     push();
-    tr(side * 9.6, 19, 0);
+    tr(side * 8.5, 19.6, 0);
     ry(sh[0]);
     rx(-sh[1]);
     rz(side * sh[2]);
-    if (S.pauldron) box(8, 5.5, 9, S.pauldron, { y: 1.2, kind: 6, tb: 1.15 });
-    ball(3.3, S.sleeve || S.coat, { y: -0.5 }, 8, 4);
-    limb(3.1, 2.6, 14, S.sleeve || S.coat);
-    if (S.trim && S.sleeveTrim !== false) prism(2.8, 2.8, 1.2, 8, S.trim, { kind: 2, y: -12.6, ea: 0.9, open: true });
-    tr(0, -13.5, 0);
+    ball(3.1, S.sleeve || S.coat, { y: -0.4 }, 8, 4);
+    // 어깨 갑옷
+    if (S.pauldronR && side === -1) {
+      push();
+      tr(0, 1.2, 0);
+      rz(-0.25);
+      ball(5.7, S.pauldronR, { sy: 0.7, half: 0.6, kind: 6 }, 12, 5);
+      prism(5.9, 5.5, 2.4, 12, S.pauldronR, { y: -1.4, kind: 6, open: true });
+      prism(5.5, 5.0, 2.2, 12, S.pauldronD || S.pauldronR, { y: -3.5, x: -0.3, kind: 6, open: true });
+      prism(5.0, 4.4, 2, 12, S.pauldronR, { y: -5.5, x: -0.6, kind: 6, open: true });
+      prism(5.95, 5.95, 0.5, 12, S.trim, { kind: 2, y: -0.25, ea: 1.1, open: true });
+      box(1.6, 1.6, 1.2, S.trim, { kind: 2, y: 2.4, z: 3.6, ea: 1.3 });
+      pop();
+    } else if (S.pauldron) {
+      push(); tr(0, 1, 0); ball(4.6, S.pauldron, { sy: 0.7, half: 0.62, kind: 6 }, 10, 4); box(8.4, 2.2, 8.6, S.pauldron, { y: -1.6, kind: 6, tb: 1.1 }); pop();
+    }
+    if (S.crystals && side === 1) {
+      for (let k = 0; k < 4; k++) { push(); tr(0.5 + k * 0.6, 3, -1 + k * 1.4); rz(-0.4 - k * 0.25); rx(-0.4 + k * 0.3); box(2.2, 6 + k * 1.6, 2.2, S.trim, { kind: 2, y: 3 + k, ea: 1.5, tt: 0.05 }); pop(); }
+      glowL(0, 6, 0, 22, S.trim, 0.5);
+    }
+    limb(2.8, 2.35, 14, S.sleeve || S.coat);
+    if (S.trim && S.sleeveTrim !== false) {
+      prism(2.6, 2.6, 1.1, 10, S.trim, { kind: 2, y: -12.6, ea: 0.9, open: true });
+      line([side * 2.9, -2, 0.6], [side * 2.4, -11, 1.2], 0.45, S.trim, 1.0);
+    }
+    if (S.cracks) { line([side * 2.4, -3, 2.2], [side * 1.6, -7, 2.6], 0.5, S.trim, 1.5); line([side * 1.6, -7, 2.6], [side * 2.6, -11, 2.0], 0.5, S.trim, 1.5); }
+    tr(0, -13.6, 0);
+    ball(2.3, S.sleeve || S.coat, {}, 8, 4);
     rx(-(side === 1 ? P.elbL : P.elbR));
-    limb(2.7, 2.3, 12.5, S.glove || S.coat);
-    tr(0, -12.5, 0);
-    box(4, 4.4, 4.4, S.glove || S.skin, { y: -1.6, tb: 0.8 });
+    limb(2.4, 2.0, 13, S.glove || S.coat);
+    if (S.gauntlet) {
+      box(4.0, 7.5, 2, S.gauntlet, { y: -6.6, z: 1.7, kind: 6, tb: 0.85 });
+      box(0.5, 6.5, 0.5, S.trim, { kind: 2, y: -6.6, z: 3.1, ea: 1.2 });
+    }
+    tr(0, -13, 0);
+    box(3.7, 4.2, 4, S.hand || S.glove || S.skin, { y: -1.7, tb: 0.75 });
+    box(1.2, 3, 1.4, S.hand || S.glove || S.skin, { x: side * 1.8, y: -1.1, z: 1.5 });
     if (P.glowHand && (side === -1 || P.glowBoth)) glowL(0, -2, 2, 26 * P.glowHand, P.castCol || S.trim, 0.9 * P.glowHand);
     if (wpn) weapon(wpn.type, wpn.color, P, side, wpn.len);
     pop();
@@ -16169,45 +16403,127 @@ AZ.gfx.models3d = (() => {
     const sw = side === 1 ? P.legL : P.legR;
     const kn = side === 1 ? P.kneeL : P.kneeR;
     push();
-    tr(side * 4.4, -1, 0);
+    tr(side * 3.9, -1, 0);
     rz(side * P.spread);
     rx(-sw);
-    limb(3.9, 3.0, 17.5, S.pants);
-    tr(0, -17, 0);
+    ball(3.5, S.pants, { y: 0.2 }, 8, 4);
+    limb(3.5, 2.7, 18.5, S.pants);
+    if (S.thighStrap) prism(3.2, 3.2, 1.2, 10, S.thighStrap, { y: -9, kind: 6, open: true });
+    tr(0, -18.3, 0);
     rx(kn);
-    if (S.knee) box(6, 5, 3, S.knee, { y: -0.5, z: 2.9, kind: 6 });
-    limb(3.1, 2.7, 17, S.boots);
-    tr(0, -17, 0);
+    ball(2.7, S.pants, {}, 8, 4);
+    if (S.knee) { push(); tr(0, -0.3, 2.3); box(4.8, 5.2, 2.2, S.knee, { kind: 6, tb: 0.75, tt: 0.85 }); pop(); }
+    limb(2.9, 2.4, 18, S.boots);
+    if (S.shinPlate) {
+      box(4.0, 11, 1.8, S.shinPlate, { y: -8, z: 2.2, kind: 6, tb: 0.8 });
+      box(0.5, 9, 0.5, S.trim, { kind: 2, y: -8, z: 3.2, ea: 1.1 });
+    }
+    if (S.cracks) line([side * 1.2, -3, 2.6], [side * -0.6, -9, 2.5], 0.5, S.trim, 1.4);
+    tr(0, -18, 0);
     rx(-kn * 0.3 + sw * 0.5);
-    box(6.2, 5, 12, S.boots, { y: -1.2, z: 2.6 });
-    if (S.trim) box(6.4, 0.9, 2, S.trim, { kind: 2, y: 0.8, z: 7.4, ea: 0.8 });
+    box(5.2, 4.4, 10.6, S.boots, { y: -1.3, z: 2.2, tt: 0.85 });
+    box(5.4, 2, 3.6, S.toe || S.boots, { y: -2.5, z: 6.2, kind: 6 });
+    if (S.trim) box(5.6, 0.7, 1.4, S.trim, { kind: 2, y: 0.9, z: 6.8, ea: 0.8 });
     pop();
   }
 
-  /** 긴 코트 자락 */
+  /** 긴 코트 자락 (뒤 두 갈래 + 앞 두 장, 가장자리에 빛 줄) */
   function coatSkirt(S, P) {
     if (!S.coatLen) return;
     const L = S.coatLen;
-    push();
-    tr(0, 3, -5);
-    rx(0.12 + P.flow);
-    box(17, L, 2, S.coat, { y: -L / 2, tb: 1.25 });
-    if (S.trim) box(17 * 1.2, 1, 2.2, S.trim, { kind: 2, y: -L + 0.5, ea: 0.9 });
-    pop();
-    for (const side of [1, -1]) {
-      const sw = side === 1 ? P.legL : P.legR;
+    if (S.ragged) {
+      // 찢어진 망토 자락 (제로)
+      for (let i = 0; i < 7; i++) {
+        const a = Math.PI * (0.35 + i * 0.05) * 2 - Math.PI * 0.2;
+        const len = L * (0.7 + ((i * 37) % 10) / 22);
+        push();
+        tr(Math.cos(a) * 6.6, 3, -Math.abs(Math.sin(a)) * 5.4);
+        ry(Math.PI / 2 - a);
+        rx(0.12 + P.flow * (0.8 + i * 0.05) + Math.sin(TIME * 3 + i) * 0.04);
+        box(4.2, len, 1.2, S.coat, { y: -len / 2, tb: 0.7 });
+        box(0.5, len * 0.9, 1.4, S.trim, { kind: 2, x: 1.9, y: -len * 0.45, ea: 0.9, tb: 0.7 });
+        pop();
+      }
+      return;
+    }
+    for (const sd of [1, -1]) {
       push();
-      tr(side * 5.4, 3, 4.6);
-      rz(side * 0.16);
+      tr(sd * 3.3, 3, -4.6);
+      rz(sd * 0.08);
+      rx(0.12 + P.flow + Math.sin(TIME * 2.2 + sd) * 0.03);
+      box(7.2, L, 1.3, S.coat, { y: -L / 2, tb: 1.22 });
+      box(7.2 * 1.2, 0.8, 1.5, S.trim, { kind: 2, y: -L + 0.4, ea: 0.9 });
+      box(0.6, L, 1.5, S.trim, { kind: 2, x: -sd * 3.5 * 1.1, y: -L / 2, ea: 0.7, tb: 1.2 });
+      pop();
+      const sw = sd === 1 ? P.legL : P.legR;
+      push();
+      tr(sd * 4.7, 3, 4.1);
+      rz(sd * 0.16);
       rx(-Math.max(-0.2, sw) * 0.7 + P.flow * 0.3);
-      box(7, L * 0.9, 1.6, S.coat, { y: -L * 0.45, tb: 1.15 });
-      if (S.trim) box(1, L * 0.9, 1.8, S.trim, { kind: 2, x: -side * 3.4, y: -L * 0.45, ea: 0.9 });
+      box(6, L * 0.9, 1.3, S.coat, { y: -L * 0.45, tb: 1.15 });
+      if (S.lining) box(5, L * 0.86, 0.4, S.lining, { y: -L * 0.45, z: -0.75, tb: 1.15 });
+      box(0.7, L * 0.9, 1.5, S.trim, { kind: 2, x: -sd * 2.9, y: -L * 0.45, ea: 1.0 });
+      box(6 * 1.15, 0.7, 1.5, S.trim, { kind: 2, y: -L * 0.9 + 0.3, ea: 0.9 });
       pop();
       push();
-      tr(side * 8.2, 3, 0);
-      rz(side * (0.22 + P.flow * 0.2));
-      box(1.6, L * 0.92, 9, S.coat, { y: -L * 0.46, tb: 1.2 });
+      tr(sd * 7.2, 3, 0);
+      rz(sd * (0.22 + P.flow * 0.2));
+      box(1.3, L * 0.92, 7.8, S.coat, { y: -L * 0.46, tb: 1.2 });
       pop();
+    }
+  }
+
+  /** 몸통 (엉덩이 좌표에서) */
+  function torso(S, P) {
+    prism(6.0, 6.6, 8.4, 10, S.body, { y: 7.4, sz: 0.66 });
+    prism(6.6, 8.2, 11, 10, S.coat, { y: 16.3, sz: 0.62 });
+    prism(8.2, 5.2, 3.4, 10, S.coat, { y: 23.4, sz: 0.62 });
+    if (S.chestPlate) {
+      push(); tr(0, 16, 4.6); box(12.4, 8, 2.6, S.chestPlate, { kind: 6, tb: 0.8 }); box(12.6, 0.6, 2.8, S.trim, { kind: 2, y: -2, ea: 0.8 }); pop();
+    }
+    if (S.chestPlateR) {
+      // 오른쪽 가슴 은색 갑옷 판 (원작의 비대칭 갑옷)
+      push();
+      tr(-3.4, 16.4, 4.3);
+      ry(0.25);
+      box(7.6, 8.6, 2.4, S.chestPlateR, { kind: 6, tb: 0.85 });
+      box(6.8, 3, 2.6, S.pauldronD || S.chestPlateR, { y: -5, kind: 6, tb: 0.8 });
+      box(7.8, 0.45, 2.6, S.trim, { kind: 2, y: 1.4, ea: 1.0 });
+      pop();
+    }
+    if (S.trim && S.frontLines !== false) {
+      // 재킷 앞자락과 회로 무늬
+      line([1.6, 6.5, 5.2], [2.2, 21.5, 5.3], 0.5, S.trim, 1.1);
+      line([2.2, 19.6, 5.3], [5.8, 19.2, 4.2], 0.42, S.trim, 1.0);
+      line([5.8, 19.2, 4.2], [6.6, 14.5, 3.6], 0.42, S.trim, 0.9);
+      line([3.4, 9, 5.0], [6.2, 9, 3.8], 0.4, S.trim, 0.8);
+      if (!S.chestPlateR) line([-1.6, 6.5, 5.2], [-2.2, 21.5, 5.3], 0.5, S.trim, 1.1);
+    }
+    if (S.cracks) {
+      const pts = [[-4.5, 21, 4.8], [-2, 17, 5.6], [-3.4, 14, 5.6], [0.6, 11, 5.6], [-0.6, 8, 5.2], [2.6, 6, 4.8]];
+      for (let i = 0; i < pts.length - 1; i++) line(pts[i], pts[i + 1], 0.55, S.trim, 1.6);
+      line([3, 20, 5], [5.4, 16, 4.4], 0.5, S.trim, 1.4);
+    }
+    if (S.highCollar) {
+      // 높게 선 깃 (안쪽 가장자리에 푸른 빛)
+      push();
+      tr(0, 22.4, -3.4);
+      rx(-0.16);
+      box(11, 8, 1.3, S.collarCol || S.coat, { y: 4, tt: 1.25 });
+      box(13.6, 0.7, 1.5, S.trim, { kind: 2, y: 7.9, ea: 1.2 });
+      pop();
+      for (const sd of [1, -1]) {
+        push();
+        tr(sd * 5.2, 22.4, 0.6);
+        ry(sd * -0.35);
+        rz(sd * -0.2);
+        box(1.3, 7.4, 7, S.collarCol || S.coat, { y: 3.7, tt: 1.15 });
+        box(1.5, 7, 0.6, S.trim, { kind: 2, y: 3.7, z: 3.8, ea: 1.3 });
+        box(1.5, 0.6, 7.4, S.trim, { kind: 2, y: 7.3, ea: 1.1 });
+        pop();
+      }
+    } else if (S.collar !== false) {
+      prism(4.6, 5.6, 3, 10, S.coat2 || S.coat, { y: 24, sz: 0.85 });
     }
   }
 
@@ -16217,25 +16533,20 @@ AZ.gfx.models3d = (() => {
     if (P.fall) { rx(-P.fall); }
     if (P.tilt) rz(P.tilt);
     push();
-    tr(0, 38 - P.crouch, 0);
+    tr(0, 40 - P.crouch, 0);
     rx(P.lean * 0.4);
-    prism(7.6, 7.4, 7, 8, S.pants, { y: 1.5, sz: 0.66, ph: Math.PI / 8 });
-    if (S.belt) prism(8, 8, 2.2, 8, S.belt, { y: 4, sz: 0.68, kind: 6, ph: Math.PI / 8 });
+    prism(6.8, 6.4, 7, 10, S.pants, { y: 1.5, sz: 0.68 });
+    if (S.belt) {
+      prism(7.2, 7.2, 2.0, 10, S.belt, { y: 4.4, sz: 0.7, kind: 6 });
+      if (S.buckle) box(3.2, 2.4, 1, S.buckle, { y: 4.4, z: 5.5, kind: 6 });
+    }
     leg(S, P, 1);
     leg(S, P, -1);
     coatSkirt(S, P);
     push();
     rx(P.lean * 0.6);
     ry(P.twist);
-    prism(6.8, 7.4, 9, 8, S.body, { y: 7, sz: 0.66, ph: Math.PI / 8 });
-    prism(7.6, 9.4, 12.4, 8, S.coat, { y: 15.4, sz: 0.6, ph: Math.PI / 8 });
-    prism(9.4, 7, 2.6, 8, S.coat, { y: 22.9, sz: 0.62, ph: Math.PI / 8 });
-    if (S.trim) {
-      box(1.1, 12, 1, S.trim, { kind: 2, x: 2.6, y: 15, z: 5.5, ea: 1.0 });
-      box(1.1, 12, 1, S.trim, { kind: 2, x: -2.6, y: 15, z: 5.5, ea: 1.0 });
-    }
-    if (S.chestPlate) box(13, 8, 3, S.chestPlate, { y: 16, z: 4.6, kind: 6 });
-    if (S.collar !== false) box(13, 4.4, 9.6, S.coat2 || S.coat, { y: 22, tb: 0.9, tt: 1.15 });
+    torso(S, P);
     head(S, P);
     arm(S, P, 1, wpnL);
     arm(S, P, -1, wpnR);
@@ -16244,31 +16555,36 @@ AZ.gfx.models3d = (() => {
     pop();
   }
 
-  /* ───────── 스타일 ───────── */
+  /* ───────── 스타일 (원작 그림 기준) ───────── */
+  // 카이온: 검은 머리·푸른 눈, 높게 선 검은 깃에 푸른 빛 줄, 오른쪽 어깨와 가슴의 은색 갑옷
   const KAI = {
-    skin: '#e2cfcc', hair: '#1c2644', hairHi: '#5a7cc0', hairStyle: 'kai', eye: '#55ccff',
-    body: '#26304c', coat: '#1e2946', coat2: '#2e3f66', coatLen: 24, trim: '#4fd8ff', sleeve: '#1e2946',
-    pants: '#161e36', boots: '#262f48', knee: '#2a3550', pauldron: '#a9b6cc', glove: '#1a2338', belt: '#2a3550',
+    skin: '#e6d2cf', hair: '#1d2542', hairHi: '#4a6cae', hairDk: '#121729', hairStyle: 'kai', eye: '#4cc8ff', brow: '#151a2c',
+    body: '#1a2032', coat: '#141a2a', coat2: '#1e2840', collarCol: '#121828', coatLen: 24, trim: '#3fbcff', sleeve: '#151b2c', lining: '#1f3a66',
+    pants: '#141a2a', boots: '#1c2232', knee: '#aeb8ca', pauldronR: '#b6c2d8', pauldronD: '#7e8aa4', chestPlateR: '#b6c2d8',
+    glove: '#161c2c', gauntlet: '#9aa6bc', shinPlate: '#aeb8ca', toe: '#9aa6bc', belt: '#232a3c', buckle: '#c6d0e0', highCollar: true, browAngle: 0.18,
   };
+  // 제로: 거친 붉은 머리, 붉은 균열이 빛나는 검은 갑옷, 왼쪽 어깨의 붉은 결정, 입을 가린 마스크, 찢어진 망토
   const ZERO = {
-    skin: '#e4cecb', hair: '#b3122e', hairHi: '#ff7a90', hairStyle: 'zero', eye: '#ff4060',
-    body: '#24161e', coat: '#22141c', coat2: '#3a1628', coatLen: 30, trim: '#ff2a4a', sleeve: '#22141c',
-    pants: '#1c1218', boots: '#2a1820', knee: '#2a1820', glove: '#1c1218', belt: '#2a1820',
+    skin: '#e2cbc8', hair: '#b8142e', hairHi: '#ff5a70', hairDk: '#6e0a1c', hairStyle: 'zero', eye: '#ff3a58', brow: '#6e0a1c',
+    body: '#1a1218', coat: '#1c1218', coat2: '#2a141e', coatLen: 30, trim: '#ff2a4a', sleeve: '#1e141a', ragged: true,
+    pants: '#170f14', boots: '#22161c', knee: '#3a2028', glove: '#1c1218', gauntlet: '#3a2028', shinPlate: '#3a2028', toe: '#3a2028',
+    belt: '#2a1820', cracks: true, crystals: true, mask: '#1a1014', frontLines: false, sleeveTrim: false, highCollar: true, collarCol: '#1a1016', browAngle: 0.35,
   };
   const SOLDIER = {
     skin: '#c9d0e0', hairStyle: 'helmet', helm: '#283250', helmHi: '#3f4c72', eye: '#9ab0ff',
-    body: '#283152', coat: '#252e4a', coat2: '#36425f', coatLen: 0, trim: '#9ab0ff', sleeve: '#252e4a',
-    pants: '#192036', boots: '#262d44', knee: '#3a4566', pauldron: '#4a5878', glove: '#1e2538', chestPlate: '#3a4668', belt: '#3a4566',
+    body: '#283152', coat: '#252e4a', coat2: '#36425f', coatLen: 0, trim: '#9ab0ff', sleeve: '#252e4a', frontLines: false,
+    pants: '#192036', boots: '#262d44', knee: '#3a4566', pauldron: '#4a5878', glove: '#1e2538', chestPlate: '#3a4668', belt: '#3a4566', shinPlate: '#3a4566',
   };
   const SNIPER = {
     skin: '#2a2a30', hairStyle: 'hood', eye: '#ffb35c',
-    body: '#38322e', coat: '#2c2724', coat2: '#463c35', coatLen: 22, trim: '#ffb35c', sleeve: '#2c2724',
-    pants: '#1e1b1a', boots: '#2a2522', knee: '#3a332e', glove: '#2a2522', sleeveTrim: false,
+    body: '#38322e', coat: '#2c2724', coat2: '#463c35', coatLen: 22, trim: '#ffb35c', sleeve: '#2c2724', frontLines: false,
+    pants: '#1e1b1a', boots: '#2a2522', knee: '#3a332e', glove: '#2a2522', sleeveTrim: false, belt: '#463c35',
   };
   const ARKA = {
-    skin: '#5a6a8a', hairStyle: 'knight', helm: '#6a7ea4', eye: '#ffe066',
-    body: '#3a4866', coat: '#6a7ea4', coat2: '#8fa4c8', coatLen: 20, trim: '#ffe066', sleeve: '#5a6c90',
-    pants: '#3a4866', boots: '#5a6c90', knee: '#8fa4c8', pauldron: '#8fa4c8', glove: '#4a5a7a', chestPlate: '#8fa4c8', belt: '#ffe066',
+    skin: '#5a6a8a', hairStyle: 'knight', helm: '#6a7ea4', helmHi: '#8fa4c8', eye: '#5ff0ff', crest: '#5ff0ff',
+    body: '#3a4866', coat: '#6a7ea4', coat2: '#8fa4c8', coatLen: 20, trim: '#5ff0ff', sleeve: '#5a6c90', frontLines: false,
+    pants: '#3a4866', boots: '#5a6c90', knee: '#8fa4c8', pauldron: '#8fa4c8', glove: '#4a5a7a', gauntlet: '#8fa4c8', chestPlate: '#8fa4c8',
+    belt: '#ffe066', shinPlate: '#8fa4c8', toe: '#8fa4c8',
   };
 
   /* ───────── 공격 자세 계산 ───────── */
@@ -16454,98 +16770,180 @@ AZ.gfx.models3d = (() => {
    * 떠 있는 여성형 리그 — 리아 · 세라 · 프로토콜 · 기억의 환영
    * 키 70, 공중에 뜸
    * ========================================================= */
+  // 리아: 길게 흐르는 은빛 머리, 왼쪽의 푸른 기계 머리 장식, 검은 초커와 푸른 보석, 빛나는 회로 무늬의 하얀 바디슈트 (홀로그램)
   const LIA = {
-    skin: '#e6eefc', hair: '#bccff4', hairGlow: '#8fd8ff', body: '#bfe6ff', chest: '#e6f6ff', arm: '#cfeeff',
-    glove: '#9fd8ff', skirt: '#78bdea', hem: '#5fd8ff', eye: '#4fc8ff', accent: '#5fd8ff', halo: true, legFade: 0.3,
+    skin: '#e6e4f0', hair: '#c4cff2', hairHi: '#eef2ff', hairDk: '#8f9ed6', hairGlow: '#8fd8ff', body: '#e8f1ff', chest: '#f4f8ff',
+    glove: '#a8d8ff', cuff: '#4fc8ff', stock: '#dbe8ff', skirt: '#cfe2fb', veil: '#7cc8ff', hem: '#4fc8ff', line: '#4fc8ff',
+    eye: '#3fc0ff', accent: '#4fc8ff', choker: '#141828', gem: '#3fd0ff', ornament: 'lia', halo: true, legFade: 0.3, hairLen: 38,
   };
+  // 세라: 하얀 머리, 남색 치마와 보라빛 장식, 떠다니는 기억의 파편
   const SERA = {
-    skin: '#f2eaf4', hair: '#ece6fa', hairGlow: '#d8b8ff', body: '#eef0fa', chest: '#ffffff', arm: '#e8eaf6',
-    glove: '#1e2444', skirt: '#262c50', hem: '#b07cff', eye: '#b98cff', accent: '#b07cff', shards: true, legFade: 0.1,
+    skin: '#e8dbe2', hair: '#e6e2f6', hairHi: '#ffffff', hairDk: '#b0a8d8', hairGlow: '#d8b8ff', body: '#eef0fa', chest: '#ffffff',
+    glove: '#1e2444', cuff: '#b07cff', stock: '#1e2444', skirt: '#262c50', veil: '#b07cff', hem: '#b07cff', line: '#b07cff',
+    eye: '#b98cff', accent: '#b07cff', choker: '#1e2444', gem: '#c48aff', ornament: 'sera', shards: true, legFade: 0.08, hairLen: 34,
   };
+  // 프로토콜: 하얀 머리, 금빛 갑옷 장식과 왕관, 각진 날개, 떠다니는 코드 판
   const PROTOCOL = {
-    skin: '#f4f2f0', hair: '#e8ecf8', hairGlow: '#a8f0ff', body: '#f6f4ee', chest: '#ffffff', arm: '#ecebe4',
-    glove: '#d8b860', skirt: '#e2c470', hem: '#66e0ff', eye: '#66e0ff', accent: '#66e0ff', wings: true, legFade: 0.1,
+    skin: '#eadcd6', hair: '#e8ecf8', hairHi: '#ffffff', hairDk: '#aab4d4', hairGlow: '#a8f0ff', body: '#f6f4ee', chest: '#ffffff',
+    glove: '#d8b860', cuff: '#66e0ff', stock: '#f0ece0', skirt: '#f2efe6', veil: '#e2c470', hem: '#d8b860', line: '#66e0ff',
+    eye: '#66e0ff', accent: '#66e0ff', choker: '#d8b860', gem: '#66e0ff', ornament: 'protocol', wings: true, armor: '#d8b860', legFade: 0.08, hairLen: 36,
   };
+
+  // ASTRA 의 모습: 하얀 머리, 후광, 감은 눈, 푸른 장식
+  const ASTRA_FORM = {
+    skin: '#eae4ee', hair: '#eef2ff', hairHi: '#ffffff', hairDk: '#b8c4ea', hairGlow: '#9ad8ff', body: '#f2f6ff', chest: '#ffffff',
+    glove: '#dfe8ff', cuff: '#5fc8ff', stock: '#e8eeff', skirt: '#eef4ff', veil: '#9ad8ff', hem: '#5fc8ff', line: '#5fc8ff',
+    eye: '#9ad8ff', accent: '#5fc8ff', choker: '#1a2440', gem: '#5fd8ff', ornament: 'lia', halo: true, legFade: 0.45, hairLen: 44, eyesClosed: true,
+  };
+
+  /** 긴 머리 (머리 좌표) */
+  function hairLong(S, P, t) {
+    const h = S.hair, hi = S.hairHi || h, dk = S.hairDk || h;
+    ball(5.9, h, { y: 1.3, z: -0.4, half: 0.45 }, 10, 4);
+    ball(5.7, h, { y: -0.2, z: -1.5, sy: 1.08 }, 8, 5);
+    const sway = Math.sin(t * 1.6) * 0.06 + P.flow * 0.35 + P.lean * 0.3;
+    // 등 뒤로 흐르는 긴 머리 다발
+    const n = LOD > 0 ? 9 : 5;
+    for (let i = 0; i < n; i++) {
+      const u = i / (n - 1) - 0.5;
+      const L = S.hairLen * (0.86 + 0.14 * Math.cos(u * 3)) * (0.92 + ((i * 53) % 10) / 60);
+      const ph = Math.sin(t * 1.4 + i * 0.7) * 0.05;
+      lock(u * 9.4, 1.6 - Math.abs(u) * 2, -4.6 + Math.abs(u) * 1.4, 0.22 + sway + ph, u * 0.25, L, 2.5, 4, -0.08, -u * 0.12, i % 3 === 0 ? hi : i % 3 === 1 ? h : dk);
+    }
+    // 어깨 앞으로 내려오는 옆머리
+    for (const sd of [1, -1]) {
+      lock(sd * 5.2, 2.4, 1.8, -0.06, sd * 0.1, S.hairLen * 0.62, 1.8, 4, 0.12 + sway * 0.4, -sd * 0.08, h);
+      lock(sd * 5.5, 2, -0.8, 0.05, sd * 0.16, S.hairLen * 0.7, 1.9, 4, 0.18 + sway * 0.6, sd * 0.05, dk);
+    }
+    // 앞머리
+    const bangs = [[-4, 0.35, 5.2], [-2.2, 0.15, 6], [-0.4, 0, 5.6], [1.4, -0.12, 6.2], [3.2, -0.3, 5.4], [4.6, -0.45, 4.6]];
+    bangs.forEach(([x, a, L], i) => lock(x, 4.5, 4.0, -0.55, a, L, 1.7, 3, 0.8, a * 0.5, i % 2 ? hi : h));
+    lock(0.4, 6.3, 0.2, Math.PI - 0.1, 0.3, 4.6, 0.6, 3, -1.9, 0.5, h);
+    // 머리 장식
+    if (S.ornament === 'lia') {
+      push();
+      tr(5.9, 2.4, -0.2);
+      rz(-0.2);
+      box(1.8, 4.8, 4.2, '#1a2440', { kind: 6 });
+      box(0.6, 3.6, 3.2, S.accent, { kind: 2, x: 1, ea: 1.4 });
+      push(); tr(0.4, 2, -1.2); rx(-0.7); box(0.6, 6, 2.2, S.accent, { kind: 2, y: 3, ea: 1.2, tt: 0.2 }); pop();
+      push(); tr(0.4, 1, -2.2); rx(-1.1); box(0.6, 4.6, 1.8, S.accent, { kind: 2, y: 2.2, ea: 1.0, tt: 0.2 }); pop();
+      pop();
+      glowL(6.6, 2.6, 0, 9, S.accent, 0.5);
+      box(1.2, 2.4, 2.4, '#1a2440', { x: -5.9, y: 2, z: -0.4, kind: 6 });
+      box(0.4, 1.6, 1.6, S.accent, { kind: 2, x: -6.6, y: 2, z: -0.4, ea: 1.3 });
+    } else if (S.ornament === 'sera') {
+      for (const sd of [1, -1]) { push(); tr(sd * 5.4, 3.2, -1); rz(-sd * 0.5); box(0.8, 5.6, 2.6, S.accent, { kind: 2, y: 2.6, ea: 1.2, tt: 0.1 }); pop(); }
+    } else if (S.ornament === 'protocol') {
+      // 금빛 왕관
+      push();
+      tr(0, 5.4, -0.4);
+      rx(-0.25);
+      ring(5.6, 0.9, 12, S.armor, { kind: 6 });
+      for (let k = 0; k < 5; k++) { const a = Math.PI * (0.15 + k * 0.175); push(); tr(Math.cos(a) * 5.6, 0, Math.sin(a) * 5.6); box(0.8, 3.4 + (k === 2 ? 2 : 0), 0.8, S.armor, { y: 1.6, kind: 6, tt: 0.2 }); pop(); }
+      box(1.4, 1.4, 1.4, S.gem, { kind: 2, y: 1, z: 5.6, ea: 1.8 });
+      pop();
+    }
+  }
 
   function lady(S, P, t) {
     push();
     tr(0, P.lift, 0);
     if (P.tilt) rz(P.tilt);
-    // 치마와 다리
     push();
     tr(0, 30, 0);
     rx(P.lean * 0.3);
+    // 다리 (허벅지까지 오는 스타킹, 발끝은 빛으로 흩어짐)
     for (const side of [1, -1]) {
       push();
-      tr(side * 3, 0, 0);
+      tr(side * 2.8, 0, 0);
+      rz(side * 0.05);
       rx(-(side === 1 ? P.legL : P.legR));
-      box(4.4, 16, 4.8, S.skin, { y: -8, tb: 0.7, fade: S.legFade });
-      box(4, 14, 4.4, S.glove, { y: -22, tb: 0.6, fade: Math.min(0.9, S.legFade + 0.25) });
+      limb(2.9, 2.2, 15, S.skin, { fade: S.legFade * 0.4 });
+      prism(2.5, 2.5, 1.2, 10, S.cuff, { kind: 2, y: -9, ea: 1.0, open: true, fade: S.legFade * 0.5 });
+      limb(2.5, 2.25, 6.5, S.stock, { y: -12.25, fade: S.legFade * 0.5 });
+      tr(0, -15, 0);
+      rx(0.15 + (side === 1 ? 0.1 : 0));
+      limb(2.25, 1.6, 14, S.stock, { fade: S.legFade });
+      box(2.6, 3, 6, S.stock, { y: -14.5, z: 1.2, fade: Math.min(0.9, S.legFade + 0.25) });
       pop();
     }
-    prism(12 + P.flow * 3, 6, 14, 10, S.skirt, { y: -1 });
-    prism(12.6 + P.flow * 3, 12 + P.flow * 3, 1.4, 10, S.hem, { kind: 2, y: -8.2, ea: 1.1, open: true });
-    prism(6.4, 6.4, 1.8, 10, S.accent, { kind: 2, y: 6.4, ea: 1.0, open: true });
+    // 치마: 짧은 겉치마 + 뒤로 흐르는 반투명 자락
+    prism(10.5 + P.flow * 3, 6, 9.5, 14, S.skirt, { y: -0.6 });
+    prism(11 + P.flow * 3, 10.5 + P.flow * 3, 1.2, 14, S.hem, { kind: 2, y: -5.2, ea: 1.1, open: true });
+    prism(6.3, 6.3, 1.6, 12, S.hem, { kind: 2, y: 4.1, ea: 0.9, open: true });
+    for (let i = 0; i < 7; i++) {
+      const a = Math.PI * (0.5 + (i - 3) * 0.22);
+      push();
+      ry(-a + Math.PI / 2);
+      tr(0, 3.4, -6.4);
+      rx(0.22 + P.flow * 0.7 + Math.sin(t * 2 + i) * 0.06);
+      box(5.2, 22 + Math.abs(i - 3) * -1.8, 0.5, S.veil, { y: -11, fade: 0.5, tb: 1.35 });
+      box(5.2 * 1.3, 0.5, 0.7, S.hem, { kind: 2, y: -22 + Math.abs(i - 3) * 1.8, ea: 0.8 });
+      pop();
+    }
     // 몸통
     push();
     rx(P.lean * 0.5);
     ry(P.twist);
-    box(10, 9, 7, S.body, { y: 9, tb: 0.85 });
-    box(12, 9, 8, S.chest, { y: 16, tb: 0.85, tt: 1.05 });
-    box(8, 2, 1, S.accent, { kind: 2, y: 13, z: 4.2, ea: 1.1 });
-    box(4, 3.6, 4, S.skin, { y: 22 });
+    prism(5.5, 6.3, 8.4, 12, S.body, { y: 4.6, sz: 0.7 });
+    prism(6.3, 7.0, 7.2, 12, S.body, { y: 12.4, sz: 0.68 });
+    for (const sd of [1, -1]) ball(3.1, S.chest, { x: sd * 2.4, y: 13.2, z: 2.5, sz: 0.9 }, 10, 6);
+    prism(7.0, 4.4, 3.6, 12, S.skin, { y: 17.6, sz: 0.66 });
+    if (S.armor) {
+      push(); tr(0, 14, 4.2); box(9, 6, 1.6, S.armor, { kind: 6, tb: 0.7 }); pop();
+      for (const sd of [1, -1]) { push(); tr(sd * 7.2, 18, 0); ball(3.4, S.armor, { sy: 0.7, half: 0.6, kind: 6 }, 10, 4); pop(); }
+      box(11.6, 1.6, 7.6, S.armor, { y: 1.6, kind: 6 });
+    }
+    // 빛나는 회로 무늬
+    line([0, 1.5, 4.2], [0, 10, 4.6], 0.45, S.line, 1.3);
+    line([0, 10, 4.6], [-2.6, 11, 4.8], 0.4, S.line, 1.2);
+    line([0, 10, 4.6], [2.6, 11, 4.8], 0.4, S.line, 1.2);
+    line([-5.2, 3, 3], [-1, 6.5, 4.2], 0.4, S.line, 1.1);
+    line([5.2, 3, 3], [1, 6.5, 4.2], 0.4, S.line, 1.1);
+    prism(5.6, 5.6, 0.8, 12, S.line, { kind: 2, y: 8.4, sz: 0.72, ea: 0.9, open: true });
+    // 초커와 보석
+    prism(2.45, 2.45, 1.6, 10, S.choker, { y: 21, kind: 6 });
+    box(1.2, 1.2, 0.8, S.gem, { kind: 2, y: 20.6, z: 2.4, ea: 1.8 });
+    glowL(0, 20.6, 3, 6, S.gem, 0.6);
     // 머리
     push();
-    tr(0, 30, 0.5);
+    tr(0, 20, 0.4);
+    prism(2.2, 1.95, 4.4, 10, S.skin, { y: 2 });
+    tr(0, 4.2, 0);
     ry(P.headYaw);
     rx(P.headPitch);
-    sc(1.16);
-    box(9.6, 10.6, 9.6, S.skin, { tb: 0.82 });
-    box(1.8, 1.4, 0.6, S.eye, { kind: 2, x: 2.2, y: 0.2, z: 4.9, ea: 1.4 });
-    box(1.8, 1.4, 0.6, S.eye, { kind: 2, x: -2.2, y: 0.2, z: 4.9, ea: 1.4 });
-    box(11, 4.4, 11, S.hair, { y: 5 });
-    box(10.6, 6, 3, S.hair, { y: 2.4, z: 4, tb: 0.6 });
-    const sway = Math.sin(t * 1.6) * 0.08 + P.flow * 0.3;
-    push();
-    tr(0, 2, -4.8);
-    rx(0.12 + sway);
-    for (const sd of [1, -1]) {
-      push();
-      tr(sd * 2.6, 0, 0);
-      rz(sd * 0.08);
-      box(5, 22, 3, S.hair, { y: -10, tb: 0.45 });
-      box(2.4, 1, 3.2, S.hairGlow, { kind: 2, y: -21, ea: 0.9 });
-      pop();
-    }
-    pop();
-    for (const side of [1, -1]) {
-      push();
-      tr(side * 5.2, 1, 0.5);
-      rz(side * (0.06 + sway * 0.3));
-      box(2.6, 16, 5, S.hair, { y: -7, tb: 0.5 });
-      pop();
-    }
+    tr(0, 4.8, 0.3);
+    sc(1.1);
+    face(S, P);
+    hairLong(S, P, t);
     if (S.halo) {
       push();
-      tr(0, 8, -3);
-      rx(-0.35);
-      ring(9, 1, 12, S.accent, { kind: 2, ea: 1.3 });
+      tr(0, 8.6, -3.4);
+      rx(-0.4);
+      ring(8.4, 0.9, 16, S.accent, { kind: 2, ea: 1.3 });
+      ring(6.6, 0.4, 12, '#ffffff', { kind: 2, ea: 1.0 });
       pop();
-      glowL(0, 8, -3, 26, S.accent, 0.35);
+      glowL(0, 8.6, -3.4, 24, S.accent, 0.3);
     }
     pop();
-    // 팔
+    // 팔: 드러난 어깨, 팔꿈치부터 긴 장갑
     for (const side of [1, -1]) {
       const sh = side === 1 ? P.shL : P.shR;
       push();
-      tr(side * 6.6, 19, 0);
+      tr(side * 6.7, 17.6, 0);
       ry(sh[0]);
       rx(-sh[1]);
       rz(side * sh[2]);
-      box(3.6, 12, 4, S.arm, { y: -6, tb: 0.85 });
-      tr(0, -11.5, 0);
+      ball(2.5, S.skin, {}, 8, 5);
+      limb(2.4, 2.0, 11.5, S.skin);
+      prism(2.25, 2.25, 1.2, 10, S.cuff, { kind: 2, y: -7, ea: 1.1, open: true });
+      limb(2.2, 2.05, 4.5, S.glove, { y: -7.4 - 2.25 });
+      tr(0, -11.4, 0);
       rx(-(side === 1 ? P.elbL : P.elbR));
-      box(3.3, 11, 3.6, S.glove, { y: -5.5, tb: 0.8 });
+      limb(2.05, 1.7, 10.5, S.glove);
+      prism(2, 2.2, 1.2, 10, S.cuff, { kind: 2, y: -9.6, ea: 1.0, open: true });
+      box(2.6, 3.6, 3, S.skin, { y: -11.8, tb: 0.75 });
       if (P.glowHand && side === -1) glowL(0, -12, 0, 30 * P.glowHand, S.accent, 0.9 * P.glowHand);
       pop();
     }
@@ -16553,8 +16951,8 @@ AZ.gfx.models3d = (() => {
     pop();
     // 장식
     if (S.shards) {
-      for (let i = 0; i < 5; i++) {
-        const a = t * 0.9 + (i / 5) * TAU;
+      for (let i = 0; i < 6; i++) {
+        const a = t * 0.9 + (i / 6) * TAU;
         push();
         tr(Math.cos(a) * 26, 44 + Math.sin(t * 2 + i) * 6, Math.sin(a) * 26);
         ry(t * 2 + i);
@@ -16565,13 +16963,14 @@ AZ.gfx.models3d = (() => {
     }
     if (S.wings) {
       for (const side of [1, -1]) {
-        for (let k = 0; k < 3; k++) {
+        for (let k = 0; k < 4; k++) {
           push();
-          tr(side * 6, 48 - k * 5, -6);
+          tr(side * 5, 49 - k * 4, -6);
           ry(side * (0.5 + k * 0.1));
-          rz(side * (0.9 + k * 0.42 + Math.sin(t * 1.5) * 0.06));
-          box(1.6, 34 - k * 6, 9, '#f4ecd0', { y: -(17 - k * 3), kind: 6, tb: 0.3 });
-          box(0.8, 32 - k * 6, 1, S.accent, { kind: 2, x: 0, y: -(17 - k * 3), z: 4.8, ea: 1.2, tb: 0.3 });
+          rz(side * (0.85 + k * 0.36 + Math.sin(t * 1.5) * 0.06));
+          box(1.6, 36 - k * 6, 9, '#f4ecd0', { y: -(18 - k * 3), kind: 6, tb: 0.3 });
+          box(0.8, 34 - k * 6, 1, S.accent, { kind: 2, y: -(18 - k * 3), z: 4.8, ea: 1.2, tb: 0.3 });
+          box(2, 2, 10, S.armor || '#d8b860', { kind: 6, y: -0.5 });
           pop();
         }
       }
@@ -16613,7 +17012,7 @@ AZ.gfx.models3d = (() => {
   }
 
   /* 상자 공용: 외부(보스 파일 부분)에서도 쓰도록 */
-  const K = { push, pop, tr, rx, ry, rz, sc, ap, box, prism, ball, ring, glowL, glowAt, quad, tri, humanoid, lady, manPose, ladyPose, basePose, swing, runCycle, weapon, clamp01, lerp, easeOut, easeIn, smooth, TAU, ARKA, ZERO };
+  const K = { push, pop, tr, rx, ry, rz, sc, ap, box, prism, ball, ring, glowL, glowAt, quad, tri, strand, lock, line, limb, face, humanoid, lady, manPose, ladyPose, basePose, swing, runCycle, weapon, clamp01, lerp, easeOut, easeIn, smooth, TAU, ARKA, ZERO, KAI };
 
   /* =========================================================
    * 일반 적
@@ -16819,6 +17218,13 @@ AZ.gfx.models3d = (() => {
 
   function drawEntity(e, W, t, floorZ) {
     const z0 = floorZ + (e.z || 0);
+    TIME = t;
+    LOD = e.kind === 'enemy' ? 0 : 1;
+    const C = AZ.gfx.cam3d.st;
+    if (LOD && e.kind === 'ally' && C && C.eye && Math.hypot(C.eye[0] - e.x, C.eye[2] - e.y) > 1400) LOD = 0;
+    // 느린 기기: 동료부터, 더 느리면 주인공도 가볍게
+    if (QUALITY < 2 && e.kind === 'ally') LOD = 0;
+    if (QUALITY < 1 && e.kind === 'player') LOD = 0;
     Mx = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0];
     tr(e.x, z0, e.y);
     ry(Math.PI / 2 - (e.facing || 0));
@@ -16844,14 +17250,14 @@ AZ.gfx.models3d = (() => {
       case 'ally':
         if (e.ally === 'lia') {
           // 홀로그램 AI: 살짝 비치고 푸른 빛
-          FADE = Math.max(FADE, 0.18);
+          FADE = Math.max(FADE, 0.1);
           sc(1.0);
           lady(LIA, ladyPose(e, t), t);
           glowL(0, 40, 0, 70, '#8fd8ff', 0.22);
         } else {
           const P = manPose(e, W, t, 'blade');
           sc((e.r || 20) / 20 * 1.03);
-          humanoid(ZERO, P, { type: 'blade', color: '#ff3355', len: 52 });
+          humanoid(ZERO, P, { type: 'crystal', color: '#ff2a4a', len: 54 });
         }
         break;
       case 'enemy':
@@ -16875,7 +17281,21 @@ AZ.gfx.models3d = (() => {
     FADE = 0;
   }
 
+  /* 자동 품질: 모델 만드는 시간이 길면 단계를 낮춤 (2 → 1 → 0) */
+  let QUALITY = 2;
+  let costAvg = 0;
+  let slowFrames = 0;
   function build(W, t, ghosts) {
+    const t0 = typeof performance !== 'undefined' ? performance.now() : 0;
+    const out = buildInner(W, t, ghosts);
+    if (t0) {
+      const dt = performance.now() - t0;
+      costAvg = costAvg ? costAvg * 0.95 + dt * 0.05 : dt;
+      if (costAvg > 7 && QUALITY > 0) { slowFrames += 1; if (slowFrames > 90) { QUALITY -= 1; slowFrames = 0; costAvg *= 0.7; } } else slowFrames = 0;
+    }
+    return out;
+  }
+  function buildInner(W, t, ghosts) {
     mn = 0; gn = 0; sn = 0;
     const C = AZ.gfx.cam3d.st;
     if (C && C.eye && C.target) {
@@ -16916,6 +17336,7 @@ AZ.gfx.models3d = (() => {
           tr(snap.x, fz(snap.x, snap.y) + (snap.z || 0), snap.y);
           ry(Math.PI / 2 - (snap.facing || 0));
           FADE = base;
+          LOD = 0;
           const wid = (p.stats && p.stats.weaponId) || 'blade';
           humanoid(KAI, manPose(snap, W, t, wid), null, null);
         } catch (err) { stack.length = 0; }
@@ -16926,7 +17347,10 @@ AZ.gfx.models3d = (() => {
     return { mesh: mesh.subarray(0, mn * STRIDE), meshCount: mn, glow: glow.subarray(0, gn * STRIDE), glowCount: gn, shadow: shad.subarray(0, sn * 6), shadowCount: sn };
   }
 
-  return { build, BOSSES, K, KAI, ZERO, LIA, SERA, PROTOCOL, ARKA };
+  return {
+    build, BOSSES, K, KAI, ZERO, LIA, SERA, PROTOCOL, ARKA, ASTRA_FORM,
+    get quality() { return QUALITY; }, set quality(v) { QUALITY = v; costAvg = 0; slowFrames = 0; },
+  };
 })();
 
 </script>
@@ -17099,6 +17523,17 @@ AZ.gfx.models3d = (() => {
     K.prism(4, 4, 6, 8, '#ffffff', { kind: 2, ea: 2 });
     K.pop();
     K.glowL(0, 0, 40, 60 + open * 60, lens, 0.6 + open * 0.8 * (0.7 + 0.3 * A.pulse));
+    // 양옆의 거대한 장갑 포드 (원작의 어깨 장갑)
+    for (const sd of [1, -1]) {
+      K.push();
+      K.tr(sd * 50, -4 + Math.sin(t * 1.3 + sd) * 3, -4);
+      K.rz(sd * (0.2 + A.hot * 0.15));
+      K.ball(19, shell2, { kind: 6, sy: 1.2 }, 10, 6);
+      K.box(30, 10, 30, shell, { y: -14, kind: 6, tb: 0.7 });
+      for (let k = 0; k < 3; k++) K.box(3.4, 3.4, 1, A.hot ? '#ff9a3d' : lens, { kind: 2, x: -sd * 4 + sd * k * 4, y: 2, z: 17, ea: 1.5 });
+      K.push(); K.tr(sd * 6, -26, 6); K.rx(0.4); K.box(8, 26, 8, shell, { y: -10, kind: 6, tb: 0.6 }); K.box(10, 6, 12, shell2, { y: -24, kind: 6 }); K.pop();
+      K.pop();
+    }
     // 도는 고리와 위성
     K.push();
     K.ry(t * 0.7);
@@ -17139,7 +17574,7 @@ AZ.gfx.models3d = (() => {
     if (A.an === 'cast') { P.shR = [0, 2.9, 0.1]; P.elbR = 0.2; P.wpR = 0.1; P.eye = 2; }
     if (A.slump) { P.crouch = 9; P.lean = 0.45; P.headPitch = 0.5; P.shR = [0, 0.1, 0.5]; P.wpR = 2.4; }
     K.sc((e.r || 24) / 20 * 1.02);
-    K.humanoid(K.ZERO, P, { type: 'blade', color: '#ff3355', len: 56 }, null);
+    K.humanoid(K.ZERO, P, { type: 'crystal', color: '#ff2a4a', len: 58 }, null);
     K.glowL(0, 40, 0, 110, '#ff3355', 0.12 + A.hot * 0.15);
   };
 
@@ -17372,12 +17807,20 @@ AZ.gfx.models3d = (() => {
     K.push();
     K.tr(0, 120 + Math.sin(t * 1.2) * 8 - A.slump * 30, 0);
     const spin = t * (0.3 + ph * 0.15);
-    // 핵 (팔면체)
+    // 핵: 수정 껍질 안에 떠 있는 ASTRA 의 모습 (원작의 하얀 머리·후광·감은 눈)
     const op = A.ex ? 1 : 0;
     K.push();
-    K.ry(spin * 2);
-    K.prism(26, 0, 42, 6, '#e8f6ff', { y: 21, kind: 2, ea: 1.2 + op * 1.2 });
-    K.prism(0, 26, 42, 6, '#e8f6ff', { y: -21, kind: 2, ea: 1.2 + op * 1.2 });
+    K.tr(0, -38, 6);
+    K.sc(1.15);
+    const AP = K.ladyPose(Object.assign({}, e, { anim: A.an === 'cast' || A.hot ? 'cast' : 'idle', vx: 0, vy: 0, down: 0, dead: false }), t);
+    AP.shL = [-0.2, 0.5, 0.9]; AP.shR = [0.2, 0.5, 0.9]; AP.elbL = 0.3; AP.elbR = 0.3; AP.lift = 0;
+    if (A.hot) { AP.shL = [-0.1, 1.6, 0.4]; AP.shR = [0.1, 1.6, 0.4]; }
+    K.lady(M3.ASTRA_FORM, AP, t);
+    K.pop();
+    K.push();
+    K.ry(spin * 0.6);
+    K.prism(30, 0, 50, 8, '#cfe8ff', { y: 25, kind: 6, fade: 0.72 - op * 0.3, open: true });
+    K.prism(0, 30, 50, 8, '#cfe8ff', { y: -25, kind: 6, fade: 0.72 - op * 0.3, open: true });
     K.pop();
     K.glowL(0, 0, 0, 140 + op * 100, main, 0.6 + op * 0.8 * (0.7 + 0.3 * A.pulse));
     // 둘레의 수정 갑옷 판
