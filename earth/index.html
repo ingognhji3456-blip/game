@@ -11,6 +11,8 @@
 <body>
   <canvas id="globe" aria-label="지구"></canvas>
 
+  <canvas id="field-canvas" hidden aria-hidden="true"></canvas>
+
   <div id="ui">
     <header class="top">
       <div class="clock" aria-live="polite">
@@ -50,6 +52,18 @@
     </nav>
 
     <div id="hint" class="hint" hidden></div>
+
+    <button id="btn-descend" class="descend" hidden><span>⬇ 땅으로 내려가기</span><small id="descend-sub"></small></button>
+
+    <div id="field-ui" hidden>
+      <button id="btn-ascend" class="ascend" title="우주로 돌아가기 (Esc)">🌍 <span>우주로</span></button>
+      <div id="field-loc" class="field-loc"></div>
+      <aside id="field-guide" class="field-guide">
+        <button id="guide-head" class="guide-head"><span>📖 여기서 보이는 것</span><small id="guide-count"></small></button>
+        <div id="guide-body" class="guide-body"></div>
+      </aside>
+      <div class="field-hint">끌어서 둘러보기 · 눌러서 알아보기 · 축소하면 우주로</div>
+    </div>
 
     <section id="card" class="card" hidden aria-live="polite">
       <div class="card-head">
@@ -109,6 +123,7 @@
       <p class="intro-lead">마그마 바다에서 태어나 얼어붙고, 생명으로 가득 차고, 결국 태양에 삼켜지기까지.<br>지구의 시간을 직접 돌려 보고, 역사를 바꿔 보세요.</p>
       <ul class="intro-list">
         <li><span>▶</span>재생하거나 아래 타임라인을 끌어 원하는 시대로</li>
+        <li><span>🔍</span>끝까지 확대하면 그 시대의 땅과 바닷속으로 내려가 생물을 만납니다</li>
         <li><span>☄️</span>소행성·화산·온실가스로 역사에 개입</li>
         <li><span>📜</span>바뀐 역사를 실제 역사와 비교</li>
       </ul>
@@ -126,7 +141,7 @@
       <h2>조작 방법</h2>
       <table>
         <tr><td>지구 끌기</td><td>돌려 보기</td></tr>
-        <tr><td>휠 / 두 손가락</td><td>확대·축소</td></tr>
+        <tr><td>휠 / 두 손가락</td><td>확대·축소 (끝까지 확대하면 땅으로)</td></tr>
         <tr><td>타임라인 끌기</td><td>시간 이동</td></tr>
         <tr><td><kbd>스페이스</kbd></td><td>재생 / 멈춤</td></tr>
         <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>이전 / 다음 사건</td></tr>
@@ -152,6 +167,7 @@
 
   <script src="js/core/util.js"></script>
   <script src="js/core/quat.js"></script>
+  <script src="js/core/noise.js"></script>
   <script src="js/data/timescale.js"></script>
   <script src="js/data/continents.js"></script>
   <script src="js/data/plates.js"></script>
@@ -159,16 +175,22 @@
   <script src="js/data/events.js"></script>
   <script src="js/sim/plates.js"></script>
   <script src="js/sim/model.js"></script>
+  <script src="js/sim/surface.js"></script>
   <script src="js/render/landmask.js"></script>
   <script src="js/render/shaders.js"></script>
   <script src="js/render/globe.js"></script>
   <script src="js/render/look.js"></script>
   <script src="js/render/fx.js"></script>
+  <script src="js/render/ground.js"></script>
+  <script src="js/field/terrain.js"></script>
+  <script src="js/field/species.js"></script>
+  <script src="js/field/scene.js"></script>
   <script src="js/ui/audio.js"></script>
   <script src="js/ui/hud.js"></script>
   <script src="js/ui/timeline.js"></script>
   <script src="js/ui/chart.js"></script>
   <script src="js/ui/panels.js"></script>
+  <script src="js/field/mode.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

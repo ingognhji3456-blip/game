@@ -10,7 +10,7 @@
 
   const SAVE_KEY = 'earth-chronicle-v1';
   const SPEEDS = [600, 240, 90, 30]; // 타임라인 전체를 지나는 데 걸리는 초
-  const DIST_MIN = 1.3;
+  const DIST_MIN = 1.035;
   const DIST_MAX = 16;
 
   const app = {
@@ -46,6 +46,15 @@
   let focus = null;
   let frameAvg = 16;
   let resizePending = true;
+  let peekTimer = 0;
+  let peekInfo = null;
+  let lastMoonPos = [0, 0, 9];
+  const ALT_MIN = DIST_MIN - 1;
+  /* 지표에서의 높이로 확대·축소 (가까울수록 천천히) */
+  const zoomBy = (factor) => {
+    const alt = U.clamp((cam.dist - 1) * factor, ALT_MIN, DIST_MAX - 1);
+    cam.dist = 1 + alt;
+  };
   const cam = { yaw: 0.55, pitch: 0.28, dist: 3.4, vy: 0, vp: 0 };
   const now = () => performance.now() / 1000;
   
@@ -331,7 +340,7 @@
         canvas.classList.add('dragging');
       } else if (pointers.size === 2) {
         const [a, b] = [...pointers.values()];
-        pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: cam.dist };
+        pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: cam.dist, last: Math.hypot(a.x - b.x, a.y - b.y) };
         drag = null;
       }
       focus = null;
@@ -342,7 +351,20 @@
       if (pinch && pointers.size >= 2) {
         const [a, b] = [...pointers.values()];
         const d = Math.hypot(a.x - b.x, a.y - b.y);
-        cam.dist = U.clamp((pinch.dist * pinch.d) / Math.max(d, 1), DIST_MIN, DIST_MAX);
+        const step = pinch.last / Math.max(d, 1);
+        pinch.last = d;
+        if (EC.fieldMode.active) { EC.fieldMode.zoom(Math.log(step) * 900); return; }
+        const before = cam.dist;
+        zoomBy(Math.pow(step, 1.6));
+        if (step < 0.985 && before <= DIST_MIN + 1e-4) tryDescend(0.6);
+        return;
+      }
+      if (drag && EC.fieldMode.active) {
+        EC.fieldMode.drag(p.x - drag.x, p.y - drag.y);
+        drag.moved += Math.abs(p.x - drag.x) + Math.abs(p.y - drag.y);
+        drag.x = p.x;
+        drag.y = p.y;
+        drag.last = performance.now();
         return;
       }
       if (drag) {
@@ -371,14 +393,20 @@
       if (wasDrag && pointers.size === 0) {
         drag = null;
         if (performance.now() - wasDrag.last > 80) { cam.vy = 0; cam.vp = 0; }
-        if (wasDrag.moved < 7) onCanvasClick(e.clientX, e.clientY);
+        if (wasDrag.moved < 7) {
+          if (EC.fieldMode.active) EC.fieldMode.tap(e.clientX, e.clientY);
+          else onCanvasClick(e.clientX, e.clientY);
+        }
       }
     };
     canvas.addEventListener('pointerup', up);
     canvas.addEventListener('pointercancel', up);
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      cam.dist = U.clamp(cam.dist * Math.exp(e.deltaY * 0.0012), DIST_MIN, DIST_MAX);
+      if (EC.fieldMode.active) { EC.fieldMode.zoom(e.deltaY); return; }
+      const before = cam.dist;
+      zoomBy(Math.exp(e.deltaY * 0.0016));
+      if (e.deltaY < 0 && before <= DIST_MIN + 1e-4) tryDescend(Math.min(1, -e.deltaY / 300));
     }, { passive: false });
   }
 
@@ -389,6 +417,37 @@
       return;
     }
     $('impact-sizes').hidden = true;
+  }
+
+  /* ---------------- 지상으로 내려가기 ---------------- */
+
+  let descendAcc = 0;
+  function tryDescend(amount) {
+    if (!EC.fieldMode.ready || EC.fieldMode.active) return;
+    descendAcc += amount;
+    if (descendAcc >= 1) {
+      descendAcc = 0;
+      const d = EC.fieldMode.centerDir();
+      if (d) EC.fieldMode.enter(d);
+    }
+  }
+
+  function updateDescend(dt, st, u) {
+    const btn = $('btn-descend');
+    if (!EC.fieldMode.ready || cam.dist > 1.45 || app.tool) {
+      btn.hidden = true;
+      descendAcc = Math.max(0, descendAcc - dt);
+      return;
+    }
+    peekTimer -= dt;
+    if (peekTimer <= 0) {
+      peekTimer = 0.4;
+      peekInfo = EC.fieldMode.peek(u, st);
+    }
+    if (!peekInfo) { btn.hidden = true; return; }
+    btn.hidden = false;
+    $('descend-sub').textContent = `아래: ${peekInfo.bio.name}`;
+    descendAcc = Math.max(0, descendAcc - dt * 0.5);
   }
 
   /* ---------------- 화면 조작 ---------------- */
@@ -469,7 +528,8 @@
       else if (e.key === '+' || e.key === '=') setSpeed(Math.min(SPEEDS.length - 1, app.speedIdx + 1));
       else if (e.key === '-' || e.key === '_') setSpeed(Math.max(0, app.speedIdx - 1));
       else if (e.key === 'Escape') {
-        if (app.tool) cancelTool();
+        if (EC.fieldMode.active) EC.fieldMode.exit();
+        else if (app.tool) cancelTool();
         else if (!$('help').hidden) $('help').hidden = true;
         else if (!$('card').hidden) EC.ui.panels.hideCard();
         else { $('chart-panel').hidden = true; $('history-panel').hidden = true; }
@@ -559,7 +619,7 @@
 
     const st = EC.sim.stateAt(app.run, app.t);
     const u = EC.look.build(st, app.run, app.t);
-    globe.spin += dt * ((Math.PI * 2) / (80 * U.clamp(st.dayHours / 24, 0.2, 3)));
+    globe.spin += dt * ((Math.PI * 2) / (80 * U.clamp(st.dayHours / 24, 0.2, 3))) * (EC.fieldMode.active ? 0.25 : 1);
     moonAngle += dt * ((Math.PI * 2) / 70);
     updateCamera(dt);
     const md = st.moonKm > 0 ? EC.look.moonVisualDistance(st.moonKm) : 0;
@@ -571,7 +631,12 @@
     u.layerVis = EC.plates.layerVisibility(app.t);
     Object.assign(u, fx.update(now(), globe));
     u.uPick = app.tool && pickHover ? pickHover : [0, 0, 0];
-    globe.render(u);
+    u.uDetail = U.smoothstep(2.2, 1.08, cam.dist);
+    lastMoonPos = u.uMoonPos;
+    if (!EC.fieldMode.frame(dt, st, u, tnow)) {
+      globe.render(u);
+      updateDescend(dt, st, u);
+    }
 
     timeline.draw(app.t);
 
@@ -615,6 +680,25 @@
     fx = new EC.FxManager();
     fx.onImpact = (e) => EC.audio.impact(e.size);
     timeline = new EC.ui.Timeline($('timeline'), app);
+    EC.fieldMode.init(globe, app, {
+      moonPos: () => lastMoonPos,
+      onEnter: () => { cancelTool(); $('history-panel').hidden = true; $('chart-panel').hidden = true; EC.ui.panels.hideCard(); },
+      onExit: (dir) => {
+        cam.dist = 1.22;
+        if (dir) {
+          const w = globe.toWorld(dir);
+          cam.yaw = Math.atan2(w[0], w[2]);
+          cam.pitch = U.clamp(Math.asin(U.clamp(w[1], -1, 1)), -1.2, 1.2);
+        }
+        cam.vy = 0;
+        cam.vp = 0;
+        descendAcc = 0;
+      },
+    });
+    $('btn-descend').addEventListener('click', () => {
+      const d = EC.fieldMode.centerDir();
+      if (d) EC.fieldMode.enter(d);
+    });
     EC.ui.hud.init();
 
     app.base = EC.sim.run([], new Set());

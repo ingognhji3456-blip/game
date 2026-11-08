@@ -4,6 +4,7 @@
 <body><canvas id="c"></canvas>
 <script src="../js/core/util.js"></script>
 <script src="../js/core/quat.js"></script>
+<script src="../js/core/noise.js"></script>
 <script src="../js/data/timescale.js"></script>
 <script src="../js/data/continents.js"></script>
 <script src="../js/data/plates.js"></script>
@@ -45,6 +46,7 @@ window.renderAt = function (opts) {
   if (o.fx) { fu.fx[0] = o.fx.dir[0]; fu.fx[1] = o.fx.dir[1]; fu.fx[2] = o.fx.dir[2]; fu.fx[3] = o.fx.age; fu.fxP[0] = o.fx.kind === 'volcano' ? 2 : 1; fu.fxP[1] = o.fx.size; }
   Object.assign(u, fu);
   u.uPick = [0, 0, 0];
+  u.uDetail = o.detail !== undefined ? o.detail : Math.max(0, Math.min(1, (2.2 - o.dist) / (2.2 - 1.08)));
   g.render(u);
   return { T: st.T, stage: st.stageName, dyn: st.dynastyName, ice: st.iceLat };
 };

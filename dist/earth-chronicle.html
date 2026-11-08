@@ -435,6 +435,102 @@ body.picking #globe { cursor: crosshair; }
 .setting input { accent-color: var(--accent); width: 16px; height: 16px; }
 kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5px; border: 1px solid var(--line-2); background: rgba(255, 255, 255, 0.05); }
 
+/* ---------- 지상 탐사 ---------- */
+#field-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 0; }
+body.field .rail, body.field .sheet, body.field .stats { display: none !important; }
+.field-guide:not(.open) .guide-body { display: none; }
+.field-guide:not(.open) { width: auto; }
+body.field #globe { cursor: grab; }
+.descend {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--dock-h) + var(--gap) * 2 + var(--safe-b));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: #f2f5fc;
+  color: #0b1020;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  animation: rise 0.25s ease-out;
+}
+.descend small { font-size: 11.5px; font-weight: 500; color: #4a5470; }
+.descend:hover { background: #fff; }
+.ascend {
+  position: absolute;
+  top: calc(12px + var(--safe-t));
+  left: calc(12px + var(--safe-l));
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 15px;
+  border-radius: 999px;
+  background: var(--glass);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  font-size: 13px;
+  font-weight: 650;
+}
+.ascend:hover { background: rgba(30, 40, 64, 0.8); }
+.field-loc {
+  position: absolute;
+  top: calc(98px + var(--safe-t));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 13px;
+  border-radius: 999px;
+  background: rgba(3, 5, 10, 0.5);
+  font-size: 12px;
+  color: #dfe5f3;
+  white-space: nowrap;
+  max-width: calc(100vw - 24px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.field-guide {
+  position: absolute;
+  left: calc(var(--gap) + var(--safe-l));
+  top: calc(64px + var(--safe-t));
+  width: 220px;
+  max-height: calc(100vh - var(--dock-h) - 120px - var(--safe-t));
+  overflow: auto;
+  border-radius: 16px;
+  background: var(--glass);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.guide-head { width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 14px; text-align: left; font-size: 13px; font-weight: 700; }
+.guide-head span::after { content: " ▾"; color: var(--faint); font-weight: 400; }
+.field-guide.open .guide-head span::after { content: " ▴"; }
+.guide-head small { font-size: 11px; color: var(--faint); font-weight: 500; }
+.guide-body { padding: 0 8px 8px; }
+.guide-group { font-size: 11px; color: var(--faint); padding: 8px 6px 4px; }
+.guide-item { width: 100%; display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 10px; text-align: left; font-size: 13px; }
+.guide-item:hover { background: rgba(255, 255, 255, 0.07); }
+.guide-item .gi { width: 22px; text-align: center; font-size: 16px; }
+.guide-item .gn { flex: 1; }
+.guide-item .gc { font-size: 11px; color: var(--muted); background: rgba(255, 255, 255, 0.08); border-radius: 999px; padding: 1px 7px; }
+.guide-empty { font-size: 12px; color: var(--muted); padding: 4px 8px; line-height: 1.5; }
+.field-hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--dock-h) + var(--gap) * 2 + var(--safe-b));
+  transform: translateX(-50%);
+  font-size: 11.5px;
+  color: rgba(230, 236, 250, 0.7);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.card.k-field .card-title { color: #f2e2c4; }
+
 /* ---------- 휴대폰 ---------- */
 @media (max-width: 760px) {
   :root { --gap: 10px; --dock-h: 58px; }
@@ -485,6 +581,12 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
   .play { width: 42px; height: 42px; }
   .speed { min-width: 0; padding: 6px 9px; font-size: 11.5px; }
 
+  .ascend span { display: none; }
+  .ascend { top: calc(8px + var(--safe-t)); left: calc(6px + var(--safe-l)); padding: 9px 12px; }
+  .field-loc { top: calc(84px + var(--safe-t)); font-size: 11px; }
+  .field-guide { top: auto; bottom: calc(var(--dock-h) + var(--gap) * 2 + var(--safe-b)); left: calc(10px + var(--safe-l)); right: calc(10px + var(--safe-r)); width: auto; max-height: 46vh; }
+  .field-guide:not(.open) { right: auto; }
+  .field-hint { display: none; }
   .intro-box { padding: 26px 22px 22px; }
   .intro-box h1 { font-size: 34px; }
   .intro-lead { font-size: 14px; }
@@ -497,6 +599,8 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
 </head>
 <body>
   <canvas id="globe" aria-label="지구"></canvas>
+
+  <canvas id="field-canvas" hidden aria-hidden="true"></canvas>
 
   <div id="ui">
     <header class="top">
@@ -537,6 +641,18 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
     </nav>
 
     <div id="hint" class="hint" hidden></div>
+
+    <button id="btn-descend" class="descend" hidden><span>⬇ 땅으로 내려가기</span><small id="descend-sub"></small></button>
+
+    <div id="field-ui" hidden>
+      <button id="btn-ascend" class="ascend" title="우주로 돌아가기 (Esc)">🌍 <span>우주로</span></button>
+      <div id="field-loc" class="field-loc"></div>
+      <aside id="field-guide" class="field-guide">
+        <button id="guide-head" class="guide-head"><span>📖 여기서 보이는 것</span><small id="guide-count"></small></button>
+        <div id="guide-body" class="guide-body"></div>
+      </aside>
+      <div class="field-hint">끌어서 둘러보기 · 눌러서 알아보기 · 축소하면 우주로</div>
+    </div>
 
     <section id="card" class="card" hidden aria-live="polite">
       <div class="card-head">
@@ -596,6 +712,7 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
       <p class="intro-lead">마그마 바다에서 태어나 얼어붙고, 생명으로 가득 차고, 결국 태양에 삼켜지기까지.<br>지구의 시간을 직접 돌려 보고, 역사를 바꿔 보세요.</p>
       <ul class="intro-list">
         <li><span>▶</span>재생하거나 아래 타임라인을 끌어 원하는 시대로</li>
+        <li><span>🔍</span>끝까지 확대하면 그 시대의 땅과 바닷속으로 내려가 생물을 만납니다</li>
         <li><span>☄️</span>소행성·화산·온실가스로 역사에 개입</li>
         <li><span>📜</span>바뀐 역사를 실제 역사와 비교</li>
       </ul>
@@ -613,7 +730,7 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
       <h2>조작 방법</h2>
       <table>
         <tr><td>지구 끌기</td><td>돌려 보기</td></tr>
-        <tr><td>휠 / 두 손가락</td><td>확대·축소</td></tr>
+        <tr><td>휠 / 두 손가락</td><td>확대·축소 (끝까지 확대하면 땅으로)</td></tr>
         <tr><td>타임라인 끌기</td><td>시간 이동</td></tr>
         <tr><td><kbd>스페이스</kbd></td><td>재생 / 멈춤</td></tr>
         <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>이전 / 다음 사건</td></tr>
@@ -875,6 +992,143 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
   }
 
   EC.q = { D2R, dot, cross, len, norm, vec, latLon, IDENTITY, axisAngle, euler, mul, conj, normalize, rotate, slerp, fromTo, angleBetween, toMat3 };
+})();
+
+</script>
+  <script>/* js/core/noise.js */
+'use strict';
+
+/*
+ * 셰이더(js/render/shaders.js)와 똑같은 simplex 잡음을 자바스크립트로 옮긴 것.
+ * 화면에서 육지로 보이는 곳을 컴퓨터도 육지로 판단하고, 지상 장면에서 생물을 땅 높이에 맞춰 세우는 데 씁니다.
+ */
+(function () {
+  const EC = (window.EC = window.EC || {});
+
+  const mod289 = (x) => x - Math.floor(x * (1 / 289)) * 289;
+  const permute = (x) => mod289((x * 34 + 10) * x);
+  const taylorInvSqrt = (r) => 1.79284291400159 - 0.85373472095314 * r;
+
+  /* 그래픽 카드는 32비트 실수를 쓰므로 상수도 32비트로 맞춥니다 (floor 경계에서 결과가 달라지지 않게) */
+  const f32 = Math.fround;
+  const N_ = f32(0.142857142857);
+  const NS_X = f32(N_ * 2);
+  const NS_Y = f32(f32(N_ * 0.5) - 1);
+  const NS_Z = N_;
+
+  function snoise(vx, vy, vz) {
+    const s = (vx + vy + vz) / 3;
+    let ix = Math.floor(vx + s);
+    let iy = Math.floor(vy + s);
+    let iz = Math.floor(vz + s);
+    const t = (ix + iy + iz) / 6;
+    const x0x = vx - ix + t;
+    const x0y = vy - iy + t;
+    const x0z = vz - iz + t;
+    const gx = x0x >= x0y ? 1 : 0;
+    const gy = x0y >= x0z ? 1 : 0;
+    const gz = x0z >= x0x ? 1 : 0;
+    const lx = 1 - gx;
+    const ly = 1 - gy;
+    const lz = 1 - gz;
+    const i1x = Math.min(gx, lz), i1y = Math.min(gy, lx), i1z = Math.min(gz, ly);
+    const i2x = Math.max(gx, lz), i2y = Math.max(gy, lx), i2z = Math.max(gz, ly);
+    const x1x = x0x - i1x + 1 / 6, x1y = x0y - i1y + 1 / 6, x1z = x0z - i1z + 1 / 6;
+    const x2x = x0x - i2x + 1 / 3, x2y = x0y - i2y + 1 / 3, x2z = x0z - i2z + 1 / 3;
+    const x3x = x0x - 0.5, x3y = x0y - 0.5, x3z = x0z - 0.5;
+    ix = mod289(ix);
+    iy = mod289(iy);
+    iz = mod289(iz);
+    const pz = [permute(iz), permute(iz + i1z), permute(iz + i2z), permute(iz + 1)];
+    const py = [permute(pz[0] + iy), permute(pz[1] + iy + i1y), permute(pz[2] + iy + i2y), permute(pz[3] + iy + 1)];
+    const p = [permute(py[0] + ix), permute(py[1] + ix + i1x), permute(py[2] + ix + i2x), permute(py[3] + ix + 1)];
+    const X = [x0x, x1x, x2x, x3x];
+    const Y = [x0y, x1y, x2y, x3y];
+    const Z = [x0z, x1z, x2z, x3z];
+    let sum = 0;
+    for (let k = 0; k < 4; k++) {
+      const j = p[k] - 49 * Math.floor(p[k] * NS_Z * NS_Z);
+      const xu = Math.floor(j * NS_Z);
+      const yu = Math.floor(j - 7 * xu);
+      const gxk = xu * NS_X + NS_Y;
+      const gyk = yu * NS_X + NS_Y;
+      const h = 1 - Math.abs(gxk) - Math.abs(gyk);
+      const sh = h <= 0 ? -1 : 0;
+      let ax = gxk + (Math.floor(gxk) * 2 + 1) * sh;
+      let ay = gyk + (Math.floor(gyk) * 2 + 1) * sh;
+      let az = h;
+      const norm = taylorInvSqrt(ax * ax + ay * ay + az * az);
+      ax *= norm;
+      ay *= norm;
+      az *= norm;
+      let m = Math.max(0.5 - (X[k] * X[k] + Y[k] * Y[k] + Z[k] * Z[k]), 0);
+      m *= m;
+      sum += m * m * (ax * X[k] + ay * Y[k] + az * Z[k]);
+    }
+    return 105 * sum;
+  }
+
+  function fbm(x, y, z, oct) {
+    let s = 0;
+    let a = 0.5;
+    for (let i = 0; i < oct; i++) {
+      s += a * snoise(x, y, z);
+      x = x * 2.03 + 1.7;
+      y = y * 2.03 + 9.2;
+      z = z * 2.03 + 3.1;
+      a *= 0.5;
+    }
+    return s;
+  }
+
+  function ridge4(x, y, z) {
+    let s = 0;
+    let a = 0.5;
+    for (let i = 0; i < 4; i++) {
+      const n = 1 - Math.abs(snoise(x, y, z));
+      s += a * n * n;
+      x = x * 2.1 + 3.3;
+      y = y * 2.1 + 1.1;
+      z = z * 2.1 + 7.7;
+      a *= 0.5;
+    }
+    return s;
+  }
+
+  /* 지상 장면용 2차원 잡음 (셰이더 ground.js 와 같음) */
+  function fbm2(x, z, oct) {
+    let s = 0;
+    let a = 0.5;
+    for (let i = 0; i < oct; i++) {
+      s += a * snoise(x, 7.31, z);
+      const nx = 1.6 * x + 1.2 * z;
+      const nz = -1.2 * x + 1.6 * z;
+      x = nx + 1.7;
+      z = nz + 9.2;
+      a *= 0.5;
+    }
+    return s;
+  }
+
+  function ridged2(x, z, oct) {
+    let s = 0;
+    let a = 0.5;
+    let w = 1;
+    for (let i = 0; i < oct; i++) {
+      let n = 1 - Math.abs(snoise(x, 3.71, z));
+      n *= n;
+      s += a * n * w;
+      w = Math.min(1, n * 2);
+      const nx = 1.6 * x + 1.2 * z;
+      const nz = -1.2 * x + 1.6 * z;
+      x = nx + 3.3;
+      z = nz + 7.7;
+      a *= 0.5;
+    }
+    return s;
+  }
+
+  EC.noise = { snoise, fbm, ridge4, fbm2, ridged2 };
 })();
 
 </script>
@@ -2172,7 +2426,7 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
     const samples = [];
     const events = [];
     const emit = (id, t, data) => events.push({ id, t, kind: 'life', data: data || null, snap: snapshot(st) });
-    const record = (t) => samples.push({ t, B: st.B, O2: st.O2, snowLog: st.snowLog });
+    const record = (t) => samples.push({ t, B: st.B, O2: st.O2, snowLog: st.snowLog, E: st.alive ? st.E : -1e9 });
 
     function resetLineage() {
       st.dynasty = null;
@@ -2383,7 +2637,7 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
     const b = sm[i + 1];
     if (b.t === a.t) return b;
     const f = (t - a.t) / (b.t - a.t);
-    return { t, B: U.lerp(a.B, b.B, f), O2: U.lerp(a.O2, b.O2, f), snowLog: U.lerp(a.snowLog, b.snowLog, f) };
+    return { t, B: U.lerp(a.B, b.B, f), O2: U.lerp(a.O2, b.O2, f), snowLog: U.lerp(a.snowLog, b.snowLog, f), E: a.E > -1e8 && b.E > -1e8 ? U.lerp(a.E, b.E, f) : b.E };
   }
 
   function seaLevel(t, T) {
@@ -2412,6 +2666,7 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
       O2: sm.O2,
       B: snap.alive ? sm.B : 0,
       alive: snap.alive,
+      E: snap.alive ? sm.E : null,
       stage: snap.stage,
       stageId: stage.id,
       stageName: stage.name,
@@ -2470,6 +2725,161 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
     STAGES, S, DYNASTIES, MILESTONES, CLIMATE_SENS,
     run, stateAt, timeline, firstTimes, baseT, baseCO2, sunLuminosity, glacialIndex, env, buildConfig,
   };
+})();
+
+</script>
+  <script>/* js/sim/surface.js */
+'use strict';
+
+/*
+ * 지구 한 지점의 지표 정보 — 셰이더(shadeEarth)와 같은 계산을 자바스크립트로 합니다.
+ * 바다인지 육지인지, 해안까지 얼마나 가까운지, 산, 기온, 습도, 얼음, 그리고 생물군계 이름.
+ */
+(function () {
+  const EC = (window.EC = window.EC || {});
+  const U = EC.util;
+  const Q = EC.q;
+  const N = EC.noise;
+  const D2R = Math.PI / 180;
+
+  /* R8 텍스처 + LINEAR 필터와 같은 쌍선형 보간 */
+  function sampleMask(layer, lat, lon) {
+    const M = EC.landmask;
+    const W = M.W;
+    const H = M.H;
+    const data = M.data;
+    const u = lon / 360 + 0.5;
+    const v = 0.5 - lat / 180;
+    const x = u * W - 0.5;
+    const y = U.clamp(v * H - 0.5, 0, H - 1);
+    const x0 = Math.floor(x);
+    const y0 = Math.floor(y);
+    const fx = x - x0;
+    const fy = y - y0;
+    const y1 = Math.min(H - 1, y0 + 1);
+    const wx0 = ((x0 % W) + W) % W;
+    const wx1 = (wx0 + 1) % W;
+    const base = layer * W * H;
+    const a = data[base + y0 * W + wx0];
+    const b = data[base + y0 * W + wx1];
+    const c = data[base + y1 * W + wx0];
+    const d = data[base + y1 * W + wx1];
+    const val = (a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + d * fx) * fy;
+    return (val - 128) / 127;
+  }
+
+  function plateField(q, rots, vis) {
+    let best = -1;
+    let sum = 0;
+    let layer = -1;
+    for (let i = 0; i < rots.length; i++) {
+      if (vis[i] < 0.01) continue;
+      const v = Q.rotate(Q.conj(rots[i]), q);
+      const lat = Math.asin(U.clamp(v[1], -1, 1)) / D2R;
+      const lon = Math.atan2(v[0], v[2]) / D2R;
+      const s = U.lerp(-1, sampleMask(i, lat, lon), vis[i]);
+      if (s > best) { best = s; layer = i; }
+      sum += Math.max(s, 0);
+    }
+    return { s: best, overlap: sum - Math.max(best, 0), layer };
+  }
+
+  function coastAt(q, look, rots, vis) {
+    const pf = plateField(q, rots, vis);
+    const n1 = N.fbm(q[0] * 3 + 11, q[1] * 3 + 11, q[2] * 3 + 11, 5);
+    const n2 = N.fbm(q[0] * 11 + 3, q[1] * 11 + 3, q[2] * 11 + 3, 4);
+    const d = look.uDetail || 0;
+    const fine = d > 0.001 ? d * (N.fbm(q[0] * 48 + 2, q[1] * 48 + 2, q[2] * 48 + 2, 4) * 0.022 + N.snoise(q[0] * 160, q[1] * 160, q[2] * 160) * 0.006) : 0;
+    const coast = pf.s + (n1 * 0.2 + n2 * 0.065 + fine) * (1 + look.uShrink * 0.9) - look.uShrink + look.uSeaShift;
+    const basin = pf.s + n1 * 0.2 + n2 * 0.065 + fine + look.uSeaShift;
+    return { pf, n1, n2, coast, basin };
+  }
+
+  /* q: 지구 고정 좌표의 단위 벡터, look: EC.look.build() 결과 */
+  function query(q, look, rots, vis) {
+    const lat = Math.asin(U.clamp(q[1], -1, 1));
+    const alat = Math.abs(lat) / D2R;
+    const c = coastAt(q, look, rots, vis);
+    const { pf, n1, n2, coast, basin } = c;
+    const future = look.uFuture > 0.5;
+    const dry = coast > 0 ? 1 : 0;
+    const level = U.lerp(-1.6, 0, look.uOcean);
+    const landAmt = future ? Math.max(dry, basin > level ? 1 : 0) : dry;
+    const waterPresent = future ? 1 : U.smoothstep(0, 0.25, look.uOcean);
+    const land = 1 - (1 - landAmt) * waterPresent;
+    const inland = U.clamp(coast, 0, 1.5);
+    const mount = N.ridge4(q[0] * 5 + 7, q[1] * 5 + 7, q[2] * 5 + 7);
+    const mtn = mount * (0.22 + 1.9 * U.clamp(pf.overlap, 0, 0.6)) * U.smoothstep(0.02, 0.3, inland);
+    const depth = future ? U.clamp(level - basin, 0, 2) : U.clamp(-coast, 0, 2);
+    const tempLocal = look.uTempG + 13 - 38 * Math.sin(lat) * Math.sin(lat) - mtn * 22;
+    let moist = 0.55 + 0.45 * n2 + 0.35 * N.fbm(q[0] * 4 + 21, q[1] * 4 + 21, q[2] * 4 + 21, 3)
+      - 0.7 * U.smoothstep(0.25, 1.0, inland)
+      + 0.45 * (1 - U.smoothstep(0, 14, alat))
+      - 0.55 * Math.exp(-(((alat - 24) / 9) ** 2))
+      + 0.3 * U.smoothstep(36, 52, alat) + look.uWet;
+    moist = U.clamp(moist, 0, 1);
+    const iceEdge = look.uIceLat + n1 * 7 + n2 * 2.5;
+    const ice = U.smoothstep(iceEdge - 1.2, iceEdge + 1.2, alat);
+    const peakSnow = U.smoothstep(-4, -14, tempLocal) * U.smoothstep(0.25, 0.6, mtn);
+    const landIce = Math.max(ice, peakSnow);
+    const seaIce = U.smoothstep(iceEdge + 0.8, iceEdge + 3, alat);
+
+    /* 바다 쪽 방향: 해안선 값이 줄어드는 쪽 (동·북 방향 성분) */
+    const east = Q.norm(Q.cross([0, 1, 0], q));
+    const north = Q.cross(q, east);
+    const e = 0.004;
+    const off = (dx, dy) => Q.norm([q[0] + (east[0] * dx + north[0] * dy), q[1] + (east[1] * dx + north[1] * dy), q[2] + (east[2] * dx + north[2] * dy)]);
+    const ce = coastAt(off(e, 0), look, rots, vis).coast;
+    const cn = coastAt(off(0, e), look, rots, vis).coast;
+    let gx = (ce - coast) / e;
+    let gy = (cn - coast) / e;
+    const gl = Math.hypot(gx, gy) || 1;
+    gx /= gl;
+    gy /= gl;
+    /* 해안선까지 대략적인 거리(라디안): 값 ÷ 기울기 */
+    const coastDistRad = Math.abs(coast) / Math.max(1e-3, Math.hypot((ce - coast) / e, (cn - coast) / e));
+
+    return {
+      lat: lat / D2R,
+      lon: Math.atan2(q[0], q[2]) / D2R,
+      layer: pf.layer,
+      layerId: pf.layer >= 0 ? EC.data.layers[pf.layer].id : null,
+      land: land >= 0.5,
+      coast, inland, mtn, depth, tempLocal, moist, landIce, seaIce, n1, n2,
+      seaDir: [-gx, -gy], // (동, 북) 성분 — 바다 쪽
+      coastKm: coastDistRad * 6371,
+      lava: look.uLava,
+      heat: look.uHeat,
+      veg: look.uVeg,
+    };
+  }
+
+  /* 생물군계 이름과 종류 */
+  function biome(info, st) {
+    if (info.lava > 0.3 || info.heat > 0.3) return { id: 'lava', name: '녹은 지표', habitat: 'lava' };
+    if (!info.land) {
+      if (info.seaIce > 0.5 || st.snow) return { id: 'seaIce', name: '얼어붙은 바다', habitat: 'sea' };
+      return { id: info.depth < 0.22 ? 'shelf' : 'ocean', name: info.depth < 0.22 ? '얕은 바다' : '깊은 바다', habitat: 'sea' };
+    }
+    if (info.landIce > 0.5 || st.snow) return { id: 'ice', name: '빙원', habitat: 'land' };
+    if (info.coast < 0 && st.ocean < 0.99) return { id: 'seabed', name: '말라붙은 바다 밑', habitat: 'land' };
+    const T = info.tempLocal;
+    const m = info.moist;
+    const mountain = info.mtn > 0.42;
+    if (info.veg < 0.05) {
+      if (T > 60) return { id: 'scorched', name: '타는 듯한 맨땅', habitat: 'land', mountain };
+      return { id: 'barren', name: mountain ? '바위산' : '맨바위 땅', habitat: 'land', mountain };
+    }
+    if (m < 0.22) return { id: 'desert', name: '사막', habitat: 'land', mountain };
+    if (T < -2) return { id: 'tundra', name: '툰드라', habitat: 'land', mountain };
+    if (T < 8) return { id: 'boreal', name: '침엽수림', habitat: 'land', mountain };
+    if (m > 0.62 && T > 20) return { id: 'rainforest', name: '열대 우림', habitat: 'land', mountain };
+    if (m < 0.45 && T > 17) return { id: 'savanna', name: '사바나', habitat: 'land', mountain };
+    if (m < 0.48) return { id: 'grassland', name: '초원', habitat: 'land', mountain };
+    return { id: 'forest', name: '온대림', habitat: 'land', mountain };
+  }
+
+  EC.surface = { query, biome, sampleMask };
 })();
 
 </script>
@@ -2598,6 +3008,7 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
     const layers = EC.data.layers;
     const out = new Uint8Array(W * H * layers.length);
     layers.forEach((layer, i) => out.set(sdfLayer(rasterize(layer)), i * W * H));
+    EC.landmask.data = out;
     return out;
   }
 
@@ -2618,6 +3029,7 @@ kbd { font-family: inherit; font-size: 12px; padding: 2px 6px; border-radius: 5p
 /*
  * 지구를 그리는 셰이더. 화면 전체를 덮는 삼각형 하나에 광선을 쏘아
  * 지구·구름·대기·달·태양·별을 한 번에 계산합니다 (텍스처 이미지 없이 모두 절차적으로 생성).
+ * 대기는 레일리·미 산란을 직접 적분해 파란 하늘, 붉은 노을, 옅은 안개를 만듭니다.
  */
 (function () {
   const EC = (window.EC = window.EC || {});
@@ -2628,42 +3040,8 @@ in vec2 aPos;
 void main() { gl_Position = vec4(aPos, 0.0, 1.0); }
 `;
 
-  EC.render.FRAG = `#version 300 es
-precision highp float;
-precision highp sampler2DArray;
-out vec4 fragColor;
-
-uniform vec2 uRes;
-uniform float uTime;
-uniform vec3 uCamPos, uCamRight, uCamUp, uCamFwd;
-uniform float uTanHalfFov;
-uniform mat3 uEarthRot;          // 세계 → 지구 고정 좌표
-uniform vec3 uSunDir, uSunColor;
-uniform float uSunAng, uSunIntensity;
-
-uniform sampler2DArray uMask;
-uniform mat3 uPlateInv[8];       // 지구 고정 좌표 → 각 판의 현재 좌표
-uniform float uLayerVis[8];
-
-uniform float uShrink, uSeaShift, uOcean, uLava, uHeat, uIceLat, uTempG, uVeg, uMats, uWet, uSand, uFuture;
-uniform vec3 uRock, uOceanDeep, uOceanShallow;
-uniform float uCloud, uCloudSpin;
-uniform vec3 uCloudColor;
-uniform vec3 uAtmoColor, uHazeColor;
-uniform float uAtmoDensity, uHaze;
-uniform float uCity;
-uniform vec3 uMoonPos;
-uniform float uMoonR, uMoonLava;
-uniform vec4 uFx[4];             // xyz: 지구 고정 방향, w: 진행도(0~1, 음수면 없음)
-uniform vec4 uFxP[4];            // x: 종류(1 충돌, 2 화산), y: 크기
-uniform vec3 uMeteorA, uMeteorB;
-uniform float uMeteor, uDust, uFlash, uExposure;
-uniform vec3 uPick;              // 고른 위치 표시 (지구 고정 방향), 길이 0이면 없음
-
-const float PI = 3.14159265359;
-const float ATMO_R = 1.028;
-
-/* ---------- 잡음 (Ashima / Gustavson simplex) ---------- */
+  /* 잡음 함수 — 지상 장면 셰이더도 함께 씁니다. js/core/noise.js 와 결과가 같아야 합니다. */
+  EC.render.NOISE = `
 vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec4 permute(vec4 x) { return mod289(((x * 34.0) + 10.0) * x); }
@@ -2713,6 +3091,46 @@ float fbm5(vec3 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { s += 
 float ridge4(vec3 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { float n = 1.0 - abs(snoise(p)); s += a * n * n; p = p * 2.1 + vec3(3.3, 1.1, 7.7); a *= 0.5; } return s; }
 float sq(float x) { return x * x; }
 float hash13(vec3 p) { p = fract(p * 0.1031); p += dot(p, p.zyx + 31.32); return fract((p.x + p.y) * p.z); }
+`;
+
+  EC.render.FRAG = `#version 300 es
+precision highp float;
+precision highp sampler2DArray;
+out vec4 fragColor;
+
+uniform vec2 uRes;
+uniform float uTime;
+uniform vec3 uCamPos, uCamRight, uCamUp, uCamFwd;
+uniform float uTanHalfFov;
+uniform mat3 uEarthRot;          // 세계 → 지구 고정 좌표
+uniform vec3 uSunDir, uSunColor;
+uniform float uSunAng, uSunIntensity;
+
+uniform sampler2DArray uMask;
+uniform mat3 uPlateInv[8];       // 지구 고정 좌표 → 각 판의 현재 좌표
+uniform float uLayerVis[8];
+
+uniform float uShrink, uSeaShift, uOcean, uLava, uHeat, uIceLat, uTempG, uVeg, uMats, uWet, uSand, uFuture, uDetail;
+uniform vec3 uRock, uOceanDeep, uOceanShallow;
+uniform float uCloud, uCloudSpin;
+uniform vec3 uCloudColor;
+uniform vec3 uBetaR, uBetaM, uMieAbs; // 산란 계수 (지구 반지름 단위)
+uniform float uCity;
+uniform vec3 uMoonPos;
+uniform float uMoonR, uMoonLava;
+uniform vec4 uFx[4];             // xyz: 지구 고정 방향, w: 진행도(0~1, 음수면 없음)
+uniform vec4 uFxP[4];            // x: 종류(1 충돌, 2 화산), y: 크기
+uniform vec3 uMeteorA, uMeteorB;
+uniform float uMeteor, uDust, uFlash, uExposure;
+uniform vec3 uPick;              // 고른 위치 표시 (지구 고정 방향), 길이 0이면 없음
+
+const float PI = 3.14159265359;
+const float RA = 1.026;          // 대기 꼭대기
+const float HR = 0.0022;         // 레일리 규모 높이
+const float HM = 0.0006;         // 미 규모 높이
+const float SUN_I = 1.0;         // 햇빛 세기 (표면 반사 기준)
+
+${EC.render.NOISE}
 
 vec2 sphereHit(vec3 ro, vec3 rd, vec3 c, float r) {
   vec3 oc = ro - c;
@@ -2725,6 +3143,58 @@ vec2 sphereHit(vec3 ro, vec3 rd, vec3 c, float r) {
 }
 
 vec3 rotY(vec3 p, float a) { float c = cos(a), s = sin(a); return vec3(c * p.x + s * p.z, p.y, -s * p.x + c * p.z); }
+
+/* ---------- 대기 산란 ---------- */
+vec3 extinction(vec2 od) { return uBetaR * od.x + (uBetaM * 1.1 + uMieAbs) * od.y; }
+
+vec2 lightOD(vec3 p) {
+  float b = dot(p, uSunDir);
+  float c = dot(p, p);
+  float shadow = 1.0;
+  if (b < 0.0) {
+    shadow = smoothstep(0.996, 1.003, sqrt(max(c - b * b, 0.0)));
+    if (shadow <= 0.0) return vec2(1e4);
+  }
+  float len = -b + sqrt(max(b * b - c + RA * RA, 0.0));
+  float ds = len / 4.0;
+  vec2 od = vec2(0.0);
+  for (int i = 0; i < 4; i++) {
+    vec3 s = p + uSunDir * ds * (float(i) + 0.5);
+    float h = max(length(s) - 1.0, 0.0);
+    od += vec2(exp(-h / HR), exp(-h / HM)) * ds;
+  }
+  return mix(vec2(80.0, 20.0), od, shadow);
+}
+
+void atmosphere(vec3 ro, vec3 rd, float tMax, out vec3 inscat, out vec3 trans) {
+  inscat = vec3(0.0);
+  trans = vec3(1.0);
+  vec2 a = sphereHit(ro, rd, vec3(0.0), RA);
+  if (a.y <= 0.0) return;
+  float t0 = max(a.x, 0.0);
+  float t1 = min(a.y, tMax);
+  if (t1 <= t0) return;
+  const int NV = 10;
+  float ds = (t1 - t0) / float(NV);
+  vec2 odV = vec2(0.0);
+  vec3 sumR = vec3(0.0), sumM = vec3(0.0);
+  for (int i = 0; i < NV; i++) {
+    vec3 p = ro + rd * (t0 + ds * (float(i) + 0.5));
+    float h = max(length(p) - 1.0, 0.0);
+    vec2 dens = vec2(exp(-h / HR), exp(-h / HM)) * ds;
+    odV += dens;
+    vec2 odL = lightOD(p);
+    vec3 att = exp(-extinction(odV + odL));
+    sumR += att * dens.x;
+    sumM += att * dens.y;
+  }
+  float mu = dot(rd, uSunDir);
+  float pR = 0.0596831 * (1.0 + mu * mu);
+  float g = 0.76;
+  float pM = 0.1193662 * ((1.0 - g * g) * (1.0 + mu * mu)) / ((2.0 + g * g) * pow(max(1.0 + g * g - 2.0 * g * mu, 1e-4), 1.5));
+  inscat = (sumR * uBetaR * pR + sumM * uBetaM * pM) * uSunColor * uSunIntensity * SUN_I * PI;
+  trans = exp(-extinction(odV));
+}
 
 /* ---------- 대륙 ---------- */
 float plateField(vec3 q, out float overlap) {
@@ -2748,12 +3218,18 @@ float plateField(vec3 q, out float overlap) {
 float cloudField(vec3 q) {
   vec3 p = rotY(q, uCloudSpin);
   vec3 w = vec3(fbm3(p * 1.7 + 1.3), fbm3(p * 1.7 + 7.1), fbm3(p * 1.7 + 4.7));
-  float c = fbm5(p * 3.2 + w * 1.1);
+  float c = fbm5(p * 3.2 + w * 0.8);
+  c += 0.06 * snoise(p * 52.0 + w);
+  if (uDetail > 0.01) c += uDetail * (0.1 * snoise(p * 26.0 + w * 2.0) + 0.05 * snoise(p * 90.0));
   float alat = abs(asin(clamp(p.y, -1.0, 1.0))) * 180.0 / PI;
   float band = 0.14 * (1.0 - smoothstep(0.0, 9.0, alat)) - 0.16 * exp(-sq((alat - 24.0) / 9.0)) + 0.1 * smoothstep(38.0, 55.0, alat) * (1.0 - smoothstep(70.0, 88.0, alat));
   float cov = clamp(uCloud + band * step(0.05, uCloud) * (1.0 - smoothstep(0.85, 1.0, uCloud)), 0.0, 1.0);
   float v = c * 0.55 + 0.5;
-  return smoothstep(1.0 - cov, 1.0 - cov + 0.28, v) * smoothstep(0.0, 0.05, uCloud);
+  if (uDetail > 0.01) v += uDetail * (0.035 * snoise(p * 210.0) + 0.018 * snoise(p * 460.0));
+  float soft = mix(0.2, 0.08, uDetail);
+  float base = smoothstep(1.0 - cov - 0.02, 1.0 - cov + soft, v);
+  float tex = 0.62 + 0.38 * (fbm3(p * 17.0 + w * 3.0) * 0.5 + 0.5);
+  return base * tex * smoothstep(0.0, 0.05, uCloud);
 }
 
 /* ---------- 배경: 별, 은하수, 태양 ---------- */
@@ -2793,9 +3269,11 @@ vec3 shadeEarth(vec3 pw, vec3 rd, out float dustOut) {
   float s = plateField(q, ov);
   float n1 = fbm5(q * 3.0 + 11.0);
   float n2 = fbm4(q * 11.0 + 3.0);
+  /* 가까이 볼수록 해안선이 더 잘게 들쭉날쭉해집니다 (js/sim/surface.js 와 같은 식) */
+  float fine = uDetail > 0.001 ? uDetail * (fbm4(q * 48.0 + 2.0) * 0.022 + snoise(q * 160.0) * 0.006) : 0.0;
   /* coast: 대륙 지각인지(> 0), basin: 지각 성장과 무관한 지형 높이(미래에 바다가 마를 때 씀) */
-  float basin = s + n1 * 0.2 + n2 * 0.065 + uSeaShift;
-  float coast = s + (n1 * 0.2 + n2 * 0.065) * (1.0 + uShrink * 0.9) - uShrink + uSeaShift;
+  float basin = s + n1 * 0.2 + n2 * 0.065 + fine + uSeaShift;
+  float coast = s + (n1 * 0.2 + n2 * 0.065 + fine) * (1.0 + uShrink * 0.9) - uShrink + uSeaShift;
   float w = fwidth(coast) * 0.9 + 1e-4;
   float dry = smoothstep(-w, w, coast);
   float level = mix(-1.6, 0.0, uOcean);
@@ -2805,31 +3283,48 @@ vec3 shadeEarth(vec3 pw, vec3 rd, out float dustOut) {
   float land = 1.0 - (1.0 - landAmt) * waterPresent;
   float inland = clamp(coast, 0.0, 1.5);
   float mount = ridge4(q * 5.0 + 7.0);
-  float mtn = mount * (0.22 + 1.9 * clamp(ov, 0.0, 0.6)) * smoothstep(0.02, 0.3, inland);
+  float mtnMask = (0.22 + 1.9 * clamp(ov, 0.0, 0.6)) * smoothstep(0.02, 0.3, inland);
+  float mtn = mount * mtnMask;
   float depth = uFuture > 0.5 ? clamp(level - basin, 0.0, 2.0) : clamp(-coast, 0.0, 2.0);
 
-  float tempLocal = uTempG + 12.0 - 44.0 * sin(lat) * sin(lat) - mtn * 22.0;
-  float moist = 0.55 + 0.45 * n2 + 0.35 * fbm3(q * 4.0 + 21.0)
-    - 0.95 * smoothstep(0.12, 0.85, inland)
+  float tempLocal = uTempG + 13.0 - 38.0 * sin(lat) * sin(lat) - mtn * 22.0;
+  float m3 = fbm3(q * 4.0 + 21.0);
+  float moist = 0.55 + 0.45 * n2 + 0.35 * m3
+    - 0.7 * smoothstep(0.25, 1.0, inland)
     + 0.45 * (1.0 - smoothstep(0.0, 14.0, alat))
     - 0.55 * exp(-sq((alat - 24.0) / 9.0))
-    + 0.15 * smoothstep(38.0, 58.0, alat) + uWet;
+    + 0.3 * smoothstep(36.0, 52.0, alat) + uWet;
   moist = clamp(moist, 0.0, 1.0);
 
-  /* 맨땅 */
-  vec3 bare = mix(uRock, uRock * 0.62 + vec3(0.04), 0.5 + 0.5 * n2);
-  bare = mix(bare, vec3(0.80, 0.66, 0.46), uSand * smoothstep(0.38, 0.1, moist));
-  /* 식생 */
-  vec3 rain = vec3(0.07, 0.24, 0.07), savanna = vec3(0.46, 0.45, 0.20), temperate = vec3(0.16, 0.32, 0.11);
-  vec3 boreal = vec3(0.10, 0.21, 0.12), tundra = vec3(0.40, 0.40, 0.32), desertV = vec3(0.78, 0.65, 0.45);
+  /* 맨땅: 바위색과 모래색, 크고 작은 얼룩 */
+  float mottle = fbm3(q * 34.0 + 9.0) * 0.5 + 0.5;
+  vec3 bare = mix(uRock * 0.55, uRock, smoothstep(0.2, 0.8, n2 * 0.5 + 0.5)) * (0.85 + 0.3 * mottle);
+  vec3 sandCol = mix(vec3(0.58, 0.43, 0.27), vec3(0.66, 0.52, 0.36), mottle);
+  bare = mix(bare, sandCol, uSand * smoothstep(0.38, 0.08, moist));
+  /* 식생 (위성 사진의 색감) */
+  vec3 rain = vec3(0.030, 0.075, 0.026), savanna = vec3(0.24, 0.22, 0.11), temperate = vec3(0.055, 0.10, 0.040);
+  vec3 boreal = vec3(0.030, 0.060, 0.040), tundra = vec3(0.19, 0.18, 0.14), desertV = vec3(0.52, 0.40, 0.26);
   vec3 wetC = mix(boreal, rain, smoothstep(6.0, 22.0, tempLocal));
   vec3 midC = mix(tundra, mix(temperate, savanna, smoothstep(18.0, 26.0, tempLocal)), smoothstep(-2.0, 8.0, tempLocal));
   vec3 veg = mix(midC, wetC, smoothstep(0.45, 0.8, moist));
   veg = mix(desertV, veg, smoothstep(0.12, 0.38, moist));
+  veg *= 0.8 + 0.4 * mottle;
   float vegAmt = uVeg * smoothstep(-8.0, 3.0, tempLocal) * (1.0 - smoothstep(42.0, 55.0, tempLocal));
   vec3 landCol = mix(bare, veg, vegAmt);
-  landCol = mix(landCol, vec3(0.22, 0.30, 0.17), uMats * (1.0 - smoothstep(0.0, 0.18, inland)) * 0.55);
-  landCol = mix(landCol, vec3(0.40, 0.38, 0.36), smoothstep(0.35, 0.85, mtn) * 0.55);
+  landCol = mix(landCol, vec3(0.13, 0.17, 0.10), uMats * (1.0 - smoothstep(0.0, 0.18, inland)) * 0.55);
+
+  /* 산: 가까이 볼수록 더 잘게 갈라진 능선 */
+  float mDetail = uDetail > 0.001 ? uDetail * ridge4(q * 23.0 + 3.0) * 0.45 : 0.0;
+  float rocky = smoothstep(0.32, 0.8, mtn + mDetail * mtnMask * 0.5);
+  landCol = mix(landCol, uRock * 0.62 + vec3(0.03), rocky * 0.6);
+
+  /* 강: 가까이 보면 습한 땅에 물길이 보입니다 */
+  float river = 0.0;
+  if (uDetail > 0.05) {
+    float rv = abs(fbm3(q * 13.0 + 5.0) + 0.25 * snoise(q * 60.0));
+    float rw = fwidth(rv) * 1.2 + 0.004;
+    river = (1.0 - smoothstep(0.004, 0.004 + rw, rv)) * smoothstep(0.3, 0.55, moist) * smoothstep(0.02, 0.08, inland) * (1.0 - smoothstep(0.5, 0.9, mtn)) * uDetail;
+  }
   vec3 seabed = mix(vec3(0.30, 0.27, 0.25), vec3(0.74, 0.71, 0.64), smoothstep(-0.25, 0.45, n1 + n2 * 0.3) * 0.55);
   landCol = mix(seabed, landCol, dry);
 
@@ -2839,13 +3334,14 @@ vec3 shadeEarth(vec3 pw, vec3 rd, out float dustOut) {
   float peakSnow = smoothstep(-4.0, -14.0, tempLocal) * smoothstep(0.25, 0.6, mtn);
   float landIce = max(ice, peakSnow);
   float seaIce = smoothstep(iceEdge + 0.8, iceEdge + 3.0, alat);
-  vec3 iceCol = vec3(0.86, 0.90, 0.95) * (0.92 + 0.08 * n2);
+  vec3 iceCol = vec3(0.80, 0.84, 0.89) * (0.94 + 0.06 * n2);
 
-  /* 바다 */
-  vec3 oceanCol = mix(uOceanShallow, uOceanDeep, smoothstep(0.0, 0.32, depth));
+  /* 바다: 대륙붕은 밝은 청록, 먼바다는 짙은 남색 */
+  vec3 oceanCol = mix(uOceanShallow, uOceanDeep, smoothstep(0.0, 0.18, depth));
+  landCol = mix(landCol, uOceanShallow * 0.8, river * (1.0 - landIce));
 
   vec3 albedo = mix(mix(oceanCol, iceCol * 0.95, seaIce), mix(landCol, iceCol, landIce), land);
-  float water = (1.0 - land) * (1.0 - seaIce);
+  float water = (1.0 - land) * (1.0 - seaIce) + river * land * 0.4;
   vec3 emit = vec3(0.0);
 
   /* 마그마 바다 / 녹아내리는 지표 */
@@ -2889,30 +3385,48 @@ vec3 shadeEarth(vec3 pw, vec3 rd, out float dustOut) {
   vec3 sunE = uEarthRot * uSunDir;
   vec3 ts = sunE - q * dot(sunE, q);
   float tsl = length(ts);
+  vec3 tsn = tsl > 1e-4 ? ts / tsl : vec3(0.0);
   float relief = 1.0;
   if (tsl > 1e-3 && land > 0.01) {
-    vec3 qOff = normalize(q + ts / tsl * 0.0045);
+    float stepA = mix(0.0045, 0.0012, uDetail);
+    vec3 qOff = normalize(q + tsn * stepA);
     float mOff = ridge4(qOff * 5.0 + 7.0);
-    relief = clamp(1.0 + (mount - mOff) * 9.0 * smoothstep(0.02, 0.3, inland) * (0.35 + 2.0 * clamp(ov, 0.0, 0.5)) * (1.0 - molten), 0.45, 1.6);
+    float hNow = mount * mtnMask;
+    float hOff = mOff * mtnMask;
+    if (uDetail > 0.001) {
+      hNow += mDetail * mtnMask * 0.35;
+      hOff += uDetail * ridge4(qOff * 23.0 + 3.0) * 0.45 * mtnMask * 0.35;
+    }
+    relief = clamp(1.0 + (hNow - hOff) * mix(9.0, 30.0, uDetail) * (1.0 - molten), 0.4, 1.7);
   }
 
-  /* 조명 */
+  /* 햇빛: 대기를 지나며 붉어진 빛 */
   float ndlRaw = dot(n, uSunDir);
+  vec3 sunTrans = exp(-extinction(lightOD(n * 1.0005)));
+  vec3 sunCol = uSunColor * uSunIntensity * SUN_I * sunTrans;
   float ndl = max(ndlRaw, 0.0) * mix(1.0, relief, land);
-  float dayMask = smoothstep(-0.12, 0.12, ndlRaw);
-  vec3 sunCol = uSunColor * uSunIntensity;
-  vec3 col = albedo * sunCol * ndl * (1.0 - dust * 0.75);
-  col += albedo * uAtmoColor * 0.05 * uAtmoDensity * dayMask;
+  vec3 skyAmb = uBetaR / max(uBetaR.b, 1.0) * vec3(0.05, 0.06, 0.09) * smoothstep(-0.15, 0.3, ndlRaw) * uSunIntensity;
+
+  /* 구름과 구름 그림자 */
+  float cl = 0.0;
+  float clShadow = 0.0;
+  if (uCloud > 0.001) {
+    cl = cloudField(q);
+    clShadow = cloudField(normalize(q + tsn * 0.011));
+  }
+  vec3 col = albedo * (sunCol * ndl * (1.0 - clShadow * 0.6) * (1.0 - dust * 0.75) + skyAmb);
   vec3 hv = normalize(uSunDir - rd);
   float fres = 0.02 + 0.98 * pow(1.0 - max(dot(n, -rd), 0.0), 5.0);
-  float spec = pow(max(dot(n, hv), 0.0), 220.0) * 2.0 + pow(max(dot(n, hv), 0.0), 24.0) * 0.06;
-  col += sunCol * spec * water * (0.25 + fres) * smoothstep(0.0, 0.1, ndlRaw) * (1.0 - dust);
+  float rough = mix(220.0, 600.0, uDetail);
+  float spec = pow(max(dot(n, hv), 0.0), rough) * 1.6 + pow(max(dot(n, hv), 0.0), 26.0) * 0.05;
+  col += sunCol * spec * water * (0.2 + fres) * smoothstep(0.0, 0.08, ndlRaw) * (1.0 - dust) * (1.0 - cl);
+  col += water * fres * skyAmb * 2.0;
 
-  /* 구름 */
-  float cl = uCloud > 0.001 ? cloudField(q) : 0.0;
   vec3 cloudCol = mix(uCloudColor, vec3(0.38, 0.30, 0.24), dust * 0.8);
-  float cdiff = smoothstep(-0.15, 0.6, ndlRaw);
-  col = mix(col, cloudCol * sunCol * (0.012 + cdiff * 0.95), cl * 0.92);
+  float selfShade = 0.45 + 0.55 * exp(-clShadow * 1.6);
+  float cdiff = smoothstep(-0.12, 0.5, ndlRaw);
+  vec3 cLit = cloudCol * (sunCol * cdiff * selfShade * (1.0 - 0.18 * cl * cl) + skyAmb * 4.0);
+  col = mix(col, cLit, cl * 0.95);
 
   /* 밤의 도시 불빛 */
   if (uCity > 0.001) {
@@ -2921,24 +3435,16 @@ vec3 shadeEarth(vec3 pw, vec3 rd, out float dustOut) {
     float c2 = pow(max(0.0, snoise(q * 85.0 + 3.0)), 3.0);
     float region = smoothstep(-0.1, 0.45, fbm3(q * 5.0 + 40.0));
     float lights = (c1 * 0.7 + c2 * 1.4) * region * mask * uCity * (1.0 - cl * 0.7);
-    col += vec3(1.0, 0.72, 0.38) * lights * 1.6 * (1.0 - dayMask);
+    col += vec3(1.0, 0.72, 0.38) * lights * 1.4 * (1.0 - smoothstep(-0.1, 0.12, ndlRaw));
   }
-
-  /* 대기 산란 (가장자리일수록 두꺼움) */
-  float mu = max(dot(n, -rd), 0.0);
-  float rim = pow(1.0 - mu, 2.2);
-  float sunsetK = smoothstep(-0.25, 0.1, ndlRaw) * (1.0 - smoothstep(0.05, 0.45, ndlRaw));
-  vec3 scatter = mix(uAtmoColor, vec3(1.0, 0.45, 0.2), sunsetK * 0.7);
-  float lightA = smoothstep(-0.2, 0.35, ndlRaw);
-  col = col * (1.0 - rim * 0.35 * uAtmoDensity) + scatter * sunCol * (0.05 + rim * 0.9) * lightA * uAtmoDensity * 0.55;
-  col = mix(col, uHazeColor * sunCol * (0.15 + 0.85 * cdiff), uHaze * (0.55 + 0.45 * rim));
 
   col += emit * (1.0 - cl * 0.6);
   col += vec3(1.0, 0.95, 0.85) * uFlash * 3.0;
 
   if (dot(uPick, uPick) > 0.5) {
     float a = acos(clamp(dot(q, uPick), -1.0, 1.0));
-    float ring = smoothstep(0.004, 0.0, abs(a - 0.045)) * (0.6 + 0.4 * sin(uTime * 6.0));
+    float rr = mix(0.045, 0.012, uDetail);
+    float ring = smoothstep(rr * 0.09, 0.0, abs(a - rr)) * (0.6 + 0.4 * sin(uTime * 6.0));
     col += vec3(1.0, 0.85, 0.4) * ring * 1.5;
   }
   return col;
@@ -2978,23 +3484,6 @@ float meteorGlow(vec3 ro, vec3 rd, out float tRay) {
   return exp(-d * d / (wdt * wdt)) * (0.25 + 0.75 * sp * sp) + exp(-d * d / (wdt * wdt * 30.0)) * sp * 0.25;
 }
 
-/* 지구 바깥 대기 테두리 */
-vec3 halo(vec3 ro, vec3 rd, float tM) {
-  float tc = -dot(ro, rd);
-  vec3 pc = ro + rd * tc;
-  float b = length(pc);
-  if (b <= 0.97 || b >= ATMO_R + 0.06 || tc <= 0.0 || tc >= tM) return vec3(0.0);
-  vec3 nc = pc / b;
-  float ndl = dot(nc, uSunDir);
-  float light = smoothstep(-0.35, 0.3, ndl);
-  float thick = exp(-max(b - 1.0, 0.0) / (0.011 * max(uAtmoDensity, 0.3)));
-  float forward = pow(max(dot(rd, uSunDir), 0.0), 8.0) * 1.5;
-  float sunsetK = smoothstep(-0.35, 0.0, ndl) * (1.0 - smoothstep(0.0, 0.35, ndl));
-  vec3 c = mix(uAtmoColor, vec3(1.0, 0.45, 0.18), sunsetK * 0.8);
-  c = mix(c, uHazeColor, uHaze * 0.7);
-  return c * uSunColor * uSunIntensity * thick * light * (0.65 + forward) * uAtmoDensity * 0.9;
-}
-
 void main() {
   vec2 uv = (gl_FragCoord.xy - 0.5 * uRes) / uRes.y;
   vec3 rd = normalize(uCamFwd + (uv.x * uCamRight + uv.y * uCamUp) * 2.0 * uTanHalfFov);
@@ -3008,18 +3497,27 @@ void main() {
   /* 지구 가장자리 계단 현상을 줄이기 위한 픽셀 크기 */
   float tc = -dot(ro, rd);
   float bdist = length(ro + rd * tc);
-  float pixW = 2.0 * uTanHalfFov / uRes.y * max(tc, 0.1) * 1.2;
+  float pixW = 2.0 * uTanHalfFov / uRes.y * max(tc, 0.05) * 1.2;
 
   vec3 col;
   float dust = 0.0;
+  vec3 inscat, trans;
   if (tE < tM && tE < 1e8) {
-    col = shadeEarth(ro + rd * tE, rd, dust);
+    vec3 surf = shadeEarth(ro + rd * tE, rd, dust);
+    atmosphere(ro, rd, tE, inscat, trans);
+    col = surf * trans + inscat;
     float aa = clamp((1.0 - bdist) / pixW, 0.0, 1.0);
-    if (aa < 1.0) col = mix(background(rd) + halo(ro, rd, tM), col, aa);
+    if (aa < 1.0) {
+      vec3 i2, t2;
+      atmosphere(ro, rd, 1e9, i2, t2);
+      col = mix(background(rd) * t2 + i2, col, aa);
+    }
   } else if (tM < 1e8) {
-    col = shadeMoon(ro + rd * tM);
+    atmosphere(ro, rd, tM, inscat, trans);
+    col = shadeMoon(ro + rd * tM) * trans + inscat;
   } else {
-    col = background(rd) + halo(ro, rd, tM);
+    atmosphere(ro, rd, 1e9, inscat, trans);
+    col = background(rd) * trans + inscat;
   }
 
   if (uMeteor > 0.001) {
@@ -3163,6 +3661,17 @@ void main() {
       return Q.rotate(Q.conj(this.earthToWorldQ()), pw);
     }
 
+    /* 한 지점의 지평 좌표계(동·위·북)를 세계 좌표로 */
+    localFrame(dirEarth) {
+      const up = Q.norm(this.toWorld(dirEarth));
+      const axis = this.toWorld([0, 1, 0]);
+      let east = Q.cross(axis, up);
+      if (Q.len(east) < 1e-6) east = [1, 0, 0];
+      east = Q.norm(east);
+      const north = Q.cross(up, east);
+      return { up, east, north };
+    }
+
     /* 지구 고정 방향이 세계에서 어디인지 */
     toWorld(dir) {
       return Q.rotate(this.earthToWorldQ(), dir);
@@ -3171,6 +3680,7 @@ void main() {
     render(u) {
       const gl = this.gl;
       const L = this.loc;
+      gl.useProgram(this.prog);
       gl.viewport(0, 0, this.canvas.width, this.canvas.height);
       const cam = this.cameraBasis();
       gl.uniform2f(L.uRes, this.canvas.width, this.canvas.height);
@@ -3189,10 +3699,10 @@ void main() {
       gl.uniformMatrix3fv(L.uPlateInv, false, this.plateMats);
       gl.uniform1fv(L.uLayerVis, u.layerVis);
 
-      const f1 = ['uSunAng', 'uSunIntensity', 'uShrink', 'uSeaShift', 'uOcean', 'uLava', 'uHeat', 'uIceLat', 'uTempG', 'uVeg', 'uMats', 'uWet', 'uSand',
+      const f1 = ['uDetail', 'uSunAng', 'uSunIntensity', 'uShrink', 'uSeaShift', 'uOcean', 'uLava', 'uHeat', 'uIceLat', 'uTempG', 'uVeg', 'uMats', 'uWet', 'uSand',
         'uFuture', 'uCloud', 'uCloudSpin', 'uAtmoDensity', 'uHaze', 'uCity', 'uMoonR', 'uMoonLava', 'uMeteor', 'uDust', 'uFlash', 'uExposure'];
       for (const k of f1) if (L[k]) gl.uniform1f(L[k], u[k]);
-      const f3 = ['uSunColor', 'uRock', 'uOceanDeep', 'uOceanShallow', 'uCloudColor', 'uAtmoColor', 'uHazeColor', 'uMoonPos', 'uMeteorA', 'uMeteorB', 'uPick'];
+      const f3 = ['uBetaR', 'uBetaM', 'uMieAbs', 'uSunColor', 'uRock', 'uOceanDeep', 'uOceanShallow', 'uCloudColor', 'uAtmoColor', 'uHazeColor', 'uMoonPos', 'uMeteorA', 'uMeteorB', 'uPick'];
       for (const k of f3) if (L[k]) gl.uniform3fv(L[k], u[k]);
       gl.uniform4fv(L.uFx, u.fx);
       gl.uniform4fv(L.uFxP, u.fxP);
@@ -3245,8 +3755,8 @@ void main() {
 
     const green = 1 - U.smoothstep(0.1, 2, st.O2);
     const hotOcean = U.smoothstep(40, 90, T);
-    let oceanDeep = mix3([0.012, 0.05, 0.14], [0.02, 0.095, 0.085], green);
-    let oceanShallow = mix3([0.035, 0.25, 0.34], [0.10, 0.27, 0.19], green);
+    let oceanDeep = mix3([0.004, 0.016, 0.046], [0.006, 0.03, 0.026], green);
+    let oceanShallow = mix3([0.018, 0.095, 0.125], [0.05, 0.13, 0.09], green);
     oceanDeep = mix3(oceanDeep, [0.06, 0.07, 0.08], hotOcean * 0.6);
     oceanShallow = mix3(oceanShallow, [0.2, 0.22, 0.2], hotOcean * 0.5);
 
@@ -3259,7 +3769,7 @@ void main() {
     if (t <= 0) {
       cloud = 0.46 + 0.2 * U.smoothstep(25, 45, T);
       if (st.snow) cloud = 0.3;
-      if (st.alive && st.stage >= S.microbe && st.O2 < 0.3 && t > -3600) haze = 0.22 * (1 - U.smoothstep(0.05, 0.3, st.O2));
+      if (st.alive && st.stage >= S.microbe && st.O2 < 0.3 && t > -3600) haze = 0.55 * (1 - U.smoothstep(0.05, 0.3, st.O2));
       if (st.lava > 0.05) {
         cloud = 0.1;
         haze = 0.12;
@@ -3275,6 +3785,7 @@ void main() {
       if (t < -4380) {
         atmo = mix3([0.9, 0.55, 0.32], atmo, U.smoothstep(-4430, -4380, t));
         dens = Math.max(dens, 1.4);
+        if (st.lava <= 0.05) { haze = Math.max(haze, 0.3); hazeColor = [0.9, 0.62, 0.4]; }
       }
     } else {
       const wet = U.smoothstep(0.0, 0.5, st.ocean);
@@ -3304,7 +3815,16 @@ void main() {
     let city = 0;
     if (st.civ && st.civT !== undefined) city = U.smoothstep(st.civT, st.civT + 0.0118, t) * (1 - U.smoothstep(st.civT + 0.0123, st.civT + 0.025, t));
 
+    /* 대기 산란 계수 (지구 반지름 단위): 레일리는 공기 밀도, 미는 안개·연무 */
+    const betaR = [21 * dens, 49 * dens, 121 * dens];
+    /* 연무는 빛을 고르게 흩뿌리고, 연무 색의 반대색(주황 연무라면 파랑)을 흡수합니다 */
+    const betaM = [67 * dens + haze * 1400, 67 * dens + haze * 1350, 67 * dens + haze * 1300];
+    const mieAbs = [haze * 3000 * (1 - hazeColor[0]), haze * 3000 * (1 - hazeColor[1]), haze * 3000 * (1 - hazeColor[2])];
+
     return {
+      uBetaR: betaR,
+      uBetaM: betaM,
+      uMieAbs: mieAbs,
       uRock: rock,
       uVeg: veg,
       uMats: mats,
@@ -3331,7 +3851,7 @@ void main() {
       uSunIntensity: 0.93 + 0.07 * Math.min(st.sunLum, 1.5) + redGiant * 0.25,
       uSunAng: Math.min(0.85, 0.02 * Math.pow(st.sunRadius, 0.8)),
       uMoonLava: st.moonKm > 0 ? 1 - U.smoothstep(-4500, -4380, t) : 0,
-      uExposure: 1.0,
+      uExposure: 1.45,
     };
   }
 
@@ -3418,6 +3938,1995 @@ void main() {
   }
 
   EC.FxManager = FxManager;
+})();
+
+</script>
+  <script>/* js/render/ground.js */
+'use strict';
+
+/*
+ * 지상 장면 셰이더: 땅(높이장 광선 행진), 하늘(대기 산란), 구름, 해·달·별, 물, 바닷속.
+ * 지형 함수 terrainH 는 js/field/terrain.js 와 똑같아야 합니다 (생물을 땅 위에 세우기 위해).
+ */
+(function () {
+  const EC = (window.EC = window.EC || {});
+  EC.render = EC.render || {};
+
+  EC.render.GROUND_FRAG = `#version 300 es
+precision highp float;
+out vec4 fragColor;
+
+uniform vec2 uRes;
+uniform float uTime;
+uniform vec3 uCamPos, uCamRight, uCamUp, uCamFwd;
+uniform float uTanHalfFov;
+
+uniform vec3 uSunDir, uSunColor;
+uniform float uSunAng, uSunI;
+uniform vec3 uSunLight, uSkyZenith, uSkyHorizon;
+uniform vec3 uMoonDir;
+uniform float uMoonAng, uStars;
+uniform vec3 uBetaR, uBetaM, uMieAbs;   // 1/km
+
+uniform vec2 uSeed, uSeaDir;
+uniform float uHillAmp, uHillFreq, uRough, uMtnAmp, uMtnNear, uDune, uCanopy, uBaseH, uCoast, uCoastDist;
+uniform float uUnder, uDepth;
+uniform vec3 uGrass, uRock, uSand, uSoil, uWaterDeep, uWaterShallow, uCloudColor;
+uniform float uVeg, uSandAmt, uSnow, uSnowLine, uMats, uLava, uIce, uFogK, uCloud, uExposure, uFade, uSalt, uMaxH;
+
+const float PI = 3.14159265359;
+const float RP = 6371.0;
+const float RAT = 6451.0;
+const float HRk = 8.0;
+const float HMk = 1.2;
+
+${EC.render.NOISE}
+
+float fbm2(vec2 p, int oct) {
+  float s = 0.0, a = 0.5;
+  for (int i = 0; i < 10; i++) {
+    if (i >= oct) break;
+    s += a * snoise(vec3(p.x, 7.31, p.y));
+    p = mat2(1.6, -1.2, 1.2, 1.6) * p + vec2(1.7, 9.2);
+    a *= 0.5;
+  }
+  return s;
+}
+float ridged2(vec2 p, int oct) {
+  float s = 0.0, a = 0.5, w = 1.0;
+  for (int i = 0; i < 10; i++) {
+    if (i >= oct) break;
+    float n = 1.0 - abs(snoise(vec3(p.x, 3.71, p.y)));
+    n *= n;
+    s += a * n * w;
+    w = min(1.0, n * 2.0);
+    p = mat2(1.6, -1.2, 1.2, 1.6) * p + vec2(3.3, 7.7);
+    a *= 0.5;
+  }
+  return s;
+}
+
+int octFor(float t) { return int(clamp(7.0 - log2(1.0 + t * 0.02), 3.0, 7.0)); }
+
+float terrainH(vec2 p, int oct) {
+  vec2 q = p + uSeed;
+  float r = length(p);
+  float near = smoothstep(3.0, 40.0, r);
+  float seaMask = 0.0;
+  float s = 0.0;
+  if (uCoast > 0.5) {
+    s = dot(p, uSeaDir) - uCoastDist;
+    seaMask = smoothstep(-250.0, -40.0, s);
+  }
+  float h = uHillAmp * fbm2(q * uHillFreq, oct) * (0.3 + 0.7 * near);
+  h += uRough * fbm2(q * 0.06, max(oct - 3, 2)) * (0.4 + 0.6 * near);
+  if (uMtnAmp > 0.0 && r > uMtnNear) h += uMtnAmp * ridged2(q * 0.00045, min(oct, 6)) * smoothstep(uMtnNear, uMtnNear * 6.0, r) * (1.0 - seaMask);
+  if (uDune > 0.0) {
+    float d = sin(dot(q, vec2(0.011, 0.0045)) + fbm2(q * 0.0025, 3) * 2.6);
+    h += uDune * 12.0 * (1.0 - d * d) * near * (1.0 - seaMask);
+  }
+  if (uCanopy > 0.0) h += uCanopy * 16.0 * smoothstep(90.0, 260.0, r) * (0.55 + 0.45 * fbm2(q * 0.035, 3)) * (1.0 - seaMask);
+  h += uBaseH;
+  if (uCoast > 0.5) h -= smoothstep(-150.0, 250.0, s) * (uBaseH + 30.0) + max(s, 0.0) * 0.015;
+  return h;
+}
+
+/* ---------- 하늘 ---------- */
+vec2 sphere2(vec3 ro, vec3 rd, float r) {
+  float b = dot(ro, rd);
+  float c = dot(ro, ro) - r * r;
+  float h = b * b - c;
+  if (h < 0.0) return vec2(-1.0);
+  h = sqrt(h);
+  return vec2(-b - h, -b + h);
+}
+vec3 ext(vec2 od) { return uBetaR * od.x + (uBetaM * 1.1 + uMieAbs) * od.y; }
+vec2 lightODk(vec3 p) {
+  vec2 a = sphere2(p, uSunDir, RAT);
+  float g = sphere2(p, uSunDir, RP).x;
+  if (g > 0.0) return vec2(1e5);
+  float ds = a.y / 3.0;
+  vec2 od = vec2(0.0);
+  for (int i = 0; i < 3; i++) {
+    vec3 s = p + uSunDir * ds * (float(i) + 0.5);
+    float h = length(s) - RP;
+    od += vec2(exp(-h / HRk), exp(-h / HMk)) * ds;
+  }
+  return od;
+}
+vec3 skyScatter(vec3 rd, out vec3 trans) {
+  vec3 ro = vec3(0.0, RP + 0.002 + max(uCamPos.y, 0.0) * 0.001, 0.0);
+  vec3 d = normalize(vec3(rd.x, max(rd.y, 0.004), rd.z));
+  float tmax = sphere2(ro, d, RAT).y;
+  const int N = 6;
+  vec2 odV = vec2(0.0);
+  vec3 sR = vec3(0.0), sM = vec3(0.0);
+  float prev = 0.0;
+  for (int i = 0; i < N; i++) {
+    float f = (float(i) + 1.0) / float(N);
+    float tt = tmax * f * f;
+    float ds = tt - prev;
+    vec3 p = ro + d * (prev + ds * 0.5);
+    prev = tt;
+    float h = length(p) - RP;
+    vec2 dens = vec2(exp(-h / HRk), exp(-h / HMk)) * ds;
+    odV += dens;
+    vec3 att = exp(-ext(odV + lightODk(p)));
+    sR += att * dens.x;
+    sM += att * dens.y;
+  }
+  float mu = dot(d, uSunDir);
+  float pR = 0.0596831 * (1.0 + mu * mu);
+  float g = 0.76;
+  float pM = 0.1193662 * ((1.0 - g * g) * (1.0 + mu * mu)) / ((2.0 + g * g) * pow(max(1.0 + g * g - 2.0 * g * mu, 1e-4), 1.5));
+  trans = exp(-ext(odV));
+  return (sR * uBetaR * pR + sM * uBetaM * pM) * uSunColor * uSunI;
+}
+
+float hash12(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+
+vec3 sky(vec3 rd, bool full) {
+  vec3 trans;
+  vec3 col = skyScatter(rd, trans);
+  if (!full) return col;
+  /* 별 */
+  if (uStars > 0.01 && rd.y > 0.0) {
+    vec2 sp = vec2(atan(rd.x, rd.z), asin(rd.y)) * 160.0;
+    vec2 cell = floor(sp);
+    float h = hash12(cell);
+    if (h > 0.985) {
+      vec2 o = vec2(hash12(cell + 3.1), hash12(cell + 7.7)) - 0.5;
+      float dd = length(fract(sp) - 0.5 - o * 0.6);
+      col += smoothstep(0.12, 0.0, dd) * (h - 0.985) / 0.015 * uStars * 1.5 * trans * (0.8 + 0.2 * sin(uTime * 3.0 + h * 40.0));
+    }
+  }
+  /* 해 */
+  float sa = acos(clamp(dot(rd, uSunDir), -1.0, 1.0));
+  if (rd.y > -0.02) {
+    col += uSunColor * uSunI * 4.0 * smoothstep(uSunAng * 1.05, uSunAng * 0.95, sa) * trans;
+    col += uSunColor * trans * uSunI * 0.02 * exp(-sa / max(uSunAng * 2.5, 0.02));
+  }
+  /* 달: 둥근 공으로 그려 위상(초승달·보름달)이 맞게 */
+  float ma = acos(clamp(dot(rd, uMoonDir), -1.0, 1.0));
+  if (ma < uMoonAng && rd.y > -0.02) {
+    vec3 mr = normalize(cross(uMoonDir, vec3(0.0, 1.0, 0.0)));
+    vec3 mu2 = cross(mr, uMoonDir);
+    vec2 o = vec2(dot(rd, mr), dot(rd, mu2)) / sin(uMoonAng);
+    float z = sqrt(max(0.0, 1.0 - dot(o, o)));
+    vec3 nrm = normalize(o.x * mr + o.y * mu2 - z * uMoonDir);
+    float lit = max(dot(nrm, uSunDir), 0.0);
+    float maria = smoothstep(0.0, 0.4, fbm4(nrm * 2.0 + 3.0));
+    vec3 mc = mix(vec3(0.62), vec3(0.36), maria) * (lit * uSunI * 0.06 + 0.004);
+    float edge = smoothstep(1.0, 0.96, length(o));
+    col = mix(col, mc + col * 0.15, edge * (0.85 + 0.15 * smoothstep(0.0, 0.3, uStars)));
+  }
+  /* 구름 */
+  if (uCloud > 0.01 && rd.y > 0.0) {
+    float tc = (2200.0 - uCamPos.y) / rd.y;
+    vec2 cp = (uCamPos.xz + rd.xz * tc) * 0.00032 + uSeed * 0.0003 + vec2(uTime * 0.004, 0.0);
+    float c = fbm2(cp, 6) * 0.6 + 0.5;
+    float dens = smoothstep(1.0 - uCloud, 1.0 - uCloud + 0.25, c);
+    float c2 = fbm2(cp + uSunDir.xz * 0.06, 4) * 0.6 + 0.5;
+    float shade = 0.55 + 0.45 * smoothstep(0.7, 0.3, c2 - (1.0 - uCloud));
+    vec3 cl = uCloudColor * (uSunLight * (0.4 + 0.6 * shade) * 1.2 + uSkyZenith * 0.8);
+    float fade = exp(-tc * 0.00002);
+    col = mix(col, cl, dens * fade * 0.92);
+  }
+  return col;
+}
+
+/* ---------- 땅 ---------- */
+float castTerrain(vec3 ro, vec3 rd, float tmax) {
+  /* 가장 높은 땅보다 위로 올라가는 광선은 일찍 끝냅니다 */
+  if (rd.y > 0.0) {
+    if (ro.y > uMaxH) return -1.0;
+    tmax = min(tmax, (uMaxH - ro.y) / rd.y);
+  }
+  float t = 0.1;
+  float lastT = 0.0;
+  float lastD = 1.0;
+  for (int i = 0; i < 110; i++) {
+    vec3 p = ro + rd * t;
+    float d = p.y - terrainH(p.xz, octFor(t));
+    if (d < 0.0) {
+      return lastT + (t - lastT) * lastD / max(lastD - d, 1e-4);
+    }
+    lastT = t;
+    lastD = d;
+    t += max(d * 0.45, 0.04 + t * 0.008);
+    if (t > tmax) return -1.0;
+  }
+  /* 거의 수평인 광선은 걸음 수가 모자랄 수 있습니다. 여기까지 왔다면 땅 위를 스치는 중이므로
+     하늘(구멍)로 그리지 않고 마지막 지점을 땅으로 칩니다. 이 거리면 안개에 거의 덮입니다. */
+  return lastT;
+}
+
+float softShadow(vec3 p, vec3 l) {
+  float res = 1.0;
+  float t = 1.0;
+  for (int i = 0; i < 14; i++) {
+    vec3 q = p + l * t;
+    if (q.y > uMaxH) break;
+    float d = q.y - terrainH(q.xz, 3);
+    res = min(res, 10.0 * d / t);
+    if (res < 0.02) break;
+    t += clamp(d * 0.8, 3.0, 200.0);
+    if (t > 2500.0) break;
+  }
+  return clamp(res, 0.0, 1.0);
+}
+
+vec3 terrainNormal(vec3 p, float t) {
+  float e = max(0.06, t * 0.0016);
+  int o = max(octFor(t) - 1, 3);
+  float hx = terrainH(p.xz + vec2(e, 0.0), o) - terrainH(p.xz - vec2(e, 0.0), o);
+  float hz = terrainH(p.xz + vec2(0.0, e), o) - terrainH(p.xz - vec2(0.0, e), o);
+  return normalize(vec3(-hx, 2.0 * e, -hz));
+}
+
+vec3 shadeGround(vec3 p, vec3 n, float t, out vec3 emit) {
+  emit = vec3(0.0);
+  float slope = 1.0 - n.y;
+  float tex = fbm2(p.xz * 0.09 + uSeed, 4) * 0.5 + 0.5;
+  float fine = snoise(vec3(p.xz * 1.7, 1.0)) * 0.5 + 0.5;
+  vec3 soil = uSoil * (0.8 + 0.35 * tex);
+  /* 풀밭: 큰 얼룩(마른 곳·젖은 곳)과 가까이 보이는 잔무늬 */
+  float patchy = fbm2(p.xz * 0.012 + uSeed * 0.3, 3) * 0.5 + 0.5;
+  float blades = t < 80.0 ? (snoise(vec3(p.xz * 3.1, 5.0)) * 0.5 + 0.5) * (1.0 - smoothstep(20.0, 80.0, t)) : 0.5;
+  vec3 grass = uGrass * (0.62 + 0.45 * tex) * (0.8 + 0.35 * fine) * (0.75 + 0.5 * blades);
+  grass = mix(grass, mix(uGrass, uSoil, 0.55) * 1.1, smoothstep(0.55, 0.85, patchy) * 0.6);
+  float vegMask = uVeg * smoothstep(0.42, 0.18, slope) * smoothstep(0.2, 0.5, tex + 0.15);
+  vec3 col = mix(soil, grass, vegMask);
+  /* 멀리 보이는 숲: 나무 꼭대기들이 모인 짙은 초록 */
+  if (uCanopy > 0.0) {
+    float r = length(p.xz);
+    float cm = uCanopy * smoothstep(80.0, 220.0, r);
+    if (uCoast > 0.5) cm *= 1.0 - smoothstep(-250.0, -40.0, dot(p.xz, uSeaDir) - uCoastDist);
+    float crowns = smoothstep(-0.3, 0.7, snoise(vec3(p.xz * 0.11, 3.0))) * 0.5 + smoothstep(-0.2, 0.8, snoise(vec3(p.xz * 0.37, 9.0))) * 0.5;
+    crowns = mix(crowns, 0.5, smoothstep(250.0, 900.0, t));
+    vec3 canopyC = uGrass * vec3(0.55, 0.7, 0.55) * (0.55 + 0.7 * crowns);
+    col = mix(col, canopyC, cm * smoothstep(0.5, 0.25, slope));
+  }
+  float sandM = max(uSandAmt, uCoast > 0.5 ? smoothstep(3.0, 0.5, p.y) : 0.0);
+  col = mix(col, uSand * (0.85 + 0.25 * fine), sandM * (1.0 - smoothstep(0.35, 0.6, slope)));
+  float strata = 0.85 + 0.15 * sin(p.y * 0.9 + fbm2(p.xz * 0.02, 2) * 3.0);
+  col = mix(col, uRock * strata * (0.8 + 0.3 * tex), smoothstep(0.32, 0.6, slope));
+  if (uMats > 0.0) {
+    float wet = uCoast > 0.5 ? smoothstep(4.0, 0.3, p.y) : uUnder;
+    col = mix(col, mix(vec3(0.16, 0.22, 0.10), vec3(0.24, 0.14, 0.20), tex), uMats * wet * 0.75);
+  }
+  if (uSalt > 0.0) col = mix(col, vec3(0.78, 0.75, 0.70) * (0.9 + 0.1 * fine), uSalt * smoothstep(0.3, 0.6, tex));
+  float snow = max(uSnow, smoothstep(uSnowLine, uSnowLine + 120.0, p.y + tex * 60.0));
+  col = mix(col, vec3(0.86, 0.89, 0.94) * (0.92 + 0.08 * fine), snow * (1.0 - smoothstep(0.5, 0.75, slope) * (1.0 - uIce)));
+  if (uIce > 0.0) {
+    float crack = 1.0 - smoothstep(0.0, 0.03, abs(snoise(vec3(p.xz * 0.03, 2.0))));
+    col = mix(col, vec3(0.55, 0.7, 0.85), crack * uIce * 0.5);
+  }
+  if (uLava > 0.0) {
+    col = mix(col, vec3(0.06, 0.05, 0.05) * (0.7 + 0.6 * tex), uLava);
+    /* 멀리 있는 가는 균열은 화면에서 깜빡이지 않도록 평균 빛으로 바꿉니다 */
+    float w1 = 0.06 + t * 0.00012;
+    float w2 = 0.04 + t * 0.0006;
+    float c1 = (1.0 - smoothstep(0.0, w1, abs(snoise(vec3(p.xz * 0.025, uTime * 0.02))))) * (1.0 - smoothstep(600.0, 2500.0, t));
+    float c2 = (1.0 - smoothstep(0.0, w2, abs(snoise(vec3(p.xz * 0.11, 4.0 + uTime * 0.03))))) * (1.0 - smoothstep(60.0, 300.0, t));
+    float avg = 0.12 * smoothstep(300.0, 2500.0, t);
+    emit = vec3(1.0, 0.3, 0.04) * (c1 * 3.0 + c2 * 1.5 + avg) * uLava * (0.7 + 0.3 * sin(uTime * 2.0 + p.x * 0.1));
+  }
+  return col;
+}
+
+vec3 underwaterFog(float depthBelowSurface) {
+  return uWaterShallow * exp(-depthBelowSurface * 0.025) * (uSunLight * 0.8 + uSkyZenith * 0.6);
+}
+
+void main() {
+  vec2 uv = (gl_FragCoord.xy - 0.5 * uRes) / uRes.y;
+  vec3 rd = normalize(uCamFwd + (uv.x * uCamRight + uv.y * uCamUp) * 2.0 * uTanHalfFov);
+  vec3 ro = uCamPos;
+  vec3 col;
+
+  if (uUnder > 0.5) {
+    /* ---------- 바닷속 ---------- */
+    float tSurf = rd.y > 0.0 ? -ro.y / rd.y : 1e9;
+    float tT = castTerrain(ro, rd, 400.0);
+    vec3 fogC = underwaterFog(-ro.y + 4.0);
+    float k = 0.022 + 0.02 * smoothstep(20.0, 80.0, uDepth);
+    if (tT > 0.0 && tT < tSurf) {
+      vec3 p = ro + rd * tT;
+      vec3 n = terrainNormal(p, tT);
+      vec3 e;
+      vec3 alb = shadeGround(p, n, tT, e);
+      float caust = pow(1.0 - abs(snoise(vec3(p.xz * 0.35, uTime * 0.5))), 6.0) + pow(1.0 - abs(snoise(vec3(p.xz * 0.6 + 4.0, uTime * 0.7))), 8.0);
+      float lightDepth = exp(-(-p.y) * 0.03);
+      vec3 lit = (uSunLight * max(n.y, 0.0) * (0.6 + caust * 0.9) * lightDepth + uSkyZenith * 0.5 * lightDepth) * mix(vec3(1.0), uWaterShallow * 2.2, 0.6);
+      col = alb * lit + e;
+      col = mix(col, fogC, 1.0 - exp(-tT * k));
+    } else if (tSurf < 1e8) {
+      vec3 p = ro + rd * tSurf;
+      float wv = snoise(vec3(p.xz * 0.15, uTime * 0.4)) * 0.5 + 0.5;
+      float cosI = rd.y;
+      float window = smoothstep(0.62, 0.72, cosI);
+      vec3 surf = mix(fogC * 1.4, (uSunLight + uSkyZenith) * 1.2 * mix(vec3(1.0), uWaterShallow * 3.0, 0.4), window) * (0.8 + 0.4 * wv);
+      surf += uSunLight * 2.0 * pow(max(dot(rd, uSunDir), 0.0), 40.0) * window;
+      col = mix(surf, fogC, 1.0 - exp(-tSurf * k * 0.6));
+    } else {
+      col = fogC * (0.6 + 0.4 * smoothstep(-0.5, 0.5, rd.y));
+    }
+    /* 빛줄기 */
+    float rays = pow(max(0.0, snoise(vec3(rd.x * 6.0 + uTime * 0.05, rd.z * 6.0, uTime * 0.1))), 3.0) * smoothstep(-0.1, 0.6, rd.y);
+    col += uSunLight * rays * 0.12 * smoothstep(80.0, 5.0, uDepth);
+  } else {
+    /* ---------- 땅 위 ---------- */
+    float tT = castTerrain(ro, rd, 6000.0);
+    float tW = (uCoast > 0.5 && rd.y < 0.0) ? -ro.y / rd.y : 1e9;
+    bool hitW = tW < 1e8 && (tT < 0.0 || tW < tT);
+    vec3 fogC = uSkyHorizon + uSunColor * uSunI * 0.006 * pow(max(dot(rd, uSunDir), 0.0), 6.0);
+    if (hitW) {
+      vec3 p = ro + rd * tW;
+      vec2 wp = p.xz * 0.25;
+      float e = 0.5;
+      float h0 = snoise(vec3(wp, uTime * 0.35));
+      float hx = snoise(vec3(wp + vec2(e * 0.25, 0.0), uTime * 0.35));
+      float hz = snoise(vec3(wp + vec2(0.0, e * 0.25), uTime * 0.35));
+      float amp = 0.35 / (1.0 + tW * 0.01);
+      vec3 n = normalize(vec3((h0 - hx) * amp * 4.0, 1.0, (h0 - hz) * amp * 4.0));
+      vec3 rf = reflect(rd, n);
+      rf.y = abs(rf.y);
+      float fres = 0.02 + 0.98 * pow(1.0 - max(dot(n, -rd), 0.0), 5.0);
+      fres = min(fres, 0.75);
+      float floorH = terrainH(p.xz, 4);
+      float depth = max(0.0, -floorH);
+      vec3 under = mix(uWaterShallow * 1.6, uWaterDeep, smoothstep(0.5, 18.0, depth)) * (uSunLight * 0.7 + uSkyZenith * 0.6);
+      vec3 refl = sky(rf, false) * 0.8 * mix(vec3(1.0), uWaterShallow * 3.5 + 0.25, 0.35);
+      col = mix(under, refl, fres * 0.85);
+      col += uSunLight * 3.0 * pow(max(dot(rf, uSunDir), 0.0), 400.0);
+      float foam = smoothstep(0.6, 0.0, depth) * (0.5 + 0.5 * snoise(vec3(p.xz * 0.8, uTime)));
+      col = mix(col, (uSunLight + uSkyZenith) * 0.8, foam * 0.5);
+      col = mix(col, fogC, 1.0 - exp(-tW * uFogK));
+    } else if (tT > 0.0) {
+      vec3 p = ro + rd * tT;
+      vec3 n = terrainNormal(p, tT);
+      vec3 emit;
+      vec3 alb = shadeGround(p, n, tT, emit);
+      float ndl = max(dot(n, uSunDir), 0.0);
+      float sh = ndl > 0.0 && uSunDir.y > -0.05 ? (tT < 1800.0 ? mix(softShadow(p + n * 0.3, uSunDir), 1.0, smoothstep(700.0, 1800.0, tT)) : 1.0) : 0.0;
+      vec3 amb = mix(uSkyHorizon * 0.5, uSkyZenith, n.y * 0.5 + 0.5) * 0.8;
+      col = alb * (uSunLight * ndl * sh + amb) + emit;
+      col = mix(col, fogC, 1.0 - exp(-tT * uFogK));
+    } else {
+      col = sky(rd, true);
+    }
+  }
+
+  col *= uExposure;
+  col = (col * (2.51 * col + 0.03)) / (col * (2.43 * col + 0.59) + 0.14);
+  col = pow(clamp(col, 0.0, 1.0), vec3(1.0 / 2.2));
+  col *= uFade;
+  float vig = 1.0 - 0.18 * dot(uv, uv);
+  fragColor = vec4(col * vig, 1.0);
+}
+`;
+
+  /* 지구 셰이더와 같은 WebGL 컨텍스트를 함께 씁니다 */
+  class GroundRenderer {
+    constructor(gl) {
+      this.gl = gl;
+      const mk = (type, src) => {
+        const sh = gl.createShader(type);
+        gl.shaderSource(sh, src);
+        gl.compileShader(sh);
+        if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error('지상 셰이더 컴파일 실패: ' + gl.getShaderInfoLog(sh));
+        return sh;
+      };
+      const prog = gl.createProgram();
+      gl.attachShader(prog, mk(gl.VERTEX_SHADER, EC.render.VERT));
+      gl.attachShader(prog, mk(gl.FRAGMENT_SHADER, EC.render.GROUND_FRAG));
+      gl.bindAttribLocation(prog, 0, 'aPos');
+      gl.linkProgram(prog);
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error('지상 셰이더 연결 실패: ' + gl.getProgramInfoLog(prog));
+      this.prog = prog;
+      this.loc = {};
+      const n = gl.getProgramParameter(prog, gl.ACTIVE_UNIFORMS);
+      for (let i = 0; i < n; i++) {
+        const info = gl.getActiveUniform(prog, i);
+        this.loc[info.name.replace(/\[0\]$/, '')] = gl.getUniformLocation(prog, info.name);
+      }
+    }
+
+    render(canvas, cam, u) {
+      const gl = this.gl;
+      const L = this.loc;
+      gl.useProgram(this.prog);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.uniform2f(L.uRes, canvas.width, canvas.height);
+      gl.uniform3fv(L.uCamPos, cam.pos);
+      gl.uniform3fv(L.uCamRight, cam.right);
+      gl.uniform3fv(L.uCamUp, cam.up);
+      gl.uniform3fv(L.uCamFwd, cam.fwd);
+      gl.uniform1f(L.uTanHalfFov, cam.tanHalf);
+      for (const k in u) {
+        const loc = L[k];
+        if (!loc) continue;
+        const v = u[k];
+        if (typeof v === 'number') gl.uniform1f(loc, v);
+        else if (v.length === 2) gl.uniform2fv(loc, v);
+        else if (v.length === 3) gl.uniform3fv(loc, v);
+      }
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+  }
+
+  EC.GroundRenderer = GroundRenderer;
+})();
+
+</script>
+  <script>/* js/field/terrain.js */
+'use strict';
+
+/*
+ * 지상 장면의 땅 모양과 하늘 빛 — 셰이더(js/render/ground.js)와 같은 계산.
+ * 지점 정보(EC.surface.query)와 시대 상태로 장면 값을 만들고, 생물을 땅 높이에 맞춰 세울 때 씁니다.
+ */
+(function () {
+  const EC = (window.EC = window.EC || {});
+  EC.field = EC.field || {};
+  const U = EC.util;
+  const N = EC.noise;
+
+  const BASE_R_KM = [5.8e-3, 13.5e-3, 33.1e-3];
+  const MIE_KM_PER_UNIT = 0.021 / 67;
+  const RP = 6371;
+  const RAT = 6451;
+
+  const octFor = (t) => Math.round(U.clamp(9 - Math.log2(1 + t * 0.02), 3, 9)) | 0;
+  /* GLSL 의 int() 는 버림이므로 같게 맞춥니다 */
+  const octForG = (t) => Math.floor(U.clamp(7 - Math.log2(1 + t * 0.02), 3, 7));
+
+  function terrainH(P, x, z, oct) {
+    const qx = x + P.uSeed[0];
+    const qz = z + P.uSeed[1];
+    const r = Math.hypot(x, z);
+    const near = U.smoothstep(3, 40, r);
+    let seaMask = 0;
+    let s = 0;
+    if (P.uCoast > 0.5) {
+      s = x * P.uSeaDir[0] + z * P.uSeaDir[1] - P.uCoastDist;
+      seaMask = U.smoothstep(-250, -40, s);
+    }
+    let h = P.uHillAmp * N.fbm2(qx * P.uHillFreq, qz * P.uHillFreq, oct) * (0.3 + 0.7 * near);
+    h += P.uRough * N.fbm2(qx * 0.06, qz * 0.06, Math.max(oct - 3, 2)) * (0.4 + 0.6 * near);
+    if (P.uMtnAmp > 0 && r > P.uMtnNear) h += P.uMtnAmp * N.ridged2(qx * 0.00045, qz * 0.00045, Math.min(oct, 6)) * U.smoothstep(P.uMtnNear, P.uMtnNear * 6, r) * (1 - seaMask);
+    if (P.uDune > 0) {
+      const d = Math.sin(qx * 0.011 + qz * 0.0045 + N.fbm2(qx * 0.0025, qz * 0.0025, 3) * 2.6);
+      h += P.uDune * 12 * (1 - d * d) * near * (1 - seaMask);
+    }
+    if (P.uCanopy > 0) h += P.uCanopy * 16 * U.smoothstep(90, 260, r) * (0.55 + 0.45 * N.fbm2(qx * 0.035, qz * 0.035, 3)) * (1 - seaMask);
+    h += P.uBaseH;
+    if (P.uCoast > 0.5) h -= U.smoothstep(-150, 250, s) * (P.uBaseH + 30) + Math.max(s, 0) * 0.015;
+    return h;
+  }
+
+  /* 카메라에서 거리 dist 인 곳의 높이 (셰이더가 같은 거리에서 쓰는 세밀도로) */
+  function heightAt(P, x, z, dist) {
+    return terrainH(P, x, z, octForG(dist));
+  }
+
+  /* ---------- 하늘 빛 (km 단위) ---------- */
+  function sphere2(o, d, r) {
+    const b = o[0] * d[0] + o[1] * d[1] + o[2] * d[2];
+    const c = o[0] * o[0] + o[1] * o[1] + o[2] * o[2] - r * r;
+    const h = b * b - c;
+    if (h < 0) return [-1, -1];
+    const sh = Math.sqrt(h);
+    return [-b - sh, -b + sh];
+  }
+  function ext(P, odR, odM) {
+    return [0, 1, 2].map((i) => P.uBetaR[i] * odR + (P.uBetaM[i] * 1.1 + P.uMieAbs[i]) * odM);
+  }
+  function lightOD(P, p) {
+    const sd = P.uSunDir;
+    if (sphere2(p, sd, RP)[0] > 0) return [1e5, 1e5];
+    const len = sphere2(p, sd, RAT)[1];
+    const ds = len / 4;
+    let r = 0;
+    let m = 0;
+    for (let i = 0; i < 4; i++) {
+      const s = [p[0] + sd[0] * ds * (i + 0.5), p[1] + sd[1] * ds * (i + 0.5), p[2] + sd[2] * ds * (i + 0.5)];
+      const h = Math.hypot(s[0], s[1], s[2]) - RP;
+      r += Math.exp(-h / 8) * ds;
+      m += Math.exp(-h / 1.2) * ds;
+    }
+    return [r, m];
+  }
+  function skyScatter(P, d) {
+    const o = [0, RP + 0.002, 0];
+    d = [d[0], Math.max(d[1], 0.004), d[2]];
+    const l = Math.hypot(d[0], d[1], d[2]);
+    d = [d[0] / l, d[1] / l, d[2] / l];
+    const tmax = sphere2(o, d, RAT)[1];
+    let odR = 0;
+    let odM = 0;
+    const sR = [0, 0, 0];
+    const sM = [0, 0, 0];
+    let prev = 0;
+    for (let i = 0; i < 8; i++) {
+      const f = (i + 1) / 8;
+      const tt = tmax * f * f;
+      const ds = tt - prev;
+      const tm = prev + ds * 0.5;
+      prev = tt;
+      const p = [o[0] + d[0] * tm, o[1] + d[1] * tm, o[2] + d[2] * tm];
+      const h = Math.hypot(p[0], p[1], p[2]) - RP;
+      const dr = Math.exp(-h / 8) * ds;
+      const dm = Math.exp(-h / 1.2) * ds;
+      odR += dr;
+      odM += dm;
+      const lo = lightOD(P, p);
+      const e = ext(P, odR + lo[0], odM + lo[1]);
+      for (let k = 0; k < 3; k++) {
+        const att = Math.exp(-e[k]);
+        sR[k] += att * dr;
+        sM[k] += att * dm;
+      }
+    }
+    const mu = d[0] * P.uSunDir[0] + d[1] * P.uSunDir[1] + d[2] * P.uSunDir[2];
+    const pR = 0.0596831 * (1 + mu * mu);
+    const g = 0.76;
+    const pM = 0.1193662 * ((1 - g * g) * (1 + mu * mu)) / ((2 + g * g) * Math.pow(Math.max(1 + g * g - 2 * g * mu, 1e-4), 1.5));
+    return [0, 1, 2].map((k) => (sR[k] * P.uBetaR[k] * pR + sM[k] * P.uBetaM[k] * pM) * P.uSunColor[k] * P.uSunI);
+  }
+
+  /* 관찰자에게 닿는 햇빛 */
+  function sunLight(P) {
+    const o = [0, RP + 0.002, 0];
+    const lo = lightOD(P, o);
+    const e = ext(P, lo[0], lo[1]);
+    const up = U.smoothstep(-0.06, 0.04, P.uSunDir[1]);
+    return [0, 1, 2].map((k) => P.uSunColor[k] * Math.exp(-e[k]) * 1.7 * up * P.uSunIntensity);
+  }
+
+  const mix3 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+  const mul3 = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
+
+  function hashSeed(lat, lon) {
+    const a = Math.sin(lat * 12.9898 + lon * 78.233) * 43758.5453;
+    const b = Math.sin(lat * 39.346 + lon * 11.135) * 24634.6345;
+    return [(a - Math.floor(a)) * 6000 - 3000, (b - Math.floor(b)) * 6000 - 3000];
+  }
+
+  /*
+   * 장면 값 만들기
+   * info: EC.surface.query, bio: EC.surface.biome, st: 시뮬레이션 상태, look: EC.look.build, sun/moon: 지평 좌표 단위 벡터
+   */
+  function build(info, bio, st, look, sun, moon) {
+    const S = EC.sim.S;
+    const P = {};
+    P.uSeed = hashSeed(Math.round(info.lat * 2) / 2, Math.round(info.lon * 2) / 2);
+    const under = bio.habitat === 'sea';
+    const oxid = U.smoothstep(0.2, 3, st.O2);
+    const plants = st.alive && st.stage >= S.landPlants;
+    P.uUnder = under ? 1 : 0;
+    P.uCoast = 0;
+    P.uCoastDist = 1000;
+    P.uSeaDir = [1, 0];
+    P.uBaseH = 0;
+    P.uHillAmp = 16;
+    P.uHillFreq = 0.004;
+    P.uRough = 0.35;
+    P.uMtnAmp = 250 + 900 * Math.max(0, info.mtn - 0.15);
+    P.uMtnNear = 400;
+    P.uDune = 0;
+    P.uCanopy = 0;
+    P.uSandAmt = 0;
+    P.uSnow = 0;
+    P.uIce = 0;
+    P.uLava = 0;
+    P.uSalt = 0;
+    P.uMats = st.alive && st.stage >= S.microbe && st.stage < S.landPlants ? 1 : 0;
+    P.uSnowLine = Math.max(60, (info.tempLocal + 6) * 150);
+    P.uDepth = 0;
+
+    const id = bio.id;
+    if (id === 'desert' || id === 'barren' || id === 'scorched') { P.uHillAmp = 22; P.uRough = 0.6; }
+    if (id === 'desert') { P.uDune = 1; P.uSandAmt = 1; P.uHillAmp = 8; }
+    if (id === 'grassland' || id === 'savanna') { P.uHillAmp = 10; P.uHillFreq = 0.003; P.uRough = 0.25; }
+    if (id === 'forest' || id === 'rainforest' || id === 'boreal') { P.uHillAmp = 18; P.uRough = 0.3; P.uCanopy = plants && st.stage >= S.forests ? 1 : 0; }
+    if (id === 'tundra') { P.uHillAmp = 10; P.uSnow = 0.25; }
+    if (id === 'ice') { P.uHillAmp = 8; P.uHillFreq = 0.002; P.uRough = 0.15; P.uSnow = 1; P.uIce = 1; }
+    if (id === 'lava') { P.uHillAmp = 26; P.uHillFreq = 0.005; P.uRough = 1.2; P.uLava = Math.max(info.lava, info.heat, 0.6); }
+    if (id === 'seabed') { P.uHillAmp = 4; P.uRough = 0.1; P.uSalt = 1; }
+    if (bio.mountain) { P.uHillAmp = 45; P.uMtnAmp = 1100; P.uMtnNear = 150; }
+
+    if (!under && info.land && info.coastKm < 80 && st.ocean > 0.3 && id !== 'lava') {
+      P.uCoast = 1;
+      P.uCoastDist = 60 + (info.coastKm / 80) * 1800;
+      const l = Math.hypot(info.seaDir[0], info.seaDir[1]) || 1;
+      P.uSeaDir = [info.seaDir[0] / l, info.seaDir[1] / l];
+      P.uBaseH = 6 + Math.min(info.coastKm, 80) * 0.25;
+    }
+    if (under) {
+      const depth = id === 'shelf' ? 6 + info.depth * 80 : 25 + Math.min(info.depth, 1) * 30;
+      P.uDepth = depth;
+      P.uBaseH = -depth;
+      P.uHillAmp = 3;
+      P.uHillFreq = 0.006;
+      P.uRough = 0.4;
+      P.uMtnAmp = 0;
+      P.uSandAmt = 0.8;
+    }
+
+    /* 색 */
+    let soil = mix3([0.11, 0.10, 0.095], [0.30, 0.19, 0.12], oxid);
+    if (plants) soil = mix3(soil, [0.17, 0.12, 0.08], 0.6);
+    P.uSoil = soil;
+    P.uRock = mul3(look.uRock, 0.75);
+    P.uSand = oxid > 0.5 ? [0.62, 0.5, 0.34] : [0.24, 0.22, 0.2];
+    let grass = [0.09, 0.15, 0.05];
+    if (st.E !== null && st.E < -385) grass = [0.13, 0.19, 0.07];
+    if (id === 'grassland' && st.E !== null && st.E > -30) grass = [0.30, 0.33, 0.11];
+    if (id === 'savanna') grass = st.E !== null && st.E > -30 ? [0.46, 0.38, 0.17] : [0.2, 0.22, 0.09];
+    if (id === 'tundra') grass = [0.28, 0.27, 0.18];
+    if (id === 'rainforest') grass = [0.06, 0.13, 0.04];
+    P.uGrass = grass;
+    const vegF = { desert: 0.12, savanna: 0.85, grassland: 1, forest: 1, rainforest: 1, boreal: 0.9, tundra: 0.7 }[id] || 0;
+    P.uVeg = (look.uVeg || 0) * vegF;
+    P.uWaterDeep = mul3(look.uOceanDeep, 2.2);
+    P.uWaterShallow = mul3(look.uOceanShallow, 2.4);
+    P.uCloud = Math.min(look.uCloud, 0.92);
+    P.uCloudColor = look.uCloudColor;
+
+    /* 하늘 */
+    P.uBetaR = [0, 1, 2].map((k) => BASE_R_KM[k] * (look.uBetaR[k] / [21, 49, 121][k]));
+    P.uBetaM = look.uBetaM.map((v) => v * MIE_KM_PER_UNIT);
+    P.uMieAbs = look.uMieAbs.map((v) => v * MIE_KM_PER_UNIT);
+    P.uSunDir = sun;
+    P.uSunColor = look.uSunColor;
+    P.uSunIntensity = look.uSunIntensity;
+    P.uSunI = 22 * look.uSunIntensity;
+    P.uSunAng = Math.min(1.0, 0.00465 * st.sunRadius * 1.6);
+    P.uMoonDir = moon;
+    P.uMoonAng = st.moonKm > 0 ? Math.atan(1737 / st.moonKm) * 1.15 : 0;
+    P.uSunLight = sunLight(P);
+    P.uSkyZenith = skyScatter(P, [0, 1, 0]);
+    const hz = [0, 1, 2, 3].map((k) => skyScatter(P, [Math.cos(k * 1.57), 0.05, Math.sin(k * 1.57)]));
+    P.uSkyHorizon = [0, 1, 2].map((c) => (hz[0][c] + hz[1][c] + hz[2][c] + hz[3][c]) / 4);
+    const night = U.smoothstep(0.05, -0.18, sun[1]);
+    P.uStars = night * (1 - Math.min(1, (look.uBetaM[0] - 67) / 1500));
+    const hazeF = Math.max(0, (look.uBetaM[1] - 67 * (look.uBetaR[0] / 21)) / 700);
+    P.uFogK = 0.00005 * (1 + hazeF * 10) * (look.uBetaR[0] / 21);
+    P.uExposure = 1.0;
+    P.uMaxH = P.uBaseH + Math.abs(P.uHillAmp) * 1.1 + P.uRough + P.uMtnAmp * 1.05 + P.uDune * 12 + P.uCanopy * 16 + 2;
+    P.uFade = 1;
+    return P;
+  }
+
+  EC.field.terrainH = terrainH;
+  EC.field.heightAt = heightAt;
+  EC.field.octFor = octForG;
+  EC.field.buildParams = build;
+  EC.field.skyScatter = skyScatter;
+  void octFor;
+})();
+
+</script>
+  <script>/* js/field/species.js */
+'use strict';
+
+/*
+ * 지상 장면에 나오는 생명체·무생명체 도감.
+ * 각 항목: 언제(when)·어디서(habitat) 나오는지, 크기, 움직임, 그림(draw), 설명.
+ * 그림 좌표: 발 닿는 곳이 (0, 0), 위쪽이 음수 y. 크기 1 = 그 생물의 기준 크기(size, m).
+ * env.E 는 "진화 시계" — 실제 역사에서는 시간과 같고, 역사를 바꾸면 생물이 나타나는 때도 달라집니다.
+ */
+(function () {
+  const EC = (window.EC = window.EC || {});
+  EC.field = EC.field || {};
+
+  /* ---------- 그리기 도우미 ---------- */
+  const G = { L: [1, 1, 1] };
+  const cl = (v) => Math.max(0, Math.min(255, v | 0));
+  function c(rgb, a = 1, k = 1) {
+    return `rgba(${cl(rgb[0] * k * G.L[0])},${cl(rgb[1] * k * G.L[1])},${cl(rgb[2] * k * G.L[2])},${a})`;
+  }
+  function lin(ctx, x0, y0, x1, y1, stops) {
+    const g = ctx.createLinearGradient(x0, y0, x1, y1);
+    for (const [o, col] of stops) g.addColorStop(o, col);
+    return g;
+  }
+  function rad(ctx, x, y, r0, r1, stops) {
+    const g = ctx.createRadialGradient(x, y, r0, x, y, r1);
+    for (const [o, col] of stops) g.addColorStop(o, col);
+    return g;
+  }
+  function ell(ctx, x, y, rx, ry, fill, rot = 0) {
+    ctx.beginPath();
+    ctx.ellipse(x, y, Math.max(1e-4, rx), Math.max(1e-4, ry), rot, 0, Math.PI * 2);
+    ctx.fillStyle = fill;
+    ctx.fill();
+  }
+  function poly(ctx, pts, fill, stroke, lw) {
+    ctx.beginPath();
+    pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.closePath();
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+  }
+  function line(ctx, x0, y0, x1, y1, col, w) {
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.strokeStyle = col;
+    ctx.lineWidth = w;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+  function curve(ctx, pts, col, w) {
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    if (pts.length === 3) ctx.quadraticCurveTo(pts[1][0], pts[1][1], pts[2][0], pts[2][1]);
+    else ctx.bezierCurveTo(pts[1][0], pts[1][1], pts[2][0], pts[2][1], pts[3][0], pts[3][1]);
+    ctx.strokeStyle = col;
+    ctx.lineWidth = w;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+  function shadow(ctx, rx, a = 0.28) {
+    ell(ctx, 0, 0, rx, rx * 0.18, `rgba(0,0,0,${a})`);
+  }
+  /* 다리: 위 관절에서 아래로, 걷는 각도 */
+  function leg(ctx, x, y, len, ang, w, col, knee = 0.25) {
+    const kx = x + Math.sin(ang) * len * 0.5;
+    const ky = y + Math.cos(ang) * len * 0.5;
+    const fx = kx + Math.sin(ang - knee) * len * 0.5;
+    const fy = Math.min(0, ky + Math.cos(ang - knee) * len * 0.5);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(kx, ky);
+    ctx.lineTo(fx, fy);
+    ctx.strokeStyle = col;
+    ctx.lineWidth = w;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  }
+
+  const between = (E, a, b) => E !== null && E >= a && E < b;
+  const atLeast = (E, a) => E !== null && E >= a;
+
+  /* ---------- 도감 ---------- */
+  const SPECIES = [
+    /* ===== 무생명체 ===== */
+    {
+      id: 'rock', name: '바위', kind: 'thing', icon: '🪨', habitat: ['land', 'sea'], size: [0.35, 1.6], count: [5, 10], dist: [6, 160], w: 0.62, h: 0.75,
+      when: (e) => e.habitat !== 'lava' || true,
+      info: '지구의 단단한 껍데기를 이루는 암석 조각입니다. 화산에서 굳은 현무암, 모래가 쌓여 굳은 사암, 땅속 깊은 곳에서 식은 화강암처럼 만들어진 방법에 따라 종류가 다릅니다.',
+      setup(i, rng, e) {
+        const n = 9;
+        i.pts = [];
+        for (let k = 0; k < n; k++) {
+          const a = Math.PI + (k / (n - 1)) * Math.PI;
+          const r = 0.45 + rng() * 0.2;
+          i.pts.push([Math.cos(a) * r * 1.2, Math.min(0, Math.sin(a) * r * (1.2 + rng() * 0.4))]);
+        }
+        i.col = e.lava ? [40, 34, 32] : e.oxid > 0.5 ? [116, 106, 96] : [88, 86, 84];
+        if (e.under) i.col = [96, 104, 100];
+      },
+      draw(ctx, t, i, e) {
+        shadow(ctx, 0.62);
+        poly(ctx, i.pts, lin(ctx, -0.4, -0.7, 0.4, 0, [[0, c(i.col, 1, 1.15)], [0.6, c(i.col, 1, 0.8)], [1, c(i.col, 1, 0.5)]]));
+        ell(ctx, -0.12, -0.42, 0.22, 0.1, c(i.col, 0.35, 1.35), -0.3);
+        line(ctx, -0.15, -0.45, 0.05, -0.2, c(i.col, 0.6, 0.4), 0.025);
+        line(ctx, 0.05, -0.2, 0.2, -0.28, c(i.col, 0.6, 0.4), 0.02);
+        if (e.under) ell(ctx, 0.05, -0.55, 0.35, 0.08, c([60, 120, 70], 0.6));
+        if (e.lava) line(ctx, -0.3, -0.05, 0.35, -0.08, `rgba(255,${120 + 60 * Math.sin(t * 2) | 0},30,0.9)`, 0.04);
+      },
+    },
+    {
+      id: 'crystal', name: '석영 결정', kind: 'thing', icon: '💎', habitat: ['land'], size: [0.25, 0.4], count: [1, 1], dist: [2.5, 5], w: 0.5, h: 1,
+      when: (e) => e.habitat === 'land' && !e.lava,
+      info: '이산화규소(SiO₂)가 규칙적으로 쌓여 자란 육각기둥 모양의 광물입니다. 생명체가 아니지만, 원자가 정해진 모양으로 차곡차곡 쌓이며 "자랍니다". 지각에서 두 번째로 흔한 광물입니다.',
+      setup(i, rng) {
+        i.prisms = [];
+        for (let k = 0; k < 5; k++) i.prisms.push({ a: (rng() - 0.5) * 0.9, l: 0.45 + rng() * 0.55, w: 0.07 + rng() * 0.05, x: (rng() - 0.5) * 0.3 });
+      },
+      draw(ctx, t, i) {
+        shadow(ctx, 0.4, 0.2);
+        for (const p of i.prisms) {
+          ctx.save();
+          ctx.translate(p.x, 0);
+          ctx.rotate(p.a);
+          const w = p.w;
+          const l = p.l;
+          poly(ctx, [[-w, 0], [-w, -l], [0, -l - w * 1.6], [w, -l], [w, 0]], lin(ctx, -w, 0, w, 0, [[0, c([210, 200, 235], 0.85)], [0.5, c([250, 248, 255], 0.95)], [1, c([170, 160, 205], 0.85)]]), c([255, 255, 255], 0.7), 0.012);
+          line(ctx, 0, -l * 0.1, 0, -l - w * 1.4, c([255, 255, 255], 0.6), 0.01);
+          ctx.restore();
+        }
+      },
+    },
+    {
+      id: 'volcano', name: '화산', kind: 'thing', icon: '🌋', habitat: ['land'], size: [500, 1100], count: [1, 1], dist: [2500, 4200], w: 1.6, h: 1.3,
+      when: (e) => (e.habitat === 'land' || e.habitat === 'lava') && (e.t < -2500 || e.lava),
+      info: '땅속의 녹은 암석(마그마)이 뿜어져 나오는 산입니다. 어린 지구는 지금보다 훨씬 뜨거워서 화산 활동이 활발했고, 화산이 내뿜은 기체가 대기와 바다의 재료가 되었습니다.',
+      draw(ctx, t, i, e) {
+        poly(ctx, [[-1.6, 0], [-0.32, -0.95], [-0.16, -1], [0.16, -1], [0.32, -0.95], [1.6, 0]], lin(ctx, -1, -1, 1, 0, [[0, c([90, 78, 70])], [1, c([40, 34, 32])]]));
+        const glow = 0.6 + 0.4 * Math.sin(t * 1.7);
+        ell(ctx, 0, -0.99, 0.15, 0.03, `rgba(255,${120 + 60 * glow | 0},40,${0.8 * glow})`);
+        line(ctx, 0.05, -0.97, 0.3, -0.55, 'rgba(255,110,30,0.7)', 0.02);
+        line(ctx, -0.04, -0.97, -0.22, -0.6, 'rgba(255,90,20,0.6)', 0.015);
+        for (let k = 0; k < 7; k++) {
+          const f = (t * 0.05 + k / 7) % 1;
+          ell(ctx, 0.05 + f * 0.5 + Math.sin(k + t * 0.3) * 0.05, -1.05 - f * 0.9, 0.12 + f * 0.35, 0.09 + f * 0.25, `rgba(70,64,62,${0.5 * (1 - f)})`);
+        }
+      },
+    },
+    {
+      id: 'iceberg', name: '빙산', kind: 'thing', icon: '🧊', habitat: ['coast'], size: [12, 40], count: [1, 3], dist: [150, 900], w: 1, h: 0.8,
+      when: (e) => e.coast && (e.T < 2 || e.snow),
+      info: '빙하나 얼음판에서 떨어져 나온 거대한 얼음덩어리입니다. 얼음은 물보다 가벼워 떠 있지만, 부피의 약 90%는 물속에 잠겨 있습니다.',
+      setup(i, rng) {
+        i.pts = [[-1, 0]];
+        for (let k = 1; k < 8; k++) i.pts.push([-1 + k * 0.25, -0.25 - rng() * 0.55]);
+        i.pts.push([1, 0]);
+      },
+      draw(ctx, t, i) {
+        const bob = Math.sin(t * 0.6 + i.phase) * 0.01;
+        ctx.translate(0, bob);
+        poly(ctx, [[-1.1, 0], [-0.7, 0.9], [0.8, 0.8], [1.1, 0]], c([140, 200, 220], 0.35));
+        poly(ctx, i.pts, lin(ctx, -1, -0.8, 1, 0, [[0, c([250, 252, 255])], [1, c([170, 205, 225])]]));
+      },
+    },
+    {
+      id: 'meteor', name: '유성', kind: 'thing', icon: '☄️', habitat: ['sky'], size: [1, 1], count: [3, 5], dist: [0, 0], w: 0, h: 0,
+      when: (e) => !e.under && e.t < -3850,
+      info: '우주를 떠돌던 돌이 대기에 뛰어들어 타면서 빛나는 것입니다. 어린 지구에는 훨씬 많은 소행성과 혜성이 떨어졌습니다(후기 대폭격 가설).',
+    },
+
+    /* ===== 바다의 생명 ===== */
+    {
+      id: 'stromatolite', name: '스트로마톨라이트', kind: 'life', icon: '🪸', habitat: ['shore', 'sea'], size: [0.5, 1.2], count: [5, 9], dist: [3, 40], w: 0.8, h: 0.75,
+      when: (e) => e.alive && e.stage >= e.S.photo && (e.under || e.coast) && e.depthOK,
+      count2: (e) => (e.stage >= e.S.animals ? [1, 2] : [5, 9]),
+      info: '남세균(시아노박테리아)이 햇빛을 받으며 만든 끈적한 막에 모래가 붙고, 그 위에 또 막이 자라기를 수천 년 되풀이해 생긴 층층이 쌓인 바위 기둥입니다. 35억 년 전부터 지구에 산소를 보탠 주인공으로, 지금도 오스트레일리아 샤크만에서 볼 수 있습니다.',
+      setup(i, rng) {
+        i.domes = [];
+        for (let k = 0; k < 4; k++) i.domes.push({ x: (k - 1.5) * 0.38 + (rng() - 0.5) * 0.1, h: 0.4 + rng() * 0.45, w: 0.2 + rng() * 0.08 });
+      },
+      draw(ctx, t, i) {
+        shadow(ctx, 0.8, 0.22);
+        for (const d of i.domes) {
+          ctx.beginPath();
+          ctx.moveTo(d.x - d.w, 0);
+          ctx.lineTo(d.x - d.w, -d.h + d.w * 0.6);
+          ctx.quadraticCurveTo(d.x, -d.h - d.w * 0.5, d.x + d.w, -d.h + d.w * 0.6);
+          ctx.lineTo(d.x + d.w, 0);
+          ctx.closePath();
+          ctx.fillStyle = lin(ctx, d.x - d.w, 0, d.x + d.w, 0, [[0, c([150, 140, 110])], [0.4, c([185, 172, 135])], [1, c([110, 104, 84])]]);
+          ctx.fill();
+          for (let y = -0.08; y > -d.h + 0.05; y -= 0.07) line(ctx, d.x - d.w, y, d.x + d.w, y - 0.015, c([100, 92, 70], 0.55), 0.012);
+          ell(ctx, d.x, -d.h + d.w * 0.1, d.w * 0.9, d.w * 0.28, c([70, 110, 60], 0.85));
+        }
+      },
+    },
+    {
+      id: 'seaweed', name: '해조류', kind: 'life', icon: '🌿', habitat: ['sea'], size: [0.8, 2.5], count: [5, 9], dist: [3, 40], w: 0.5, h: 1,
+      when: (e) => e.under && e.alive && e.stage >= e.S.multicell && e.depthOK,
+      info: '바다에서 광합성을 하는 다세포 조류입니다. 뿌리처럼 생긴 부착기로 바위에 붙어 햇빛 쪽으로 자랍니다. 약 10억 년 전 처음 나타난 다세포 생물의 후손입니다.',
+      draw(ctx, t, i) {
+        for (let k = 0; k < 4; k++) {
+          const x = (k - 1.5) * 0.12;
+          const sw = Math.sin(t * 0.9 + i.phase + k) * 0.15;
+          const col = k % 2 ? c([80, 110, 40]) : c([110, 120, 45]);
+          curve(ctx, [[x, 0], [x + sw * 0.5, -0.35], [x - sw * 0.3, -0.7], [x + sw, -1]], col, 0.05);
+          for (let j = 1; j < 5; j++) ell(ctx, x + sw * (j / 5), -j * 0.2, 0.06, 0.025, col, sw + 0.5);
+        }
+      },
+    },
+    {
+      id: 'dickinsonia', name: '디킨소니아', kind: 'life', icon: '🫓', habitat: ['sea'], size: [0.3, 0.9], count: [3, 6], dist: [2.5, 18], w: 0.55, h: 0.2, flat: true,
+      when: (e) => e.under && e.stage === e.S.ediacaran,
+      info: '약 5억 7천만 년 전 바다 밑에 살던 납작한 타원형 생물입니다. 입도, 눈도, 다리도 없이 바닥의 미생물 막을 몸으로 흡수해 먹었던 것으로 보이며, 가장 오래된 동물 가운데 하나로 여겨집니다.',
+      draw(ctx, t, i) {
+        ctx.scale(1, 0.4);
+        ell(ctx, 0.04, 0.05, 0.52, 0.4, 'rgba(0,0,0,0.25)');
+        ell(ctx, 0, -0.1, 0.5, 0.38, rad(ctx, -0.1, -0.2, 0.05, 0.55, [[0, c([225, 180, 130])], [1, c([170, 120, 80])]]));
+        line(ctx, -0.48, -0.1, 0.48, -0.1, c([130, 85, 55], 0.8), 0.02);
+        for (let k = -9; k <= 9; k++) {
+          const x = k * 0.05;
+          const yy = Math.sqrt(Math.max(0, 1 - (x / 0.5) ** 2)) * 0.36;
+          line(ctx, x, -0.1 - yy, x, -0.1 + yy, c([140, 95, 60], 0.6), 0.012);
+        }
+      },
+    },
+    {
+      id: 'charnia', name: '카르니아', kind: 'life', icon: '🪶', habitat: ['sea'], size: [0.3, 0.7], count: [3, 6], dist: [2.5, 20], w: 0.25, h: 1,
+      when: (e) => e.under && e.stage === e.S.ediacaran,
+      info: '깃털처럼 생긴 에디아카라 생물입니다. 바닥에 원반 모양 뿌리를 박고 서서 물속의 영양분을 걸러 먹었던 것으로 보입니다. 동물인지 아닌지 아직 논쟁 중입니다.',
+      draw(ctx, t, i) {
+        const sw = Math.sin(t * 0.7 + i.phase) * 0.06;
+        ell(ctx, 0, 0, 0.12, 0.03, c([150, 110, 100]));
+        line(ctx, 0, 0, sw * 0.4, -0.2, c([170, 130, 120]), 0.03);
+        ctx.beginPath();
+        ctx.moveTo(sw * 0.4, -0.2);
+        ctx.quadraticCurveTo(0.22 + sw, -0.6, sw, -1);
+        ctx.quadraticCurveTo(-0.22 + sw, -0.6, sw * 0.4, -0.2);
+        ctx.fillStyle = lin(ctx, -0.2, 0, 0.2, 0, [[0, c([200, 140, 140])], [1, c([235, 190, 175])]]);
+        ctx.fill();
+        for (let k = 1; k < 10; k++) {
+          const y = -0.2 - k * 0.08;
+          const x = sw * (0.4 + k * 0.06);
+          line(ctx, x - 0.15, y + 0.03, x, y, c([150, 95, 95], 0.6), 0.01);
+          line(ctx, x + 0.15, y + 0.03, x, y, c([150, 95, 95], 0.6), 0.01);
+        }
+      },
+    },
+    {
+      id: 'jellyfish', name: '해파리', kind: 'life', icon: '🪼', habitat: ['sea'], size: [0.35, 0.9], count: [3, 6], dist: [3, 18], w: 0.35, h: 1.1, swim: 'drift', alt: [0.5, 2.5],
+      when: (e) => e.under && e.alive && e.stage >= e.S.ediacaran,
+      info: '몸의 95% 이상이 물인 투명한 동물입니다. 뇌도 심장도 없이 우산 모양 몸을 오므렸다 펴며 헤엄칩니다. 5억 년이 넘는 긴 역사를 가진 가장 오래된 동물 무리 가운데 하나입니다.',
+      draw(ctx, t, i) {
+        const p = Math.sin(t * 2 + i.phase);
+        const bw = 0.3 * (1 + p * 0.08);
+        for (let k = 0; k < 7; k++) {
+          const x = (k - 3) * 0.07;
+          curve(ctx, [[x, -0.75], [x + Math.sin(t * 1.5 + k) * 0.06, -0.5], [x - Math.sin(t * 1.3 + k) * 0.06, -0.25], [x + Math.sin(t + k) * 0.05, -0.05]], c([230, 190, 230], 0.45), 0.012);
+        }
+        ctx.beginPath();
+        ctx.ellipse(0, -0.78, bw, 0.25 * (1 - p * 0.06), 0, Math.PI, Math.PI * 2);
+        ctx.closePath();
+        ctx.fillStyle = rad(ctx, 0, -0.85, 0.02, 0.32, [[0, c([255, 230, 255], 0.75)], [1, c([200, 150, 220], 0.35)]]);
+        ctx.fill();
+        ell(ctx, 0, -0.82, 0.1, 0.05, c([255, 180, 220], 0.5));
+      },
+    },
+    {
+      id: 'trilobite', name: '삼엽충', kind: 'life', icon: '🪲', habitat: ['sea'], size: [0.12, 0.4], count: [5, 9], dist: [1.3, 7], w: 0.5, h: 0.25, flat: true, crawl: 0.04,
+      when: (e) => e.under && e.stage >= e.S.animals && between(e.E, -538.8, -252),
+      info: '고생대 바다를 2억 7천만 년 넘게 누빈 절지동물입니다. 몸이 세 갈래(가운데와 양옆)로 나뉘어 "삼엽충"이라 부릅니다. 방해석으로 된 수정체 눈을 가진, 눈이 있는 가장 오래된 동물 가운데 하나입니다.',
+      draw(ctx, t, i) {
+        const bob = Math.abs(Math.sin(t * 6 + i.phase)) * 0.01;
+        ctx.translate(0, -bob);
+        ctx.scale(1, 0.45);
+        ell(ctx, 0.03, 0.06, 0.5, 0.3, 'rgba(0,0,0,0.25)');
+        const body = c([120, 100, 80]);
+        ctx.beginPath();
+        ctx.moveTo(0.48, -0.15);
+        ctx.quadraticCurveTo(0.5, -0.5, 0.25, -0.5);
+        ctx.lineTo(-0.38, -0.36);
+        ctx.quadraticCurveTo(-0.52, -0.15, -0.38, 0.06);
+        ctx.lineTo(0.25, 0.2);
+        ctx.quadraticCurveTo(0.5, 0.2, 0.48, -0.15);
+        ctx.fillStyle = lin(ctx, 0, -0.5, 0, 0.2, [[0, c([150, 128, 100])], [1, c([90, 72, 56])]]);
+        ctx.fill();
+        ell(ctx, 0.36, -0.15, 0.16, 0.3, c([140, 118, 92]));
+        line(ctx, 0.36, -0.15, 0.62, 0.15, body, 0.03);
+        line(ctx, 0.36, -0.15, 0.62, -0.45, body, 0.03);
+        ell(ctx, 0.36, -0.3, 0.04, 0.05, c([40, 35, 30]));
+        ell(ctx, 0.36, 0.0, 0.04, 0.05, c([40, 35, 30]));
+        ell(ctx, -0.05, -0.15, 0.4, 0.09, c([165, 142, 112]));
+        for (let k = 0; k < 9; k++) {
+          const x = 0.2 - k * 0.065;
+          line(ctx, x, -0.42 + k * 0.012, x, 0.12 - k * 0.012, c([70, 55, 42], 0.7), 0.012);
+        }
+      },
+    },
+    {
+      id: 'anomalocaris', name: '아노말로카리스', kind: 'life', icon: '🦐', habitat: ['sea'], size: [0.5, 1], count: [1, 3], dist: [3, 15], w: 0.55, h: 0.35, swim: 'swim', alt: [0.4, 2.5], speed: 0.5,
+      when: (e) => e.under && e.stage >= e.S.animals && between(e.E, -538.8, -480),
+      info: '캄브리아기 바다의 최상위 포식자입니다. 머리 앞의 가시 돋친 팔로 먹이를 붙잡고, 몸 양옆의 지느러미를 물결치듯 움직여 헤엄쳤습니다. 길이가 1m에 이르기도 했습니다.',
+      draw(ctx, t, i) {
+        const w = t * 5 + i.phase;
+        for (let k = 0; k < 9; k++) {
+          const x = 0.3 - k * 0.075;
+          const f = Math.sin(w - k * 0.7) * 0.06;
+          ell(ctx, x, -0.12 + f, 0.05, 0.12, c([200, 110, 80], 0.9), 0.4);
+        }
+        ell(ctx, 0, -0.15, 0.4, 0.1, lin(ctx, 0, -0.25, 0, -0.05, [[0, c([215, 120, 85])], [1, c([150, 70, 50])]]));
+        poly(ctx, [[-0.38, -0.15], [-0.55, -0.25], [-0.52, -0.15], [-0.55, -0.05]], c([190, 100, 70]));
+        line(ctx, 0.36, -0.2, 0.45, -0.3, c([60, 40, 30]), 0.02);
+        ell(ctx, 0.46, -0.31, 0.03, 0.03, c([30, 25, 20]));
+        const a = Math.sin(t * 2 + i.phase) * 0.2;
+        curve(ctx, [[0.38, -0.12], [0.55, -0.15 + a * 0.2], [0.6, -0.02], [0.5, 0.02]], c([220, 140, 100]), 0.03);
+      },
+    },
+    {
+      id: 'fish', name: '물고기', kind: 'life', icon: '🐟', habitat: ['sea'], size: [0.2, 0.5], count: [6, 12], dist: [2.5, 20], w: 0.5, h: 0.35, swim: 'school', alt: [0.5, 5], speed: 1.2,
+      when: (e) => e.under && e.stage >= e.S.animals && atLeast(e.E, -420),
+      info: '등뼈를 가진 동물(척추동물)은 물고기에서 시작했습니다. 약 4억 2천만 년 전부터 턱과 지느러미를 가진 물고기들이 바다를 채웠고, 사람을 포함한 육지 척추동물도 그 후손입니다.',
+      draw(ctx, t, i) {
+        const tw = Math.sin(t * 9 + i.phase) * 0.08;
+        poly(ctx, [[-0.32, -0.16], [-0.5, -0.3 + tw], [-0.46, -0.16], [-0.5, -0.02 + tw]], c([90, 120, 150]));
+        ell(ctx, 0, -0.16, 0.36, 0.13, lin(ctx, 0, -0.29, 0, -0.03, [[0, c([70, 100, 135])], [0.55, c([170, 195, 210])], [1, c([225, 230, 235])]]));
+        poly(ctx, [[-0.05, -0.27], [0.1, -0.36], [0.12, -0.27]], c([80, 110, 145]));
+        ell(ctx, 0.24, -0.19, 0.03, 0.03, c([20, 20, 25]));
+      },
+    },
+    {
+      id: 'shark', name: '상어', kind: 'life', icon: '🦈', habitat: ['sea'], size: [1.5, 4], count: [0, 1], dist: [12, 40], w: 0.55, h: 0.4, swim: 'swim', alt: [2, 8], speed: 1.5,
+      when: (e) => e.under && atLeast(e.E, -400) && e.depth > 15,
+      info: '연골로 된 뼈대를 가진 물고기로, 4억 년 넘게 바다를 지켜 온 포식자입니다. 다섯 번의 대멸종을 모두 살아남았습니다.',
+      draw(ctx, t, i) {
+        const tw = Math.sin(t * 3 + i.phase) * 0.06;
+        poly(ctx, [[-0.35, -0.15], [-0.55, -0.4 + tw], [-0.5, -0.15], [-0.52, -0.02 + tw]], c([90, 100, 110]));
+        ctx.beginPath();
+        ctx.moveTo(0.5, -0.16);
+        ctx.quadraticCurveTo(0.3, -0.3, -0.38, -0.17);
+        ctx.quadraticCurveTo(0.2, -0.04, 0.5, -0.16);
+        ctx.fillStyle = lin(ctx, 0, -0.3, 0, -0.05, [[0, c([95, 105, 118])], [0.6, c([150, 158, 168])], [1, c([225, 228, 230])]]);
+        ctx.fill();
+        poly(ctx, [[0.0, -0.24], [-0.12, -0.42], [-0.15, -0.23]], c([85, 95, 108]));
+        poly(ctx, [[0.12, -0.12], [0.0, -0.0], [-0.04, -0.12]], c([110, 120, 130]));
+        ell(ctx, 0.36, -0.19, 0.018, 0.018, c([10, 10, 10]));
+        for (let k = 0; k < 4; k++) line(ctx, 0.25 - k * 0.025, -0.2, 0.24 - k * 0.025, -0.13, c([60, 70, 80], 0.6), 0.006);
+      },
+    },
+    {
+      id: 'ammonite', name: '암모나이트', kind: 'life', icon: '🐚', habitat: ['sea'], size: [0.15, 0.6], count: [2, 5], dist: [3, 20], w: 0.45, h: 0.6, swim: 'drift', alt: [0.5, 4],
+      when: (e) => e.under && atLeast(e.E, -400) && (e.E < -66 || e.dynasty === 'archosaur'),
+      info: '나선형 껍데기를 가진 오징어의 먼 친척입니다. 껍데기 속 방에 기체를 채워 떠다녔습니다. 4억 년 가까이 번성했지만 공룡과 함께 6600만 년 전에 사라졌고, 화석으로 흔히 발견됩니다.',
+      draw(ctx, t, i) {
+        const bob = Math.sin(t + i.phase) * 0.02;
+        ctx.translate(0, bob);
+        ell(ctx, 0, -0.3, 0.3, 0.3, rad(ctx, -0.08, -0.38, 0.02, 0.32, [[0, c([240, 220, 180])], [1, c([170, 130, 90])]]));
+        ctx.beginPath();
+        for (let a = 0; a < Math.PI * 6; a += 0.15) {
+          const r = 0.29 * Math.exp(-a * 0.16);
+          const x = Math.cos(a) * r;
+          const y = -0.3 + Math.sin(a) * r;
+          if (a === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = c([120, 85, 55], 0.8);
+        ctx.lineWidth = 0.018;
+        ctx.stroke();
+        for (let k = 0; k < 14; k++) {
+          const a = k * 0.45;
+          line(ctx, Math.cos(a) * 0.16, -0.3 + Math.sin(a) * 0.16, Math.cos(a) * 0.29, -0.3 + Math.sin(a) * 0.29, c([150, 110, 75], 0.5), 0.01);
+        }
+        for (let k = 0; k < 5; k++) curve(ctx, [[0.27, -0.25 + k * 0.03], [0.38, -0.2 + k * 0.04 + Math.sin(t * 2 + k) * 0.02], [0.42, -0.12 + k * 0.04]], c([200, 150, 130], 0.9), 0.018);
+      },
+    },
+    {
+      id: 'plesiosaur', name: '수장룡', kind: 'life', icon: '🦕', habitat: ['sea'], size: [3, 7], count: [0, 1], dist: [15, 45], w: 0.6, h: 0.55, swim: 'swim', alt: [2, 10], speed: 1.2,
+      when: (e) => e.under && e.dynasty === 'archosaur' && atLeast(e.E, -200) && e.depth > 12,
+      info: '공룡 시대 바다에 살던 파충류입니다. 긴 목과 네 개의 커다란 지느러미발로 물속을 날듯이 헤엄쳤습니다. 공룡이 아니라 공룡의 먼 친척입니다.',
+      draw(ctx, t, i) {
+        const fl = Math.sin(t * 2 + i.phase) * 0.4;
+        const col = c([90, 105, 100]);
+        ell(ctx, 0.12, -0.15, 0.12, 0.04, col, 0.6 + fl);
+        ell(ctx, -0.15, -0.15, 0.1, 0.035, col, 0.6 - fl);
+        ell(ctx, 0, -0.22, 0.26, 0.12, lin(ctx, 0, -0.34, 0, -0.1, [[0, c([95, 110, 105])], [1, c([170, 175, 160])]]));
+        poly(ctx, [[-0.25, -0.24], [-0.5, -0.2], [-0.25, -0.18]], col);
+        curve(ctx, [[0.22, -0.25], [0.35, -0.3], [0.45, -0.45], [0.55, -0.48]], col, 0.06);
+        ell(ctx, 0.58, -0.48, 0.06, 0.03, col);
+        ell(ctx, 0.6, -0.49, 0.01, 0.01, c([10, 10, 10]));
+      },
+    },
+    {
+      id: 'whale', name: '고래', kind: 'life', icon: '🐋', habitat: ['sea'], size: [8, 16], count: [0, 1], dist: [25, 60], w: 0.55, h: 0.35, swim: 'swim', alt: [4, 14], speed: 1.4,
+      when: (e) => e.under && e.dynasty === 'mammal' && e.mammalAge >= 15 && e.depth > 15,
+      info: '육지에 살던 포유류가 약 5천만 년 전 다시 바다로 돌아가 진화한 동물입니다. 지금도 공기로 숨을 쉬고 새끼에게 젖을 먹입니다. 대왕고래는 지구에 살았던 가장 큰 동물입니다.',
+      draw(ctx, t, i) {
+        const f = Math.sin(t * 1.2 + i.phase) * 0.06;
+        ctx.beginPath();
+        ctx.moveTo(0.5, -0.18);
+        ctx.bezierCurveTo(0.48, -0.32, 0.0, -0.33, -0.38, -0.2 + f * 0.5);
+        ctx.bezierCurveTo(0.0, -0.06, 0.4, -0.04, 0.5, -0.18);
+        ctx.fillStyle = lin(ctx, 0, -0.33, 0, -0.06, [[0, c([45, 55, 70])], [0.7, c([70, 82, 98])], [1, c([170, 175, 180])]]);
+        ctx.fill();
+        poly(ctx, [[-0.36, -0.2 + f * 0.5], [-0.55, -0.3 + f], [-0.47, -0.2 + f * 0.6], [-0.55, -0.1 + f]], c([45, 55, 70]));
+        ell(ctx, 0.15, -0.09, 0.14, 0.03, c([60, 70, 85]), 0.5);
+        for (let k = 0; k < 5; k++) line(ctx, 0.4 - k * 0.04, -0.1, 0.1 - k * 0.04, -0.07, c([130, 135, 140], 0.6), 0.006);
+        ell(ctx, 0.36, -0.2, 0.012, 0.012, c([10, 10, 10]));
+      },
+    },
+    {
+      id: 'coral', name: '산호', kind: 'life', icon: '🪸', habitat: ['sea'], size: [0.4, 1.2], count: [3, 6], dist: [3, 25], w: 0.6, h: 0.9,
+      when: (e) => e.under && atLeast(e.E, -485) && e.T > 18 && e.depth < 40,
+      info: '산호는 식물처럼 보이지만 작은 동물(폴립)이 모여 사는 군체입니다. 몸속에 사는 조류가 광합성으로 양분을 나눠 주고, 탄산칼슘 뼈대가 쌓여 산호초가 됩니다. 바다 생물의 4분의 1이 산호초에 기대어 삽니다.',
+      setup(i, rng) { i.hue = rng() < 0.5 ? [235, 120, 90] : [225, 140, 190]; i.seedB = rng() * 100; },
+      draw(ctx, t, i) {
+        const br = (x, y, a, l, d) => {
+          if (d > 4) return;
+          const x2 = x + Math.sin(a) * l;
+          const y2 = y - Math.cos(a) * l;
+          line(ctx, x, y, x2, y2, c(i.hue, 1, 1 - d * 0.08), 0.07 - d * 0.012);
+          br(x2, y2, a - 0.45 + Math.sin(i.seedB + d) * 0.15, l * 0.75, d + 1);
+          br(x2, y2, a + 0.4, l * 0.72, d + 1);
+        };
+        br(-0.15, 0, -0.1, 0.32, 0);
+        ell(ctx, 0.3, -0.12, 0.22, 0.13, rad(ctx, 0.25, -0.2, 0.02, 0.24, [[0, c([230, 200, 120])], [1, c([170, 140, 70])]]));
+        for (let k = 0; k < 4; k++) line(ctx, 0.12, -0.1 - k * 0.03, 0.48, -0.12 - k * 0.025, c([140, 110, 60], 0.6), 0.01);
+      },
+    },
+
+    /* ===== 육지의 식물 ===== */
+    {
+      id: 'earlyPlant', name: '쿡소니아 (초기 육상 식물)', kind: 'life', icon: '🌱', habitat: ['land'], size: [0.05, 0.12], count: [8, 14], dist: [1.5, 8], w: 0.4, h: 1,
+      when: (e) => e.habitat === 'land' && e.plants && between(e.E, -470, -385) && e.wet,
+      info: '처음으로 육지에 올라온 식물 무리입니다. 잎도 뿌리도 없이, 손가락 마디만 한 줄기가 Y자로 갈라지고 끝에 포자 주머니를 달았습니다. 물가의 축축한 땅에서만 살 수 있었습니다.',
+      draw(ctx, t, i) {
+        for (let k = 0; k < 6; k++) {
+          const x = (k - 2.5) * 0.12;
+          const sw = Math.sin(t + k + i.phase) * 0.03;
+          const col = c([90, 140, 60]);
+          line(ctx, x, 0, x + sw, -0.5, col, 0.03);
+          line(ctx, x + sw, -0.5, x - 0.08 + sw, -0.85, col, 0.025);
+          line(ctx, x + sw, -0.5, x + 0.08 + sw, -0.8, col, 0.025);
+          ell(ctx, x - 0.08 + sw, -0.88, 0.035, 0.045, c([150, 120, 60]));
+          ell(ctx, x + 0.08 + sw, -0.83, 0.035, 0.045, c([150, 120, 60]));
+        }
+      },
+    },
+    {
+      id: 'fern', name: '고사리', kind: 'life', icon: '🌿', habitat: ['land'], size: [0.6, 1.6], count: [5, 10], dist: [2, 30], w: 0.7, h: 0.9,
+      when: (e) => e.habitat === 'land' && e.plants && atLeast(e.E, -390) && e.moist > 0.3 && e.T > -2,
+      info: '꽃 없이 포자로 번식하는 식물입니다. 뿌리·줄기·잎을 갖춘 관다발 식물로 약 3억 8천만 년 전부터 지구의 숲 바닥을 덮었고, 공룡도 고사리를 먹었습니다.',
+      draw(ctx, t, i) {
+        for (let k = 0; k < 7; k++) {
+          const a = -1.2 + k * 0.4 + Math.sin(t * 0.8 + i.phase + k) * 0.04;
+          const ex = Math.sin(a) * 0.65;
+          const ey = -Math.cos(a) * 0.55 - 0.25;
+          const mx = Math.sin(a) * 0.3;
+          const my = -0.75;
+          const col = c(k % 2 ? [60, 110, 45] : [80, 130, 55]);
+          curve(ctx, [[0, 0], [mx, my], [ex, ey]], col, 0.025);
+          for (let j = 1; j < 8; j++) {
+            const u = j / 8;
+            const px = (1 - u) * (1 - u) * 0 + 2 * (1 - u) * u * mx + u * u * ex;
+            const py = 2 * (1 - u) * u * my + u * u * ey;
+            const l = 0.11 * (1 - u * 0.7);
+            line(ctx, px, py, px - l * 0.7, py - l * 0.4, col, 0.022);
+            line(ctx, px, py, px + l * 0.7, py - l * 0.4, col, 0.022);
+          }
+        }
+      },
+    },
+    {
+      id: 'scaleTree', name: '인목 (레피도덴드론)', kind: 'life', icon: '🌴', habitat: ['land'], size: [18, 35], count: [5, 9], dist: [22, 150], w: 0.3, h: 1,
+      when: (e) => e.habitat === 'land' && e.forests && between(e.E, -385, -250) && e.moist > 0.35,
+      info: '석탄기 늪지 숲을 이룬 키 30m의 거대한 나무입니다. 줄기에 비늘 같은 마름모 무늬가 있어 "비늘나무"라고도 합니다. 이 숲이 땅에 묻혀 오늘날의 석탄이 되었습니다.',
+      draw(ctx, t, i) {
+        ctx.beginPath();
+        ctx.moveTo(-0.035, 0);
+        ctx.lineTo(-0.02, -0.82);
+        ctx.lineTo(0.02, -0.82);
+        ctx.lineTo(0.035, 0);
+        ctx.fillStyle = lin(ctx, -0.04, 0, 0.04, 0, [[0, c([80, 75, 55])], [0.5, c([120, 110, 80])], [1, c([60, 55, 40])]]);
+        ctx.fill();
+        for (let y = -0.04; y > -0.8; y -= 0.04) line(ctx, -0.03, y, 0.03, y - 0.02, c([50, 45, 30], 0.5), 0.004);
+        const sw = Math.sin(t * 0.4 + i.phase) * 0.01;
+        const tips = [[-0.16, -0.95], [-0.06, -1.0], [0.06, -1.0], [0.16, -0.95]];
+        for (const [x, y] of tips) {
+          curve(ctx, [[0, -0.82], [x * 0.5, -0.88], [x + sw, y]], c([80, 75, 55]), 0.012);
+          for (let k = 0; k < 9; k++) {
+            const a = (k / 8) * Math.PI * 2;
+            line(ctx, x + sw, y, x + sw + Math.cos(a) * 0.05, y + Math.sin(a) * 0.05, c([70, 115, 50]), 0.008);
+          }
+        }
+      },
+    },
+    {
+      id: 'conifer', name: '침엽수', kind: 'life', icon: '🌲', habitat: ['land'], size: [10, 26], count: [5, 12], dist: [20, 180], w: 0.25, h: 1,
+      when: (e) => e.habitat === 'land' && e.forests && atLeast(e.E, -300) && e.T > -8 && e.moist > 0.25 && (e.biome !== 'rainforest'),
+      info: '바늘처럼 가는 잎과 솔방울을 가진 겉씨식물입니다. 약 3억 년 전에 나타나 공룡 시대 숲의 주인공이었고, 지금도 추운 북쪽 숲을 덮고 있습니다.',
+      draw(ctx, t, i) {
+        line(ctx, 0, 0, 0, -0.25, c([90, 65, 45]), 0.04);
+        const sw = Math.sin(t * 0.5 + i.phase) * 0.008;
+        for (let k = 0; k < 6; k++) {
+          const y0 = -0.15 - k * 0.14;
+          const w = 0.24 - k * 0.035;
+          poly(ctx, [[-w, y0], [sw * k, y0 - 0.26], [w, y0]], lin(ctx, -w, 0, w, 0, [[0, c([30, 60, 40])], [0.45, c([50, 90, 55])], [1, c([22, 45, 30])]]));
+        }
+      },
+    },
+    {
+      id: 'cycad', name: '소철', kind: 'life', icon: '🌴', habitat: ['land'], size: [1.5, 4], count: [3, 7], dist: [6, 60], w: 0.6, h: 1,
+      when: (e) => e.habitat === 'land' && e.plants && atLeast(e.E, -280) && e.T > 10 && (e.E < -66 || e.dynasty === 'archosaur' || e.tropical),
+      info: '굵은 줄기 끝에 깃털 같은 단단한 잎을 펼친 겉씨식물입니다. 공룡 시대에 아주 흔해서 "살아 있는 화석"이라 불리며, 지금도 열대 지방에 남아 있습니다.',
+      draw(ctx, t, i) {
+        ctx.beginPath();
+        ctx.moveTo(-0.09, 0);
+        ctx.lineTo(-0.07, -0.45);
+        ctx.lineTo(0.07, -0.45);
+        ctx.lineTo(0.09, 0);
+        ctx.fillStyle = lin(ctx, -0.09, 0, 0.09, 0, [[0, c([90, 75, 55])], [0.5, c([130, 110, 80])], [1, c([70, 58, 42])]]);
+        ctx.fill();
+        for (let y = -0.03; y > -0.44; y -= 0.05) {
+          line(ctx, -0.08, y, 0, y - 0.03, c([60, 50, 35], 0.6), 0.008);
+          line(ctx, 0.08, y, 0, y - 0.03, c([60, 50, 35], 0.6), 0.008);
+        }
+        for (let k = 0; k < 9; k++) {
+          const a = -1.35 + k * 0.34 + Math.sin(t * 0.7 + i.phase + k) * 0.03;
+          const ex = Math.sin(a) * 0.55;
+          const ey = -0.45 - Math.cos(a) * 0.45 + Math.abs(Math.sin(a)) * 0.15;
+          const col = c([55, 100, 45]);
+          curve(ctx, [[0, -0.45], [ex * 0.5, -0.45 - Math.cos(a) * 0.4], [ex, ey]], col, 0.02);
+          for (let j = 2; j < 9; j++) {
+            const u = j / 9;
+            const px = ex * u;
+            const py = -0.45 + (ey + 0.45) * u - Math.sin(Math.PI * u) * 0.1;
+            line(ctx, px, py, px + 0.05, py + 0.06, col, 0.012);
+            line(ctx, px, py, px - 0.05, py + 0.06, col, 0.012);
+          }
+        }
+      },
+    },
+    {
+      id: 'broadleaf', name: '활엽수', kind: 'life', icon: '🌳', habitat: ['land'], size: [8, 22], count: [5, 11], dist: [18, 170], w: 0.45, h: 1,
+      when: (e) => e.habitat === 'land' && e.forests && atLeast(e.E, -100) && e.T > 0 && e.moist > 0.32,
+      info: '넓은 잎을 가진 속씨식물(꽃 피는 식물) 나무입니다. 약 1억 년 전부터 빠르게 퍼져 지금은 지구 식물의 대부분을 차지합니다. 열매를 맺어 동물에게 먹이를 주고 씨앗을 퍼뜨립니다.',
+      setup(i, rng) { i.blobs = []; for (let k = 0; k < 9; k++) i.blobs.push([(rng() - 0.5) * 0.6, -0.55 - rng() * 0.38, 0.14 + rng() * 0.1]); },
+      draw(ctx, t, i, e) {
+        line(ctx, 0, 0, 0, -0.5, c([85, 62, 45]), 0.06);
+        line(ctx, 0, -0.38, -0.15, -0.6, c([85, 62, 45]), 0.03);
+        line(ctx, 0, -0.42, 0.16, -0.62, c([85, 62, 45]), 0.03);
+        const sw = Math.sin(t * 0.5 + i.phase) * 0.01;
+        const base = e.T < 8 ? [130, 120, 50] : e.tropical ? [35, 85, 35] : [55, 100, 45];
+        for (const [x, y, r] of i.blobs) ell(ctx, x + sw, y, r, r * 0.85, rad(ctx, x - r * 0.4 + sw, y - r * 0.4, r * 0.1, r * 1.1, [[0, c(base, 1, 1.35)], [1, c(base, 1, 0.65)]]));
+      },
+    },
+    {
+      id: 'palm', name: '야자나무', kind: 'life', icon: '🌴', habitat: ['land'], size: [8, 16], count: [3, 6], dist: [14, 120], w: 0.5, h: 1,
+      when: (e) => e.habitat === 'land' && e.plants && atLeast(e.E, -90) && e.tropical && (e.coast || e.moist > 0.4),
+      info: '줄기에 가지가 없고 꼭대기에만 커다란 잎이 모여 나는 열대 식물입니다. 공룡 시대 끝 무렵 처음 나타났고, 열매(코코넛)는 바다를 떠다니며 섬과 섬으로 퍼집니다.',
+      draw(ctx, t, i) {
+        curve(ctx, [[0, 0], [0.06, -0.4], [0.02, -0.7], [0.1, -0.92]], c([125, 100, 70]), 0.045);
+        for (let k = 0; k < 8; k++) {
+          const a = (k / 8) * Math.PI * 2 + Math.sin(t * 0.6 + i.phase) * 0.05;
+          const ex = 0.1 + Math.cos(a) * 0.38;
+          const ey = -0.92 + Math.abs(Math.sin(a)) * 0.05 + 0.18;
+          curve(ctx, [[0.1, -0.92], [0.1 + Math.cos(a) * 0.2, -1.02], [ex, ey]], c([50, 105, 45]), 0.03);
+          for (let j = 2; j < 8; j++) {
+            const u = j / 8;
+            const px = 0.1 + (ex - 0.1) * u;
+            const py = -0.92 - Math.sin(Math.PI * u) * 0.09 + (ey + 0.92) * u * u;
+            line(ctx, px, py, px + 0.02, py + 0.08, c([55, 115, 50]), 0.012);
+          }
+        }
+      },
+    },
+    {
+      id: 'grass', name: '풀', kind: 'life', icon: '🌾', habitat: ['land'], size: [0.25, 0.6], count: [10, 18], dist: [1.4, 12], w: 0.5, h: 1,
+      when: (e) => e.habitat === 'land' && e.plants && atLeast(e.E, -30) && (e.biome === 'grassland' || e.biome === 'savanna' || e.biome === 'tundra' || e.biome === 'forest'),
+      info: '풀(벼과 식물)은 생각보다 늦게, 공룡이 사라진 뒤에야 널리 퍼졌습니다. 잘려도 밑동에서 다시 자라기 때문에 초원과 그 초원을 뜯어 먹는 동물들이 함께 진화했습니다.',
+      draw(ctx, t, i, e) {
+        const col = e.biome === 'savanna' ? [170, 150, 80] : e.biome === 'tundra' ? [130, 125, 85] : [100, 140, 55];
+        for (let k = 0; k < 11; k++) {
+          const x = (k - 5) * 0.045;
+          const sw = Math.sin(t * 1.4 + i.phase + k * 0.6) * 0.08;
+          const h = 0.6 + ((k * 37) % 11) / 25;
+          ctx.beginPath();
+          ctx.moveTo(x - 0.02, 0);
+          ctx.quadraticCurveTo(x + sw * 0.5, -h * 0.6, x + sw + (k - 5) * 0.03, -h);
+          ctx.quadraticCurveTo(x + sw * 0.5 + 0.01, -h * 0.6, x + 0.02, 0);
+          ctx.fillStyle = c(col, 1, 0.8 + (k % 3) * 0.12);
+          ctx.fill();
+        }
+      },
+    },
+
+    /* ===== 육지의 동물 ===== */
+    {
+      id: 'dragonfly', name: '메가네우라 (거대 잠자리)', kind: 'life', icon: '🪰', habitat: ['air'], size: [0.5, 0.7], count: [1, 3], dist: [3, 15], w: 0.5, h: 0.3, fly: 'flit', alt: [1, 4], speed: 2,
+      when: (e) => e.habitat === 'land' && e.forests && between(e.E, -320, -250),
+      info: '석탄기의 날개폭 70cm짜리 잠자리 친척입니다. 대기 중 산소가 지금보다 많아(30% 이상) 곤충이 이렇게 클 수 있었다는 설명이 유력합니다.',
+      draw(ctx, t, i) {
+        const fl = Math.sin(t * 30 + i.phase);
+        line(ctx, -0.45, -0.15, 0.1, -0.15, c([60, 90, 110]), 0.035);
+        ell(ctx, 0.14, -0.15, 0.06, 0.04, c([50, 80, 95]));
+        ell(ctx, 0.21, -0.16, 0.04, 0.035, c([90, 140, 120]));
+        for (const [x, s] of [[0.1, 1], [0.0, 0.9]]) {
+          ell(ctx, x - 0.05, -0.15 - 0.12 * fl, 0.25 * s, 0.05, 'rgba(220,235,255,0.35)', -0.15);
+          ell(ctx, x - 0.05, -0.15 + 0.05 * fl, 0.24 * s, 0.045, 'rgba(220,235,255,0.25)', 0.15);
+        }
+      },
+    },
+    {
+      id: 'amphibian', name: '초기 양서류', kind: 'life', icon: '🦎', habitat: ['land'], size: [1, 2], count: [1, 3], dist: [5, 25], w: 0.55, h: 0.25, walk: 0.25,
+      when: (e) => e.habitat === 'land' && e.stage >= e.S.tetrapods && between(e.E, -375, -200) && (e.wet || e.coast),
+      info: '물고기에서 진화해 처음으로 육지를 걸은 척추동물의 후손입니다. 납작하고 넓은 머리, 옆으로 벌린 다리를 가졌고, 알은 물속에 낳았습니다. 개구리·도롱뇽의 먼 친척입니다.',
+      draw(ctx, t, i) {
+        shadow(ctx, 0.45);
+        const s = Math.sin(t * 4 + i.phase) * (i.moving ? 0.5 : 0);
+        const col = c([95, 100, 60]);
+        leg(ctx, 0.2, -0.1, 0.16, 0.6 + s, 0.05, col, -0.8);
+        leg(ctx, -0.22, -0.1, 0.16, 0.6 - s, 0.05, col, -0.8);
+        ctx.beginPath();
+        ctx.moveTo(-0.55, -0.08);
+        ctx.quadraticCurveTo(-0.3, -0.14, -0.1, -0.17);
+        ctx.quadraticCurveTo(0.25, -0.2, 0.42, -0.14);
+        ctx.quadraticCurveTo(0.5, -0.1, 0.42, -0.06);
+        ctx.quadraticCurveTo(0, -0.04, -0.55, -0.08);
+        ctx.fillStyle = lin(ctx, 0, -0.2, 0, -0.05, [[0, c([110, 115, 70])], [1, c([160, 150, 100])]]);
+        ctx.fill();
+        for (let k = 0; k < 5; k++) ell(ctx, -0.25 + k * 0.12, -0.15, 0.025, 0.015, c([60, 65, 35], 0.7));
+        ell(ctx, 0.36, -0.15, 0.015, 0.015, c([20, 20, 15]));
+        leg(ctx, 0.18, -0.1, 0.16, 0.4 - s, 0.05, col, -0.8);
+        leg(ctx, -0.24, -0.1, 0.16, 0.4 + s, 0.05, col, -0.8);
+      },
+    },
+    {
+      id: 'dimetrodon', name: '디메트로돈', kind: 'life', icon: '🦎', habitat: ['land'], size: [2.2, 3.5], count: [1, 3], dist: [8, 40], w: 0.55, h: 0.55, walk: 0.4,
+      when: (e) => e.habitat === 'land' && e.dynasty === 'synapsid' && atLeast(e.E, -300),
+      info: '등에 커다란 돛을 단 페름기의 포식자입니다. 공룡처럼 보이지만 사실은 공룡보다 포유류에 더 가까운 "단궁류"로, 사람의 아주 먼 친척입니다. 돛은 체온 조절에 쓰였다는 설명이 있습니다.',
+      draw(ctx, t, i) {
+        shadow(ctx, 0.45);
+        const s = Math.sin(t * 3.5 + i.phase) * (i.moving ? 0.45 : 0);
+        const dark = c([110, 70, 50]);
+        leg(ctx, 0.18, -0.12, 0.15, 0.5 + s, 0.04, dark, -0.6);
+        leg(ctx, -0.18, -0.12, 0.15, 0.5 - s, 0.04, dark, -0.6);
+        ctx.beginPath();
+        ctx.moveTo(-0.22, -0.18);
+        for (let k = 0; k <= 10; k++) {
+          const x = -0.22 + k * 0.045;
+          const y = -0.18 - Math.sin((k / 10) * Math.PI) * 0.33;
+          ctx.lineTo(x, y);
+        }
+        ctx.lineTo(0.23, -0.18);
+        ctx.closePath();
+        ctx.fillStyle = lin(ctx, 0, -0.5, 0, -0.18, [[0, c([190, 110, 70])], [1, c([150, 80, 55])]]);
+        ctx.fill();
+        for (let k = 0; k <= 10; k++) {
+          const x = -0.22 + k * 0.045;
+          line(ctx, x, -0.18, x, -0.18 - Math.sin((k / 10) * Math.PI) * 0.33, c([90, 50, 35], 0.8), 0.008);
+        }
+        ctx.beginPath();
+        ctx.moveTo(-0.55, -0.1);
+        ctx.quadraticCurveTo(-0.3, -0.16, -0.1, -0.2);
+        ctx.quadraticCurveTo(0.25, -0.22, 0.38, -0.2);
+        ctx.quadraticCurveTo(0.5, -0.17, 0.45, -0.12);
+        ctx.quadraticCurveTo(0.1, -0.08, -0.55, -0.1);
+        ctx.fillStyle = lin(ctx, 0, -0.22, 0, -0.08, [[0, c([140, 95, 65])], [1, c([180, 140, 100])]]);
+        ctx.fill();
+        line(ctx, 0.38, -0.14, 0.46, -0.13, c([240, 230, 210], 0.9), 0.006);
+        ell(ctx, 0.37, -0.18, 0.012, 0.012, c([20, 15, 10]));
+        leg(ctx, 0.16, -0.12, 0.15, 0.35 - s, 0.04, dark, -0.6);
+        leg(ctx, -0.2, -0.12, 0.15, 0.35 + s, 0.04, dark, -0.6);
+      },
+    },
+    {
+      id: 'sauropod', name: '용각류 (목 긴 공룡)', kind: 'life', icon: '🦕', habitat: ['land'], size: [16, 26], count: [1, 3], dist: [40, 170], w: 0.55, h: 0.55, walk: 0.9,
+      when: (e) => e.habitat === 'land' && e.dinos && e.dinoAge >= 30 && e.plants && e.biome !== 'desert',
+      info: '브라키오사우루스, 아파토사우루스 같은 거대한 초식 공룡입니다. 긴 목으로 높은 나무의 잎을 먹었고, 몸길이 25m, 몸무게 50톤이 넘는 종도 있었습니다. 땅을 걸은 동물 가운데 가장 컸습니다.',
+      draw(ctx, t, i) {
+        shadow(ctx, 0.4);
+        const s = Math.sin(t * 1.6 + i.phase) * (i.moving ? 0.25 : 0);
+        const col = [115, 120, 95];
+        const far = c(col, 1, 0.7);
+        line(ctx, 0.12, -0.18, 0.12 + Math.sin(-s) * 0.04, 0, far, 0.06);
+        line(ctx, -0.15, -0.18, -0.15 + Math.sin(s) * 0.04, 0, far, 0.065);
+        ctx.beginPath();
+        ctx.moveTo(-0.55, -0.12);
+        ctx.quadraticCurveTo(-0.35, -0.2, -0.2, -0.26);
+        ctx.quadraticCurveTo(0.0, -0.33, 0.18, -0.27);
+        ctx.quadraticCurveTo(0.3, -0.35, 0.38, -0.5);
+        ctx.quadraticCurveTo(0.42, -0.58, 0.5, -0.56);
+        ctx.quadraticCurveTo(0.53, -0.53, 0.46, -0.5);
+        ctx.quadraticCurveTo(0.36, -0.36, 0.25, -0.18);
+        ctx.quadraticCurveTo(0.0, -0.12, -0.2, -0.17);
+        ctx.quadraticCurveTo(-0.38, -0.13, -0.55, -0.12);
+        ctx.fillStyle = lin(ctx, 0, -0.35, 0, -0.12, [[0, c(col, 1, 1.1)], [1, c(col, 1, 0.75)]]);
+        ctx.fill();
+        ell(ctx, 0.49, -0.55, 0.008, 0.008, c([15, 15, 10]));
+        line(ctx, 0.15, -0.18, 0.15 + Math.sin(s) * 0.04, 0, c(col, 1, 0.9), 0.065);
+        line(ctx, -0.12, -0.19, -0.12 + Math.sin(-s) * 0.04, 0, c(col, 1, 0.9), 0.07);
+      },
+    },
+    {
+      id: 'theropod', name: '수각류 (육식 공룡)', kind: 'life', icon: '🦖', habitat: ['land'], size: [4, 12], count: [1, 2], dist: [20, 110], w: 0.55, h: 0.55, walk: 1.2,
+      when: (e) => e.habitat === 'land' && e.dinos,
+      info: '두 발로 걷는 육식 공룡 무리로, 티라노사우루스와 벨로키랍토르가 여기에 속합니다. 새는 이 무리의 작은 깃털 공룡에서 진화했습니다. 즉, 새는 살아 있는 공룡입니다.',
+      draw(ctx, t, i) {
+        shadow(ctx, 0.35);
+        const s = Math.sin(t * 3 + i.phase) * (i.moving ? 0.5 : 0);
+        const col = [120, 95, 60];
+        const legf = (sw, k) => {
+          ctx.beginPath();
+          ctx.moveTo(-0.02, -0.33);
+          ctx.quadraticCurveTo(0.06 + sw * 0.1, -0.2, -0.02 + sw * 0.15, -0.1);
+          ctx.lineTo(0.04 + sw * 0.2, 0);
+          ctx.strokeStyle = c(col, 1, k);
+          ctx.lineWidth = 0.05;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.stroke();
+        };
+        legf(-s, 0.7);
+        ctx.beginPath();
+        ctx.moveTo(-0.55, -0.42);
+        ctx.quadraticCurveTo(-0.3, -0.42, -0.05, -0.43);
+        ctx.quadraticCurveTo(0.15, -0.46, 0.25, -0.52);
+        ctx.quadraticCurveTo(0.3, -0.6, 0.42, -0.6);
+        ctx.quadraticCurveTo(0.52, -0.58, 0.52, -0.54);
+        ctx.lineTo(0.38, -0.5);
+        ctx.quadraticCurveTo(0.3, -0.48, 0.25, -0.42);
+        ctx.quadraticCurveTo(0.1, -0.3, -0.08, -0.32);
+        ctx.quadraticCurveTo(-0.3, -0.38, -0.55, -0.42);
+        ctx.fillStyle = lin(ctx, 0, -0.6, 0, -0.3, [[0, c(col, 1, 1.05)], [1, c([175, 155, 115])]]);
+        ctx.fill();
+        for (let k = 0; k < 5; k++) line(ctx, -0.25 + k * 0.08, -0.43, -0.22 + k * 0.08, -0.37, c([80, 60, 35], 0.6), 0.012);
+        line(ctx, 0.4, -0.52, 0.5, -0.53, c([240, 235, 220], 0.9), 0.006);
+        ell(ctx, 0.41, -0.57, 0.01, 0.01, c([15, 10, 5]));
+        line(ctx, 0.2, -0.42, 0.25, -0.37, c(col, 1, 0.8), 0.018);
+        legf(s, 0.95);
+      },
+    },
+    {
+      id: 'ceratops', name: '뿔공룡', kind: 'life', icon: '🦏', habitat: ['land'], size: [5, 8], count: [1, 3], dist: [25, 100], w: 0.55, h: 0.45, walk: 0.7,
+      when: (e) => e.habitat === 'land' && e.dinos && e.dinoAge >= 140 && e.plants,
+      info: '트리케라톱스로 대표되는 초식 공룡입니다. 머리 뒤의 커다란 뼈 프릴과 뿔로 몸을 지키고 짝에게 뽐냈습니다. 공룡 시대가 끝나기 직전까지 무리 지어 살았습니다.',
+      draw(ctx, t, i) {
+        shadow(ctx, 0.42);
+        const s = Math.sin(t * 2.4 + i.phase) * (i.moving ? 0.35 : 0);
+        const col = [125, 110, 80];
+        line(ctx, 0.15, -0.15, 0.15 + Math.sin(-s) * 0.05, 0, c(col, 1, 0.7), 0.07);
+        line(ctx, -0.22, -0.15, -0.22 + Math.sin(s) * 0.05, 0, c(col, 1, 0.7), 0.07);
+        ell(ctx, -0.05, -0.24, 0.35, 0.14, lin(ctx, 0, -0.38, 0, -0.1, [[0, c(col, 1, 1.1)], [1, c(col, 1, 0.75)]]));
+        poly(ctx, [[-0.38, -0.25], [-0.58, -0.18], [-0.38, -0.18]], c(col));
+        ell(ctx, 0.3, -0.36, 0.13, 0.17, lin(ctx, 0.2, -0.5, 0.4, -0.2, [[0, c([150, 120, 85])], [1, c([110, 90, 65])]]), -0.3);
+        ell(ctx, 0.4, -0.25, 0.1, 0.07, c(col));
+        poly(ctx, [[0.49, -0.24], [0.56, -0.22], [0.49, -0.19]], c([90, 80, 60]));
+        line(ctx, 0.41, -0.3, 0.55, -0.42, c([235, 225, 200]), 0.022);
+        line(ctx, 0.47, -0.27, 0.53, -0.3, c([235, 225, 200]), 0.015);
+        ell(ctx, 0.4, -0.29, 0.01, 0.01, c([15, 10, 5]));
+        line(ctx, 0.18, -0.15, 0.18 + Math.sin(s) * 0.05, 0, c(col, 1, 0.95), 0.075);
+        line(ctx, -0.19, -0.15, -0.19 + Math.sin(-s) * 0.05, 0, c(col, 1, 0.95), 0.075);
+      },
+    },
+    {
+      id: 'pterosaur', name: '익룡', kind: 'life', icon: '🦅', habitat: ['air'], size: [3, 8], count: [1, 3], dist: [30, 160], w: 0.6, h: 0.4, fly: 'soar', alt: [25, 90], speed: 6,
+      when: (e) => !e.under && e.dinos && e.habitat === 'land',
+      info: '공룡과 같은 시대에 하늘을 지배한 날아다니는 파충류입니다. 넷째 손가락이 아주 길게 늘어나 날개막을 받쳤습니다. 공룡도 새도 아닌 별개의 무리이며, 날개폭 10m가 넘는 종도 있었습니다.',
+      draw(ctx, t, i) {
+        const f = Math.sin(t * 2.2 + i.phase) * 0.25;
+        const col = c([130, 110, 95]);
+        poly(ctx, [[-0.05, -0.2], [-0.55, -0.2 - f], [-0.1, -0.13]], c([160, 120, 100], 0.9));
+        ell(ctx, 0, -0.17, 0.14, 0.04, col);
+        poly(ctx, [[0.12, -0.19], [0.36, -0.17], [0.12, -0.15]], col);
+        poly(ctx, [[0.13, -0.19], [0.06, -0.3], [0.1, -0.18]], c([180, 100, 80]));
+        poly(ctx, [[0.0, -0.2], [0.55, -0.2 - f * 1.1], [0.05, -0.13]], c([175, 135, 110], 0.95));
+      },
+    },
+    {
+      id: 'bird', name: '새', kind: 'life', icon: '🐦', habitat: ['air'], size: [0.4, 1.2], count: [2, 5], dist: [15, 120], w: 0.5, h: 0.3, fly: 'soar', alt: [10, 60], speed: 7,
+      when: (e) => !e.under && e.birds && e.habitat === 'land',
+      info: '깃털 달린 작은 육식 공룡에서 진화한, 지금도 살아 있는 공룡입니다. 6600만 년 전 대멸종 때 다른 공룡은 모두 사라졌지만 일부 새는 살아남아 1만 종이 넘게 퍼졌습니다.',
+      draw(ctx, t, i) {
+        const f = Math.sin(t * 6 + i.phase);
+        const col = c([60, 60, 65]);
+        ctx.beginPath();
+        ctx.moveTo(-0.5, -0.2 - f * 0.18);
+        ctx.quadraticCurveTo(-0.2, -0.28 - f * 0.05, 0, -0.18);
+        ctx.quadraticCurveTo(0.2, -0.28 - f * 0.05, 0.5, -0.2 - f * 0.18);
+        ctx.quadraticCurveTo(0.2, -0.2, 0, -0.14);
+        ctx.quadraticCurveTo(-0.2, -0.2, -0.5, -0.2 - f * 0.18);
+        ctx.fillStyle = col;
+        ctx.fill();
+      },
+    },
+    {
+      id: 'smallMammal', name: '초기 포유류', kind: 'life', icon: '🐁', habitat: ['land'], size: [0.12, 0.2], count: [1, 3], dist: [2, 9], w: 0.5, h: 0.4, walk: 0.3,
+      when: (e) => e.habitat === 'land' && e.mammalsOrigin && e.dynasty !== 'mammal' && e.plants,
+      info: '공룡 시대 내내 몸집이 쥐만 했던 최초의 포유류입니다. 털로 체온을 유지하며 주로 밤에 움직여 공룡을 피했습니다. 공룡이 사라지자 이들의 후손이 지구 곳곳을 차지했습니다.',
+      draw(ctx, t, i) {
+        shadow(ctx, 0.35);
+        const s = Math.sin(t * 14 + i.phase) * (i.moving ? 0.6 : 0);
+        const col = c([105, 80, 60]);
+        leg(ctx, 0.15, -0.12, 0.12, 0.3 + s, 0.05, col);
+        leg(ctx, -0.18, -0.12, 0.12, 0.3 - s, 0.05, col);
+        curve(ctx, [[-0.3, -0.18], [-0.45, -0.25], [-0.55, -0.12]], col, 0.025);
+        ell(ctx, -0.02, -0.2, 0.28, 0.13, lin(ctx, 0, -0.33, 0, -0.07, [[0, c([120, 92, 70])], [1, c([175, 150, 125])]]));
+        ell(ctx, 0.27, -0.24, 0.12, 0.08, c([115, 90, 68]));
+        ell(ctx, 0.22, -0.33, 0.04, 0.05, c([150, 110, 100]));
+        ell(ctx, 0.31, -0.26, 0.014, 0.014, c([10, 8, 5]));
+        ell(ctx, 0.39, -0.23, 0.015, 0.012, c([60, 40, 40]));
+      },
+    },
+    {
+      id: 'deer', name: '사슴', kind: 'life', icon: '🦌', habitat: ['land'], size: [1.2, 1.8], count: [1, 4], dist: [12, 70], w: 0.5, h: 1, walk: 0.8,
+      when: (e) => e.habitat === 'land' && e.dynasty === 'mammal' && e.mammalAge >= 30 && e.plants && e.T > -6 && e.biome !== 'desert',
+      info: '공룡이 사라진 뒤 다양해진 발굽 포유류입니다. 수컷의 뿔은 해마다 떨어졌다가 다시 자랍니다. 풀과 나뭇잎을 먹는 초식 동물이 늘어나면서 초원과 숲의 모습도 함께 바뀌었습니다.',
+      draw(ctx, t, i) {
+        shadow(ctx, 0.3);
+        const s = Math.sin(t * 4 + i.phase) * (i.moving ? 0.4 : 0);
+        const col = [140, 100, 65];
+        const lg2 = (x, a, k) => line(ctx, x, -0.48, x + Math.sin(a) * 0.08, 0, c(col, 1, k), 0.035);
+        lg2(0.18, -s, 0.7);
+        lg2(-0.2, s, 0.7);
+        ell(ctx, 0, -0.55, 0.27, 0.12, lin(ctx, 0, -0.67, 0, -0.43, [[0, c(col, 1, 1.05)], [1, c([195, 170, 135])]]));
+        ell(ctx, -0.27, -0.6, 0.04, 0.03, c([235, 230, 220]));
+        line(ctx, 0.22, -0.6, 0.32, -0.82, c(col), 0.07);
+        ell(ctx, 0.36, -0.84, 0.09, 0.05, c(col, 1, 1.05), 0.3);
+        ell(ctx, 0.31, -0.92, 0.025, 0.05, c(col), -0.4);
+        ell(ctx, 0.37, -0.86, 0.01, 0.01, c([10, 8, 5]));
+        line(ctx, 0.32, -0.9, 0.26, -1.05, c([200, 180, 150]), 0.015);
+        line(ctx, 0.28, -1.0, 0.2, -1.04, c([200, 180, 150]), 0.012);
+        line(ctx, 0.35, -0.9, 0.4, -1.04, c([200, 180, 150]), 0.015);
+        lg2(0.21, s, 0.95);
+        lg2(-0.17, -s, 0.95);
+      },
+    },
+    {
+      id: 'mammoth', name: '매머드', kind: 'life', icon: '🦣', habitat: ['land'], size: [3, 4], count: [1, 3], dist: [25, 90], w: 0.55, h: 0.9, walk: 0.7,
+      when: (e) => e.habitat === 'land' && e.dynasty === 'mammal' && e.mammalAge >= 61 && e.T < 9 && !e.civModern,
+      info: '빙하기의 추운 초원을 누빈, 긴 털로 덮인 코끼리 친척입니다. 마지막 무리는 약 4천 년 전까지 북극해의 섬에 살았습니다. 얼어붙은 땅에서 거의 온전한 몸이 발견되기도 합니다.',
+      draw(ctx, t, i) {
+        shadow(ctx, 0.4);
+        const s = Math.sin(t * 2 + i.phase) * (i.moving ? 0.3 : 0);
+        const col = [95, 65, 45];
+        const lg2 = (x, a, k) => line(ctx, x, -0.4, x + Math.sin(a) * 0.06, 0, c(col, 1, k), 0.11);
+        lg2(0.15, -s, 0.7);
+        lg2(-0.18, s, 0.7);
+        ell(ctx, 0, -0.5, 0.36, 0.25, lin(ctx, 0, -0.75, 0, -0.25, [[0, c(col, 1, 1.1)], [1, c(col, 1, 0.75)]]));
+        ell(ctx, 0.3, -0.68, 0.15, 0.17, c(col, 1, 1.05));
+        for (let k = 0; k < 14; k++) line(ctx, -0.3 + k * 0.045, -0.4, -0.31 + k * 0.045, -0.27, c([70, 45, 30], 0.7), 0.012);
+        curve(ctx, [[0.4, -0.62], [0.52, -0.5], [0.5, -0.25], [0.45, -0.15]], c(col, 1, 0.95), 0.06);
+        curve(ctx, [[0.36, -0.55], [0.6, -0.5], [0.66, -0.7], [0.55, -0.8]], c([235, 225, 200]), 0.035);
+        ell(ctx, 0.34, -0.72, 0.012, 0.012, c([10, 8, 5]));
+        lg2(0.18, s, 0.95);
+        lg2(-0.15, -s, 0.95);
+      },
+    },
+    {
+      id: 'human', name: '사람 (호모 사피엔스)', kind: 'life', icon: '🧍', habitat: ['land'], size: [1.6, 1.8], count: [1, 4], dist: [8, 45], w: 0.25, h: 1, walk: 1.1,
+      when: (e) => e.habitat === 'land' && e.humans && !e.ice,
+      info: '약 30만 년 전 아프리카에서 나타난 현생 인류입니다. 불과 도구와 말을 쓰며 무리 지어 사냥하고 채집하다가, 약 1만 2천 년 전부터 농사를 짓고 마을을 세우기 시작했습니다.',
+      setup(i, rng, e) { i.cloth = e.civ ? [[150, 80, 60], [70, 90, 130], [180, 160, 110]][Math.floor(rng() * 3)] : [140, 110, 80]; },
+      draw(ctx, t, i, e) {
+        shadow(ctx, 0.16);
+        const s = Math.sin(t * 5 + i.phase) * (i.moving ? 0.4 : 0);
+        const skin = [170, 125, 95];
+        line(ctx, 0, -0.5, Math.sin(-s) * 0.12, 0, c([60, 50, 45], 1, 0.75), 0.07);
+        line(ctx, 0, -0.75, Math.sin(s) * 0.12 - 0.02, -0.45, c(skin, 1, 0.8), 0.05);
+        poly(ctx, [[-0.08, -0.85], [0.08, -0.85], [0.1, -0.45], [-0.1, -0.45]], c(i.cloth));
+        line(ctx, 0, -0.5, Math.sin(s) * 0.12, 0, c([60, 50, 45]), 0.07);
+        ell(ctx, 0.01, -0.94, 0.07, 0.08, c(skin));
+        ell(ctx, -0.01, -0.99, 0.07, 0.045, c([40, 30, 25]));
+        line(ctx, 0, -0.75, Math.sin(-s) * 0.12 + 0.03, -0.45, c(skin), 0.05);
+        if (!e.civ) line(ctx, 0.12, -1.1, 0.06, -0.1, c([120, 100, 70]), 0.025);
+      },
+    },
+    {
+      id: 'hut', name: '움집과 마을', kind: 'thing', icon: '🛖', habitat: ['land'], size: [3, 5], count: [2, 4], dist: [25, 90], w: 0.6, h: 1,
+      when: (e) => e.habitat === 'land' && e.civ && !e.civModern && !e.ice,
+      info: '농사를 지으며 한곳에 머물게 된 사람들이 지은 집입니다. 나무 기둥 위에 풀이나 갈대를 덮었습니다. 정착 생활은 곡식 저장, 인구 증가, 도시와 문자로 이어졌습니다.',
+      draw(ctx, t, i) {
+        shadow(ctx, 0.6);
+        poly(ctx, [[-0.45, 0], [-0.45, -0.35], [0.45, -0.35], [0.45, 0]], lin(ctx, -0.45, 0, 0.45, 0, [[0, c([120, 95, 65])], [1, c([90, 70, 48])]]));
+        poly(ctx, [[-0.6, -0.33], [0, -1], [0.6, -0.33]], lin(ctx, -0.5, -1, 0.5, -0.3, [[0, c([190, 160, 95])], [1, c([130, 105, 60])]]));
+        for (let k = 0; k < 8; k++) line(ctx, -0.55 + k * 0.15, -0.36, -0.02 + k * 0.01, -0.95, c([110, 85, 45], 0.5), 0.01);
+        poly(ctx, [[-0.1, 0], [-0.1, -0.24], [0.1, -0.24], [0.1, 0]], c([40, 30, 20]));
+        for (let k = 0; k < 4; k++) {
+          const f = (t * 0.15 + k / 4) % 1;
+          ell(ctx, 0.05 + f * 0.2, -1.05 - f * 0.7, 0.06 + f * 0.15, 0.05 + f * 0.1, `rgba(200,200,205,${0.35 * (1 - f)})`);
+        }
+      },
+    },
+    {
+      id: 'city', name: '도시', kind: 'thing', icon: '🏙️', habitat: ['land'], size: [80, 160], count: [1, 1], dist: [1500, 3200], w: 2, h: 1,
+      when: (e) => e.habitat === 'land' && e.civModern && !e.ice,
+      info: '오늘날 인류의 절반 이상이 도시에 삽니다. 도시는 밤에도 불을 밝혀 우주에서도 보이고, 지구의 기후와 생태계를 바꿀 만큼 큰 영향을 주고 있습니다.',
+      setup(i, rng) { i.bld = []; let x = -2; while (x < 2) { const w = 0.1 + rng() * 0.18; i.bld.push([x, w, 0.25 + rng() * 0.75]); x += w + 0.02; } },
+      draw(ctx, t, i, e) {
+        const night = e.night;
+        for (const [x, w, h] of i.bld) {
+          poly(ctx, [[x, 0], [x, -h], [x + w, -h], [x + w, 0]], lin(ctx, x, -h, x + w, 0, [[0, c([120, 130, 145])], [1, c([70, 78, 92])]]));
+          if (night > 0.2) {
+            for (let yy = -0.05; yy > -h + 0.04; yy -= 0.06) {
+              for (let xx = x + 0.025; xx < x + w - 0.02; xx += 0.045) {
+                if (((xx * 97 + yy * 53) % 1 + 1) % 1 > 0.45) ell(ctx, xx, yy, 0.012, 0.015, `rgba(255,220,140,${night})`);
+              }
+            }
+          }
+        }
+      },
+    },
+  ];
+
+  /* 땅 모양·하늘처럼 그림이 따로 없는 "주변의 것들" (도감 목록에만 나옴) */
+  const FEATURES = [
+    { id: 'water', name: '바닷물', icon: '🌊', when: (e) => e.under || e.coast, info: '지구 표면의 70%를 덮은 짠물입니다. 약 44억 년 전 수증기가 비가 되어 내리며 생겼고, 생명은 바다에서 시작했습니다. 짠맛은 강물이 오랫동안 바위에서 녹여 온 소금 때문입니다.' },
+    { id: 'sand', name: '모래', icon: '⏳', when: (e) => e.biome === 'desert' || e.coast, info: '바위가 바람과 물에 오랫동안 깎여 생긴 작은 알갱이입니다. 대부분 단단한 석영으로 되어 있어 끝까지 남습니다.' },
+    { id: 'ice', name: '얼음', icon: '🧊', when: (e) => e.ice || e.snow || e.biome === 'tundra', info: '물이 얼어 생긴 고체입니다. 하얀 얼음은 햇빛을 되비춰 지구를 더 춥게 만듭니다. 그래서 얼음이 넓어지면 더 추워지고, 더 추워지면 얼음이 더 넓어지는 되먹임이 일어납니다.' },
+    { id: 'lava', name: '용암', icon: '🔥', when: (e) => e.lava, info: '1000°C가 넘게 녹은 암석입니다. 식으면 검은 현무암이 되어 새로운 땅을 만듭니다. 어린 지구의 표면 전체가 한때 용암 바다였습니다.' },
+    { id: 'mat', name: '미생물 매트', icon: '🦠', when: (e) => e.alive && e.stage >= e.S.microbe && e.stage < e.S.landPlants && (e.coast || e.under), info: '눈에 보이지 않는 세균들이 수십억 마리씩 모여 만든 얇은 막입니다. 식물이 나타나기 전 수십억 년 동안, 물가와 얕은 바다의 바닥을 덮은 것은 이런 미생물 막뿐이었습니다.' },
+    { id: 'clouds', name: '구름', icon: '☁️', when: (e) => e.cloud > 0.15 && !e.under, info: '공기 속 수증기가 아주 작은 물방울이나 얼음 알갱이로 맺혀 떠 있는 것입니다. 구름은 햇빛을 가려 지구를 식히기도 하고, 열을 붙잡아 데우기도 합니다.' },
+    { id: 'sun', name: '태양', icon: '☀️', when: (e) => !e.under && e.sunUp, info: '지구 생명의 에너지는 거의 모두 태양에서 옵니다. 태양은 1억 년마다 약 1%씩 밝아지고 있어서, 45억 년 전에는 지금보다 30% 정도 어두웠습니다.' },
+    { id: 'moon', name: '달', icon: '🌙', when: (e) => !e.under && e.moon, info: '약 45억 년 전 거대 충돌로 생긴 지구의 위성입니다. 처음에는 지금보다 열 배 넘게 가까워 하늘에서 훨씬 크게 보였고, 해마다 약 3.8cm씩 멀어지고 있습니다.' },
+    { id: 'mountain', name: '산', icon: '⛰️', when: (e) => e.mountain, info: '판과 판이 부딪치며 땅이 구겨지고 솟아올라 생깁니다. 히말라야는 인도가 아시아와 부딪쳐 생긴 산맥으로, 지금도 해마다 몇 mm씩 높아지고 있습니다.' },
+  ];
+
+  EC.field.SPECIES = SPECIES;
+  EC.field.FEATURES = FEATURES;
+  EC.field.G = G;
+})();
+
+</script>
+  <script>/* js/field/scene.js */
+'use strict';
+
+/*
+ * 지상 장면: 지점·시대에 맞는 생명체·무생명체를 골라 땅 위에 배치하고, 움직이고, 화면에 그립니다.
+ */
+(function () {
+  const EC = (window.EC = window.EC || {});
+  EC.field = EC.field || {};
+  const U = EC.util;
+  const F = EC.field;
+
+  /* 지점 정보 + 시대 상태 → 장면 조건 */
+  function makeEnv(info, bio, st, look, run, t, P, sun, moon) {
+    const S = EC.sim.S;
+    const lastT = (id) => EC.look.lastEventT(run, id, t);
+    let resetT = -1e9;
+    for (const id of ['complexWiped', 'sterilized', 'complexEnd', 'lifeEnd']) {
+      const x = lastT(id);
+      if (x !== null) resetT = Math.max(resetT, x);
+    }
+    const after = (id) => {
+      const x = lastT(id);
+      return x !== null && x > resetT ? x : null;
+    };
+    const tDino = after('dinosaurs');
+    const tMam = after('dynMammal');
+    const under = bio.habitat === 'sea';
+    const coast = P.uCoast > 0.5;
+    const civModern = !!(st.civ && st.civT !== undefined && t >= st.civT + 0.0117);
+    return {
+      t,
+      E: st.alive ? st.E : null,
+      S,
+      alive: st.alive,
+      stage: st.stage,
+      dynasty: st.dynasty,
+      humans: st.humans,
+      civ: st.civ,
+      civModern,
+      habitat: under ? 'sea' : bio.habitat === 'lava' ? 'lava' : 'land',
+      under,
+      biome: bio.id,
+      biomeName: bio.name,
+      mountain: !!bio.mountain,
+      coast,
+      T: info.tempLocal,
+      tropical: info.tempLocal > 21,
+      moist: info.moist,
+      wet: info.moist > 0.42 || coast,
+      plants: st.alive && st.stage >= S.landPlants && (look.uVeg || 0) > 0.05,
+      forests: st.alive && st.stage >= S.forests && (look.uVeg || 0) > 0.2,
+      dinos: st.dynasty === 'archosaur' && tDino !== null,
+      dinoAge: tDino !== null ? t - tDino : -1,
+      birds: after('birds') !== null,
+      mammalsOrigin: after('mammalsOrigin') !== null,
+      mammalAge: st.dynasty === 'mammal' && tMam !== null ? t - tMam : -1,
+      snow: st.snow,
+      ice: bio.id === 'ice',
+      lava: bio.habitat === 'lava',
+      oxid: U.smoothstep(0.2, 3, st.O2),
+      depth: P.uDepth,
+      depthOK: under ? P.uDepth < 60 : true,
+      night: U.smoothstep(0.08, -0.12, sun[1]),
+      sunUp: sun[1] > 0,
+      moon: st.moonKm > 0 && moon[1] > 0,
+      cloud: look.uCloud,
+    };
+  }
+
+  function available(env) {
+    return F.SPECIES.filter((sp) => {
+      try { return sp.when(env); } catch (e) { return false; }
+    });
+  }
+
+  function signature(env) {
+    return available(env).map((s) => s.id).join(',') + '|' + env.habitat + env.biome + (env.coast ? 'c' : '');
+  }
+
+  function place(sp, env, P, rng, focusYaw) {
+    const hab = sp.habitat;
+    const inView = focusYaw !== undefined && rng() < 0.55;
+    for (let tries = 0; tries < 24; tries++) {
+      const r = U.lerp(sp.dist[0], sp.dist[1], Math.pow(rng(), 1.5));
+      const a = inView ? focusYaw + (rng() - 0.5) * 1.3 : rng() * Math.PI * 2;
+      const x = Math.sin(a) * r;
+      const z = Math.cos(a) * r;
+      const h = F.heightAt(P, x, z, r);
+      if (hab.includes('coast')) {
+        if (h < -2) return { x, y: 0, z, r };
+        continue;
+      }
+      if (env.under) {
+        if (!hab.includes('sea')) return null;
+        const alt = sp.alt ? U.lerp(sp.alt[0], sp.alt[1], rng()) : 0;
+        return { x, y: Math.min(h + alt, -0.5), z, r, alt };
+      }
+      if (hab.includes('air')) {
+        const alt = U.lerp(sp.alt[0], sp.alt[1], rng());
+        return { x, y: Math.max(h, 0) + alt, z, r, alt };
+      }
+      if (hab.includes('shore')) {
+        if (env.coast && h > -1.2 && h < 0.8) return { x, y: h, z, r };
+        continue;
+      }
+      if (hab.includes('land')) {
+        if (env.coast && h < 0.4) continue;
+        return { x, y: h, z, r };
+      }
+      return null;
+    }
+    return null;
+  }
+
+  class Scene {
+    constructor() {
+      this.items = [];
+      this.meteors = [];
+      this.hits = [];
+      this.sig = '';
+      this.selected = null;
+    }
+
+    compose(env, P, seed, focusYaw) {
+      const rng = U.rng(seed);
+      this.items = [];
+      this.meteors = [];
+      for (const sp of available(env)) {
+        if (sp.habitat.includes('sky')) {
+          for (let k = 0; k < 4; k++) this.meteors.push({ sp, phase: rng() * 10, per: 2.5 + rng() * 4, ax: rng(), ay: rng() * 0.3, ang: 0.4 + rng() * 0.5 });
+          continue;
+        }
+        const cnt = sp.count2 ? sp.count2(env) : sp.count;
+        const n = Math.round(U.lerp(cnt[0], cnt[1], rng()));
+        for (let k = 0; k < n; k++) {
+          const p = place(sp, env, P, rng, focusYaw);
+          if (!p) continue;
+          const it = {
+            sp, x: p.x, y: p.y, z: p.z, alt: p.alt || 0,
+            size: U.lerp(sp.size[0], sp.size[1], rng()),
+            phase: rng() * 100,
+            heading: rng() * Math.PI * 2,
+            moving: false,
+            moveTimer: rng() * 4,
+            cx: p.x, cz: p.z, orbitR: 4 + rng() * 10, orbitA: rng() * Math.PI * 2,
+            facing: rng() < 0.5 ? 1 : -1,
+            vx: 0, vz: 0,
+          };
+          if (sp.setup) sp.setup(it, rng, env);
+          this.items.push(it);
+        }
+      }
+      this.sig = signature(env);
+    }
+
+    update(dt, env, P, rng) {
+      for (const it of this.items) {
+        const sp = it.sp;
+        const speed = sp.walk || sp.crawl || sp.speed || 0;
+        if (!speed) continue;
+        let vx = 0;
+        let vz = 0;
+        if (sp.swim === 'school' || sp.fly === 'soar') {
+          const w = (sp.speed || 1) / Math.max(it.orbitR, 1);
+          it.orbitA += w * dt * (it.phase % 2 > 1 ? 1 : -1);
+          const nx = it.cx + Math.cos(it.orbitA) * it.orbitR;
+          const nz = it.cz + Math.sin(it.orbitA) * it.orbitR;
+          vx = (nx - it.x) / Math.max(dt, 1e-3);
+          vz = (nz - it.z) / Math.max(dt, 1e-3);
+          it.x = nx;
+          it.z = nz;
+          it.moving = true;
+        } else {
+          it.moveTimer -= dt;
+          if (it.moveTimer <= 0) {
+            it.moving = sp.swim || sp.fly ? true : rng() < 0.6;
+            it.moveTimer = 2 + rng() * 5;
+            it.heading += (rng() - 0.5) * 1.6;
+          }
+          const r = Math.hypot(it.x, it.z);
+          if (r > sp.dist[1] * 1.1 || r < sp.dist[0] * 0.8) {
+            const toC = Math.atan2(-it.x, -it.z) + (r < sp.dist[0] * 0.8 ? Math.PI : 0);
+            it.heading += Math.sin(toC - it.heading) * dt * 2;
+          }
+          if (it.moving) {
+            vx = Math.sin(it.heading) * speed;
+            vz = Math.cos(it.heading) * speed;
+            const nx = it.x + vx * dt;
+            const nz = it.z + vz * dt;
+            if (!env.under && !sp.fly && env.coast && F.heightAt(P, nx, nz, Math.hypot(nx, nz)) < 0.4) {
+              it.heading += Math.PI * 0.7;
+            } else {
+              it.x = nx;
+              it.z = nz;
+            }
+          }
+        }
+        const h = F.heightAt(P, it.x, it.z, Math.hypot(it.x, it.z));
+        if (env.under) it.y = Math.min(h + (it.alt || 0) + Math.sin(it.phase + performance.now() / 1500) * 0.2 * (sp.swim ? 1 : 0), -0.4);
+        else if (sp.fly) it.y = Math.max(h, 0) + it.alt;
+        else it.y = h;
+        it.vx = vx;
+        it.vz = vz;
+      }
+    }
+
+    /* cam: { pos, right, up, fwd, tanHalf } (지평 좌표), light: [r,g,b] 배수 */
+    draw(ctx, W, H, cam, P, env, time, light, fogK) {
+      ctx.clearRect(0, 0, W, H);
+      this.hits = [];
+      const k0 = H / (2 * cam.tanHalf);
+
+      if (this.meteors.length) {
+        for (const m of this.meteors) {
+          const f = ((time + m.phase) % m.per) / m.per;
+          if (f > 0.35) continue;
+          const u = f / 0.35;
+          const x0 = W * m.ax;
+          const y0 = H * (0.05 + m.ay);
+          const len = H * 0.35;
+          const x = x0 - Math.cos(m.ang) * len * u;
+          const y = y0 + Math.sin(m.ang) * len * u;
+          const g = ctx.createLinearGradient(x, y, x + Math.cos(m.ang) * 80, y - Math.sin(m.ang) * 80);
+          g.addColorStop(0, `rgba(255,240,210,${0.9 * (1 - u)})`);
+          g.addColorStop(1, 'rgba(255,200,150,0)');
+          ctx.strokeStyle = g;
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + Math.cos(m.ang) * 80, y - Math.sin(m.ang) * 80);
+          ctx.stroke();
+        }
+      }
+
+      const vis = [];
+      for (const it of this.items) {
+        const v = [it.x - cam.pos[0], it.y - cam.pos[1], it.z - cam.pos[2]];
+        const zc = v[0] * cam.fwd[0] + v[1] * cam.fwd[1] + v[2] * cam.fwd[2];
+        if (zc < 0.4) continue;
+        const xc = v[0] * cam.right[0] + v[1] * cam.right[1] + v[2] * cam.right[2];
+        const yc = v[0] * cam.up[0] + v[1] * cam.up[1] + v[2] * cam.up[2];
+        const k = k0 / zc;
+        const sx = W / 2 + xc * k;
+        const sy = H / 2 - yc * k;
+        const s = it.size * k;
+        const hw = (it.sp.w || 0.5) * s;
+        const hh = (it.sp.h || 1) * s;
+        if (sx + hw < -20 || sx - hw > W + 20 || sy < -20 || sy - hh > H + 20) continue;
+        if (hh < 1.2) continue;
+        const dist = Math.hypot(v[0], v[1], v[2]);
+        /* 언덕 뒤에 가려졌는지 */
+        if (!env.under) {
+          let hidden = false;
+          const topY = it.y + it.size * (it.sp.h || 1) * 0.8;
+          for (let f = 0.2; f < 0.95; f += 0.15) {
+            const px = cam.pos[0] + v[0] * f;
+            const pz = cam.pos[2] + v[2] * f;
+            const lineY = cam.pos[1] + (topY - cam.pos[1]) * f;
+            if (F.heightAt(P, px, pz, dist * f) > lineY + 0.3) { hidden = true; break; }
+          }
+          if (hidden) continue;
+        }
+        let facing = it.facing;
+        if (it.vx || it.vz) {
+          const sv = it.vx * cam.right[0] + it.vz * cam.right[2];
+          if (Math.abs(sv) > 0.01) facing = sv > 0 ? 1 : -1;
+          it.facing = facing;
+        }
+        vis.push({ it, zc, sx, sy, s, hw, hh, dist, facing });
+      }
+      vis.sort((a, b) => b.zc - a.zc);
+
+      for (const o of vis) {
+        const fog = env.under ? Math.exp(-o.dist * (0.022 + 0.02 * U.smoothstep(20, 80, env.depth))) : Math.exp(-o.dist * fogK * 0.9);
+        ctx.save();
+        ctx.translate(o.sx, o.sy);
+        ctx.scale(o.s * o.facing, o.s);
+        F.G.L = light;
+        ctx.globalAlpha = U.clamp(fog, env.under ? 0.3 : 0.12, 1);
+        try { o.it.sp.draw(ctx, time, o.it, env); } catch (e) { /* 그림 오류는 무시 */ }
+        ctx.restore();
+        this.hits.push({ it: o.it, x0: o.sx - o.hw, x1: o.sx + o.hw, y0: o.sy - o.hh, y1: o.sy + Math.max(4, o.s * 0.05), zc: o.zc });
+        if (this.selected === o.it) {
+          ctx.strokeStyle = 'rgba(255,220,140,0.9)';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([4, 4]);
+          ctx.strokeRect(o.sx - o.hw - 4, o.sy - o.hh - 4, o.hw * 2 + 8, o.hh + 8);
+          ctx.setLineDash([]);
+        }
+      }
+
+      /* 가까운 것 몇 개에 이름표 */
+      const labeled = new Set();
+      const placed = [];
+      const cands = vis.filter((o) => o.hh > 26 && o.dist < 120).sort((a, b) => b.hh - a.hh);
+      ctx.font = '600 12px -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif';
+      ctx.textBaseline = 'middle';
+      let n = 0;
+      for (const o of cands) {
+        if (n >= 5) break;
+        if (labeled.has(o.it.sp.id)) continue;
+        labeled.add(o.it.sp.id);
+        n++;
+        const text = o.it.sp.name.replace(/ \(.*\)$/, '');
+        const tw = ctx.measureText(text).width;
+        const lx = U.clamp(o.sx, tw / 2 + 8, W - tw / 2 - 8);
+        const ly = U.clamp(o.sy - o.hh - 14, 140, Math.max(140, o.sy - 18));
+        const box = [lx - tw / 2 - 10, ly - 12, lx + tw / 2 + 10, ly + 12];
+        if (placed.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) continue;
+        placed.push(box);
+        ctx.fillStyle = 'rgba(8,12,22,0.62)';
+        roundRect(ctx, lx - tw / 2 - 8, ly - 10, tw + 16, 20, 10);
+        ctx.fill();
+        ctx.fillStyle = o.it.sp.kind === 'life' ? '#bff0cf' : '#f2e2c4';
+        ctx.fillText(text, lx - tw / 2, ly + 0.5);
+      }
+    }
+
+    pick(x, y) {
+      let best = null;
+      for (const h of this.hits) {
+        if (x >= h.x0 - 6 && x <= h.x1 + 6 && y >= h.y0 - 6 && y <= h.y1 + 6) {
+          if (!best || h.zc < best.zc) best = h;
+        }
+      }
+      return best ? best.it : null;
+    }
+
+    /* 도감 목록: 지금 장면에 있는 것 */
+    guide(env) {
+      const map = new Map();
+      for (const it of this.items) {
+        const g = map.get(it.sp.id) || { id: it.sp.id, name: it.sp.name, icon: it.sp.icon, kind: it.sp.kind, info: it.sp.info, count: 0 };
+        g.count++;
+        map.set(it.sp.id, g);
+      }
+      for (const m of this.meteors) if (!map.has(m.sp.id)) map.set(m.sp.id, { id: m.sp.id, name: m.sp.name, icon: m.sp.icon, kind: 'thing', info: m.sp.info, count: 1 });
+      for (const f of F.FEATURES) {
+        try { if (f.when(env)) map.set(f.id, { id: f.id, name: f.name, icon: f.icon, kind: 'feature', info: f.info, count: 0 }); } catch (e) { /* 무시 */ }
+      }
+      return [...map.values()];
+    }
+
+    nearestOf(id) {
+      let best = null;
+      for (const it of this.items) if (it.sp.id === id && (!best || Math.hypot(it.x, it.z) < Math.hypot(best.x, best.z))) best = it;
+      return best;
+    }
+  }
+
+  function roundRect(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  F.makeEnv = makeEnv;
+  F.available = available;
+  F.signature = signature;
+  F.Scene = Scene;
 })();
 
 </script>
@@ -4121,7 +6630,7 @@ void main() {
   function showCard(app, e, extra) {
     const card = $('card');
     card.className = `card k-${e.kind}`;
-    $('card-icon').textContent = e.kind === 'intervention' ? EC.data.tools[e.tool].icon : KIND_ICON[e.kind] || '•';
+    $('card-icon').textContent = e.icon || (e.kind === 'intervention' ? EC.data.tools[e.tool].icon : KIND_ICON[e.kind] || '•');
     const pre = e.kind === 'intervention' ? '당신의 개입 · ' : '';
     $('card-title').textContent = pre + e.title + (e.prevented ? ' (막음)' : '');
     const lab = EC.time.labelAt(e.t);
@@ -4232,6 +6741,319 @@ void main() {
 })();
 
 </script>
+  <script>/* js/field/mode.js */
+'use strict';
+
+/*
+ * 지상 탐사 모드: 우주에서 끝까지 확대하면 그 지점의 땅(또는 바닷속)으로 내려갑니다.
+ * 끌어서 둘러보고, 생명체·무생명체를 누르면 설명이 나옵니다. 시간을 흘리면 풍경도 그 시대로 바뀝니다.
+ */
+(function () {
+  const EC = (window.EC = window.EC || {});
+  const U = EC.util;
+  const Q = EC.q;
+  const F = EC.field;
+  const $ = (id) => document.getElementById(id);
+
+  const S = {
+    ready: false,
+    active: false,
+    anchor: null,
+    dirFixed: null,
+    yaw: 0,
+    pitch: -0.04,
+    fov: 58,
+    fade: 0,
+    fadeDir: 0,
+    exitAcc: 0,
+    info: null,
+    bio: null,
+    env: null,
+    terrain: null,
+    sig: '',
+    queryTimer: 0,
+    lastT: null,
+    scene: null,
+    rng: U.rng(7),
+    guideSig: '',
+  };
+  let globe = null;
+  let app = null;
+  let gr = null;
+  let ov = null;
+  let octx = null;
+  let hooks = {};
+
+  const TERRAIN_KEYS = ['uSeed', 'uUnder', 'uCoast', 'uCoastDist', 'uSeaDir', 'uBaseH', 'uHillAmp', 'uHillFreq', 'uRough', 'uMtnAmp', 'uMtnNear', 'uDune', 'uCanopy', 'uDepth'];
+
+  function init(g, a, h) {
+    globe = g;
+    app = a;
+    hooks = h || {};
+    try {
+      gr = new EC.GroundRenderer(g.gl);
+    } catch (e) {
+      console.warn(e);
+      return;
+    }
+    ov = $('field-canvas');
+    octx = ov.getContext('2d');
+    S.scene = new F.Scene();
+    S.ready = true;
+    $('btn-ascend').addEventListener('click', () => exit());
+    $('guide-head').addEventListener('click', () => $('field-guide').classList.toggle('open'));
+  }
+
+  /* 화면 가운데의 지점 (지구 고정 좌표) */
+  function centerDir() {
+    return globe.pick(globe.cssW / 2, globe.cssH / 2);
+  }
+
+  function queryAt(dir, look, st) {
+    const l = Object.assign({}, look, { uDetail: 1 });
+    const info = EC.surface.query(dir, l, EC.plates.layerRotations(app.t), EC.plates.layerVisibility(app.t));
+    const bio = EC.surface.biome(info, st);
+    return { info, bio };
+  }
+
+  function currentDir() {
+    if (S.anchor) return Q.rotate(EC.plates.rotationOf(EC.data.layers[S.anchor.layer].plate, app.t, {}), S.anchor.vec);
+    return S.dirFixed;
+  }
+
+  function enter(dir) {
+    if (!S.ready || S.active || !dir) return;
+    const st = EC.sim.stateAt(app.run, app.t);
+    const look = EC.look.build(st, app.run, app.t);
+    const { info } = queryAt(dir, look, st);
+    S.anchor = null;
+    S.dirFixed = dir;
+    if (info.land && info.layer >= 0) {
+      const rot = EC.plates.rotationOf(EC.data.layers[info.layer].plate, app.t, {});
+      S.anchor = { layer: info.layer, vec: Q.rotate(Q.conj(rot), dir) };
+    }
+    /* 오전 햇살 속에서 시작하도록 지구를 돌려 둡니다 (해 높이 약 35°, 해가 뜨는 쪽) */
+    let best = globe.spin;
+    let bestScore = -1e9;
+    const keep = globe.spin;
+    for (let k = 0; k < 96; k++) {
+      globe.spin = (k / 96) * Math.PI * 2;
+      const f = globe.localFrame(dir);
+      const el = Q.dot(globe.sunDir, f.up);
+      const east = Q.dot(globe.sunDir, f.east);
+      const score = -Math.abs(el - 0.57) + (east > 0 ? 0.3 : 0);
+      if (score > bestScore) { bestScore = score; best = globe.spin; }
+    }
+    globe.spin = best;
+    void keep;
+    S.active = true;
+    S.sig = '';
+    S.terrain = null;
+    S.queryTimer = 0;
+    S.fade = 0;
+    S.fadeDir = 1;
+    S.exitAcc = 0;
+    S.fov = 58;
+    S.pitch = info.land ? -0.1 : -0.3;
+    S.yaw = Math.random() * Math.PI * 2;
+    S.scene.selected = null;
+    document.body.classList.add('field');
+    $('field-ui').hidden = false;
+    ov.hidden = false;
+    $('btn-descend').hidden = true;
+    if (hooks.onEnter) hooks.onEnter();
+  }
+
+  function exit() {
+    if (!S.active) return;
+    const dir = currentDir();
+    S.active = false;
+    document.body.classList.remove('field');
+    $('field-ui').hidden = true;
+    ov.hidden = true;
+    $('field-guide').classList.remove('open');
+    if (hooks.onExit) hooks.onExit(dir);
+  }
+
+  function camera() {
+    const cp = Math.cos(S.pitch);
+    const fwd = [Math.sin(S.yaw) * cp, Math.sin(S.pitch), Math.cos(S.yaw) * cp];
+    const right = Q.norm(Q.cross([0, 1, 0], fwd));
+    const up = Q.cross(fwd, right);
+    const P = S.terrain;
+    let y;
+    if (P.uUnder > 0.5) y = F.terrainH(P, 0, 0, 7) + 2.2;
+    else y = Math.max(F.terrainH(P, 0, 0, 7), P.uCoast > 0.5 ? 0.3 : -1e9) + 1.8;
+    return { pos: [0, y, 0], fwd, right, up, tanHalf: Math.tan((S.fov * Math.PI) / 360) };
+  }
+
+  function lightFor(P) {
+    const sl = P.uSunLight;
+    const sz = P.uSkyZenith;
+    const day = U.clamp(P.uSunDir[1] * 3 + 0.3, 0, 1);
+    let L = [0, 1, 2].map((k) => U.clamp(sl[k] * 0.33 * day + sz[k] * 0.55 + 0.05, 0.07, 1.2));
+    if (P.uUnder > 0.5) {
+      const a = Math.exp(-P.uDepth * 0.018);
+      L = [L[0] * 0.5 * a, L[1] * 0.85 * a, L[2] * 1.0 * a].map((v) => U.clamp(v, 0.06, 1.1));
+    }
+    if (P.uLava > 0.3) L = [Math.min(1.2, L[0] + 0.35), L[1] + 0.08, L[2]];
+    return L;
+  }
+
+  function locationText(info, bio, env, st) {
+    const lat = info.lat;
+    const lon = info.lon;
+    const ns = lat >= 0 ? '북위' : '남위';
+    const ew = lon >= 0 ? '동경' : '서경';
+    const where = S.anchor ? `${EC.data.layers[S.anchor.layer].name}판` : '';
+    const T = `${U.formatNumber(st && st.T > 80 ? st.T : info.tempLocal, 0)}°C`;
+    const depth = env.under ? ` · 수심 ${Math.round(env.depth)}m` : '';
+    return `📍 ${where ? where + ' · ' : ''}${bio.name}${depth} · ${T} · ${ns} ${Math.abs(lat).toFixed(0)}° ${ew} ${Math.abs(lon).toFixed(0)}°`;
+  }
+
+  function renderGuide(env) {
+    const list = S.scene.guide(env);
+    const sig = list.map((g) => g.id + g.count).join(',');
+    if (sig === S.guideSig) return;
+    S.guideSig = sig;
+    const life = list.filter((g) => g.kind === 'life');
+    const things = list.filter((g) => g.kind !== 'life');
+    $('guide-count').textContent = `생명체 ${life.length} · 무생명체 ${things.length}`;
+    const row = (g) => `<button class="guide-item" data-id="${g.id}"><span class="gi">${g.icon}</span><span class="gn">${U.escapeHtml(g.name)}</span>${g.count > 1 ? `<span class="gc">${g.count}</span>` : ''}</button>`;
+    let html = '';
+    html += `<div class="guide-group">생명체</div>${life.length ? life.map(row).join('') : '<div class="guide-empty">아직 눈에 보이는 생명이 없습니다.</div>'}`;
+    html += `<div class="guide-group">무생명체</div>${things.map(row).join('')}`;
+    const body = $('guide-body');
+    body.innerHTML = html;
+    body.querySelectorAll('.guide-item').forEach((b) => b.addEventListener('click', () => {
+      const g = list.find((x) => x.id === b.dataset.id);
+      if (!g) return;
+      const it = S.scene.nearestOf(g.id);
+      if (it) {
+        S.yaw = Math.atan2(it.x, it.z);
+        S.scene.selected = it;
+      }
+      showInfo(g);
+    }));
+  }
+
+  function showInfo(g) {
+    const kindLabel = g.kind === 'life' ? '생명체' : '무생명체';
+    EC.ui.panels.showCard(app, {
+      id: 'field-' + g.id, t: app.t, kind: g.kind === 'life' ? 'life' : 'field', icon: g.icon,
+      title: g.name, text: `[${kindLabel}] ${g.info}`, source: 'field',
+    });
+  }
+
+  function frame(dt, st, look, tnow) {
+    if (!S.active) return false;
+    if (S.fadeDir > 0) S.fade = Math.min(1, S.fade + dt * 1.8);
+    const dir = currentDir();
+    const frameW = globe.localFrame(dir);
+    const toLocal = (w) => Q.norm([Q.dot(w, frameW.east), Q.dot(w, frameW.up), Q.dot(w, frameW.north)]);
+    const sun = toLocal(globe.sunDir);
+    const moonW = hooks.moonPos ? hooks.moonPos() : [0, 0, 1];
+    const moon = toLocal([moonW[0] - frameW.up[0], moonW[1] - frameW.up[1], moonW[2] - frameW.up[2]]);
+
+    S.queryTimer -= dt;
+    if (!S.info || S.queryTimer <= 0 || (S.lastT !== null && Math.abs(EC.time.toS(app.t) - EC.time.toS(S.lastT)) > 0.002)) {
+      const q = queryAt(dir, look, st);
+      S.info = q.info;
+      S.bio = q.bio;
+      S.queryTimer = 0.5;
+      S.lastT = app.t;
+    }
+    const P = F.buildParams(S.info, S.bio, st, look, sun, moon);
+    const terrainKey = S.bio.id + S.bio.habitat + (P.uCoast > 0.5 ? 'c' : '') + (S.bio.mountain ? 'm' : '');
+    if (!S.terrain || S.terrain._key !== terrainKey) {
+      S.terrain = { _key: terrainKey };
+      for (const k of TERRAIN_KEYS) S.terrain[k] = P[k];
+      S.sig = '';
+    }
+    for (const k of TERRAIN_KEYS) P[k] = S.terrain[k];
+    P.uMaxH = P.uBaseH + Math.abs(P.uHillAmp) * 1.1 + P.uRough + P.uMtnAmp * 1.05 + P.uDune * 12 + P.uCanopy * 16 + 2;
+    const env = F.makeEnv(S.info, S.bio, st, look, app.run, app.t, P, sun, moon);
+    const sig = F.signature(env) + '|' + terrainKey;
+    if (sig !== S.sig) {
+      const seed = Math.floor((S.info.lat + 90) * 1000) * 7919 + Math.floor((S.info.lon + 180) * 1000) + terrainKey.length * 13;
+      S.scene.compose(env, P, seed, S.yaw);
+      S.sig = sig;
+    }
+    S.env = env;
+    S.scene.update(dt, env, P, S.rng);
+
+    P.uTime = tnow;
+    P.uFade = S.fade;
+    const cam = camera();
+    gr.render(globe.canvas, cam, P);
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    if (ov.width !== Math.round(W * dpr) || ov.height !== Math.round(H * dpr)) {
+      ov.width = Math.round(W * dpr);
+      ov.height = Math.round(H * dpr);
+    }
+    octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ov.style.opacity = String(S.fade);
+    S.scene.draw(octx, W, H, cam, P, env, tnow, lightFor(P), P.uFogK);
+
+    $('field-loc').textContent = locationText(S.info, S.bio, env, st);
+    renderGuide(env);
+    return true;
+  }
+
+  /* ---------- 조작 ---------- */
+  function drag(dx, dy) {
+    const k = 0.0045 * (S.fov / 58);
+    S.yaw -= dx * k;
+    S.pitch = U.clamp(S.pitch + dy * k, -0.75, 1.1);
+  }
+
+  function zoom(delta) {
+    if (delta < 0) {
+      S.fov = U.clamp(S.fov * Math.exp(delta * 0.0012), 22, 58);
+      S.exitAcc = 0;
+    } else {
+      if (S.fov < 57.5) { S.fov = U.clamp(S.fov * Math.exp(delta * 0.0012), 22, 58); return; }
+      S.exitAcc += delta;
+      if (S.exitAcc > 260) exit();
+    }
+  }
+
+  function tap(x, y) {
+    const it = S.scene.pick(x, y);
+    if (!it) {
+      S.scene.selected = null;
+      return;
+    }
+    S.scene.selected = it;
+    const sp = it.sp;
+    showInfo({ id: sp.id, name: sp.name, icon: sp.icon, kind: sp.kind, info: sp.info });
+  }
+
+  /* 우주에서 볼 때 화면 가운데 아래에 무엇이 있는지 (내려가기 버튼용) */
+  function peek(look, st) {
+    const dir = centerDir();
+    if (!dir) return null;
+    const { info, bio } = queryAt(dir, look, st);
+    return { dir, info, bio };
+  }
+
+  function setView(yaw, pitch) {
+    S.yaw = yaw;
+    if (pitch !== undefined) S.pitch = pitch;
+  }
+
+  EC.fieldMode = {
+    init, enter, exit, frame, drag, zoom, tap, peek, centerDir, setView,
+    debug: () => ({ info: S.info, bio: S.bio, env: S.env, items: S.scene && S.scene.items.map((i) => i.sp.id) }),
+    get active() { return S.active; },
+    get ready() { return S.ready; },
+  };
+})();
+
+</script>
   <script>/* js/main.js */
 'use strict';
 
@@ -4245,7 +7067,7 @@ void main() {
 
   const SAVE_KEY = 'earth-chronicle-v1';
   const SPEEDS = [600, 240, 90, 30]; // 타임라인 전체를 지나는 데 걸리는 초
-  const DIST_MIN = 1.3;
+  const DIST_MIN = 1.035;
   const DIST_MAX = 16;
 
   const app = {
@@ -4281,6 +7103,15 @@ void main() {
   let focus = null;
   let frameAvg = 16;
   let resizePending = true;
+  let peekTimer = 0;
+  let peekInfo = null;
+  let lastMoonPos = [0, 0, 9];
+  const ALT_MIN = DIST_MIN - 1;
+  /* 지표에서의 높이로 확대·축소 (가까울수록 천천히) */
+  const zoomBy = (factor) => {
+    const alt = U.clamp((cam.dist - 1) * factor, ALT_MIN, DIST_MAX - 1);
+    cam.dist = 1 + alt;
+  };
   const cam = { yaw: 0.55, pitch: 0.28, dist: 3.4, vy: 0, vp: 0 };
   const now = () => performance.now() / 1000;
   
@@ -4566,7 +7397,7 @@ void main() {
         canvas.classList.add('dragging');
       } else if (pointers.size === 2) {
         const [a, b] = [...pointers.values()];
-        pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: cam.dist };
+        pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: cam.dist, last: Math.hypot(a.x - b.x, a.y - b.y) };
         drag = null;
       }
       focus = null;
@@ -4577,7 +7408,20 @@ void main() {
       if (pinch && pointers.size >= 2) {
         const [a, b] = [...pointers.values()];
         const d = Math.hypot(a.x - b.x, a.y - b.y);
-        cam.dist = U.clamp((pinch.dist * pinch.d) / Math.max(d, 1), DIST_MIN, DIST_MAX);
+        const step = pinch.last / Math.max(d, 1);
+        pinch.last = d;
+        if (EC.fieldMode.active) { EC.fieldMode.zoom(Math.log(step) * 900); return; }
+        const before = cam.dist;
+        zoomBy(Math.pow(step, 1.6));
+        if (step < 0.985 && before <= DIST_MIN + 1e-4) tryDescend(0.6);
+        return;
+      }
+      if (drag && EC.fieldMode.active) {
+        EC.fieldMode.drag(p.x - drag.x, p.y - drag.y);
+        drag.moved += Math.abs(p.x - drag.x) + Math.abs(p.y - drag.y);
+        drag.x = p.x;
+        drag.y = p.y;
+        drag.last = performance.now();
         return;
       }
       if (drag) {
@@ -4606,14 +7450,20 @@ void main() {
       if (wasDrag && pointers.size === 0) {
         drag = null;
         if (performance.now() - wasDrag.last > 80) { cam.vy = 0; cam.vp = 0; }
-        if (wasDrag.moved < 7) onCanvasClick(e.clientX, e.clientY);
+        if (wasDrag.moved < 7) {
+          if (EC.fieldMode.active) EC.fieldMode.tap(e.clientX, e.clientY);
+          else onCanvasClick(e.clientX, e.clientY);
+        }
       }
     };
     canvas.addEventListener('pointerup', up);
     canvas.addEventListener('pointercancel', up);
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      cam.dist = U.clamp(cam.dist * Math.exp(e.deltaY * 0.0012), DIST_MIN, DIST_MAX);
+      if (EC.fieldMode.active) { EC.fieldMode.zoom(e.deltaY); return; }
+      const before = cam.dist;
+      zoomBy(Math.exp(e.deltaY * 0.0016));
+      if (e.deltaY < 0 && before <= DIST_MIN + 1e-4) tryDescend(Math.min(1, -e.deltaY / 300));
     }, { passive: false });
   }
 
@@ -4624,6 +7474,37 @@ void main() {
       return;
     }
     $('impact-sizes').hidden = true;
+  }
+
+  /* ---------------- 지상으로 내려가기 ---------------- */
+
+  let descendAcc = 0;
+  function tryDescend(amount) {
+    if (!EC.fieldMode.ready || EC.fieldMode.active) return;
+    descendAcc += amount;
+    if (descendAcc >= 1) {
+      descendAcc = 0;
+      const d = EC.fieldMode.centerDir();
+      if (d) EC.fieldMode.enter(d);
+    }
+  }
+
+  function updateDescend(dt, st, u) {
+    const btn = $('btn-descend');
+    if (!EC.fieldMode.ready || cam.dist > 1.45 || app.tool) {
+      btn.hidden = true;
+      descendAcc = Math.max(0, descendAcc - dt);
+      return;
+    }
+    peekTimer -= dt;
+    if (peekTimer <= 0) {
+      peekTimer = 0.4;
+      peekInfo = EC.fieldMode.peek(u, st);
+    }
+    if (!peekInfo) { btn.hidden = true; return; }
+    btn.hidden = false;
+    $('descend-sub').textContent = `아래: ${peekInfo.bio.name}`;
+    descendAcc = Math.max(0, descendAcc - dt * 0.5);
   }
 
   /* ---------------- 화면 조작 ---------------- */
@@ -4704,7 +7585,8 @@ void main() {
       else if (e.key === '+' || e.key === '=') setSpeed(Math.min(SPEEDS.length - 1, app.speedIdx + 1));
       else if (e.key === '-' || e.key === '_') setSpeed(Math.max(0, app.speedIdx - 1));
       else if (e.key === 'Escape') {
-        if (app.tool) cancelTool();
+        if (EC.fieldMode.active) EC.fieldMode.exit();
+        else if (app.tool) cancelTool();
         else if (!$('help').hidden) $('help').hidden = true;
         else if (!$('card').hidden) EC.ui.panels.hideCard();
         else { $('chart-panel').hidden = true; $('history-panel').hidden = true; }
@@ -4794,7 +7676,7 @@ void main() {
 
     const st = EC.sim.stateAt(app.run, app.t);
     const u = EC.look.build(st, app.run, app.t);
-    globe.spin += dt * ((Math.PI * 2) / (80 * U.clamp(st.dayHours / 24, 0.2, 3)));
+    globe.spin += dt * ((Math.PI * 2) / (80 * U.clamp(st.dayHours / 24, 0.2, 3))) * (EC.fieldMode.active ? 0.25 : 1);
     moonAngle += dt * ((Math.PI * 2) / 70);
     updateCamera(dt);
     const md = st.moonKm > 0 ? EC.look.moonVisualDistance(st.moonKm) : 0;
@@ -4806,7 +7688,12 @@ void main() {
     u.layerVis = EC.plates.layerVisibility(app.t);
     Object.assign(u, fx.update(now(), globe));
     u.uPick = app.tool && pickHover ? pickHover : [0, 0, 0];
-    globe.render(u);
+    u.uDetail = U.smoothstep(2.2, 1.08, cam.dist);
+    lastMoonPos = u.uMoonPos;
+    if (!EC.fieldMode.frame(dt, st, u, tnow)) {
+      globe.render(u);
+      updateDescend(dt, st, u);
+    }
 
     timeline.draw(app.t);
 
@@ -4850,6 +7737,25 @@ void main() {
     fx = new EC.FxManager();
     fx.onImpact = (e) => EC.audio.impact(e.size);
     timeline = new EC.ui.Timeline($('timeline'), app);
+    EC.fieldMode.init(globe, app, {
+      moonPos: () => lastMoonPos,
+      onEnter: () => { cancelTool(); $('history-panel').hidden = true; $('chart-panel').hidden = true; EC.ui.panels.hideCard(); },
+      onExit: (dir) => {
+        cam.dist = 1.22;
+        if (dir) {
+          const w = globe.toWorld(dir);
+          cam.yaw = Math.atan2(w[0], w[2]);
+          cam.pitch = U.clamp(Math.asin(U.clamp(w[1], -1, 1)), -1.2, 1.2);
+        }
+        cam.vy = 0;
+        cam.vp = 0;
+        descendAcc = 0;
+      },
+    });
+    $('btn-descend').addEventListener('click', () => {
+      const d = EC.fieldMode.centerDir();
+      if (d) EC.fieldMode.enter(d);
+    });
     EC.ui.hud.init();
 
     app.base = EC.sim.run([], new Set());

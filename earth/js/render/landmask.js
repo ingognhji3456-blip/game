@@ -122,6 +122,7 @@
     const layers = EC.data.layers;
     const out = new Uint8Array(W * H * layers.length);
     layers.forEach((layer, i) => out.set(sdfLayer(rasterize(layer)), i * W * H));
+    EC.landmask.data = out;
     return out;
   }
 

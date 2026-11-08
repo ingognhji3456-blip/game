@@ -213,7 +213,7 @@
     const samples = [];
     const events = [];
     const emit = (id, t, data) => events.push({ id, t, kind: 'life', data: data || null, snap: snapshot(st) });
-    const record = (t) => samples.push({ t, B: st.B, O2: st.O2, snowLog: st.snowLog });
+    const record = (t) => samples.push({ t, B: st.B, O2: st.O2, snowLog: st.snowLog, E: st.alive ? st.E : -1e9 });
 
     function resetLineage() {
       st.dynasty = null;
@@ -424,7 +424,7 @@
     const b = sm[i + 1];
     if (b.t === a.t) return b;
     const f = (t - a.t) / (b.t - a.t);
-    return { t, B: U.lerp(a.B, b.B, f), O2: U.lerp(a.O2, b.O2, f), snowLog: U.lerp(a.snowLog, b.snowLog, f) };
+    return { t, B: U.lerp(a.B, b.B, f), O2: U.lerp(a.O2, b.O2, f), snowLog: U.lerp(a.snowLog, b.snowLog, f), E: a.E > -1e8 && b.E > -1e8 ? U.lerp(a.E, b.E, f) : b.E };
   }
 
   function seaLevel(t, T) {
@@ -453,6 +453,7 @@
       O2: sm.O2,
       B: snap.alive ? sm.B : 0,
       alive: snap.alive,
+      E: snap.alive ? sm.E : null,
       stage: snap.stage,
       stageId: stage.id,
       stageName: stage.name,

@@ -122,6 +122,17 @@
       return Q.rotate(Q.conj(this.earthToWorldQ()), pw);
     }
 
+    /* 한 지점의 지평 좌표계(동·위·북)를 세계 좌표로 */
+    localFrame(dirEarth) {
+      const up = Q.norm(this.toWorld(dirEarth));
+      const axis = this.toWorld([0, 1, 0]);
+      let east = Q.cross(axis, up);
+      if (Q.len(east) < 1e-6) east = [1, 0, 0];
+      east = Q.norm(east);
+      const north = Q.cross(up, east);
+      return { up, east, north };
+    }
+
     /* 지구 고정 방향이 세계에서 어디인지 */
     toWorld(dir) {
       return Q.rotate(this.earthToWorldQ(), dir);
@@ -130,6 +141,7 @@
     render(u) {
       const gl = this.gl;
       const L = this.loc;
+      gl.useProgram(this.prog);
       gl.viewport(0, 0, this.canvas.width, this.canvas.height);
       const cam = this.cameraBasis();
       gl.uniform2f(L.uRes, this.canvas.width, this.canvas.height);
@@ -148,10 +160,10 @@
       gl.uniformMatrix3fv(L.uPlateInv, false, this.plateMats);
       gl.uniform1fv(L.uLayerVis, u.layerVis);
 
-      const f1 = ['uSunAng', 'uSunIntensity', 'uShrink', 'uSeaShift', 'uOcean', 'uLava', 'uHeat', 'uIceLat', 'uTempG', 'uVeg', 'uMats', 'uWet', 'uSand',
+      const f1 = ['uDetail', 'uSunAng', 'uSunIntensity', 'uShrink', 'uSeaShift', 'uOcean', 'uLava', 'uHeat', 'uIceLat', 'uTempG', 'uVeg', 'uMats', 'uWet', 'uSand',
         'uFuture', 'uCloud', 'uCloudSpin', 'uAtmoDensity', 'uHaze', 'uCity', 'uMoonR', 'uMoonLava', 'uMeteor', 'uDust', 'uFlash', 'uExposure'];
       for (const k of f1) if (L[k]) gl.uniform1f(L[k], u[k]);
-      const f3 = ['uSunColor', 'uRock', 'uOceanDeep', 'uOceanShallow', 'uCloudColor', 'uAtmoColor', 'uHazeColor', 'uMoonPos', 'uMeteorA', 'uMeteorB', 'uPick'];
+      const f3 = ['uBetaR', 'uBetaM', 'uMieAbs', 'uSunColor', 'uRock', 'uOceanDeep', 'uOceanShallow', 'uCloudColor', 'uAtmoColor', 'uHazeColor', 'uMoonPos', 'uMeteorA', 'uMeteorB', 'uPick'];
       for (const k of f3) if (L[k]) gl.uniform3fv(L[k], u[k]);
       gl.uniform4fv(L.uFx, u.fx);
       gl.uniform4fv(L.uFxP, u.fxP);

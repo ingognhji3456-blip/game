@@ -13,7 +13,7 @@ const OUT = path.resolve(__dirname, '../docs/screenshots');
     await p.evaluate(() => { document.getElementById('intro').hidden = true; });
     return p;
   }
-  const shot = async (p, name) => { await p.waitForTimeout(1500); await p.screenshot({ path: `${OUT}/${name}.png` }); };
+  const shot = async (p, name) => { await p.waitForTimeout(1500); await p.screenshot({ path: `${OUT}/${name}.png`, timeout: 180000 }); };
   let p = await page(1280, 760);
   await p.evaluate(() => window.EC_APP.seek(0));
   await shot(p, 'present');

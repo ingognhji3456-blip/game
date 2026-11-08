@@ -7,13 +7,14 @@ const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
 const FILES = [
-  'js/core/util.js', 'js/core/quat.js',
+  'js/core/util.js', 'js/core/quat.js', 'js/core/noise.js',
   'js/data/timescale.js', 'js/data/continents.js', 'js/data/plates.js', 'js/data/climate.js', 'js/data/events.js',
-  'js/sim/plates.js', 'js/sim/model.js',
+  'js/sim/plates.js', 'js/sim/model.js', 'js/render/look.js',
+  'js/field/terrain.js', 'js/field/species.js', 'js/field/scene.js',
 ];
 
 function loadEarth() {
-  const sandbox = { console, Math, JSON, Date, Object, Array, Number, String, Set, Map, Intl, Infinity, isFinite };
+  const sandbox = { console, Math, JSON, Date, Object, Array, Number, String, Set, Map, Intl, Infinity, isFinite, performance };
   sandbox.window = sandbox;
   vm.createContext(sandbox);
   for (const file of FILES) vm.runInContext(fs.readFileSync(path.join(ROOT, file), 'utf8'), sandbox, { filename: file });

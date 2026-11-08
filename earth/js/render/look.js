@@ -37,8 +37,8 @@
 
     const green = 1 - U.smoothstep(0.1, 2, st.O2);
     const hotOcean = U.smoothstep(40, 90, T);
-    let oceanDeep = mix3([0.012, 0.05, 0.14], [0.02, 0.095, 0.085], green);
-    let oceanShallow = mix3([0.035, 0.25, 0.34], [0.10, 0.27, 0.19], green);
+    let oceanDeep = mix3([0.004, 0.016, 0.046], [0.006, 0.03, 0.026], green);
+    let oceanShallow = mix3([0.018, 0.095, 0.125], [0.05, 0.13, 0.09], green);
     oceanDeep = mix3(oceanDeep, [0.06, 0.07, 0.08], hotOcean * 0.6);
     oceanShallow = mix3(oceanShallow, [0.2, 0.22, 0.2], hotOcean * 0.5);
 
@@ -51,7 +51,7 @@
     if (t <= 0) {
       cloud = 0.46 + 0.2 * U.smoothstep(25, 45, T);
       if (st.snow) cloud = 0.3;
-      if (st.alive && st.stage >= S.microbe && st.O2 < 0.3 && t > -3600) haze = 0.22 * (1 - U.smoothstep(0.05, 0.3, st.O2));
+      if (st.alive && st.stage >= S.microbe && st.O2 < 0.3 && t > -3600) haze = 0.55 * (1 - U.smoothstep(0.05, 0.3, st.O2));
       if (st.lava > 0.05) {
         cloud = 0.1;
         haze = 0.12;
@@ -67,6 +67,7 @@
       if (t < -4380) {
         atmo = mix3([0.9, 0.55, 0.32], atmo, U.smoothstep(-4430, -4380, t));
         dens = Math.max(dens, 1.4);
+        if (st.lava <= 0.05) { haze = Math.max(haze, 0.3); hazeColor = [0.9, 0.62, 0.4]; }
       }
     } else {
       const wet = U.smoothstep(0.0, 0.5, st.ocean);
@@ -96,7 +97,16 @@
     let city = 0;
     if (st.civ && st.civT !== undefined) city = U.smoothstep(st.civT, st.civT + 0.0118, t) * (1 - U.smoothstep(st.civT + 0.0123, st.civT + 0.025, t));
 
+    /* 대기 산란 계수 (지구 반지름 단위): 레일리는 공기 밀도, 미는 안개·연무 */
+    const betaR = [21 * dens, 49 * dens, 121 * dens];
+    /* 연무는 빛을 고르게 흩뿌리고, 연무 색의 반대색(주황 연무라면 파랑)을 흡수합니다 */
+    const betaM = [67 * dens + haze * 1400, 67 * dens + haze * 1350, 67 * dens + haze * 1300];
+    const mieAbs = [haze * 3000 * (1 - hazeColor[0]), haze * 3000 * (1 - hazeColor[1]), haze * 3000 * (1 - hazeColor[2])];
+
     return {
+      uBetaR: betaR,
+      uBetaM: betaM,
+      uMieAbs: mieAbs,
       uRock: rock,
       uVeg: veg,
       uMats: mats,
@@ -123,7 +133,7 @@
       uSunIntensity: 0.93 + 0.07 * Math.min(st.sunLum, 1.5) + redGiant * 0.25,
       uSunAng: Math.min(0.85, 0.02 * Math.pow(st.sunRadius, 0.8)),
       uMoonLava: st.moonKm > 0 ? 1 - U.smoothstep(-4500, -4380, t) : 0,
-      uExposure: 1.0,
+      uExposure: 1.45,
     };
   }
 

@@ -79,7 +79,7 @@
   function showCard(app, e, extra) {
     const card = $('card');
     card.className = `card k-${e.kind}`;
-    $('card-icon').textContent = e.kind === 'intervention' ? EC.data.tools[e.tool].icon : KIND_ICON[e.kind] || '•';
+    $('card-icon').textContent = e.icon || (e.kind === 'intervention' ? EC.data.tools[e.tool].icon : KIND_ICON[e.kind] || '•');
     const pre = e.kind === 'intervention' ? '당신의 개입 · ' : '';
     $('card-title').textContent = pre + e.title + (e.prevented ? ' (막음)' : '');
     const lab = EC.time.labelAt(e.t);
