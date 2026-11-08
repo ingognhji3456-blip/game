@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8"><title>판 지도 디버그</title>
+<style>body{margin:0;background:#111;color:#ddd;font:12px sans-serif;display:flex;flex-wrap:wrap;gap:6px;padding:6px}
+figure{margin:0}figcaption{padding:2px 4px}canvas{display:block;background:#0b1e3a}</style></head>
+<body>
+<script src="../js/core/util.js"></script>
+<script src="../js/core/quat.js"></script>
+<script src="../js/data/continents.js"></script>
+<script src="../js/data/plates.js"></script>
+<script src="../js/sim/plates.js"></script>
+<script src="../js/render/landmask.js"></script>
+<script>
+/* 사용: platemap.html#{"times":[-200,0],"ortho":[-30,20],"frame":"AF","w":640} */
+(function () {
+  const opts = Object.assign({ times: [-250, -200, -150, -100, -50, 0], w: 640, ortho: null, frame: null, rel: null }, JSON.parse(decodeURIComponent(location.hash.slice(1) || '{}')));
+  if (opts.rel) for (const k in opts.rel) { const o = EC.data.plateFits[k]; for (const kk in o) delete o[kk]; Object.assign(o, opts.rel[k]); }
+  const mask = EC.landmask.build();
+  const L = EC.data.layers;
+  const COLORS = [[230,120,90],[240,200,80],[200,160,110],[110,190,120],[220,110,200],[90,180,230],[235,235,235],[255,80,80]];
+  const Q = EC.q;
+  function panel(t, mode) {
+    const W = opts.w, H = mode === 'ortho' ? W / 2 : W / 2;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d'); const img = ctx.createImageData(W, H);
+    let rots = EC.plates.layerRotations(t);
+    if (opts.frame) { const fi = L.findIndex(l => l.id === opts.frame); const inv = Q.conj(rots[fi]); rots = rots.map(r => Q.mul(inv, r)); }
+    const inv = rots.map(Q.conj);
+    const vis = EC.plates.layerVisibility(t);
+    let center = null;
+    if (mode === 'ortho') center = opts.ortho;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let v;
+      if (mode === 'ortho') {
+        const S = H / 2; const px = (x - W / 2) / S, py = -(y - H / 2) / S;
+        if (px * px + py * py > 1) continue;
+        const pz = Math.sqrt(1 - px * px - py * py);
+        // 시점: center 위도/경도를 정면으로
+        const c = Q.vec(center[0], center[1]);
+        const east = Q.norm(Q.cross([0, 1, 0], c)); const north = Q.cross(c, east);
+        v = [c[0] * pz + east[0] * px + north[0] * py, c[1] * pz + east[1] * px + north[1] * py, c[2] * pz + east[2] * px + north[2] * py];
+      } else {
+        const lon = (x + 0.5) / W * 360 - 180, lat = 90 - (y + 0.5) / H * 180; v = Q.vec(lat, lon);
+      }
+      let best = -9, bi = -1, cnt = 0;
+      for (let i = 0; i < L.length; i++) {
+        if (vis[i] < 0.5) continue;
+        const p = Q.latLon(Q.rotate(inv[i], v));
+        const s = EC.landmask.sample(mask, i, p[0], p[1]);
+        if (s > 0) cnt++;
+        if (s > best) { best = s; bi = i; }
+      }
+      const o = (y * W + x) * 4;
+      if (best > 0) { const c = COLORS[bi]; const k = 0.55 + 0.45 * Math.min(1, best * 1.5); img.data[o] = c[0] * k; img.data[o + 1] = c[1] * k; img.data[o + 2] = c[2] * k; if (cnt > 1) { img.data[o] = 255; img.data[o+1] = 255; img.data[o+2] = 0; } }
+      else { img.data[o] = 12; img.data[o + 1] = 32; img.data[o + 2] = 64 + 30 * Math.max(0, 1 + best); }
+      img.data[o + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    if (mode !== 'ortho') {
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      for (let lo = -180; lo <= 180; lo += 30) { const x = (lo + 180) / 360 * W; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+      for (let la = -60; la <= 60; la += 30) { const y = (90 - la) / 180 * H; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2); ctx.stroke();
+    }
+    const fig = document.createElement('figure'); fig.appendChild(cv);
+    const cap = document.createElement('figcaption'); cap.textContent = `${t} Ma ${mode === 'ortho' ? 'ortho ' + JSON.stringify(center) : ''}${opts.frame ? ' frame=' + opts.frame : ''}`;
+    fig.appendChild(cap); document.body.appendChild(fig);
+  }
+  for (const t of opts.times) { panel(t, 'map'); if (opts.ortho) panel(t, 'ortho'); }
+  document.title = 'done';
+})();
+</script></body></html>

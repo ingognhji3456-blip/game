@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8"><title>render test</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{width:100vw;height:100vh;display:block}</style></head>
+<body><canvas id="c"></canvas>
+<script src="../js/core/util.js"></script>
+<script src="../js/core/quat.js"></script>
+<script src="../js/data/timescale.js"></script>
+<script src="../js/data/continents.js"></script>
+<script src="../js/data/plates.js"></script>
+<script src="../js/data/climate.js"></script>
+<script src="../js/data/events.js"></script>
+<script src="../js/sim/plates.js"></script>
+<script src="../js/sim/model.js"></script>
+<script src="../js/render/landmask.js"></script>
+<script src="../js/render/shaders.js"></script>
+<script src="../js/render/globe.js"></script>
+<script src="../js/render/look.js"></script>
+<script src="../js/render/fx.js"></script>
+<script>
+/* render.html#{"t":-200,"yaw":0.5,"pitch":0.3,"dist":3.4,"spin":0,"iv":[...],"off":[],"fx":{"dir":[..],"kind":"impact","size":1,"age":0.1}} */
+window.renderAt = function (opts) {
+  const o = Object.assign({ t: 0, yaw: 0.55, pitch: 0.28, dist: 3.4, spin: 0, iv: [], off: [], time: 1 }, opts);
+  if (!window._g) {
+    window._g = new EC.Globe(document.getElementById('c'));
+    const m = EC.landmask.build();
+    _g.setMask(m, EC.landmask.W, EC.landmask.H, EC.data.layers.length);
+  }
+  const g = window._g;
+  g.resize(innerWidth, innerHeight, 1);
+  g.camera = { yaw: o.yaw, pitch: o.pitch, dist: o.dist };
+  g.spin = o.spin;
+  const run = EC.sim.run(o.iv, new Set(o.off));
+  const st = EC.sim.stateAt(run, o.t);
+  const u = EC.look.build(st, run, o.t);
+  u.time = o.time;
+  u.plateRots = EC.plates.layerRotations(o.t);
+  u.layerVis = EC.plates.layerVisibility(o.t);
+  const md = st.moonKm > 0 ? EC.look.moonVisualDistance(st.moonKm) : 0;
+  const ma = o.moonAngle !== undefined ? o.moonAngle : 2.2;
+  u.uMoonPos = [md * Math.sin(ma), md * 0.08, md * Math.cos(ma)];
+  u.uMoonR = md > 0 ? 0.27 : 0;
+  u.uCloudSpin = o.time * 0.01;
+  const fx = new EC.FxManager();
+  const fu = fx.update(0, g);
+  if (o.fx) { fu.fx[0] = o.fx.dir[0]; fu.fx[1] = o.fx.dir[1]; fu.fx[2] = o.fx.dir[2]; fu.fx[3] = o.fx.age; fu.fxP[0] = o.fx.kind === 'volcano' ? 2 : 1; fu.fxP[1] = o.fx.size; }
+  Object.assign(u, fu);
+  u.uPick = [0, 0, 0];
+  g.render(u);
+  return { T: st.T, stage: st.stageName, dyn: st.dynastyName, ice: st.iceLat };
+};
+document.title = 'ready';
+</script></body></html>

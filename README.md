@@ -1,5 +1,7 @@
 # 카드 원정대 (Deck Expedition)
 
+> 🌍 이 저장소에는 두 번째 작품 **[지구 연대기](earth/README.md)** 도 있습니다. 지구의 탄생부터 먼 미래까지 시간을 돌려 보고 역사를 바꿔 보는 시뮬레이션입니다. → [`dist/earth-chronicle.html`](dist/earth-chronicle.html)
+
 브라우저에서 바로 즐기는 **로그라이크 덱빌딩 카드 배틀 게임**입니다.
 덱을 쌓고, 갈림길을 고르고, 세 개의 막을 지나 심연의 끝에 있는 **태고의 용**을 쓰러뜨리세요.
 
@@ -75,7 +77,8 @@ js/art/             SVG 아트 생성기 (적, 주인공, 아이콘, 배경, 로
 js/fx/              시각 효과(캔버스 파티클)와 사운드(WebAudio 합성)
 js/ui/              화면 — 공용 UI, 지도, 각종 화면 흐름, 전투 화면
 js/main.js          시작점
-tools/build.js      한 파일짜리 게임(dist/card-expedition.html) 만들기
+tools/build.js      한 파일짜리 게임(dist/card-expedition.html, dist/earth-chronicle.html) 만들기
+earth/              두 번째 작품 "지구 연대기" (earth/README.md)
 dist/               한 파일짜리 게임 (배포용)
 tests/              Node 로 돌리는 엔진 테스트와 전체 런 시뮬레이터
 docs/ARCHITECTURE.md  모듈 간 계약(API, 데이터 형식, 이벤트 타입)
@@ -127,7 +130,7 @@ fireSlash: {
 
 ## 한 파일로 만들기
 
-코드를 고친 뒤 아래 명령을 실행하면 모든 CSS/JS 를 합친 `dist/card-expedition.html` 이 다시 만들어집니다.
+코드를 고친 뒤 아래 명령을 실행하면 모든 CSS/JS 를 합친 `dist/card-expedition.html` 이 다시 만들어집니다. (지구 연대기의 `dist/earth-chronicle.html` 도 함께 만들어집니다.)
 
 ```bash
 node tools/build.js

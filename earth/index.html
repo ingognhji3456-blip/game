@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#04060c">
+  <meta name="description" content="지구의 탄생부터 먼 미래까지, 45억 년의 역사를 직접 돌려 보고 바꿔 보는 시뮬레이션">
+  <title>지구 연대기</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="globe" aria-label="지구"></canvas>
+
+  <div id="ui">
+    <header class="top">
+      <div class="clock" aria-live="polite">
+        <div id="clock-time" class="clock-time">45억 4천만 년 전</div>
+        <div id="clock-era" class="clock-era"></div>
+      </div>
+      <div class="top-actions">
+        <button id="btn-sound" class="icon-btn ghost" title="소리 켜기/끄기" aria-label="소리 켜기/끄기">🔊</button>
+        <button id="btn-help" class="icon-btn ghost" title="도움말과 설정" aria-label="도움말과 설정">?</button>
+      </div>
+    </header>
+
+    <aside id="stats" class="stats" aria-label="지구 상태">
+      <button id="stats-toggle" class="stats-chip" aria-expanded="false"></button>
+      <div id="stats-body" class="stats-body"></div>
+      <button id="stats-more" class="stats-more">자세히</button>
+    </aside>
+
+    <nav id="tools" class="rail" aria-label="개입 도구">
+      <div class="rail-group">
+        <button class="rail-btn" data-group="impact" aria-label="소행성 떨어뜨리기"><span>☄️</span><em>소행성</em></button>
+        <button class="rail-btn" data-tool="volcano" aria-label="거대 용암 분출"><span>🌋</span><em>화산 분출</em></button>
+        <button class="rail-btn" data-tool="co2up" aria-label="온실가스 늘리기"><span>🔥</span><em>온실가스 ×3</em></button>
+        <button class="rail-btn" data-tool="co2down" aria-label="온실가스 줄이기"><span>❄️</span><em>온실가스 ÷3</em></button>
+      </div>
+      <div class="rail-group">
+        <button id="btn-history" class="rail-btn" aria-label="바뀐 역사"><span>📜</span><em>바뀐 역사</em><b id="history-count" class="count" hidden>0</b></button>
+        <button id="btn-chart" class="rail-btn" aria-label="그래프"><span>📈</span><em>그래프</em></button>
+      </div>
+      <div id="impact-sizes" class="flyout" hidden>
+        <div class="flyout-title">소행성 크기</div>
+        <button class="size" data-tool="impact1"><b>1km</b><small>지역 재난</small></button>
+        <button class="size" data-tool="impact10"><b>10km</b><small>공룡 멸종급</small></button>
+        <button class="size" data-tool="impact100"><b>100km</b><small>동식물 전멸</small></button>
+        <button class="size" data-tool="impact500"><b>500km</b><small>모든 생명 소멸</small></button>
+      </div>
+    </nav>
+
+    <div id="hint" class="hint" hidden></div>
+
+    <section id="card" class="card" hidden aria-live="polite">
+      <div class="card-head">
+        <span id="card-icon" class="card-icon"></span>
+        <div class="card-titles">
+          <div id="card-time" class="card-time"></div>
+          <div id="card-title" class="card-title"></div>
+        </div>
+        <button id="card-close" class="icon-btn ghost small" aria-label="닫기">✕</button>
+      </div>
+      <div id="card-body" class="card-body"></div>
+      <div class="card-foot">
+        <div id="card-actions" class="card-actions"></div>
+        <div class="card-nav">
+          <button id="btn-prev" class="icon-btn ghost small" title="이전 사건 (←)" aria-label="이전 사건">‹</button>
+          <button id="btn-next" class="icon-btn ghost small" title="다음 사건 (→)" aria-label="다음 사건">›</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="chart-panel" class="sheet" hidden>
+      <div class="sheet-head">
+        <div class="tabs" id="chart-tabs">
+          <button data-metric="T" class="on">기온</button>
+          <button data-metric="co2">CO₂</button>
+          <button data-metric="O2">산소</button>
+          <button data-metric="B">생물 다양성</button>
+        </div>
+        <button class="icon-btn ghost small" data-close="chart-panel" aria-label="닫기">✕</button>
+      </div>
+      <canvas id="chart"></canvas>
+      <div class="legend"><span class="lg-you"></span>당신의 역사 <span class="lg-base"></span>실제 역사</div>
+    </section>
+
+    <section id="history-panel" class="sheet" hidden>
+      <div class="sheet-head">
+        <div class="sheet-title">바뀐 역사</div>
+        <button class="icon-btn ghost small" data-close="history-panel" aria-label="닫기">✕</button>
+      </div>
+      <div id="history-body" class="history-body"></div>
+    </section>
+
+    <footer class="dock">
+      <button id="btn-play" class="play" title="재생/멈춤 (스페이스)" aria-label="재생">▶</button>
+      <button id="btn-speed" class="speed" title="재생 속도 (+/-)">보통</button>
+      <div id="timeline" class="timeline" tabindex="0" role="slider" aria-label="시간" aria-valuemin="0" aria-valuemax="1000">
+        <canvas id="tl-canvas"></canvas>
+        <div id="tl-tip" class="tl-tip" hidden></div>
+      </div>
+    </footer>
+  </div>
+
+  <div id="intro" class="overlay intro">
+    <div class="intro-box">
+      <div class="intro-kicker">45억 4천만 년 전부터 76억 년 뒤까지</div>
+      <h1>지구 연대기</h1>
+      <p class="intro-lead">마그마 바다에서 태어나 얼어붙고, 생명으로 가득 차고, 결국 태양에 삼켜지기까지.<br>지구의 시간을 직접 돌려 보고, 역사를 바꿔 보세요.</p>
+      <ul class="intro-list">
+        <li><span>▶</span>재생하거나 아래 타임라인을 끌어 원하는 시대로</li>
+        <li><span>☄️</span>소행성·화산·온실가스로 역사에 개입</li>
+        <li><span>📜</span>바뀐 역사를 실제 역사와 비교</li>
+      </ul>
+      <p class="intro-note">실제 연구 자료를 바탕으로 만들었지만, 아주 먼 과거와 미래의 대륙 모양과 일부 수치는 추정입니다.</p>
+      <div class="intro-actions">
+        <button id="btn-start" class="btn primary">처음부터 시작하기</button>
+        <button id="btn-resume" class="btn" hidden>이어서 하기</button>
+        <button id="btn-now" class="btn ghost">현재의 지구부터 보기</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="help" class="overlay help" hidden>
+    <div class="help-box">
+      <h2>조작 방법</h2>
+      <table>
+        <tr><td>지구 끌기</td><td>돌려 보기</td></tr>
+        <tr><td>휠 / 두 손가락</td><td>확대·축소</td></tr>
+        <tr><td>타임라인 끌기</td><td>시간 이동</td></tr>
+        <tr><td><kbd>스페이스</kbd></td><td>재생 / 멈춤</td></tr>
+        <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>이전 / 다음 사건</td></tr>
+        <tr><td><kbd>+</kbd> <kbd>-</kbd> / 속도 버튼</td><td>재생 속도</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>취소 · 닫기</td></tr>
+      </table>
+      <h2>설정</h2>
+      <label class="setting"><input type="checkbox" id="chk-pause" checked> 재생 중 중요한 사건에서 멈추고 설명 보기</label>
+      <h2>시뮬레이션은 이렇게 움직입니다</h2>
+      <p>아무것도 바꾸지 않으면 실제 지구의 역사가 펼쳐집니다. 기온·이산화탄소·산소는 연구로 복원한 값을, 대륙은 판의 움직임을 따릅니다.</p>
+      <p>개입하면 그 순간부터 역사가 갈라집니다. 이산화탄소는 수백만 년에 걸쳐 암석 풍화로 줄어들고, 큰 멸종은 생명의 진화를 되돌리거나 지배 생물을 바꿉니다. 빈자리가 생겨야 다음 무리(지배파충류 → 포유류)가 지구를 차지하고, 인류는 포유류가 지배한 뒤 약 6570만 년이 지나야 나타납니다.</p>
+      <p>단순화한 모형이라 실제 과학의 결론이 아니라 "만약에"를 상상해 보는 도구로 즐겨 주세요.</p>
+      <button class="btn primary" data-close="help">닫기</button>
+    </div>
+  </div>
+
+  <div id="nogl" class="overlay" hidden>
+    <div class="intro-box">
+      <h1>지구를 그릴 수 없어요</h1>
+      <p id="nogl-msg">이 브라우저는 WebGL2 를 지원하지 않습니다. 최신 Chrome, Edge, Firefox, Safari 에서 열어 주세요.</p>
+    </div>
+  </div>
+
+  <script src="js/core/util.js"></script>
+  <script src="js/core/quat.js"></script>
+  <script src="js/data/timescale.js"></script>
+  <script src="js/data/continents.js"></script>
+  <script src="js/data/plates.js"></script>
+  <script src="js/data/climate.js"></script>
+  <script src="js/data/events.js"></script>
+  <script src="js/sim/plates.js"></script>
+  <script src="js/sim/model.js"></script>
+  <script src="js/render/landmask.js"></script>
+  <script src="js/render/shaders.js"></script>
+  <script src="js/render/globe.js"></script>
+  <script src="js/render/look.js"></script>
+  <script src="js/render/fx.js"></script>
+  <script src="js/ui/audio.js"></script>
+  <script src="js/ui/hud.js"></script>
+  <script src="js/ui/timeline.js"></script>
+  <script src="js/ui/chart.js"></script>
+  <script src="js/ui/panels.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+'use strict';
+/* node tools/shot-app.js outdir [w] [h]  — 앱을 열고 여러 장면을 찍습니다 */
+const { chromium } = require('playwright');
+const path = require('path');
+(async () => {
+  const out = process.argv[2];
+  const W = +(process.argv[3] || 1280), H = +(process.argv[4] || 800);
+  const mobile = W < 700;
+  const b = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, hasTouch: mobile });
+  const p = await ctx.newPage();
+  const errs = [];
+  p.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
+  p.on('console', (m) => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
+  await p.goto('file://' + path.resolve(__dirname, '../index.html') + '?debug');
+  await p.waitForTimeout(1500);
+  await p.screenshot({ path: `${out}/a-intro.png` });
+  await p.click('#btn-now');
+  await p.waitForTimeout(1200);
+  await p.screenshot({ path: `${out}/b-present.png` });
+  await p.evaluate(() => { document.querySelector('#card-close').click(); window.EC_APP.seek(-250); });
+  await p.waitForTimeout(800);
+  await p.screenshot({ path: `${out}/c-pangaea.png` });
+  // intervention: 10km asteroid at 160 Ma at screen center
+  await p.evaluate(() => window.EC_APP.seek(-160));
+  await p.waitForTimeout(300);
+  await p.click('.rail-btn[data-group="impact"]');
+  await p.click('.size[data-tool="impact10"]');
+  await p.waitForTimeout(200);
+  await p.mouse.move(W / 2 + 20, H / 2 - 40);
+  await p.waitForTimeout(300);
+  await p.screenshot({ path: `${out}/d-picking.png` });
+  await p.mouse.click(W / 2 + 20, H / 2 - 40);
+  await p.waitForTimeout(1900);
+  await p.screenshot({ path: `${out}/e-impact.png` });
+  await p.click('#btn-history');
+  await p.waitForTimeout(300);
+  await p.screenshot({ path: `${out}/f-history.png` });
+  await p.click('#btn-chart');
+  await p.evaluate(() => window.EC_APP.seek(-50));
+  await p.waitForTimeout(800);
+  await p.screenshot({ path: `${out}/g-chart.png` });
+  await p.evaluate(() => { document.getElementById('history-panel').hidden = true; document.getElementById('chart-panel').hidden = true; window.EC_APP.resetHistory(); window.EC_APP.seek(-4540); window.EC_APP.play(); });
+  await p.waitForTimeout(5000);
+  await p.screenshot({ path: `${out}/h-playing.png` });
+  console.log(errs.length ? errs.join('\n') : 'no errors');
+  await b.close();
+})();
