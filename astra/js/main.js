@@ -480,11 +480,21 @@ AZ.game = (() => {
     setInterval(persist, 30000);
     resize();
     applySettings();
-    game.save = AZ.save.load();
-    // 디버그: ?debug
-    if (/[?&]debug/.test(location.search)) installDebug();
-    toTitle();
-    requestAnimationFrame((t) => { last = t; frame(t); });
+    // 웹 페이지(아티팩트)로 열렸을 때: 페이지가 갱신돼도 진행 상황을 이어받음
+    const hot = window.claude && window.claude.hot;
+    const start = (data) => {
+      game.save = AZ.save.load();
+      if (!game.save && data && data.save) { game.save = AZ.save.fresh(); Object.assign(game.save, data.save); persist(); }
+      // 디버그: ?debug
+      if (/[?&]debug/.test(location.search) || location.hash === '#debug') installDebug();
+      toTitle();
+      requestAnimationFrame((t) => { last = t; frame(t); });
+    };
+    try {
+      if (hot && hot.snapshot) hot.snapshot(() => ({ save: game.save }));
+    } catch (e) { /* 무시 */ }
+    if (hot && hot.ready) hot.ready(start);
+    else start((hot && hot.data) || {});
   }
 
   function installDebug() {

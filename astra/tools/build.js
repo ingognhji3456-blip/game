@@ -42,3 +42,25 @@ if (/<link rel="stylesheet"|<script src=/.test(html)) {
 fs.mkdirSync(OUT_DIR, { recursive: true });
 fs.writeFileSync(OUT, html);
 console.log(`CSS ${cssCount}개, JS ${jsCount}개를 합쳤습니다 → ${path.relative(path.resolve(ROOT, '..'), OUT)} (${Math.round(html.length / 1024)}KB)`);
+
+/*
+ * --artifact <경로>: claude.ai 아티팩트(웹 페이지)로 올릴 판.
+ * 아티팩트는 문서 뼈대(doctype/html/head/body, charset·viewport)를 스스로 씌우므로
+ * 그 태그들을 빼고 <title> 과 <style> 을 맨 앞에 둡니다.
+ */
+const ai = process.argv.indexOf('--artifact');
+if (ai >= 0 && process.argv[ai + 1]) {
+  const out = path.resolve(process.argv[ai + 1]);
+  let page = html
+    .replace(/<!DOCTYPE html>\s*/i, '')
+    .replace(/<\/?html[^>]*>\s*/gi, '')
+    .replace(/<\/?head>\s*/gi, '')
+    .replace(/<\/?body>\s*/gi, '')
+    .replace(/<meta charset="[^"]*">\s*/i, '')
+    .replace(/<meta name="viewport"[^>]*>\s*/i, '');
+  const title = page.match(/<title>[^<]*<\/title>/i)[0];
+  page = title + '\n' + page.replace(title, '');
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  fs.writeFileSync(out, page);
+  console.log(`아티팩트 판 → ${out} (${Math.round(page.length / 1024)}KB)`);
+}
