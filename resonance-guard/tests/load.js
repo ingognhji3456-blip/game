@@ -13,6 +13,23 @@ const FILES = [
   'js/core/grid.js', 'js/core/stats.js', 'js/core/bosses.js', 'js/core/sim.js', 'js/core/progress.js', 'js/core/save.js',
 ];
 
+/** 그림 스크립트 (index.html과 같은 순서) */
+const ART = [
+  'js/art/helpers.js',
+  'js/art/towers.js',
+  'js/art/towers-a.js',
+  'js/art/towers-b.js',
+  'js/art/towers-api.js',
+  'js/art/enemies.js',
+  'js/art/enemies-r12.js',
+  'js/art/enemies-r34.js',
+  'js/art/enemies-r5.js',
+  'js/art/enemies-api.js',
+  'js/art/heroes.js',
+  'js/art/terrain.js',
+  'js/art/icons.js',
+];
+
 function loadGame({ quiet = true, extra = [] } = {}) {
   const store = new Map();
   const warnings = [];
@@ -39,4 +56,4 @@ function loadGame({ quiet = true, extra = [] } = {}) {
   return { RG: sandbox.RG, warnings, store, sandbox };
 }
 
-module.exports = { loadGame, ROOT };
+module.exports = { ART, loadGame, ROOT };

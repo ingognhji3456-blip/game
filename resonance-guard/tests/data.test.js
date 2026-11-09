@@ -4,7 +4,7 @@
 const assert = require('assert');
 const { loadGame } = require('./load');
 
-const ART = ['js/art/helpers.js', 'js/art/towers.js', 'js/art/enemies.js', 'js/art/heroes.js', 'js/art/terrain.js', 'js/art/icons.js'];
+const { ART } = require('./load');
 const { RG } = loadGame({ extra: ART });
 const D = RG.data;
 
@@ -107,6 +107,16 @@ test('그림 함수가 모든 탑·적·영웅·유닛·초상화·맵을 그린
   for (const m of D.maps.concat(D.endless)) ok(RG.art.mapBackground(RG.grid.parseMap(m)), m.id);
   for (let r = 1; r <= 5; r++) ok(RG.art.regionBanner(r), `banner ${r}`);
   ok(RG.art.lantern(0.5), 'lantern');
+});
+
+test('모든 자세가 오류 없이 그려진다 (엄격 모드: 그리다 실패하면 자리표시로 숨기지 않음)', () => {
+  RG.art._strict = true;
+  try {
+    for (const t of Object.keys(D.towers)) for (const [lv, br] of [[1], [2], [3], [4, 'A'], [4, 'B']]) for (const p of RG.art.TOWER_POSES) assert.ok(RG.art.tower(t, lv, br, p).includes('<svg'), `${t} ${lv}${br || ''} ${p}`);
+    for (const e of Object.keys(D.enemies)) for (const f of RG.art.ENEMY_FRAMES) assert.ok(RG.art.enemy(e, f).includes('<svg'), `${e} ${f}`);
+    for (const h of Object.keys(D.heroes)) for (const p of RG.art.HERO_POSES) assert.ok(RG.art.hero(h, p).includes('<svg'), `${h} ${p}`);
+    for (const u of ['stone_soldier', 'granite_guard', 'obsidian_blade', 'drone', 'rock_wall']) for (const p of RG.art.UNIT_POSES) assert.ok(RG.art.unit(u, p).includes('<svg'), `${u} ${p}`);
+  } finally { RG.art._strict = false; }
 });
 
 test('쓰이는 아이콘 이름이 모두 실제 아이콘 (물음표 대체 아님)', () => {

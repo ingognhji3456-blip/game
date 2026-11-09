@@ -378,13 +378,22 @@
 
   const HEROES = { kara, sera, sio, zena, bawi, yaro };
 
-  RG.art.hero = function hero(id, pose = 'idle') {
+  /**
+   * 영웅 자세: idle0·idle1(숨쉬기 2장) · walk0~walk3(걷기 한 바퀴) · aim(공격 직전) · attack(공격 순간) · cast(기술)
+   * 옛 이름 idle·walk1·walk2는 idle0·walk0·walk2로 읽음.
+   */
+  RG.art.HERO_POSES = ['idle0', 'idle1', 'walk0', 'walk1', 'walk2', 'walk3', 'aim', 'attack', 'cast'];
+  const HERO_OLD = { idle: 'idle0', walk1: 'walk0', walk2: 'walk2' };
+  RG.art.hero = function hero(id, pose = 'idle0') {
     const c = pad();
-    const p = LEGS[pose] ? pose : 'idle';
+    const np = HERO_OLD[pose] || (RG.art.HERO_POSES.includes(pose) ? pose : 'idle0');
+    // 지금 그림은 옛 자세 4개만 앎 → 새 이름을 가장 가까운 옛 자세로 (다시 그리면 이 줄은 사라짐)
+    const p = LEGS[np] ? np : ({ idle0: 'idle', idle1: 'idle', walk0: 'walk1', walk1: 'walk1', walk2: 'walk2', walk3: 'walk2', aim: 'idle', attack: 'attack', cast: 'attack' })[np] || 'idle';
     let body;
     try {
       body = (HEROES[id] || heroPlaceholder)(c, p);
     } catch (e) {
+      if (RG.art._strict) throw e;
       body = heroPlaceholder(c, 'idle');
     }
     return wrap('0 0 100 100', c, body);
@@ -906,13 +915,16 @@
 
   const UNITS = { stone_soldier: stoneSoldier, granite_guard: graniteGuard, obsidian_blade: obsidianBlade, obsidian_blades: obsidianBlade, drone, rock_wall: rockWall };
 
+  /** 유닛 자세: idle · walk0·walk1 · aim(휘두르기 직전) · attack */
+  RG.art.UNIT_POSES = ['idle', 'walk0', 'walk1', 'aim', 'attack'];
   RG.art.unit = function unit(kind, pose = 'idle') {
     const c = pad();
-    const p = pose === 'attack' ? 'attack' : 'idle';
+    const p = pose === 'attack' ? 'attack' : 'idle'; // 다시 그리면 다섯 자세 모두 받음
     let body;
     try {
       body = (UNITS[kind] || unitPlaceholder)(c, p);
     } catch (e) {
+      if (RG.art._strict) throw e;
       body = unitPlaceholder(c);
     }
     return wrap('0 0 100 100', c, body);

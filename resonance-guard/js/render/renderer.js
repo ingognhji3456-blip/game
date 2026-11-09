@@ -423,6 +423,45 @@ RG.render = (() => {
     }
   }
 
+  /* ---------------- 동작 자세 고르기 (docs/design/animation.md) ---------------- */
+  /** 자세 그림이 준비됐으면 그 키, 아니면 준비를 시작하고 대신할 키 */
+  function poseSprite(key, fallback, make, w, h) {
+    return RG.art.sprites.ensure(key, make, w, h) ? key : fallback;
+  }
+  /** 탑: 쏜 직후 0.14초 fire, 다음 발사 직전 aim(시위 당김·힘 모음), 그 밖 idle. 지원·광산·병영은 일하는 모습 반복 */
+  function towerPose(t) {
+    if (t.building || t.disabled) return 'idle';
+    const td = RG.data.towers[t.type];
+    if (td.role !== 'attack') {
+      const ph = (time * 0.75 + t.id * 0.37) % 3;
+      return ph < 1.7 ? 'idle' : ph < 2.55 ? 'aim' : 'fire';
+    }
+    if (td.kind === 'beam') return t.beamState && t.beamState.length ? 'fire' : 'idle';
+    if (t.anim > 0.11) return 'fire';
+    const iv = (t.calc && t.calc.interval) || 1;
+    if (t.cd > 0 && t.cd <= Math.max(0.22, iv * 0.4)) return 'aim';
+    return 'idle';
+  }
+  /** 적: 걷기 4장 한 바퀴, 붙잡혀 싸울 때·던질 때는 aim → attack */
+  function enemyFrame(e, moving) {
+    if (e.attackAnim > 0.08 || e.castAnim > 0.1) return 'attack';
+    if (e.aiming) return 'aim';
+    if (e.flying) return `walk${Math.floor(time * 8 + e.id * 0.7) % 4}`; // 날갯짓은 늘 함
+    if (!moving) return 'walk0';
+    // walkT는 걸어온 거리(칸). 보폭은 몸 크기에 비례 → 작은 적은 종종걸음
+    const stride = 0.45 + e.size * 0.55;
+    return `walk${Math.floor((e.walkT / stride) * 4) % 4}`;
+  }
+  /** 영웅: 기술 cast, 공격 attack, 곧 공격 aim, 걷기 4장, 서 있을 땐 숨쉬기 2장 */
+  function heroPose(h, moving) {
+    if (h.castAnim > 0) return 'cast';
+    if (h.attackAnim > 0.12) return 'attack';
+    if (moving) return `walk${Math.floor(time * 8) % 4}`;
+    const iv = (RG.data.heroes[h.heroId] || {}).interval || 1;
+    if (h.cd > 0 && h.cd <= Math.max(0.2, iv * 0.35)) return 'aim';
+    return Math.floor(time * 1.25 + h.id * 0.3) % 2 ? 'idle1' : 'idle0';
+  }
+
   /* ---------------- 탑 ---------------- */
   function drawTower(t) {
     const cx = X(t.x);
@@ -430,8 +469,10 @@ RG.render = (() => {
     const w = T;
     const h = T * 1.3;
     let sy = 1;
-    if (t.anim > 0) sy = 1 - 0.07 * (t.anim / 0.25);
-    const key = RG.art.sprites.towerKey(t.type, t.level, t.branch);
+    if (t.anim > 0) sy = 1 - 0.025 * (t.anim / 0.25); // 쏠 때 아주 살짝 눌림 (동작은 그림 자세가 맡음)
+    const pose = towerPose(t);
+    const key = poseSprite(RG.art.sprites.towerKey(t.type, t.level, t.branch, pose), RG.art.sprites.towerKey(t.type, t.level, t.branch, 'idle'),
+      () => RG.art.tower(t.type, t.level, t.branch, pose), RG.art.sprites.TW, RG.art.sprites.TH);
     ctx.save();
     if (t.building) ctx.globalAlpha = 0.55;
     if (sy !== 1) { ctx.translate(cx, baseY); ctx.scale(1 + (1 - sy) * 0.5, sy); ctx.translate(-cx, -baseY); }
@@ -523,7 +564,7 @@ RG.render = (() => {
     const frozen = st.time < e.ccUntil && e.ccKind === 'freeze';
     const lifted = st.time < e.ccUntil && e.ccKind === 'lift';
     const moving = !e.blockedBy && !(st.time < e.ccUntil) ;
-    const frame = moving ? Math.floor(e.walkT * 2.4) % 2 : 0;
+    const frame = enemyFrame(e, moving);
     let lift = 0;
     if (e.flying) lift = T * 0.42 + Math.sin(time * 4 + e.id) * T * 0.04;
     else if (moving) lift = Math.abs(Math.sin(e.walkT * Math.PI * 1.2)) * T * 0.05;
@@ -532,7 +573,8 @@ RG.render = (() => {
     const alphaS = (e.stealth && !e.revealed) ? 0.35 + 0.1 * Math.sin(time * 6) : 1;
     const hurt = st.time - e.lastHurt < 0.08;
     const flip = e.dir < 0;
-    const key = RG.art.sprites.enemyKey(e.type, frame);
+    const big = ed.size >= 1.4 ? 288 : 168;
+    const key = poseSprite(RG.art.sprites.enemyKey(e.type, frame), RG.art.sprites.enemyKey(e.type, 'walk0'), () => RG.art.enemy(e.type, frame), big, big);
     const ok = sprite(key, cx, cy, size, size, 0.5, 0.9, flip, alphaS);
     if (!ok) {
       ctx.fillStyle = '#9a94a8';
@@ -618,7 +660,7 @@ RG.render = (() => {
     const flip = u.dir < 0;
     if (u.kind === 'hero') {
       const moving = u.walking;
-      const pose = u.attackAnim > 0 ? 'attack' : moving ? (Math.floor(time * 6) % 2 ? 'walk1' : 'walk2') : 'idle';
+      const pose = heroPose(u, moving);
       const size = T * 0.95;
       const bob = moving ? Math.abs(Math.sin(time * 9)) * T * 0.04 : Math.sin(time * 2.2) * T * 0.012;
       if (overlay.heroSelected) {
@@ -628,7 +670,7 @@ RG.render = (() => {
         ctx.beginPath(); ctx.ellipse(cx, cy, T * 0.42, T * 0.16, 0, 0, Math.PI * 2); ctx.stroke();
         ctx.restore();
       }
-      sprite(RG.art.sprites.heroKey(u.heroId, pose), cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
+      sprite(poseSprite(RG.art.sprites.heroKey(u.heroId, pose), RG.art.sprites.heroKey(u.heroId, 'idle0'), () => RG.art.hero(u.heroId, pose), 160, 160), cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
       if (u.stunUntil > st.time) icon('stun', cx, cy - size * 1.0, T * 0.3);
       bar(cx, cy - size * 0.98, Math.max(22, T * 0.8), u.hp / u.maxHp, '#6fd3ff', 0, false);
       // 레벨
@@ -646,9 +688,11 @@ RG.render = (() => {
     }
     if (u.kind === 'soldier') {
       const size = T * 0.62;
-      const pose = u.attackAnim > 0 ? 'attack' : 'idle';
-      const bob = (Math.abs(u.x - u.px) + Math.abs(u.y - u.py)) > 0.001 ? Math.abs(Math.sin(time * 10 + u.id)) * T * 0.03 : 0;
-      sprite(RG.art.sprites.unitKey(u.look || 'stone_soldier', pose), cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
+      const walking = (Math.abs(u.x - u.px) + Math.abs(u.y - u.py)) > 0.001;
+      const pose = u.attackAnim > 0.1 ? 'attack' : u.engaged && u.cd <= 0.3 ? 'aim' : walking ? (Math.floor(time * 6 + u.id) % 2 ? 'walk1' : 'walk0') : 'idle';
+      const bob = walking ? Math.abs(Math.sin(time * 10 + u.id)) * T * 0.03 : 0;
+      const look = u.look || 'stone_soldier';
+      sprite(poseSprite(RG.art.sprites.unitKey(look, pose), RG.art.sprites.unitKey(look, 'idle'), () => RG.art.unit(look, pose), 128, 128), cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
       if (u.hp < u.maxHp) bar(cx, cy - size * 1.0, Math.max(14, T * 0.5), u.hp / u.maxHp, '#b8e986', 0, false);
       return;
     }
@@ -662,7 +706,8 @@ RG.render = (() => {
       const size = T * 0.6;
       const hover = Math.sin(time * 5) * T * 0.05;
       shadow(x, y, 0.2, 0.07, 0.25);
-      sprite(RG.art.sprites.unitKey('drone', u.cd > u.interval - 0.15 ? 'attack' : 'idle'), cx, cy - T * 0.5 + hover, size, size, 0.5, 0.6, false, 1);
+      const dp = u.cd > u.interval - 0.15 ? 'attack' : u.cd < 0.25 ? 'aim' : 'idle';
+      sprite(poseSprite(RG.art.sprites.unitKey('drone', dp), RG.art.sprites.unitKey('drone', 'idle'), () => RG.art.unit('drone', dp), 128, 128), cx, cy - T * 0.5 + hover, size, size, 0.5, 0.6, false, 1);
     }
   }
 
@@ -822,7 +867,7 @@ RG.render = (() => {
     if (gh) {
       ctx.save();
       ctx.globalAlpha = 0.65;
-      sprite(RG.art.sprites.towerKey(gh.type, 1, null), X(gh.c + 0.5), Y(gh.r + 0.82), T, T * 1.3, 0.5, 112 / 130, false);
+      sprite(RG.art.sprites.towerKey(gh.type, 1, null, 'idle'), X(gh.c + 0.5), Y(gh.r + 0.82), T, T * 1.3, 0.5, 112 / 130, false);
       ctx.restore();
     }
     drawProjectiles(alpha);

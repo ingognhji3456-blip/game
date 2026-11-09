@@ -51,8 +51,8 @@ RG.art.sprites = (() => {
   const TW = 168;
   const TH = Math.round(TW * 1.3);
 
-  function towerKey(type, level, branch) { return `tower:${type}:${level}:${branch || ''}`; }
-  function enemyKey(type, frame) { return `enemy:${type}:${frame}`; }
+  function towerKey(type, level, branch, pose = 'idle') { return `tower:${type}:${level}:${branch || ''}:${pose}`; }
+  function enemyKey(type, frame) { return `enemy:${type}:${typeof frame === 'number' ? (frame ? 'walk2' : 'walk0') : frame}`; }
   function heroKey(id, pose) { return `hero:${id}:${pose}`; }
   function unitKey(kind, pose) { return `unit:${kind}:${pose}`; }
   const LANTERN_STEPS = [1, 0.75, 0.5, 0.25, 0.08];
@@ -67,9 +67,11 @@ RG.art.sprites = (() => {
     const jobs = [];
     const A = RG.art;
     const types = new Set(game.opts.towers || Object.keys(RG.data.towers));
+    // 탑: 모든 단계의 쉬는 자세 + Lv1의 동작 자세는 미리, 나머지 동작은 처음 쓸 때(ensure)
     for (const t of types) {
-      for (const lv of [1, 2, 3]) jobs.push(load(towerKey(t, lv, null), () => A.tower(t, lv, null), TW, TH));
-      for (const b of ['A', 'B']) jobs.push(load(towerKey(t, 4, b), () => A.tower(t, 4, b), TW, TH));
+      for (const lv of [1, 2, 3]) jobs.push(load(towerKey(t, lv, null), () => A.tower(t, lv, null, 'idle'), TW, TH));
+      for (const b of ['A', 'B']) jobs.push(load(towerKey(t, 4, b), () => A.tower(t, 4, b, 'idle'), TW, TH));
+      for (const p of ['aim', 'fire']) jobs.push(load(towerKey(t, 1, null, p), () => A.tower(t, 1, null, p), TW, TH));
     }
     const enemies = new Set();
     for (const w of RG.grid.parseWaves(game.def.waves || [])) for (const g of w.groups) enemies.add(g.e);
@@ -87,14 +89,14 @@ RG.art.sprites = (() => {
     }
     for (const e of enemies) {
       const big = (RG.data.enemies[e] && RG.data.enemies[e].size >= 1.4) ? 288 : 168;
-      for (const f of [0, 1]) jobs.push(load(enemyKey(e, f), () => A.enemy(e, f), big, big));
+      for (const f of (A.ENEMY_FRAMES || ['walk0', 'walk2'])) jobs.push(load(enemyKey(e, f), () => A.enemy(e, f), big, big));
     }
     for (const id of RG.data.heroOrder) {
       if (game.opts.heroId !== id) continue;
-      for (const p of ['idle', 'walk1', 'walk2', 'attack']) jobs.push(load(heroKey(id, p), () => A.hero(id, p), 160, 160));
+      for (const p of (A.HERO_POSES || ['idle0'])) jobs.push(load(heroKey(id, p), () => A.hero(id, p), 160, 160));
     }
     for (const k of ['stone_soldier', 'granite_guard', 'obsidian_blade', 'drone', 'rock_wall']) {
-      for (const p of ['idle', 'attack']) jobs.push(load(unitKey(k, p), () => A.unit(k, p), 128, 128));
+      for (const p of (A.UNIT_POSES || ['idle', 'attack'])) jobs.push(load(unitKey(k, p), () => A.unit(k, p), 128, 128));
     }
     for (const s of LANTERN_STEPS) jobs.push(load(`lantern:${s}`, () => A.lantern(s), TW, TH));
     return Promise.all(jobs);
@@ -105,5 +107,13 @@ RG.art.sprites = (() => {
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   }
 
-  return { sized, load, get, towerKey, enemyKey, heroKey, unitKey, lanternKey, prepareForGame, dataUrl, LANTERN_STEPS };
+  /** 준비된 그림이면 돌려주고, 아니면 준비를 시작하고 null (렌더러는 그동안 대신할 그림을 씀) */
+  function ensure(key, make, w, h) {
+    const s = cache.get(key);
+    if (s !== undefined) return s;
+    if (!loading.has(key)) load(key, make, w, h);
+    return null;
+  }
+
+  return { sized, load, get, ensure, TW, TH, towerKey, enemyKey, heroKey, unitKey, lanternKey, prepareForGame, dataUrl, LANTERN_STEPS };
 })();

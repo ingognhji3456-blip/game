@@ -3821,7 +3821,11 @@ RG.sim = (() => {
     };
 
     /* ---------------- 이벤트 ---------------- */
-    const ev = (type, data) => { st.events.push(Object.assign({}, data, { type })); };   // type은 항상 이벤트 종류
+    const ev = (type, data) => {
+      st.events.push(Object.assign({}, data, { type }));   // type은 항상 이벤트 종류
+      // 보스가 능력을 쓰는 순간은 시전 자세로 (그림용)
+      if (type === 'bossAbility' && data && data.enemyId) { const b = st.enemies.find((q) => q.id === data.enemyId); if (b) b.castAnim = 0.6; }
+    };
 
     /* ---------------- 영웅 ---------------- */
     function heroStat(h) {
@@ -5108,7 +5112,7 @@ RG.sim = (() => {
           return fail('알 수 없는 기술');
       }
       h.skillCd = sk.cooldown * (1 + (meta.heroCooldownPct || 0)) * (h.level >= 5 ? 1 - D().heroLevelBonus.lv5Cooldown : 1);
-      h.attackAnim = 0.4;
+      h.castAnim = 0.5; // 기술 자세 (그림용)
       ev('heroSkill', { heroId: h.heroId, skill: sk.id, x, y });
       return { ok: true };
     }
@@ -5291,6 +5295,7 @@ RG.sim = (() => {
               o3.hp = Math.min(o3.maxHp, o3.hp + o3.maxHp * tr.healer.pct * m);
               if (o3.hp > before) any = true;
             }
+            e.castAnim = 0.45;
             if (any) ev('enemyHeal', { x: e.x, y: e.y, radius: tr.healer.radius });
           }
         }
@@ -5305,6 +5310,7 @@ RG.sim = (() => {
               const amt = o3.maxHp * tr.shielder.pct;
               if (amt > o3.shield) { o3.shield = amt; o3.maxShield = Math.max(o3.maxShield, amt); }
             }
+            e.castAnim = 0.45;
             ev('enemyShield', { x: e.x, y: e.y, radius: tr.shielder.radius });
           }
         }
@@ -5329,9 +5335,14 @@ RG.sim = (() => {
 
       /* --- 적의 공격 --- */
       for (const e of st.enemies) {
+        // 그림용 타이머 (규칙에는 쓰지 않음)
+        if (e.attackAnim) e.attackAnim = Math.max(0, e.attackAnim - DT);
+        if (e.castAnim) e.castAnim = Math.max(0, e.castAnim - DT);
+        e.aiming = false;
         if (e.dead || !canAct(e) || e.burrowed) continue;
         const ed = D().enemies[e.type];
         if (e.blockedBy && ed.melee) {
+          if (e.meleeCd <= 0.4) e.aiming = true; // 휘두르기 직전 (그림용)
           e.meleeCd -= DT;
           if (e.meleeCd <= 0) {
             e.meleeCd = ed.melee.interval;
@@ -5341,6 +5352,11 @@ RG.sim = (() => {
         }
         if (ed.traits.ranged && time >= e.st.blindUntil) {
           e.rangedCd -= DT;
+          // 던지기 직전 자세 (그림용): 곧 쏠 때 사거리 안에 상대가 있으면
+          if (e.rangedCd <= 0.45 && e.rangedCd > 0) {
+            const R2 = ed.traits.ranged.range ** 2;
+            for (const u of st.units) if (!u.dead && u.kind !== 'drone' && u.kind !== 'wall' && d2(u.x, u.y, e.x, e.y) <= R2) { e.aiming = true; break; }
+          }
           if (e.rangedCd <= 0) {
             const R = ed.traits.ranged.range;
             let best = null;
@@ -5352,6 +5368,7 @@ RG.sim = (() => {
             }
             if (best) {
               e.rangedCd = ed.traits.ranged.interval;
+              e.attackAnim = 0.3; e.dir = best.x > e.x ? 1 : -1;
               hurtUnit(best, ed.traits.ranged.damage, e);
               ev('enemyShot', { enemyId: e.id, x: e.x, y: e.y, tx: best.x, ty: best.y });
             } else e.rangedCd = 0.2;
@@ -5625,7 +5642,8 @@ RG.sim = (() => {
         const target = u.blocking.length ? enemyById(u.blocking[0]) : null;
         if (target && !target.dead) {
           const reach = 0.42 + target.size * 0.2;
-          if (dist(u.x, u.y, target.x, target.y) > reach) moveUnitToward(u, target.x, target.y, 2.0);
+          u.engaged = dist(u.x, u.y, target.x, target.y) <= reach; // 그림용
+          if (!u.engaged) moveUnitToward(u, target.x, target.y, 2.0);
           else {
             u.dir = target.x > u.x ? 1 : -1;
             u.cd -= DT;
@@ -5637,6 +5655,7 @@ RG.sim = (() => {
             }
           }
         } else {
+          u.engaged = false;
           moveUnitToward(u, u.homeX, u.homeY, 1.8);
           u.cd = Math.max(u.cd - DT, 0);
         }
@@ -5647,6 +5666,7 @@ RG.sim = (() => {
     function updateHero(h, time) {
       const hd = D().heroes[h.heroId];
       h.attackAnim = Math.max(0, h.attackAnim - DT);
+      if (h.castAnim) h.castAnim = Math.max(0, h.castAnim - DT);
       h.skillCd = Math.max(0, h.skillCd - DT);
       if (h.dead) {
         if (time >= h.downUntil) {
@@ -6416,11 +6436,41 @@ RG.art._h = (() => {
     return out;
   }
 
-  /* =========================================================
-   * 탑별 그림: (c, v) → 몸체 문자열.  v = 1|2|3|'A'|'B'
-   * 각 항목: draw, muzzle(틀 좌표 [x,y] × 5)
-   * ========================================================= */
-  const T = {};
+
+  /* 여러 그룹이 함께 쓰는 부품 */
+  function house(c, x1, x2, yw, ya, yb, wall, roof, d = 12) {
+    const h = c.h;
+    const cx = (x1 + x2) / 2;
+    let o = '';
+    // 지붕 뒤쪽 면(위로 보이는 경사면)
+    o += c.p(poly([[x1 - 4, yw + 2], [cx, ya - 2], [cx, ya - 2 - d], [x1 - 4, yw + 2 - d]]), c.vg(h.shade(roof, 0.1), 0.2, -0.1), 3);
+    o += c.p(poly([[x2 + 4, yw + 2], [cx, ya - 2], [cx, ya - 2 - d], [x2 + 4, yw + 2 - d]]), c.vg(h.shade(roof, -0.15), 0.1, -0.2), 3);
+    o += c.ln(`M${f(x1 + 4)} ${f(yw - 2 - d * 0.5 + 2)}L${f(cx)} ${f(ya - 2 - d * 0.5)}L${f(x2 - 4)} ${f(yw - 2 - d * 0.5 + 2)}`, h.shade(roof, -0.4), 1.5, 0.8);
+    // 앞벽(박공)
+    o += c.p(`M${x1} ${yb}V${yw}L${cx} ${ya}L${x2} ${yw}V${yb}Q${cx} ${yb + 5} ${x1} ${yb}Z`, wall, 3);
+    // 처마 끝
+    o += c.ol(`M${f(x1 - 5)} ${f(yw + 3)}L${f(cx)} ${f(ya - 3)}L${f(x2 + 5)} ${f(yw + 3)}`, roof, 4.5);
+    return o;
+  }
+  function shard(c, x, yt, yb, w, col, w0 = 2.6) {
+    const m = yb - w * 0.35;
+    return c.p(poly([[x, yt], [x + w / 2, m], [x, yb], [x - w / 2, m]]), c.vg(col, 0.5, -0.15), w0) +
+      c.p(poly([[x, yt], [x + w / 2, m], [x, yb]]), c.h.shade(col, -0.2), 0, ' opacity="0.7"') +
+      c.ln(`M${f(x - w * 0.18)} ${f(m - 2)}L${f(x - 1)} ${f(yt + 6)}`, '#fff', 1.4, 0.8);
+  }
+
+  /* 그룹 파일(towers-*.js)이 쓰는 공용 도구와 탑 목록 */
+  RG.art._tw = { OL, SC, VKEYS, f, M, STONE, ELEM, Ctx, poly, cyl, frus, ring, band, vseam, flame, crystal, orb, aura, spark, bolt, flag, cone, person, bow, plat, house, shard, T: {} };
+})();
+
+</script>
+  <script>/* js/art/towers-a.js */
+'use strict';
+
+/* 탑 그림 — 🔥 불 · ❄ 얼음 · ⚡ 폭풍 (공용 도구: towers.js) */
+(() => {
+  const { OL, SC, VKEYS, f, M, STONE, ELEM, Ctx, poly, cyl, frus, ring, band, vseam, flame, crystal, orb, aura, spark, bolt, flag, cone, person, bow, plat, house, shard } = RG.art._tw;
+  const T = RG.art._tw.T;
 
   /* ---------- 🔥 불씨 궁수탑 ---------- */
   T.ember_archer = {
@@ -6641,20 +6691,6 @@ RG.art._h = (() => {
 
   /* ---------- 🔥 대장간 ---------- */
   /* 박공 집: 앞벽 x1~x2, 처마 높이 yw, 꼭대기 ya, 바닥 yb, 지붕 깊이 d */
-  function house(c, x1, x2, yw, ya, yb, wall, roof, d = 12) {
-    const h = c.h;
-    const cx = (x1 + x2) / 2;
-    let o = '';
-    // 지붕 뒤쪽 면(위로 보이는 경사면)
-    o += c.p(poly([[x1 - 4, yw + 2], [cx, ya - 2], [cx, ya - 2 - d], [x1 - 4, yw + 2 - d]]), c.vg(h.shade(roof, 0.1), 0.2, -0.1), 3);
-    o += c.p(poly([[x2 + 4, yw + 2], [cx, ya - 2], [cx, ya - 2 - d], [x2 + 4, yw + 2 - d]]), c.vg(h.shade(roof, -0.15), 0.1, -0.2), 3);
-    o += c.ln(`M${f(x1 + 4)} ${f(yw - 2 - d * 0.5 + 2)}L${f(cx)} ${f(ya - 2 - d * 0.5)}L${f(x2 - 4)} ${f(yw - 2 - d * 0.5 + 2)}`, h.shade(roof, -0.4), 1.5, 0.8);
-    // 앞벽(박공)
-    o += c.p(`M${x1} ${yb}V${yw}L${cx} ${ya}L${x2} ${yw}V${yb}Q${cx} ${yb + 5} ${x1} ${yb}Z`, wall, 3);
-    // 처마 끝
-    o += c.ol(`M${f(x1 - 5)} ${f(yw + 3)}L${f(cx)} ${f(ya - 3)}L${f(x2 + 5)} ${f(yw + 3)}`, roof, 4.5);
-    return o;
-  }
   function anvil(c, x, y, k = 1) {
     return c.p(`M${f(x - 9 * k)} ${f(y - 9 * k)}H${f(x + 10 * k)}Q${f(x + 6 * k)} ${f(y - 5 * k)} ${f(x + 3 * k)} ${f(y - 5 * k)}L${f(x + 5 * k)} ${f(y)}H${f(x - 5 * k)}L${f(x - 3 * k)} ${f(y - 5 * k)}Q${f(x - 7 * k)} ${f(y - 5 * k)} ${f(x - 9 * k)} ${f(y - 9 * k)}Z`, c.vg(M.iron, 0.4, -0.2), 2.4);
   }
@@ -6739,12 +6775,6 @@ RG.art._h = (() => {
 
   /* ---------- ❄ 서리 결정탑 ---------- */
   /* 얼음 송곳/가시 — 위 끝 (x,yt), 아래 yb, 너비 w */
-  function shard(c, x, yt, yb, w, col, w0 = 2.6) {
-    const m = yb - w * 0.35;
-    return c.p(poly([[x, yt], [x + w / 2, m], [x, yb], [x - w / 2, m]]), c.vg(col, 0.5, -0.15), w0) +
-      c.p(poly([[x, yt], [x + w / 2, m], [x, yb]]), c.h.shade(col, -0.2), 0, ' opacity="0.7"') +
-      c.ln(`M${f(x - w * 0.18)} ${f(m - 2)}L${f(x - 1)} ${f(yt + 6)}`, '#fff', 1.4, 0.8);
-  }
   /* 발톱 받침 */
   const claws = (c, y, sp, ht, col) => c.ol(`M${50 - sp} ${y}Q${50 - sp - 6} ${y - ht * 0.5} ${50 - sp + 2} ${y - ht}M${50 + sp} ${y}Q${50 + sp + 6} ${y - ht * 0.5} ${50 + sp - 2} ${y - ht}`, col, 3.4);
   T.frost_crystal = {
@@ -7185,6 +7215,17 @@ RG.art._h = (() => {
       return o;
     },
   };
+
+})();
+
+</script>
+  <script>/* js/art/towers-b.js */
+'use strict';
+
+/* 탑 그림 — 🪨 대지 · ✨ 빛 · 🌑 어둠 (공용 도구: towers.js) */
+(() => {
+  const { OL, SC, VKEYS, f, M, STONE, ELEM, Ctx, poly, cyl, frus, ring, band, vseam, flame, crystal, orb, aura, spark, bolt, flag, cone, person, bow, plat, house, shard } = RG.art._tw;
+  const T = RG.art._tw.T;
 
   /* ---------- 🪨 바위 병영 ---------- */
   const MOSS = '#6fae3e';
@@ -7863,6 +7904,17 @@ RG.art._h = (() => {
     },
   };
 
+})();
+
+</script>
+  <script>/* js/art/towers-api.js */
+'use strict';
+
+/* 탑 그림 공개 함수 + 울림등 (공용 도구: towers.js, 탑 정의: towers-*.js) */
+(() => {
+  const { OL, SC, VKEYS, f, M, STONE, ELEM, Ctx, poly, cyl, frus, ring, band, vseam, flame, crystal, orb, aura, spark, bolt, flag, cone, person, bow, plat, house, shard } = RG.art._tw;
+  const T = RG.art._tw.T;
+
   /* ---------- 기본(알 수 없는 탑) ---------- */
   T._placeholder = {
     muzzle: [[50, 40], [50, 36], [50, 30], [50, 26], [50, 26]],
@@ -7885,15 +7937,20 @@ RG.art._h = (() => {
 
   const wrap = (s, body) => `<g stroke="${OL}" stroke-width="${f(3 / s)}" stroke-linejoin="round" stroke-linecap="round"${s === 1 ? '' : ` transform="matrix(${s} 0 0 ${s} ${f(50 - 50 * s)} ${f(112 - 112 * s)})"`}>${body}</g>`;
 
-  RG.art.tower = function tower(type, level, branch) {
+  /** 탑 자세: idle(쉬는 중) · aim(쏘기 직전: 시위를 당김·힘을 모음) · fire(쏘는 순간: 놓음·반동·섬광) */
+  RG.art.TOWER_POSES = ['idle', 'aim', 'fire'];
+
+  RG.art.tower = function tower(type, level, branch, pose = 'idle') {
     const def = T[type] && type[0] !== '_' ? T[type] : T._placeholder;
     const v = vkey(Number(level) || 1, branch);
     const s = SC[v];
+    const p = RG.art.TOWER_POSES.includes(pose) ? pose : 'idle';
     let c = Ctx(s, ELEM[type] || null);
     let body;
     try {
-      body = def.draw(c, v);
+      body = def.draw(c, v, p);
     } catch (e) {
+      if (RG.art._strict) throw e;
       c = Ctx(s, null);
       body = T._placeholder.draw(c, v);
     }
@@ -7968,6 +8025,7 @@ RG.art._h = (() => {
   };
 })();
 
+
 </script>
   <script>/* js/art/enemies.js */
 'use strict';
@@ -7979,7 +8037,7 @@ RG.art._h = (() => {
  *   frame 0·1: 걷기/날갯짓 2프레임. 그림자는 그리지 않음(렌더러 몫).
  * 외형: docs/design/enemies.md — 잿빛 몸 + 하얗게 빛나는 눈 + 지역 원소 색 포인트
  * ========================================================= */
-RG.art.enemy = (() => {
+(() => {
   const H = RG.art._h;
   const OL = H.OL;
   const sh = H.shade;
@@ -8099,10 +8157,22 @@ RG.art.enemy = (() => {
   /** 지그재그 번개 경로 */
   const zig = (pts) => `M${pts.map((p) => p.join(' ')).join('L')}`;
 
+  /* 지역 파일(enemies-*.js)이 쓰는 공용 도구와 적 목록 */
+  RG.art._en = { H, OL, sh, GREY, GREY_L, MISTC, HALO, GREEN, ICE, ICE_L, EMBER, EMBER_L, VOLT, SEA, BELL, GOLD, BRONZE, make, g, zig, D: {} };
+})();
+
+</script>
+  <script>/* js/art/enemies-r12.js */
+'use strict';
+
+/* 적 그림 — 1지역 솔빛 들판 · 2지역 서리 고개 (공용 도구: enemies.js) */
+(() => {
+  const { H, OL, sh, GREY, GREY_L, MISTC, HALO, GREEN, ICE, ICE_L, EMBER, EMBER_L, VOLT, SEA, BELL, GOLD, BRONZE, make, g, zig } = RG.art._en;
+  const D = RG.art._en.D;
+
   /* =========================================================
    * 1지역 · 솔빛 들판
    * ========================================================= */
-  const D = {};
 
   D.mist_rat = (f) => {
     const c = make(3.5);
@@ -8639,6 +8709,17 @@ RG.art.enemy = (() => {
     );
   };
 
+})();
+
+</script>
+  <script>/* js/art/enemies-r34.js */
+'use strict';
+
+/* 적 그림 — 3지역 잿빛 사막 · 4지역 폭풍 해안 (공용 도구: enemies.js) */
+(() => {
+  const { H, OL, sh, GREY, GREY_L, MISTC, HALO, GREEN, ICE, ICE_L, EMBER, EMBER_L, VOLT, SEA, BELL, GOLD, BRONZE, make, g, zig } = RG.art._en;
+  const D = RG.art._en.D;
+
   /* =========================================================
    * 3지역 · 붉은 협곡
    * ========================================================= */
@@ -9126,6 +9207,17 @@ RG.art.enemy = (() => {
     );
   };
 
+})();
+
+</script>
+  <script>/* js/art/enemies-r5.js */
+'use strict';
+
+/* 적 그림 — 5지역 깨진 대종 (공용 도구: enemies.js) */
+(() => {
+  const { H, OL, sh, GREY, GREY_L, MISTC, HALO, GREEN, ICE, ICE_L, EMBER, EMBER_L, VOLT, SEA, BELL, GOLD, BRONZE, make, g, zig } = RG.art._en;
+  const D = RG.art._en.D;
+
   /* =========================================================
    * 5지역 · 깨진 대종
    * ========================================================= */
@@ -9440,6 +9532,17 @@ RG.art.enemy = (() => {
       c.limb(`M82 46Q92 56 ${88 + sw} 68`, 11, mantle) + claw(88 + sw, 70, 80, c.body(mantle, 0.3))
     );
   };
+})();
+
+</script>
+  <script>/* js/art/enemies-api.js */
+'use strict';
+
+/* 적 그림 공개 함수 RG.art.enemy (공용 도구: enemies.js, 적 정의: enemies-*.js) */
+RG.art.enemy = (() => {
+  const { H, OL, sh, GREY, GREY_L, MISTC, HALO, GREEN, ICE, ICE_L, EMBER, EMBER_L, VOLT, SEA, BELL, GOLD, BRONZE, make, g, zig } = RG.art._en;
+  const D = RG.art._en.D;
+
 
   /* ---------- 자리표시 (알 수 없는 종류) ---------- */
   function placeholder(f) {
@@ -9451,17 +9554,27 @@ RG.art.enemy = (() => {
     ));
   }
 
+  /**
+   * 적 프레임: walk0~walk3(걷기·날갯짓 한 바퀴) · aim(공격 직전: 무기를 들어 올림) · attack(공격하는 순간)
+   * 옛 숫자 프레임 0·1은 walk0·walk2로 읽음.
+   * 새 방식 그림 함수는 fn.frames = true 로 표시하고 프레임 이름(문자열)을 받음.
+   */
+  const FRAMES = ['walk0', 'walk1', 'walk2', 'walk3', 'aim', 'attack'];
+  RG.art.ENEMY_FRAMES = FRAMES;
+  const legacyBit = (fr) => (fr === 'walk1' || fr === 'walk2' ? 1 : 0);
   return function enemy(type, frame) {
-    const f = frame ? 1 : 0;
+    const fr = typeof frame === 'number' || frame == null ? (frame ? 'walk2' : 'walk0') : (FRAMES.includes(frame) ? frame : 'walk0');
     const fn = D[type];
-    if (!fn) return placeholder(f);
+    if (!fn) return placeholder(legacyBit(fr));
     try {
-      return fn(f);
+      return fn.frames ? fn(fr) : fn(legacyBit(fr));
     } catch (e) {
-      return placeholder(f);
+      if (RG.art._strict) throw e;
+      return placeholder(legacyBit(fr));
     }
   };
 })();
+
 
 </script>
   <script>/* js/art/heroes.js */
@@ -9845,13 +9958,22 @@ RG.art.enemy = (() => {
 
   const HEROES = { kara, sera, sio, zena, bawi, yaro };
 
-  RG.art.hero = function hero(id, pose = 'idle') {
+  /**
+   * 영웅 자세: idle0·idle1(숨쉬기 2장) · walk0~walk3(걷기 한 바퀴) · aim(공격 직전) · attack(공격 순간) · cast(기술)
+   * 옛 이름 idle·walk1·walk2는 idle0·walk0·walk2로 읽음.
+   */
+  RG.art.HERO_POSES = ['idle0', 'idle1', 'walk0', 'walk1', 'walk2', 'walk3', 'aim', 'attack', 'cast'];
+  const HERO_OLD = { idle: 'idle0', walk1: 'walk0', walk2: 'walk2' };
+  RG.art.hero = function hero(id, pose = 'idle0') {
     const c = pad();
-    const p = LEGS[pose] ? pose : 'idle';
+    const np = HERO_OLD[pose] || (RG.art.HERO_POSES.includes(pose) ? pose : 'idle0');
+    // 지금 그림은 옛 자세 4개만 앎 → 새 이름을 가장 가까운 옛 자세로 (다시 그리면 이 줄은 사라짐)
+    const p = LEGS[np] ? np : ({ idle0: 'idle', idle1: 'idle', walk0: 'walk1', walk1: 'walk1', walk2: 'walk2', walk3: 'walk2', aim: 'idle', attack: 'attack', cast: 'attack' })[np] || 'idle';
     let body;
     try {
       body = (HEROES[id] || heroPlaceholder)(c, p);
     } catch (e) {
+      if (RG.art._strict) throw e;
       body = heroPlaceholder(c, 'idle');
     }
     return wrap('0 0 100 100', c, body);
@@ -10373,13 +10495,16 @@ RG.art.enemy = (() => {
 
   const UNITS = { stone_soldier: stoneSoldier, granite_guard: graniteGuard, obsidian_blade: obsidianBlade, obsidian_blades: obsidianBlade, drone, rock_wall: rockWall };
 
+  /** 유닛 자세: idle · walk0·walk1 · aim(휘두르기 직전) · attack */
+  RG.art.UNIT_POSES = ['idle', 'walk0', 'walk1', 'aim', 'attack'];
   RG.art.unit = function unit(kind, pose = 'idle') {
     const c = pad();
-    const p = pose === 'attack' ? 'attack' : 'idle';
+    const p = pose === 'attack' ? 'attack' : 'idle'; // 다시 그리면 다섯 자세 모두 받음
     let body;
     try {
       body = (UNITS[kind] || unitPlaceholder)(c, p);
     } catch (e) {
+      if (RG.art._strict) throw e;
       body = unitPlaceholder(c);
     }
     return wrap('0 0 100 100', c, body);
@@ -12120,8 +12245,8 @@ RG.art.sprites = (() => {
   const TW = 168;
   const TH = Math.round(TW * 1.3);
 
-  function towerKey(type, level, branch) { return `tower:${type}:${level}:${branch || ''}`; }
-  function enemyKey(type, frame) { return `enemy:${type}:${frame}`; }
+  function towerKey(type, level, branch, pose = 'idle') { return `tower:${type}:${level}:${branch || ''}:${pose}`; }
+  function enemyKey(type, frame) { return `enemy:${type}:${typeof frame === 'number' ? (frame ? 'walk2' : 'walk0') : frame}`; }
   function heroKey(id, pose) { return `hero:${id}:${pose}`; }
   function unitKey(kind, pose) { return `unit:${kind}:${pose}`; }
   const LANTERN_STEPS = [1, 0.75, 0.5, 0.25, 0.08];
@@ -12136,9 +12261,11 @@ RG.art.sprites = (() => {
     const jobs = [];
     const A = RG.art;
     const types = new Set(game.opts.towers || Object.keys(RG.data.towers));
+    // 탑: 모든 단계의 쉬는 자세 + Lv1의 동작 자세는 미리, 나머지 동작은 처음 쓸 때(ensure)
     for (const t of types) {
-      for (const lv of [1, 2, 3]) jobs.push(load(towerKey(t, lv, null), () => A.tower(t, lv, null), TW, TH));
-      for (const b of ['A', 'B']) jobs.push(load(towerKey(t, 4, b), () => A.tower(t, 4, b), TW, TH));
+      for (const lv of [1, 2, 3]) jobs.push(load(towerKey(t, lv, null), () => A.tower(t, lv, null, 'idle'), TW, TH));
+      for (const b of ['A', 'B']) jobs.push(load(towerKey(t, 4, b), () => A.tower(t, 4, b, 'idle'), TW, TH));
+      for (const p of ['aim', 'fire']) jobs.push(load(towerKey(t, 1, null, p), () => A.tower(t, 1, null, p), TW, TH));
     }
     const enemies = new Set();
     for (const w of RG.grid.parseWaves(game.def.waves || [])) for (const g of w.groups) enemies.add(g.e);
@@ -12156,14 +12283,14 @@ RG.art.sprites = (() => {
     }
     for (const e of enemies) {
       const big = (RG.data.enemies[e] && RG.data.enemies[e].size >= 1.4) ? 288 : 168;
-      for (const f of [0, 1]) jobs.push(load(enemyKey(e, f), () => A.enemy(e, f), big, big));
+      for (const f of (A.ENEMY_FRAMES || ['walk0', 'walk2'])) jobs.push(load(enemyKey(e, f), () => A.enemy(e, f), big, big));
     }
     for (const id of RG.data.heroOrder) {
       if (game.opts.heroId !== id) continue;
-      for (const p of ['idle', 'walk1', 'walk2', 'attack']) jobs.push(load(heroKey(id, p), () => A.hero(id, p), 160, 160));
+      for (const p of (A.HERO_POSES || ['idle0'])) jobs.push(load(heroKey(id, p), () => A.hero(id, p), 160, 160));
     }
     for (const k of ['stone_soldier', 'granite_guard', 'obsidian_blade', 'drone', 'rock_wall']) {
-      for (const p of ['idle', 'attack']) jobs.push(load(unitKey(k, p), () => A.unit(k, p), 128, 128));
+      for (const p of (A.UNIT_POSES || ['idle', 'attack'])) jobs.push(load(unitKey(k, p), () => A.unit(k, p), 128, 128));
     }
     for (const s of LANTERN_STEPS) jobs.push(load(`lantern:${s}`, () => A.lantern(s), TW, TH));
     return Promise.all(jobs);
@@ -12174,7 +12301,15 @@ RG.art.sprites = (() => {
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   }
 
-  return { sized, load, get, towerKey, enemyKey, heroKey, unitKey, lanternKey, prepareForGame, dataUrl, LANTERN_STEPS };
+  /** 준비된 그림이면 돌려주고, 아니면 준비를 시작하고 null (렌더러는 그동안 대신할 그림을 씀) */
+  function ensure(key, make, w, h) {
+    const s = cache.get(key);
+    if (s !== undefined) return s;
+    if (!loading.has(key)) load(key, make, w, h);
+    return null;
+  }
+
+  return { sized, load, get, ensure, TW, TH, towerKey, enemyKey, heroKey, unitKey, lanternKey, prepareForGame, dataUrl, LANTERN_STEPS };
 })();
 
 </script>
@@ -14048,6 +14183,45 @@ RG.render = (() => {
     }
   }
 
+  /* ---------------- 동작 자세 고르기 (docs/design/animation.md) ---------------- */
+  /** 자세 그림이 준비됐으면 그 키, 아니면 준비를 시작하고 대신할 키 */
+  function poseSprite(key, fallback, make, w, h) {
+    return RG.art.sprites.ensure(key, make, w, h) ? key : fallback;
+  }
+  /** 탑: 쏜 직후 0.14초 fire, 다음 발사 직전 aim(시위 당김·힘 모음), 그 밖 idle. 지원·광산·병영은 일하는 모습 반복 */
+  function towerPose(t) {
+    if (t.building || t.disabled) return 'idle';
+    const td = RG.data.towers[t.type];
+    if (td.role !== 'attack') {
+      const ph = (time * 0.75 + t.id * 0.37) % 3;
+      return ph < 1.7 ? 'idle' : ph < 2.55 ? 'aim' : 'fire';
+    }
+    if (td.kind === 'beam') return t.beamState && t.beamState.length ? 'fire' : 'idle';
+    if (t.anim > 0.11) return 'fire';
+    const iv = (t.calc && t.calc.interval) || 1;
+    if (t.cd > 0 && t.cd <= Math.max(0.22, iv * 0.4)) return 'aim';
+    return 'idle';
+  }
+  /** 적: 걷기 4장 한 바퀴, 붙잡혀 싸울 때·던질 때는 aim → attack */
+  function enemyFrame(e, moving) {
+    if (e.attackAnim > 0.08 || e.castAnim > 0.1) return 'attack';
+    if (e.aiming) return 'aim';
+    if (e.flying) return `walk${Math.floor(time * 8 + e.id * 0.7) % 4}`; // 날갯짓은 늘 함
+    if (!moving) return 'walk0';
+    // walkT는 걸어온 거리(칸). 보폭은 몸 크기에 비례 → 작은 적은 종종걸음
+    const stride = 0.45 + e.size * 0.55;
+    return `walk${Math.floor((e.walkT / stride) * 4) % 4}`;
+  }
+  /** 영웅: 기술 cast, 공격 attack, 곧 공격 aim, 걷기 4장, 서 있을 땐 숨쉬기 2장 */
+  function heroPose(h, moving) {
+    if (h.castAnim > 0) return 'cast';
+    if (h.attackAnim > 0.12) return 'attack';
+    if (moving) return `walk${Math.floor(time * 8) % 4}`;
+    const iv = (RG.data.heroes[h.heroId] || {}).interval || 1;
+    if (h.cd > 0 && h.cd <= Math.max(0.2, iv * 0.35)) return 'aim';
+    return Math.floor(time * 1.25 + h.id * 0.3) % 2 ? 'idle1' : 'idle0';
+  }
+
   /* ---------------- 탑 ---------------- */
   function drawTower(t) {
     const cx = X(t.x);
@@ -14055,8 +14229,10 @@ RG.render = (() => {
     const w = T;
     const h = T * 1.3;
     let sy = 1;
-    if (t.anim > 0) sy = 1 - 0.07 * (t.anim / 0.25);
-    const key = RG.art.sprites.towerKey(t.type, t.level, t.branch);
+    if (t.anim > 0) sy = 1 - 0.025 * (t.anim / 0.25); // 쏠 때 아주 살짝 눌림 (동작은 그림 자세가 맡음)
+    const pose = towerPose(t);
+    const key = poseSprite(RG.art.sprites.towerKey(t.type, t.level, t.branch, pose), RG.art.sprites.towerKey(t.type, t.level, t.branch, 'idle'),
+      () => RG.art.tower(t.type, t.level, t.branch, pose), RG.art.sprites.TW, RG.art.sprites.TH);
     ctx.save();
     if (t.building) ctx.globalAlpha = 0.55;
     if (sy !== 1) { ctx.translate(cx, baseY); ctx.scale(1 + (1 - sy) * 0.5, sy); ctx.translate(-cx, -baseY); }
@@ -14148,7 +14324,7 @@ RG.render = (() => {
     const frozen = st.time < e.ccUntil && e.ccKind === 'freeze';
     const lifted = st.time < e.ccUntil && e.ccKind === 'lift';
     const moving = !e.blockedBy && !(st.time < e.ccUntil) ;
-    const frame = moving ? Math.floor(e.walkT * 2.4) % 2 : 0;
+    const frame = enemyFrame(e, moving);
     let lift = 0;
     if (e.flying) lift = T * 0.42 + Math.sin(time * 4 + e.id) * T * 0.04;
     else if (moving) lift = Math.abs(Math.sin(e.walkT * Math.PI * 1.2)) * T * 0.05;
@@ -14157,7 +14333,8 @@ RG.render = (() => {
     const alphaS = (e.stealth && !e.revealed) ? 0.35 + 0.1 * Math.sin(time * 6) : 1;
     const hurt = st.time - e.lastHurt < 0.08;
     const flip = e.dir < 0;
-    const key = RG.art.sprites.enemyKey(e.type, frame);
+    const big = ed.size >= 1.4 ? 288 : 168;
+    const key = poseSprite(RG.art.sprites.enemyKey(e.type, frame), RG.art.sprites.enemyKey(e.type, 'walk0'), () => RG.art.enemy(e.type, frame), big, big);
     const ok = sprite(key, cx, cy, size, size, 0.5, 0.9, flip, alphaS);
     if (!ok) {
       ctx.fillStyle = '#9a94a8';
@@ -14243,7 +14420,7 @@ RG.render = (() => {
     const flip = u.dir < 0;
     if (u.kind === 'hero') {
       const moving = u.walking;
-      const pose = u.attackAnim > 0 ? 'attack' : moving ? (Math.floor(time * 6) % 2 ? 'walk1' : 'walk2') : 'idle';
+      const pose = heroPose(u, moving);
       const size = T * 0.95;
       const bob = moving ? Math.abs(Math.sin(time * 9)) * T * 0.04 : Math.sin(time * 2.2) * T * 0.012;
       if (overlay.heroSelected) {
@@ -14253,7 +14430,7 @@ RG.render = (() => {
         ctx.beginPath(); ctx.ellipse(cx, cy, T * 0.42, T * 0.16, 0, 0, Math.PI * 2); ctx.stroke();
         ctx.restore();
       }
-      sprite(RG.art.sprites.heroKey(u.heroId, pose), cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
+      sprite(poseSprite(RG.art.sprites.heroKey(u.heroId, pose), RG.art.sprites.heroKey(u.heroId, 'idle0'), () => RG.art.hero(u.heroId, pose), 160, 160), cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
       if (u.stunUntil > st.time) icon('stun', cx, cy - size * 1.0, T * 0.3);
       bar(cx, cy - size * 0.98, Math.max(22, T * 0.8), u.hp / u.maxHp, '#6fd3ff', 0, false);
       // 레벨
@@ -14271,9 +14448,11 @@ RG.render = (() => {
     }
     if (u.kind === 'soldier') {
       const size = T * 0.62;
-      const pose = u.attackAnim > 0 ? 'attack' : 'idle';
-      const bob = (Math.abs(u.x - u.px) + Math.abs(u.y - u.py)) > 0.001 ? Math.abs(Math.sin(time * 10 + u.id)) * T * 0.03 : 0;
-      sprite(RG.art.sprites.unitKey(u.look || 'stone_soldier', pose), cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
+      const walking = (Math.abs(u.x - u.px) + Math.abs(u.y - u.py)) > 0.001;
+      const pose = u.attackAnim > 0.1 ? 'attack' : u.engaged && u.cd <= 0.3 ? 'aim' : walking ? (Math.floor(time * 6 + u.id) % 2 ? 'walk1' : 'walk0') : 'idle';
+      const bob = walking ? Math.abs(Math.sin(time * 10 + u.id)) * T * 0.03 : 0;
+      const look = u.look || 'stone_soldier';
+      sprite(poseSprite(RG.art.sprites.unitKey(look, pose), RG.art.sprites.unitKey(look, 'idle'), () => RG.art.unit(look, pose), 128, 128), cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
       if (u.hp < u.maxHp) bar(cx, cy - size * 1.0, Math.max(14, T * 0.5), u.hp / u.maxHp, '#b8e986', 0, false);
       return;
     }
@@ -14287,7 +14466,8 @@ RG.render = (() => {
       const size = T * 0.6;
       const hover = Math.sin(time * 5) * T * 0.05;
       shadow(x, y, 0.2, 0.07, 0.25);
-      sprite(RG.art.sprites.unitKey('drone', u.cd > u.interval - 0.15 ? 'attack' : 'idle'), cx, cy - T * 0.5 + hover, size, size, 0.5, 0.6, false, 1);
+      const dp = u.cd > u.interval - 0.15 ? 'attack' : u.cd < 0.25 ? 'aim' : 'idle';
+      sprite(poseSprite(RG.art.sprites.unitKey('drone', dp), RG.art.sprites.unitKey('drone', 'idle'), () => RG.art.unit('drone', dp), 128, 128), cx, cy - T * 0.5 + hover, size, size, 0.5, 0.6, false, 1);
     }
   }
 
@@ -14447,7 +14627,7 @@ RG.render = (() => {
     if (gh) {
       ctx.save();
       ctx.globalAlpha = 0.65;
-      sprite(RG.art.sprites.towerKey(gh.type, 1, null), X(gh.c + 0.5), Y(gh.r + 0.82), T, T * 1.3, 0.5, 112 / 130, false);
+      sprite(RG.art.sprites.towerKey(gh.type, 1, null, 'idle'), X(gh.c + 0.5), Y(gh.r + 0.82), T, T * 1.3, 0.5, 112 / 130, false);
       ctx.restore();
     }
     drawProjectiles(alpha);

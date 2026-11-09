@@ -90,7 +90,11 @@ RG.sim = (() => {
     };
 
     /* ---------------- 이벤트 ---------------- */
-    const ev = (type, data) => { st.events.push(Object.assign({}, data, { type })); };   // type은 항상 이벤트 종류
+    const ev = (type, data) => {
+      st.events.push(Object.assign({}, data, { type }));   // type은 항상 이벤트 종류
+      // 보스가 능력을 쓰는 순간은 시전 자세로 (그림용)
+      if (type === 'bossAbility' && data && data.enemyId) { const b = st.enemies.find((q) => q.id === data.enemyId); if (b) b.castAnim = 0.6; }
+    };
 
     /* ---------------- 영웅 ---------------- */
     function heroStat(h) {
@@ -1377,7 +1381,7 @@ RG.sim = (() => {
           return fail('알 수 없는 기술');
       }
       h.skillCd = sk.cooldown * (1 + (meta.heroCooldownPct || 0)) * (h.level >= 5 ? 1 - D().heroLevelBonus.lv5Cooldown : 1);
-      h.attackAnim = 0.4;
+      h.castAnim = 0.5; // 기술 자세 (그림용)
       ev('heroSkill', { heroId: h.heroId, skill: sk.id, x, y });
       return { ok: true };
     }
@@ -1560,6 +1564,7 @@ RG.sim = (() => {
               o3.hp = Math.min(o3.maxHp, o3.hp + o3.maxHp * tr.healer.pct * m);
               if (o3.hp > before) any = true;
             }
+            e.castAnim = 0.45;
             if (any) ev('enemyHeal', { x: e.x, y: e.y, radius: tr.healer.radius });
           }
         }
@@ -1574,6 +1579,7 @@ RG.sim = (() => {
               const amt = o3.maxHp * tr.shielder.pct;
               if (amt > o3.shield) { o3.shield = amt; o3.maxShield = Math.max(o3.maxShield, amt); }
             }
+            e.castAnim = 0.45;
             ev('enemyShield', { x: e.x, y: e.y, radius: tr.shielder.radius });
           }
         }
@@ -1598,9 +1604,14 @@ RG.sim = (() => {
 
       /* --- 적의 공격 --- */
       for (const e of st.enemies) {
+        // 그림용 타이머 (규칙에는 쓰지 않음)
+        if (e.attackAnim) e.attackAnim = Math.max(0, e.attackAnim - DT);
+        if (e.castAnim) e.castAnim = Math.max(0, e.castAnim - DT);
+        e.aiming = false;
         if (e.dead || !canAct(e) || e.burrowed) continue;
         const ed = D().enemies[e.type];
         if (e.blockedBy && ed.melee) {
+          if (e.meleeCd <= 0.4) e.aiming = true; // 휘두르기 직전 (그림용)
           e.meleeCd -= DT;
           if (e.meleeCd <= 0) {
             e.meleeCd = ed.melee.interval;
@@ -1610,6 +1621,11 @@ RG.sim = (() => {
         }
         if (ed.traits.ranged && time >= e.st.blindUntil) {
           e.rangedCd -= DT;
+          // 던지기 직전 자세 (그림용): 곧 쏠 때 사거리 안에 상대가 있으면
+          if (e.rangedCd <= 0.45 && e.rangedCd > 0) {
+            const R2 = ed.traits.ranged.range ** 2;
+            for (const u of st.units) if (!u.dead && u.kind !== 'drone' && u.kind !== 'wall' && d2(u.x, u.y, e.x, e.y) <= R2) { e.aiming = true; break; }
+          }
           if (e.rangedCd <= 0) {
             const R = ed.traits.ranged.range;
             let best = null;
@@ -1621,6 +1637,7 @@ RG.sim = (() => {
             }
             if (best) {
               e.rangedCd = ed.traits.ranged.interval;
+              e.attackAnim = 0.3; e.dir = best.x > e.x ? 1 : -1;
               hurtUnit(best, ed.traits.ranged.damage, e);
               ev('enemyShot', { enemyId: e.id, x: e.x, y: e.y, tx: best.x, ty: best.y });
             } else e.rangedCd = 0.2;
@@ -1894,7 +1911,8 @@ RG.sim = (() => {
         const target = u.blocking.length ? enemyById(u.blocking[0]) : null;
         if (target && !target.dead) {
           const reach = 0.42 + target.size * 0.2;
-          if (dist(u.x, u.y, target.x, target.y) > reach) moveUnitToward(u, target.x, target.y, 2.0);
+          u.engaged = dist(u.x, u.y, target.x, target.y) <= reach; // 그림용
+          if (!u.engaged) moveUnitToward(u, target.x, target.y, 2.0);
           else {
             u.dir = target.x > u.x ? 1 : -1;
             u.cd -= DT;
@@ -1906,6 +1924,7 @@ RG.sim = (() => {
             }
           }
         } else {
+          u.engaged = false;
           moveUnitToward(u, u.homeX, u.homeY, 1.8);
           u.cd = Math.max(u.cd - DT, 0);
         }
@@ -1916,6 +1935,7 @@ RG.sim = (() => {
     function updateHero(h, time) {
       const hd = D().heroes[h.heroId];
       h.attackAnim = Math.max(0, h.attackAnim - DT);
+      if (h.castAnim) h.castAnim = Math.max(0, h.castAnim - DT);
       h.skillCd = Math.max(0, h.skillCd - DT);
       if (h.dead) {
         if (time >= h.downUntil) {

@@ -21,7 +21,7 @@ const OUT = path.join(ROOT, 'docs', 'reports', 'art');
 const SCRIPTS = [
   'js/util.js', 'js/data/elements.js', 'js/data/towers.js', 'js/data/enemies.js', 'js/data/heroes.js', 'js/data/maps.js',
   'js/core/grid.js',
-  'js/art/helpers.js', 'js/art/towers.js', 'js/art/enemies.js', 'js/art/heroes.js', 'js/art/terrain.js', 'js/art/icons.js',
+  ...require('../tests/load').ART,
 ];
 
 /* 설계서 기준 목록 (데이터 파일이 아직 없어도 검수할 수 있게) */
@@ -52,20 +52,18 @@ const ICONS = ['fire', 'frost', 'storm', 'earth', 'light', 'dark',
 const CATEGORY_DEFS = {
   towers: () => TOWERS.map((id) => ({
     id,
-    items: [
-      ...[1, 2, 3].map((lv) => ({ label: `Lv${lv}`, call: ['tower', id, lv, null], vb: [100, 130], tile: 1 })),
-      { label: 'Lv4 A', call: ['tower', id, 4, 'A'], vb: [100, 130], tile: 1 },
-      { label: 'Lv4 B', call: ['tower', id, 4, 'B'], vb: [100, 130], tile: 1 },
-    ],
+    // 단계마다 쉬기·조준(쏘기 직전)·발사 자세 (docs/design/animation.md)
+    items: [[1, null, 'Lv1'], [2, null, 'Lv2'], [3, null, 'Lv3'], [4, 'A', 'Lv4 A'], [4, 'B', 'Lv4 B']].flatMap(([lv, br, name]) =>
+      ['idle', 'aim', 'fire'].map((p) => ({ label: `${name} ${p}`, call: ['tower', id, lv, br, p], vb: [100, 130], tile: 1 }))),
   })),
   lantern: () => [{ id: 'lantern', items: [1, 0.5, 0.1].map((r) => ({ label: `빛 ${r}`, call: ['lantern', r], vb: [100, 130], tile: 1 })) }],
   enemies: () => ENEMIES.map((id) => ({
     id,
-    items: [0, 1].map((f) => ({ label: `frame ${f}`, call: ['enemy', id, f], vb: [100, 100], tile: ENEMY_SIZE[id] || 0.7, flipDemo: f === 1 })),
+    items: ['walk0', 'walk1', 'walk2', 'walk3', 'aim', 'attack'].map((f) => ({ label: f, call: ['enemy', id, f], vb: [100, 100], tile: ENEMY_SIZE[id] || 0.7, flipDemo: f === 'walk1' })),
   })),
   heroes: () => HEROES.map((id) => ({
     id,
-    items: ['idle', 'walk1', 'walk2', 'attack'].map((p) => ({ label: p, call: ['hero', id, p], vb: [100, 100], tile: 0.9, flipDemo: p === 'walk2' })),
+    items: ['idle0', 'idle1', 'walk0', 'walk1', 'walk2', 'walk3', 'aim', 'attack', 'cast'].map((p) => ({ label: p, call: ['hero', id, p], vb: [100, 100], tile: 0.9, flipDemo: p === 'walk1' })),
   })),
   portraits: () => PORTRAITS.map((id) => ({
     id,
@@ -73,7 +71,7 @@ const CATEGORY_DEFS = {
   })),
   units: () => UNITS.map((id) => ({
     id,
-    items: ['idle', 'attack'].map((p) => ({ label: p, call: ['unit', id, p], vb: [100, 100], tile: id === 'rock_wall' ? 1 : 0.6 })),
+    items: ['idle', 'walk0', 'walk1', 'aim', 'attack'].map((p) => ({ label: p, call: ['unit', id, p], vb: [100, 100], tile: id === 'rock_wall' ? 1 : 0.6 })),
   })),
   icons: () => [{ id: 'icons', items: ICONS.map((name) => ({ label: name, call: ['icon', name], vb: [64, 64], tile: 0, big: 96, small: 24 })) }],
   terrain: () => [{ id: 'terrain', terrain: true }],
