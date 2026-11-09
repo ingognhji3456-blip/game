@@ -59,7 +59,7 @@ const CATEGORY_DEFS = {
   lantern: () => [{ id: 'lantern', items: [1, 0.5, 0.1].map((r) => ({ label: `빛 ${r}`, call: ['lantern', r], vb: [100, 130], tile: 1 })) }],
   enemies: () => ENEMIES.map((id) => ({
     id,
-    items: ['walk0', 'walk1', 'walk2', 'walk3', 'aim', 'attack'].map((f) => ({ label: f, call: ['enemy', id, f], vb: [100, 100], tile: ENEMY_SIZE[id] || 0.7, flipDemo: f === 'walk1' })),
+    items: ['walk0', 'walk1', 'walk2', 'walk3', 'aim', 'attack', 'die0', 'die1', 'die2'].map((f) => ({ label: f, call: ['enemy', id, f], vb: [100, 100], tile: ENEMY_SIZE[id] || 0.7, flipDemo: f === 'walk1' })),
   })),
   heroes: () => HEROES.map((id) => ({
     id,

@@ -18,10 +18,11 @@ RG.art.enemy = (() => {
 
   /**
    * 적 프레임: walk0~walk3(걷기·날갯짓 한 바퀴) · aim(공격 직전: 무기를 들어 올림) · attack(공격하는 순간)
+   *          · die0~die2(죽음: 맞고 휘청 → 무너짐·깨짐 → 남은 모습·흩어짐)
    * 옛 숫자 프레임 0·1은 walk0·walk2로 읽음.
    * 새 방식 그림 함수는 fn.frames = true 로 표시하고 프레임 이름(문자열)을 받음.
    */
-  const FRAMES = ['walk0', 'walk1', 'walk2', 'walk3', 'aim', 'attack'];
+  const FRAMES = ['walk0', 'walk1', 'walk2', 'walk3', 'aim', 'attack', 'die0', 'die1', 'die2'];
   RG.art.ENEMY_FRAMES = FRAMES;
   const legacyBit = (fr) => (fr === 'walk1' || fr === 'walk2' ? 1 : 0);
   return function enemy(type, frame) {

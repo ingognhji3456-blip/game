@@ -72,8 +72,10 @@ RG.fx = (() => {
           break;
         case 'kill': {
           const big = e.boss;
-          burst(e.x, e.y - 0.25, '#c9c3d6', big ? 60 : 12, big ? 4 : 2.4, big ? 1.2 : 0.6, big ? 0.12 : 0.07, 2);
-          burst(e.x, e.y - 0.25, '#ffffff', big ? 30 : 5, 1.2, 0.8, 0.05, -1.2);
+          // 몬스터마다 죽는 효과가 따로 있으면(렌더러가 그림) 공통 효과는 작게
+          const own = RG.art.ENEMY_MOTION && RG.art.ENEMY_MOTION[e.enemyType] && RG.art.ENEMY_MOTION[e.enemyType].deathFx;
+          burst(e.x, e.y - 0.25, '#c9c3d6', big ? 60 : own ? 4 : 12, big ? 4 : 2.4, big ? 1.2 : 0.6, big ? 0.12 : 0.07, 2);
+          burst(e.x, e.y - 0.25, '#ffffff', big ? 30 : own ? 2 : 5, 1.2, 0.8, 0.05, -1.2);
           if (e.bounty) text(e.x, e.y - 0.8, `+${e.bounty}`, '#ffd34d');
           if (big) { addShake(0.5); ring(e.x, e.y, 2.5, '#ffffff', 0.9, 0.15); }
           break;

@@ -28,6 +28,7 @@ RG.render = (() => {
     canvas = cv;
     ctx = canvas.getContext('2d');
     game = g;
+    corpses = [];
     bg = null;
     bgFor = '';
     resize();
@@ -94,14 +95,61 @@ RG.render = (() => {
     return true;
   }
 
+  /* ---------------- 그림자 (빛은 늘 왼쪽 위) ---------------- */
+  // 발밑 그늘: 가장자리가 부드러운 타원 (한 번 그려 두고 늘려 씀)
+  let blobCanvas = null;
+  function blob() {
+    if (blobCanvas) return blobCanvas;
+    blobCanvas = document.createElement('canvas');
+    blobCanvas.width = 128; blobCanvas.height = 64;
+    const c2 = blobCanvas.getContext('2d');
+    const g = c2.createRadialGradient(64, 32, 2, 64, 32, 62);
+    g.addColorStop(0, 'rgba(12,7,20,1)'); g.addColorStop(0.55, 'rgba(12,7,20,0.75)'); g.addColorStop(1, 'rgba(12,7,20,0)');
+    c2.fillStyle = g;
+    c2.save(); c2.scale(1, 0.5); c2.beginPath(); c2.arc(64, 64, 64, 0, Math.PI * 2); c2.fill(); c2.restore();
+    return blobCanvas;
+  }
   function shadow(x, y, rx, ry, a = 0.32) {
     ctx.save();
-    ctx.fillStyle = `rgba(10,6,20,${a})`;
-    ctx.beginPath();
-    ctx.ellipse(X(x), Y(y), Math.max(2, rx * T), Math.max(1, ry * T), 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.globalAlpha *= Math.min(1, a * 1.6);
+    const w = Math.max(4, rx * T * 2.2);
+    const h = Math.max(2, ry * T * 2.2);
+    ctx.drawImage(blob(), X(x) - w / 2 + T * 0.03, Y(y) - h / 2 + T * 0.01, w, h);
     ctx.restore();
   }
+  // 드리운 그림자: 그림 모양 그대로 오른쪽 아래로 눕힘 (그림마다 한 번 만들어 둠)
+  const shadowCache = new Map();
+  function shadowCanvas(key) {
+    if (shadowCache.has(key)) return shadowCache.get(key);
+    const s = RG.art.sprites.get(key);
+    if (!s) return null;
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.round(s.canvas.width / 2));
+    cv.height = Math.max(1, Math.round(s.canvas.height / 2));
+    const c2 = cv.getContext('2d');
+    try { c2.filter = 'blur(1.5px)'; } catch (e) { /* 흐림을 못 쓰는 브라우저 */ }
+    c2.drawImage(s.canvas, 0, 0, cv.width, cv.height);
+    c2.filter = 'none';
+    c2.globalCompositeOperation = 'source-in';
+    c2.fillStyle = '#140c1e';
+    c2.fillRect(0, 0, cv.width, cv.height);
+    shadowCache.set(key, cv);
+    return cv;
+  }
+  /** (cx, by) = 바닥 기준점, w·h·ax·ay = 그림 배치, lift = 땅에서 뜬 높이(비행) */
+  function castShadow(key, cx, by, w, h, ax, ay, flip, alpha, lift = 0) {
+    if (!shadowsOn) return;
+    const cv = shadowCanvas(key);
+    if (!cv) return;
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    ctx.translate(cx + lift * 0.55, by);
+    ctx.transform(1, 0, -0.6, -0.4, 0, 0); // 높이 H인 점 → 오른쪽으로 0.6H, 아래로 0.4H
+    if (flip) ctx.scale(-1, 1);
+    ctx.drawImage(cv, -w * ax, -h * ay, w, h);
+    ctx.restore();
+  }
+  let shadowsOn = true;
 
   function bar(cx, top, w, ratio, color, shieldRatio, elite) {
     const h = Math.max(3, Math.round(T * 0.09));
@@ -473,6 +521,7 @@ RG.render = (() => {
     const pose = towerPose(t);
     const key = poseSprite(RG.art.sprites.towerKey(t.type, t.level, t.branch, pose), RG.art.sprites.towerKey(t.type, t.level, t.branch, 'idle'),
       () => RG.art.tower(t.type, t.level, t.branch, pose), RG.art.sprites.TW, RG.art.sprites.TH);
+    castShadow(key, cx, baseY, w, h, 0.5, 112 / 130, false, t.building ? 0.2 : 0.42);
     ctx.save();
     if (t.building) ctx.globalAlpha = 0.55;
     if (sy !== 1) { ctx.translate(cx, baseY); ctx.scale(1 + (1 - sy) * 0.5, sy); ctx.translate(-cx, -baseY); }
@@ -535,7 +584,43 @@ RG.render = (() => {
     ctx.fillStyle = glow;
     ctx.beginPath(); ctx.arc(cx, baseY - T * 0.7, T * (0.6 + ratio * 0.9), 0, Math.PI * 2); ctx.fill();
     ctx.restore();
+    castShadow(RG.art.sprites.lanternKey(ratio), cx, baseY, T, T * 1.3, 0.5, 112 / 130, false, 0.42);
     sprite(RG.art.sprites.lanternKey(ratio), cx, baseY, T, T * 1.3, 0.5, 112 / 130, false);
+  }
+
+  /* ---------------- 죽는 연출 (docs/design/animation.md §2.5) ---------------- */
+  let corpses = [];
+  const DEATH_FX = {
+    mist: ['#c9c3d6', 14, 1.6, 0.7, 0.08, -0.6], shatter: ['#dfeef5', 12, 3, 0.5, 0.06, 3], burst: ['#b5d86a', 16, 3, 0.5, 0.07, 1],
+    spores: ['#d8e48a', 18, 1.4, 0.9, 0.06, -0.4], ash: ['#5a5560', 14, 1.2, 0.8, 0.07, -0.5], splash: ['#7cc8f0', 16, 2.6, 0.5, 0.06, 3],
+    sparks: ['#ffe066', 14, 3.2, 0.4, 0.05, 0], crumble: ['#9c8f7c', 14, 2, 0.6, 0.07, 3.5], feathers: ['#e8e4f0', 10, 1.2, 1.0, 0.07, 0.6],
+    embers: ['#ff9a3c', 14, 2, 0.7, 0.06, -0.8],
+  };
+  /** 게임 화면이 이벤트를 넘겨줌 (js/ui/game.js) */
+  function onEvents(events) {
+    for (const ev of events) {
+      if (ev.type !== 'kill' || !ev.enemyType) continue;
+      const mo = (RG.art.ENEMY_MOTION && RG.art.ENEMY_MOTION[ev.enemyType]) || {};
+      const ed = RG.data.enemies[ev.enemyType] || {};
+      const dur = mo.deathTime || (ed.boss ? 1.2 : 0.7);
+      if (corpses.length > 60) corpses.shift();
+      corpses.push({ type: ev.enemyType, x: ev.x, y: ev.y, dir: ev.dir || 1, size: ev.size || ed.size || 0.7, flying: !!ev.flying, hover: mo.hover != null ? mo.hover : 0.42, t: 0, dur });
+      const fx = DEATH_FX[mo.deathFx];
+      if (fx) RG.fx.burst(ev.x, ev.y - (ev.size || 0.7) * 0.35, fx[0], ed.boss ? fx[1] * 3 : fx[1], fx[2], fx[3], fx[4], fx[5]);
+    }
+  }
+  function drawCorpse(c) {
+    const k = c.t / c.dur;
+    const frame = k < 0.3 ? 'die0' : k < 0.62 ? 'die1' : 'die2';
+    const alpha = k > 0.7 ? Math.max(0, 1 - (k - 0.7) / 0.3) : 1;
+    const size = c.size * T;
+    const cx = X(c.x);
+    const groundY = Y(c.y);
+    const lift = c.flying ? c.hover * T * Math.max(0, 1 - k / 0.6) : 0; // 비행 적은 떨어짐
+    const big = (RG.data.enemies[c.type] || {}).size >= 1.4 ? 288 : 168;
+    const key = poseSprite(RG.art.sprites.enemyKey(c.type, frame), RG.art.sprites.enemyKey(c.type, 'walk0'), () => RG.art.enemy(c.type, frame), big, big);
+    castShadow(key, cx, groundY, size, size, 0.5, 0.9, c.dir < 0, 0.22 * alpha, lift);
+    sprite(key, cx, groundY - lift, size, size, 0.5, 0.9, c.dir < 0, alpha);
   }
 
   /* ---------------- 적 ---------------- */
@@ -565,16 +650,34 @@ RG.render = (() => {
     const lifted = st.time < e.ccUntil && e.ccKind === 'lift';
     const moving = !e.blockedBy && !(st.time < e.ccUntil) ;
     const frame = enemyFrame(e, moving);
+    // 몬스터별 움직임 (그림 파일의 MOTION, docs/design/animation.md §2.5)
+    const mo = (RG.art.ENEMY_MOTION && RG.art.ENEMY_MOTION[e.type]) || {};
+    const stride = 0.45 + e.size * 0.55;
+    const ph = e.flying ? time * 5 + e.id : (e.walkT / stride) * Math.PI * 2;
     let lift = 0;
-    if (e.flying) lift = T * 0.42 + Math.sin(time * 4 + e.id) * T * 0.04;
-    else if (moving) lift = Math.abs(Math.sin(e.walkT * Math.PI * 1.2)) * T * 0.05;
+    let rot = 0;
+    let sxk = 1;
+    let syk = 1;
+    let dx = 0;
+    if (e.flying) lift = T * (mo.hover != null ? mo.hover : 0.42) + Math.sin(time * 4 + e.id) * T * 0.04;
+    else if (moving) {
+      if (mo.hop) lift = Math.pow(Math.max(0, Math.sin(ph / 2)), 0.7) * mo.hop * T;
+      else lift = Math.abs(Math.sin(ph)) * (mo.bob != null ? mo.bob : 0.05) * T;
+      if (mo.tilt) rot = Math.sin(ph) * mo.tilt * Math.PI / 180;
+      if (mo.sway) dx = Math.sin(ph / 2) * mo.sway * T;
+    }
+    if (mo.squash) { syk = 1 + Math.sin(ph * (moving || e.flying ? 1 : 0.3) + (moving ? 0 : time * 2)) * mo.squash; sxk = 1 / syk; }
     if (lifted) lift += T * 0.35 + Math.sin(time * 10) * T * 0.04;
+    const groundY = cy;
     cy -= lift;
     const alphaS = (e.stealth && !e.revealed) ? 0.35 + 0.1 * Math.sin(time * 6) : 1;
     const hurt = st.time - e.lastHurt < 0.08;
     const flip = e.dir < 0;
     const big = ed.size >= 1.4 ? 288 : 168;
     const key = poseSprite(RG.art.sprites.enemyKey(e.type, frame), RG.art.sprites.enemyKey(e.type, 'walk0'), () => RG.art.enemy(e.type, frame), big, big);
+    castShadow(key, cx + dx, groundY, size, size, 0.5, 0.9, flip, (e.flying ? 0.16 : 0.32) * alphaS, lift);
+    const motion = rot || sxk !== 1 || syk !== 1 || dx;
+    if (motion) { ctx.save(); ctx.translate(cx + dx, cy); ctx.rotate(rot); ctx.scale(sxk, syk); ctx.translate(-cx, -cy); }
     const ok = sprite(key, cx, cy, size, size, 0.5, 0.9, flip, alphaS);
     if (!ok) {
       ctx.fillStyle = '#9a94a8';
@@ -587,6 +690,7 @@ RG.render = (() => {
       sprite(key, cx, cy, size, size, 0.5, 0.9, flip, 1);
       ctx.restore();
     }
+    if (motion) ctx.restore();
     // 상태 표시
     const top = cy - size * 0.92;
     if (frozen) {
@@ -670,7 +774,9 @@ RG.render = (() => {
         ctx.beginPath(); ctx.ellipse(cx, cy, T * 0.42, T * 0.16, 0, 0, Math.PI * 2); ctx.stroke();
         ctx.restore();
       }
-      sprite(poseSprite(RG.art.sprites.heroKey(u.heroId, pose), RG.art.sprites.heroKey(u.heroId, 'idle0'), () => RG.art.hero(u.heroId, pose), 160, 160), cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
+      const hk = poseSprite(RG.art.sprites.heroKey(u.heroId, pose), RG.art.sprites.heroKey(u.heroId, 'idle0'), () => RG.art.hero(u.heroId, pose), 160, 160);
+      castShadow(hk, cx, cy, size, size, 0.5, 0.9, flip, 0.32, bob);
+      sprite(hk, cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
       if (u.stunUntil > st.time) icon('stun', cx, cy - size * 1.0, T * 0.3);
       bar(cx, cy - size * 0.98, Math.max(22, T * 0.8), u.hp / u.maxHp, '#6fd3ff', 0, false);
       // 레벨
@@ -692,7 +798,9 @@ RG.render = (() => {
       const pose = u.attackAnim > 0.1 ? 'attack' : u.engaged && u.cd <= 0.3 ? 'aim' : walking ? (Math.floor(time * 6 + u.id) % 2 ? 'walk1' : 'walk0') : 'idle';
       const bob = walking ? Math.abs(Math.sin(time * 10 + u.id)) * T * 0.03 : 0;
       const look = u.look || 'stone_soldier';
-      sprite(poseSprite(RG.art.sprites.unitKey(look, pose), RG.art.sprites.unitKey(look, 'idle'), () => RG.art.unit(look, pose), 128, 128), cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
+      const uk = poseSprite(RG.art.sprites.unitKey(look, pose), RG.art.sprites.unitKey(look, 'idle'), () => RG.art.unit(look, pose), 128, 128);
+      castShadow(uk, cx, cy, size, size, 0.5, 0.9, flip, 0.3, bob);
+      sprite(uk, cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
       if (u.hp < u.maxHp) bar(cx, cy - size * 1.0, Math.max(14, T * 0.5), u.hp / u.maxHp, '#b8e986', 0, false);
       return;
     }
@@ -852,11 +960,15 @@ RG.render = (() => {
     list.push([game.map.lantern.r + 0.82, 1, null]);
     for (const e of st.enemies) if (!e.flying) list.push([lerp(e.py, e.y, alpha), 2, e]);
     for (const u of st.units) if (!u.dead) list.push([lerp(u.py, u.y, alpha), 3, u]);
+    for (const c of corpses) c.t += dt;
+    corpses = corpses.filter((c) => c.t < c.dur);
+    for (const c of corpses) list.push([c.y - 0.001, 4, c]);
     list.sort((a, b) => a[0] - b[0]);
     for (const [, kind, obj] of list) {
       if (kind === 0) drawTower(obj);
       else if (kind === 1) drawLantern();
       else if (kind === 2) drawEnemy(obj, alpha);
+      else if (kind === 4) drawCorpse(obj);
       else drawUnit(obj, alpha);
     }
     // 비행 적은 위에
@@ -877,5 +989,5 @@ RG.render = (() => {
     ctx.restore();
   }
 
-  return { attach, detach, resize, frame, screenToWorld, worldToScreen, overlay, tileSize, get T() { return T; } };
+  return { attach, detach, resize, frame, onEvents, setShadows: (on) => { shadowsOn = !!on; }, screenToWorld, worldToScreen, overlay, tileSize, get T() { return T; } };
 })();

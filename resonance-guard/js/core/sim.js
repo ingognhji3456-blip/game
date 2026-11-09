@@ -385,7 +385,7 @@ RG.sim = (() => {
       st.gold += bounty;
       st.stats.goldEarned += bounty;
       st.stats.kills += 1;
-      ev('kill', { enemyId: e.id, enemyType: e.type, x: e.x, y: e.y, bounty, boss: !!ed.boss, flying: e.flying });
+      ev('kill', { enemyId: e.id, enemyType: e.type, x: e.x, y: e.y, bounty, boss: !!ed.boss, flying: e.flying, dir: e.dir, size: e.size }); // dir·size는 죽는 연출용
       // 경험치
       if (st.hero && !st.hero.dead) {
         if (src && src.heroHit) heroXp(e, true);

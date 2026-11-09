@@ -182,6 +182,7 @@
 
   function handleEvents(events) {
     RG.fx.onEvents(events, game);
+    if (RG.render.onEvents) RG.render.onEvents(events);
     for (const e of events) {
       switch (e.type) {
         case 'fire': UI.sfx(e.kind === 'bolt' && e.element === 'dark' ? 'hex' : FIRE_SFX[e.kind] || 'arrow', { vol: 0.5 }); break;

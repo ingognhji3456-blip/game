@@ -128,5 +128,10 @@
   const zig = (pts) => `M${pts.map((p) => p.join(' ')).join('L')}`;
 
   /* 지역 파일(enemies-*.js)이 쓰는 공용 도구와 적 목록 */
-  RG.art._en = { H, OL, sh, GREY, GREY_L, MISTC, HALO, GREEN, ICE, ICE_L, EMBER, EMBER_L, VOLT, SEA, BELL, GOLD, BRONZE, make, g, zig, D: {} };
+  RG.art._en = { H, OL, sh, GREY, GREY_L, MISTC, HALO, GREEN, ICE, ICE_L, EMBER, EMBER_L, VOLT, SEA, BELL, GOLD, BRONZE, make, g, zig, D: {}, MOTION: {} };
+  /**
+   * 몬스터별 움직임·죽음 연출 (렌더러가 읽음, docs/design/animation.md §2.5)
+   * MOTION[type] = { gait, bob, tilt, sway, squash, hover, deathFx, deathTime }
+   */
+  RG.art.ENEMY_MOTION = RG.art._en.MOTION;
 })();
