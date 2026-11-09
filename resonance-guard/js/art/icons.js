@@ -266,11 +266,16 @@ RG.art.icon = (() => {
         + SLASH();
     },
     adaptive() {
-      return '<g transform="rotate(35 32 32)">'
-        + bold('M26 12.5H38M26 25.5H38M26 38.5H38M26 51.5H38', K.creamL, 3)
-        + bold('M40 4C40 18 24 18 24 32C24 46 40 46 40 60', E('frost').color, 5)
-        + bold('M24 4C24 18 40 18 40 32C40 46 24 46 24 60', E('fire').color, 5)
-        + '</g>';
+      // 적응: 맞은 원소 쪽으로 바뀌는 방패 (반은 불, 반은 얼음 + 돌고 도는 화살)
+      const sh = xf(SHIELD, 0.6, 0, 1);
+      const cut = H.uid('ic');
+      defs += `<clipPath id="${cut}"><rect x="32" y="0" width="32" height="64"/></clipPath>`;
+      return arcArrow(32, 32, 25, 196, 336, E('fire').color, 4.5)
+        + arcArrow(32, 32, 25, 16, 156, E('frost').color, 4.5)
+        + P(sh, grad(E('fire').light, E('fire').color))
+        + `<g clip-path="url(#${cut})">${P(sh, grad(E('frost').light, E('frost').color), NS)}</g>`
+        + O(sh) + sk('M32 18V48', OL, 2.5)
+        + hl('M24 23C24 21 25 20 27 19', 3);
     },
     dampen() {
       const link = (x, c) => `<rect x="-11" y="-6.5" width="22" height="13" rx="6.5" fill="none" transform="translate(${x} ${x}) rotate(45)"${c}/>`;

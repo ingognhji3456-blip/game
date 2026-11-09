@@ -102,8 +102,9 @@
     R.over = el('div', { class: 'stage-over' });
     R.boss = el('div', { class: 'boss-bar hidden' }, [el('span', { class: 'boss-name' }), el('div', { class: 'boss-hp' }, [el('i')])]);
     R.banner = el('div', { class: 'banner' });
+    R.bossIntro = el('div', { class: 'boss-intro' });
     R.loading = el('div', { class: 'stage-loading', text: '그림 준비 중…' });
-    stage.append(canvas, R.over, R.boss, R.banner, R.loading);
+    stage.append(canvas, R.over, R.boss, R.banner, R.bossIntro, R.loading);
 
     const right = el('aside', { class: 'rail rail-right' });
     R.heroCard = el('div', { class: 'hero-card' });
@@ -224,7 +225,7 @@
     const ed = D().enemies[e.enemyType];
     if (ed.boss) {
       UI.sfx('bossAppear');
-      banner(`👑 ${ed.name}`, ed.desc);
+      bossIntro(e.enemyType);
       if (!bossTrackOn) { UI.music('boss'); bossTrackOn = true; }
     }
     if (!RG.progress.seen('enemies', e.enemyType)) {
@@ -232,8 +233,29 @@
       if (!ed.minion && !ed.boss) UI.toast(`새 적: ${ed.name} — ${ed.desc}`, 'info', 3200);
     }
   }
+  let bossIntroTimer = 0;
+  /** 보스 등장 카드: 큰 그림 + 이름 + 설명 (판은 멈추지 않음) */
+  function bossIntro(type) {
+    const ed = D().enemies[type];
+    R.bossIntro.innerHTML = '';
+    R.bossIntro.append(
+      el('div', { class: 'bi-art' }, [UI.enemyImg(type, 'bi-img')]),
+      el('div', { class: 'bi-text' }, [el('small', { text: '보스 등장' }), el('b', { text: ed.name }), el('span', { text: ed.desc })]),
+    );
+    R.bossIntro.classList.remove('show');
+    R.banner.classList.remove('show'); // 웨이브 알림과 겹치지 않게
+    void R.bossIntro.offsetWidth;
+    R.bossIntro.classList.add('show');
+    clearTimeout(bossIntroTimer);
+    bossIntroTimer = setTimeout(() => R.bossIntro.classList.remove('show'), 3400);
+  }
   function onBossDown() {
-    if (bossTrackOn && !game.state.enemies.some((q) => !q.dead && D().enemies[q.type].boss)) {
+    const alive = game.state.enemies.some((q) => !q.dead && D().enemies[q.type].boss);
+    if (!alive) {
+      const ed = D().enemies[game.def.boss] || null;
+      if (ed) { R.bossIntro.classList.remove('show'); banner(`👑 ${ed.name} 처치!`, '등불이 다시 환하게 빛납니다'); }
+    }
+    if (bossTrackOn && !alive) {
       bossTrackOn = false;
       const region = D().regions.find((r) => r.id === game.def.region);
       UI.music(region ? region.music : 'meadow');

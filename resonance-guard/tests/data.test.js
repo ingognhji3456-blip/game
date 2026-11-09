@@ -67,6 +67,21 @@ test('맵: 과제·도전 종류가 엔진 목록에 있음, 새 탑·적·영�
   }
 });
 
+test('비행 적이 있는 맵: 비행 경로 평균 8칸 이상 (가운데를 질러 바로 오지 않게)', () => {
+  for (const def of D.maps) {
+    const flyers = RG.grid.parseWaves(def.waves).some((w) => w.groups.some((g) => D.enemies[g.e].traits.flying));
+    if (!flyers) continue;
+    const m = RG.grid.parseMap(def);
+    const src = m.airSpawns.length ? m.airSpawns : m.spawns;
+    const avg = src.reduce((a, s) => a + Math.hypot(s.x - m.lantern.x, s.y - m.lantern.y), 0) / src.length;
+    assert.ok(avg >= 8, `${def.id} 비행 경로 평균 ${avg.toFixed(1)}칸`);
+  }
+});
+
+test('맵 난이도 계수(hpMult)는 0.5~1.2 사이', () => {
+  for (const def of D.maps.concat(D.endless || [])) if (def.hpMult != null) assert.ok(def.hpMult >= 0.5 && def.hpMult <= 1.2, def.id);
+});
+
 test('새 적은 그 맵에서 처음 등장 (이전 맵 웨이브에 없음)', () => {
   const seen = new Set();
   for (const m of D.maps) {

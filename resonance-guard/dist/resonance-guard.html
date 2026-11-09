@@ -482,6 +482,18 @@ button { font-family: var(--font); color: inherit; }
 .banner span { font-size: 0.9rem; color: var(--text); }
 .banner.show { animation: banner 2.4s ease-out forwards; }
 @keyframes banner { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -60%) scale(1); } }
+/* 보스 등장 카드 */
+.boss-intro { position: absolute; left: 0; right: 0; top: 30%; transform: translateY(-50%); display: flex; align-items: center; justify-content: center; gap: clamp(8px, 2vw, 22px); padding: 8px 4%; pointer-events: none; opacity: 0; background: linear-gradient(90deg, #0000, #3a0c16e8 18%, #3a0c16e8 82%, #0000); border-top: 2px solid #ff8a6a66; border-bottom: 2px solid #ff8a6a66; }
+.boss-intro .bi-art { width: clamp(70px, 13vw, 150px); aspect-ratio: 1; flex: none; filter: drop-shadow(0 6px 10px #000c); }
+.boss-intro .bi-img { width: 100%; height: 100%; }
+.boss-intro .bi-text { display: flex; flex-direction: column; gap: 2px; max-width: min(460px, 60%); }
+.boss-intro small { color: #ffb0a0; font-weight: 800; letter-spacing: 0.2em; font-size: 0.75rem; }
+.boss-intro b { font-size: clamp(1.3rem, 3.4vw, 2.3rem); color: #ffe2b0; text-shadow: 0 2px 0 #000, 0 0 14px #ff5a3a99; line-height: 1.1; }
+.boss-intro span { font-size: 0.88rem; color: var(--text); }
+.boss-intro.show { animation: bossIntro 3.4s ease-out forwards; }
+.boss-intro.show .bi-art { animation: bossArt 3.4s ease-out forwards; }
+@keyframes bossIntro { 0% { opacity: 0; } 8% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes bossArt { 0% { transform: translateX(-40px) scale(0.8); } 12% { transform: translateX(0) scale(1.08); } 20% { transform: scale(1); } 100% { transform: scale(1.04); } }
 .hero-line { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); background: #120d18e8; border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px; font-size: 0.85rem; opacity: 0; transition: opacity 0.25s; pointer-events: none; white-space: nowrap; max-width: 92%; overflow: hidden; text-overflow: ellipsis; }
 .hero-line.show { opacity: 1; }
 
@@ -1239,47 +1251,47 @@ RG.data.enemies = {
 
   /* ============ 2지역 · 서리 고개 ============ */
   frost_wolf: {
-    name: '서리 늑대', region: 2, size: 0.7, hp: 85, speed: 1.5, armor: 0, bounty: 6, lives: 1,
+    name: '서리 늑대', region: 2, size: 0.7, hp: 120, speed: 1.5, armor: 0, bounty: 8, lives: 1,
     melee: { damage: 8, interval: 0.9 }, traits: {}, affinity: { frost: 'resist', fire: 'weak' },
     desc: '빠른 무리. 얼음에 강하고 불에 약합니다.',
   },
   snow_wisp: {
-    name: '눈 요정', region: 2, size: 0.5, hp: 70, speed: 1.25, armor: 0, bounty: 7, lives: 1,
+    name: '눈 요정', region: 2, size: 0.5, hp: 110, speed: 1.25, armor: 0, bounty: 9, lives: 1,
     melee: null, traits: { flying: true }, affinity: { frost: 'resist', fire: 'weak' },
     desc: '얼음이 잘 안 통하는 비행 적.',
   },
   ice_tortoise: {
-    name: '얼음 거북', region: 2, size: 0.9, hp: 420, speed: 0.55, armor: 0.6, bounty: 20, lives: 2, elite: true,
+    name: '얼음 거북', region: 2, size: 0.9, hp: 560, speed: 0.55, armor: 0.6, bounty: 26, lives: 2, elite: true,
     melee: { damage: 14, interval: 1.5 }, traits: {}, affinity: { fire: 'weak' },
     desc: '매우 두꺼운 갑옷.',
   },
   avalanche_golem: {
-    name: '눈사태 골렘', region: 2, size: 0.9, hp: 380, speed: 0.7, armor: 0, bounty: 14, lives: 2, elite: true,
+    name: '눈사태 골렘', region: 2, size: 0.9, hp: 520, speed: 0.7, armor: 0, bounty: 18, lives: 2, elite: true,
     melee: { damage: 14, interval: 1.4 }, traits: { split: { into: 'snowball_golem', n: 2 } }, affinity: {},
     desc: '죽으면 눈덩이 골렘 둘로 갈라집니다.',
   },
   snowball_golem: {
-    name: '눈덩이 골렘', region: 2, size: 0.5, hp: 90, speed: 1.15, armor: 0, bounty: 3, lives: 1,
+    name: '눈덩이 골렘', region: 2, size: 0.5, hp: 130, speed: 1.15, armor: 0, bounty: 4, lives: 1,
     melee: { damage: 6, interval: 1.0 }, traits: {}, affinity: {}, minion: true,
     desc: '눈사태 골렘에서 나오는 작은 적.',
   },
   yeti_shaman: {
-    name: '설인 주술사', region: 2, size: 0.9, hp: 300, speed: 0.75, armor: 0, bounty: 18, lives: 2, elite: true,
+    name: '설인 주술사', region: 2, size: 0.9, hp: 420, speed: 0.75, armor: 0, bounty: 24, lives: 2, elite: true,
     melee: { damage: 12, interval: 1.3 }, traits: { healer: { radius: 2.0, pct: 0.08, every: 4 } }, affinity: {},
     desc: '주기적으로 주변 적을 치유합니다.',
   },
   rime_wraith: {
-    name: '서리 망령', region: 2, size: 0.7, hp: 160, speed: 1.0, armor: 0, bounty: 12, lives: 1,
+    name: '서리 망령', region: 2, size: 0.7, hp: 200, speed: 1.0, armor: 0, bounty: 15, lives: 1,
     melee: { damage: 10, interval: 1.0 }, traits: { stealth: true }, affinity: { frost: 'resist' },
     desc: '탐지 없이는 표적이 될 수 없습니다.',
   },
   ice_shieldbearer: {
-    name: '얼음 방패병', region: 2, size: 0.7, hp: 220, speed: 0.8, armor: 0, bounty: 14, lives: 1,
+    name: '얼음 방패병', region: 2, size: 0.7, hp: 280, speed: 0.8, armor: 0, bounty: 18, lives: 1,
     melee: { damage: 12, interval: 1.2 }, traits: { shield: { amount: 0.6, delay: 4, rate: 0.15 } }, affinity: {},
     desc: '보호막이 체력을 지키고, 잠시 안 맞으면 다시 찹니다.',
   },
   whitehorn: {
-    name: '서리 군주 흰뿔', region: 2, size: 1.8, hp: 9000, speed: 0.5, armor: 0, bounty: 300, lives: 99, boss: true, elite: true,
+    name: '서리 군주 흰뿔', region: 2, size: 1.8, hp: 7000, speed: 0.5, armor: 0, bounty: 300, lives: 99, boss: true, elite: true,
     melee: { damage: 60, interval: 1.5 }, traits: {}, affinity: { frost: 'immune', fire: 'weak' },
     bossData: { breath: { every: 12, towers: 2, range: 3.5, dur: 3 }, phase: { at: 0.5, summon: { type: 'frost_wolf', n: 5 }, speedMul: 1.2 } },
     desc: '12초마다 가까운 탑 둘을 멈추고, 체력이 절반이 되면 늑대 무리를 부릅니다.',
@@ -1287,47 +1299,47 @@ RG.data.enemies = {
 
   /* ============ 3지역 · 붉은 협곡 ============ */
   cinder_lizard: {
-    name: '불도마뱀', region: 3, size: 0.5, hp: 140, speed: 1.55, armor: 0, bounty: 6, lives: 1,
+    name: '불도마뱀', region: 3, size: 0.5, hp: 130, speed: 1.55, armor: 0, bounty: 8, lives: 1,
     melee: { damage: 10, interval: 0.9 }, traits: { unstoppable: true }, affinity: { fire: 'immune', frost: 'weak' },
     desc: '빠르고 불이 안 통하며, 병사에게 붙잡히지 않습니다.',
   },
   sand_burrower: {
-    name: '모래 굴착충', region: 3, size: 0.7, hp: 420, speed: 0.85, armor: 0, bounty: 16, lives: 1,
+    name: '모래 굴착충', region: 3, size: 0.7, hp: 390, speed: 0.85, armor: 0, bounty: 20, lives: 1,
     melee: { damage: 14, interval: 1.2 }, traits: { burrow: { every: 4, dur: 2 } }, affinity: {},
     desc: '주기적으로 땅속에 숨습니다.',
   },
   magma_brute: {
-    name: '용암 덩치', region: 3, size: 0.9, hp: 900, speed: 0.6, armor: 0.3, bounty: 30, lives: 2, elite: true,
+    name: '용암 덩치', region: 3, size: 0.9, hp: 820, speed: 0.6, armor: 0.3, bounty: 38, lives: 2, elite: true,
     melee: { damage: 28, interval: 1.6 }, traits: { deathburst: { radius: 1.2, damage: 80 } }, affinity: { fire: 'immune', frost: 'weak' },
     desc: '단단하고, 죽을 때 터져 주변 영웅·병사를 다치게 합니다.',
   },
   thermal_vulture: {
-    name: '열풍 독수리', region: 3, size: 0.7, hp: 220, speed: 1.45, armor: 0, bounty: 10, lives: 1,
+    name: '열풍 독수리', region: 3, size: 0.7, hp: 200, speed: 1.45, armor: 0, bounty: 13, lives: 1,
     melee: null, traits: { flying: true }, affinity: { fire: 'resist' },
     desc: '빠른 비행 적.',
   },
   dune_raider: {
-    name: '모래 약탈자', region: 3, size: 0.7, hp: 360, speed: 0.95, armor: 0, bounty: 14, lives: 1,
+    name: '모래 약탈자', region: 3, size: 0.7, hp: 340, speed: 0.95, armor: 0, bounty: 18, lives: 1,
     melee: { damage: 16, interval: 1.0 }, traits: { dash: { mult: 2, dur: 3 } }, affinity: {},
     desc: '처음 맞으면 잠시 두 배로 달립니다.',
   },
   obsidian_beetle: {
-    name: '흑요석 딱정벌레', region: 3, size: 0.7, hp: 520, speed: 0.8, armor: 0.55, bounty: 20, lives: 1,
+    name: '흑요석 딱정벌레', region: 3, size: 0.7, hp: 450, speed: 0.8, armor: 0.55, bounty: 26, lives: 1,
     melee: { damage: 18, interval: 1.3 }, traits: { shredResist: 0.5 }, affinity: {},
     desc: '매우 단단하고, 갑옷 파쇄도 절반만 먹힙니다.',
   },
   flame_spirit: {
-    name: '불꽃 정령', region: 3, size: 0.5, hp: 200, speed: 1.2, armor: 0, bounty: 9, lives: 1,
+    name: '불꽃 정령', region: 3, size: 0.5, hp: 180, speed: 1.2, armor: 0, bounty: 12, lives: 1,
     melee: null, traits: { flying: true }, affinity: { fire: 'absorb', frost: 'weak' },
     desc: '불에 맞으면 오히려 회복합니다.',
   },
   canyon_slinger: {
-    name: '협곡 투석병', region: 3, size: 0.7, hp: 300, speed: 0.9, armor: 0, bounty: 14, lives: 1,
+    name: '협곡 투석병', region: 3, size: 0.7, hp: 280, speed: 0.9, armor: 0, bounty: 18, lives: 1,
     melee: { damage: 8, interval: 1.2 }, traits: { ranged: { range: 2.4, damage: 14, interval: 1.6 } }, affinity: {},
     desc: '걸으면서 영웅·병사에게 돌을 던집니다.',
   },
   pyre_worm: {
-    name: '용암 벌레왕', region: 3, size: 1.8, hp: 22000, speed: 0.55, armor: 0, bounty: 450, lives: 99, boss: true, elite: true,
+    name: '용암 벌레왕', region: 3, size: 1.8, hp: 11250, speed: 0.55, armor: 0, bounty: 450, lives: 99, boss: true, elite: true,
     melee: { damage: 80, interval: 1.5 }, traits: {}, affinity: { fire: 'immune', frost: 'weak' },
     bossData: { dive: { every: 8, tiles: 3, under: 1.0, stunRadius: 1.2, stun: 1 }, phase: { at: 0.5, summon: { type: 'flame_spirit', n: 4 } } },
     desc: '8초마다 땅속으로 들어가 3칸 앞에서 튀어나옵니다.',
@@ -1335,47 +1347,47 @@ RG.data.enemies = {
 
   /* ============ 4지역 · 폭풍 해안 ============ */
   rock_crab: {
-    name: '바위게', region: 4, size: 0.7, hp: 700, speed: 0.75, armor: 0.5, bounty: 20, lives: 1,
+    name: '바위게', region: 4, size: 0.7, hp: 630, speed: 0.75, armor: 0.5, bounty: 30, lives: 1,
     melee: { damage: 22, interval: 1.3 }, traits: {}, affinity: { storm: 'weak' },
     desc: '단단하지만 폭풍에 약합니다.',
   },
   volt_jelly: {
-    name: '번개 해파리', region: 4, size: 0.7, hp: 480, speed: 0.9, armor: 0, bounty: 18, lives: 1,
+    name: '번개 해파리', region: 4, size: 0.7, hp: 420, speed: 0.9, armor: 0, bounty: 24, lives: 1,
     melee: null, traits: { flying: true, shock: { radius: 1.6, dur: 2.5 } }, affinity: { storm: 'resist' },
     desc: '죽을 때 터지며 주변 탑을 잠시 멈춥니다.',
   },
   spray_sprite: {
-    name: '물보라 요정', region: 4, size: 0.5, hp: 180, speed: 1.8, armor: 0, bounty: 5, lives: 1,
+    name: '물보라 요정', region: 4, size: 0.5, hp: 160, speed: 1.8, armor: 0, bounty: 7, lives: 1,
     melee: null, traits: { flying: true }, affinity: {},
     desc: '매우 빠른 비행 떼.',
   },
   drowned_corsair: {
-    name: '익사한 해적', region: 4, size: 0.7, hp: 640, speed: 0.9, armor: 0, bounty: 22, lives: 1,
+    name: '익사한 해적', region: 4, size: 0.7, hp: 560, speed: 0.9, armor: 0, bounty: 28, lives: 1,
     melee: { damage: 24, interval: 1.1 }, traits: { undying: { pct: 0.4 } }, affinity: {},
     desc: '처음 쓰러지면 다시 일어납니다.',
   },
   coral_colossus: {
-    name: '산호 거인', region: 4, size: 0.9, hp: 3200, speed: 0.45, armor: 0, bounty: 70, lives: 3, elite: true,
+    name: '산호 거인', region: 4, size: 0.9, hp: 2520, speed: 0.45, armor: 0, bounty: 80, lives: 3, elite: true,
     melee: { damage: 50, interval: 1.8 }, traits: { regen: 0.02 }, affinity: {},
     desc: '체력이 매우 높고 재생합니다. 등불에 닿으면 불꽃 3개.',
   },
   volt_eel: {
-    name: '전기 장어', region: 4, size: 0.7, hp: 520, speed: 1.35, armor: 0, bounty: 16, lives: 1,
+    name: '전기 장어', region: 4, size: 0.7, hp: 450, speed: 1.35, armor: 0, bounty: 22, lives: 1,
     melee: { damage: 18, interval: 0.9 }, traits: {}, affinity: { storm: 'absorb', earth: 'weak' },
     desc: '폭풍에 맞으면 회복합니다. 빠릅니다.',
   },
   mist_mariner: {
-    name: '안개 선원', region: 4, size: 0.7, hp: 520, speed: 0.9, armor: 0, bounty: 20, lives: 1,
+    name: '안개 선원', region: 4, size: 0.7, hp: 450, speed: 0.9, armor: 0, bounty: 26, lives: 1,
     melee: { damage: 14, interval: 1.2 }, traits: { stealth: true, ranged: { range: 2.6, damage: 24, interval: 1.8 } }, affinity: {},
     desc: '숨어서 영웅·병사를 쏩니다.',
   },
   tide_caller: {
-    name: '조수 술사', region: 4, size: 0.7, hp: 600, speed: 0.8, armor: 0, bounty: 24, lives: 1,
+    name: '조수 술사', region: 4, size: 0.7, hp: 520, speed: 0.8, armor: 0, bounty: 30, lives: 1,
     melee: { damage: 16, interval: 1.2 }, traits: { shielder: { radius: 2.0, pct: 0.25, every: 6 } }, affinity: {},
     desc: '주변 적에게 보호막을 씌웁니다.',
   },
   tempest_whale: {
-    name: '폭풍 고래', region: 4, size: 2.0, hp: 48000, speed: 0.4, armor: 0, bounty: 700, lives: 99, boss: true, elite: true,
+    name: '폭풍 고래', region: 4, size: 2.0, hp: 14000, speed: 0.4, armor: 0, bounty: 700, lives: 99, boss: true, elite: true,
     melee: null, traits: { flying: true }, affinity: { storm: 'resist' },
     bossData: { bolt: { every: 10, towers: 3, width: 0.8, dur: 4 }, phase: { at: 0.5, summon: { type: 'volt_jelly', n: 4 } } },
     desc: '하늘을 헤엄치는 보스. 10초마다 일직선 위의 탑을 멈춥니다.',
@@ -1383,53 +1395,53 @@ RG.data.enemies = {
 
   /* ============ 5지역 · 깨진 대종 ============ */
   grey_legionnaire: {
-    name: '회색 군단병', region: 5, size: 0.7, hp: 1200, speed: 0.8, armor: 0.25, bounty: 22, lives: 1,
+    name: '회색 군단병', region: 5, size: 0.7, hp: 840, speed: 0.8, armor: 0.25, bounty: 30, lives: 1,
     melee: { damage: 30, interval: 1.1 }, traits: {}, affinity: {},
     desc: '체력과 갑옷이 모두 좋은 강적.',
   },
   hush_monk: {
-    name: '침묵 수도사', region: 5, size: 0.7, hp: 1000, speed: 0.75, armor: 0, bounty: 28, lives: 1,
+    name: '침묵 수도사', region: 5, size: 0.7, hp: 720, speed: 0.75, armor: 0, bounty: 34, lives: 1,
     melee: { damage: 20, interval: 1.2 }, traits: { silence: { radius: 1.5 } }, affinity: {},
     desc: '지나가는 동안 주변 탑을 멈춥니다.',
   },
   void_stalker: {
-    name: '공허 추적자', region: 5, size: 0.7, hp: 800, speed: 1.45, armor: 0, bounty: 22, lives: 1,
+    name: '공허 추적자', region: 5, size: 0.7, hp: 600, speed: 1.45, armor: 0, bounty: 28, lives: 1,
     melee: { damage: 26, interval: 0.9 }, traits: { stealth: true, unstoppable: true }, affinity: { dark: 'resist', light: 'weak' },
     desc: '숨어서 매우 빠르게 달리고, 병사에게 붙잡히지 않습니다.',
   },
   ashen_paladin: {
-    name: '잿빛 성기사', region: 5, size: 0.9, hp: 1800, speed: 0.7, armor: 0.4, bounty: 40, lives: 2, elite: true,
+    name: '잿빛 성기사', region: 5, size: 0.9, hp: 1320, speed: 0.7, armor: 0.4, bounty: 50, lives: 2, elite: true,
     melee: { damage: 40, interval: 1.3 }, traits: { shield: { amount: 0.5, delay: 4, rate: 0.12 } }, affinity: {},
     desc: '갑옷과 보호막을 모두 가졌습니다.',
   },
   echo_shade: {
-    name: '메아리 그림자', region: 5, size: 0.7, hp: 1100, speed: 0.95, armor: 0, bounty: 24, lives: 1,
+    name: '메아리 그림자', region: 5, size: 0.7, hp: 780, speed: 0.95, armor: 0, bounty: 30, lives: 1,
     melee: { damage: 22, interval: 1.0 }, traits: { split: { into: 'echo_shade', n: 2, hpPct: 0.25, fragment: true } }, affinity: {},
     desc: '죽으면 약한 메아리 둘로 갈라집니다(메아리는 더 갈라지지 않음).',
   },
   bellshard_golem: {
-    name: '종 조각 골렘', region: 5, size: 0.9, hp: 2200, speed: 0.65, armor: 0, bounty: 40, lives: 2, elite: true,
+    name: '종 조각 골렘', region: 5, size: 0.9, hp: 1560, speed: 0.65, armor: 0, bounty: 50, lives: 2, elite: true,
     melee: { damage: 44, interval: 1.5 }, traits: { adaptive: { per: 0.08, max: 0.6 } }, affinity: {},
     desc: '같은 원소에 계속 맞으면 그 원소에 점점 강해집니다.',
   },
   silent_drake: {
-    name: '침묵의 비룡', region: 5, size: 0.9, hp: 1300, speed: 1.1, armor: 0.4, bounty: 30, lives: 2, elite: true,
+    name: '침묵의 비룡', region: 5, size: 0.9, hp: 960, speed: 1.1, armor: 0.4, bounty: 38, lives: 2, elite: true,
     melee: null, traits: { flying: true }, affinity: {},
     desc: '단단한 비행 적.',
   },
   resonance_eater: {
-    name: '울림 포식자', region: 5, size: 0.7, hp: 1100, speed: 0.85, armor: 0, bounty: 30, lives: 1,
+    name: '울림 포식자', region: 5, size: 0.7, hp: 780, speed: 0.85, armor: 0, bounty: 36, lives: 1,
     melee: { damage: 20, interval: 1.2 }, traits: { dampen: { radius: 2.0 } }, affinity: {},
     desc: '주변 탑들의 공명 연결을 끊습니다.',
   },
   bellkeeper: {
-    name: '종지기', region: 5, size: 1.6, hp: 70000, speed: 0.5, armor: 0, bounty: 900, lives: 99, boss: true, elite: true,
+    name: '종지기', region: 5, size: 1.6, hp: 20000, speed: 0.5, armor: 0, bounty: 900, lives: 99, boss: true, elite: true,
     melee: { damage: 120, interval: 1.5 }, traits: {}, affinity: {},
     bossData: { blink: { every: 6, tiles: 2 }, ward: { every: 10, radius: 2.5, pct: 0.3 }, phase: { at: 0.5, summon: { type: 'hush_monk', n: 3 } } },
     desc: '6초마다 앞으로 순간이동하고, 주변 적에게 보호막을 씌웁니다.',
   },
   the_silence: {
-    name: '침묵', region: 5, size: 2.0, hp: 140000, speed: 0.35, armor: 0, bounty: 0, lives: 99, boss: true, elite: true,
+    name: '침묵', region: 5, size: 2.0, hp: 40000, speed: 0.35, armor: 0, bounty: 0, lives: 99, boss: true, elite: true,
     melee: { damage: 200, interval: 1.5 }, traits: {}, affinity: { fire: 'immune', frost: 'immune' },
     bossData: {
       phases: [
@@ -1724,7 +1736,7 @@ RG.data.maps = [
       'ash_boar*6/1.2 ; vine_leech*6/1.2@3 ; straw_husk*4/1.5@6',
     ],
     task: { type: 'stack', n: 3, text: '한 탑에 공명 효과 3개' },
-    challenge: { type: 'noOpenBuild', text: '공터 건설 금지' },
+    challenge: { type: 'maxTowers', value: 6, text: '탑 6개 이하' },
     newTowers: ['crystal_mine'], newEnemies: ['vine_leech'], hero: 'sera',
     story: { before: 's1_4' },
     tips: ['maze', 'mine', 'regen'],
@@ -1743,6 +1755,7 @@ RG.data.maps = [
       'TT##^^^^^^^^#TTT',
     ],
     startGold: 350,
+    hpMult: 0.9, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'mist_rat*10/0.8',
       'ash_boar*4/1.8',
@@ -1776,6 +1789,7 @@ RG.data.maps = [
       'TT####TTT###TTTT',
     ],
     startGold: 420,
+    hpMult: 0.9, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'mist_rat*12/0.7',
       'vine_leech*4/2',
@@ -1791,15 +1805,931 @@ RG.data.maps = [
       'hollow_elder*1 ; vine_leech*3/2.5@8 ; mist_rat*10/0.7@3',
     ],
     task: { type: 'distinct', n: 5, text: '서로 다른 공명 효과 5가지 동시에' },
-    challenge: { type: 'lives', value: 1, text: '불꽃 1개로 시작' },
+    challenge: { type: 'lives', value: 3, text: '불꽃 3개로 시작' },
     newEnemies: ['hollow_elder'],
     story: { before: 's1_6', after: 's1_end' },
     unlocksBranches: true,
   },
+  /* ===================== 2지역 · 서리 고개 ===================== */
+  {
+    id: '2-1', region: 2, name: '얼음 다리', type: 'fixed',
+    grid: [
+      'A###TT#~~#TT###T',
+      'T####T#~~#T####T',
+      'T##..........#TT',
+      'T##.###~~###.#^T',
+      'S...###~~###..LT',
+      'T##.###~~###.#^T',
+      'T##..........#TT',
+      'T####T#~~#T####T',
+      'TT###T#~~#T####T',
+    ],
+    startGold: 420,
+    waves: [
+      'frost_wolf*4/1.5',
+      'mist_rat*10/0.6 ; frost_wolf*4/1.2@4',
+      'snow_wisp*3/2',
+      'frost_wolf*8/0.9 ; ash_boar*3/2@4',
+      'snow_wisp*5/1.3 ; straw_husk*4/1.8@3',
+      'frost_wolf*12/0.7',
+      'rust_knight*5/1.6 ; snow_wisp*5/1.2@4',
+      'frost_wolf*10/0.6 ; vine_leech*4/1.6@5',
+      'snow_wisp*8/0.9 ; frost_wolf*8/0.7@3',
+      'frost_wolf*16/0.5 ; rust_knight*4/1.5@3 ; snow_wisp*6/1@8',
+    ],
+    task: { type: 'links', n: 8, text: '공명 연결 8개 동시에' },
+    challenge: { type: 'maxLevel', value: 2, text: '강화 Lv2까지' },
+    newTowers: ['winter_bell'], newEnemies: ['frost_wolf', 'snow_wisp'], hero: 'sio',
+    story: { before: 's2_1' },
+    tips: ['branch'],
+  },
+  {
+    id: '2-2', region: 2, name: '눈보라 협곡', type: 'fixed',
+    grid: [
+      '^^###^^###^^##^^',
+      'S....#....####^^',
+      '^###.#.##.####^^',
+      '^###.#.##.#...#^',
+      '^^##...##.#.#.#^',
+      '^~~####^#.#.#.#^',
+      '^~~###^##...#.#^',
+      '^^####^^####^..L',
+      '^^^##^^^###^^##^',
+    ],
+    startGold: 440,
+    waves: [
+      'frost_wolf*6/1',
+      'ice_tortoise*1',
+      'frost_wolf*8/0.8 ; ice_tortoise*1@6',
+      'rust_knight*4/1.5 ; snow_wisp*4/1.2@3',
+      'ice_tortoise*3/3',
+      'spore_sac*5/1.5 ; frost_wolf*8/0.7@3',
+      'ice_tortoise*3/2.5 ; rust_knight*3/2@3',
+      'snow_wisp*8/0.9 ; frost_wolf*6/0.8@2',
+      'ice_tortoise*5/2 ; vine_leech*4/1.5@4',
+      'frost_wolf*14/0.5 ; snow_wisp*6/1@5',
+      'ice_tortoise*5/1.8 ; rust_knight*6/1.4@3',
+      'ice_tortoise*6/1.6 ; frost_wolf*14/0.5@4 ; snow_wisp*8/0.9@8',
+    ],
+    task: { type: 'effects', ids: ['permafrost'], text: '영구 동토 켜기' },
+    challenge: { type: 'noBlock', text: '붙잡기 없이(병영·근접 영웅 금지)' },
+    newTowers: ['quake_hammer'], newEnemies: ['ice_tortoise'],
+    tips: ['shred'],
+  },
+  {
+    id: '2-3', region: 2, name: '얼어붙은 호수', type: 'maze',
+    grid: [
+      '~~~~##########~~',
+      'S.,,,,^,,,,,,,#~',
+      '~#,,,,^,,,^,,,#~',
+      '~#,,,,^,,,^,,,##',
+      '~#,,,,,,,,^,,,.L',
+      '~#,,,^,,,,^,,,##',
+      '~#,,,^,,,,,,,,#~',
+      'S.,,,^,,,,,,,,#~',
+      '~~~~##########~~',
+    ],
+    startGold: 500,
+    waves: [
+      'frost_wolf*3/1.4>0 ; frost_wolf*3/1.4@3>1',
+      'avalanche_golem*1>0',
+      'avalanche_golem*1>0 ; avalanche_golem*1@4>1',
+      'snow_wisp*6/1.2>0 ; frost_wolf*8/0.8>1',
+      'avalanche_golem*3/3>0 ; ice_tortoise*2/3>1',
+      'frost_wolf*10/0.6>0 ; frost_wolf*10/0.6@3>1',
+      'avalanche_golem*3/2.5>1 ; snow_wisp*6/1@3>0',
+      'ice_tortoise*3/2.5>0 ; avalanche_golem*3/2.5@2>1',
+      'frost_wolf*14/0.5>0 ; rust_knight*5/1.4>1',
+      'avalanche_golem*4/2>0 ; avalanche_golem*4/2@3>1',
+      'snow_wisp*10/0.8>0 ; ice_tortoise*4/2>1',
+      'avalanche_golem*5/1.8>0 ; avalanche_golem*5/1.8@2>1 ; frost_wolf*12/0.5@6>0',
+    ],
+    task: { type: 'effects', ids: ['superconduct', 'overheat'], text: '초전도와 과열 함께 켜기' },
+    challenge: { type: 'maxTowers', value: 8, text: '탑 8개 이하' },
+    newTowers: ['lightning_rod'], newEnemies: ['avalanche_golem', 'snowball_golem'],
+  },
+  {
+    id: '2-4', region: 2, name: '설인 마을', type: 'fixed',
+    grid: [
+      'TT#####TT######T',
+      'T##T##TT###....L',
+      'T##.....###.##TT',
+      'T##.###.###.##TT',
+      '^##.###.###.##TT',
+      'T##.###.###.##^T',
+      'T##.###.....##TT',
+      'S...#####TT#####',
+      'TT######TT######',
+    ],
+    startGold: 460,
+    waves: [
+      'frost_wolf*8/0.9',
+      'yeti_shaman*1 ; frost_wolf*3/1@2',
+      'ice_tortoise*2/3 ; snow_wisp*4/1.2@4',
+      'yeti_shaman*1 ; ash_boar*5/1.2@1',
+      'avalanche_golem*3/2.5',
+      'frost_wolf*12/0.6 ; yeti_shaman*2/3@3',
+      'snow_wisp*8/1 ; rust_knight*4/1.5@3',
+      'ice_tortoise*4/2 ; yeti_shaman*2/3@2',
+      'avalanche_golem*4/2 ; frost_wolf*10/0.6@4',
+      'yeti_shaman*3/2.5 ; straw_husk*6/1.2@1',
+      'snow_wisp*12/0.7 ; ice_tortoise*3/2@4',
+      'avalanche_golem*5/1.8 ; yeti_shaman*3/2.5@3',
+      'frost_wolf*20/0.4 ; rust_knight*6/1.2@4',
+      'ice_tortoise*5/1.6 ; yeti_shaman*4/2@2 ; avalanche_golem*4/2@6 ; snow_wisp*8/0.8@8',
+    ],
+    task: { type: 'amp', tower: 'forge', n: 3, text: '대장간 하나가 공명 증폭 3개 받기' },
+    challenge: { type: 'noSell', text: '판매 금지' },
+    newTowers: ['forge'], newEnemies: ['yeti_shaman'],
+    tips: ['healer', 'forge'],
+  },
+  {
+    id: '2-5', region: 2, name: '수정 동굴', type: 'fixed',
+    grid: [
+      '^###^###^###^##^',
+      'S..............#',
+      '^###~###^###~#.^',
+      '^##########^##.^',
+      '^..............^',
+      '^.###^######^##^',
+      '^.##~###^###~##^',
+      '^.............L^',
+      '^^###^###^###^^^',
+    ],
+    startGold: 520,
+    hpMult: 0.9, // 탐색 봇 ★3 기준 난이도 계수
+    waves: [
+      'frost_wolf*10/0.8',
+      'ice_shieldbearer*2/3',
+      'rime_wraith*2/3',
+      'ice_shieldbearer*3/2.5 ; frost_wolf*6/0.8@3',
+      'rime_wraith*4/2 ; snow_wisp*4/1.2@4',
+      'ice_tortoise*3/2.5 ; ice_shieldbearer*3/2.5@3',
+      'rime_wraith*6/1.5 ; yeti_shaman*2/3@3',
+      'avalanche_golem*4/2 ; ice_shieldbearer*4/2@3',
+      'frost_wolf*12/0.6 ; rime_wraith*4/1.6@4',
+      'ice_shieldbearer*6/1.6 ; yeti_shaman*2/3@4',
+      'snow_wisp*9/0.8 ; rime_wraith*5/1.5@3',
+      'ice_tortoise*5/1.8 ; ice_shieldbearer*5/1.8@3',
+      'rime_wraith*7/1.2 ; avalanche_golem*3/2.2@4',
+      'ice_shieldbearer*6/1.5 ; rime_wraith*6/1.4@3 ; yeti_shaman*2/3@6 ; frost_wolf*8/0.6@8',
+    ],
+    task: { type: 'stack', n: 4, text: '한 탑에 공명 효과 4개' },
+    challenge: { type: 'banTowers', value: ['sanctuary'], text: '성소 없이' },
+    newTowers: ['ice_ballista'], newEnemies: ['rime_wraith', 'ice_shieldbearer'],
+    story: { before: 's2_5' },
+    tips: ['stealth', 'shield'],
+  },
+  {
+    id: '2-6', region: 2, name: '흰뿔의 정상', type: 'mixed', boss: 'whitehorn',
+    grid: [
+      'TT^^###^^#####^^',
+      'T##^###^#,,,,,#^',
+      'T###^##^#,,,,,.L',
+      '^###^##^#,,,,,#^',
+      'T##^###^#,,,,,#^',
+      'T####....,,,,,#^',
+      'T####.##^^^^^^^^',
+      'S.....##^^^^TT^^',
+      '^^####^^^^^^^^^^',
+    ],
+    startGold: 560,
+    waves: [
+      'frost_wolf*12/0.7',
+      'ice_shieldbearer*4/2',
+      'rime_wraith*5/1.6 ; snow_wisp*5/1.2@3',
+      'ice_tortoise*4/2.2',
+      'avalanche_golem*4/2 ; frost_wolf*8/0.6@4',
+      'yeti_shaman*3/2.5 ; ice_shieldbearer*4/2@2',
+      'snow_wisp*12/0.7',
+      'ice_tortoise*5/1.8 ; rime_wraith*6/1.4@3',
+      'avalanche_golem*6/1.6 ; yeti_shaman*2/3@4',
+      'frost_wolf*16/0.45 ; ice_shieldbearer*5/1.6@4',
+      'rime_wraith*8/1.1 ; snow_wisp*8/0.9@2',
+      'ice_tortoise*6/1.5 ; avalanche_golem*5/1.8@4',
+      'yeti_shaman*3/2.4 ; ice_shieldbearer*6/1.4@2 ; frost_wolf*10/0.55@6',
+      'snow_wisp*10/0.7 ; rime_wraith*7/1.2@3 ; ice_tortoise*4/2@6',
+      'whitehorn*1 ; frost_wolf*10/0.8@6 ; ice_shieldbearer*4/2@10',
+    ],
+    task: { type: 'distinct', n: 7, text: '서로 다른 공명 효과 7가지 동시에' },
+    challenge: { type: 'maxTowers', value: 10, text: '탑 10개 이하' },
+    newEnemies: ['whitehorn'],
+    story: { after: 's2_end' },
+  },
+  /* ===================== 3지역 · 붉은 협곡 ===================== */
+  {
+    id: '3-1', region: 3, name: '잿빛 사막길', type: 'fixed',
+    grid: [
+      '^^^^A^^^^^^A^^^^',
+      '^###%###^###%##^',
+      '^####......#####',
+      '^####.####.##..L',
+      '^#^##.####.##.#^',
+      '^####.#%##.##.#^',
+      'S.....####....#^',
+      '^######^^######^',
+      '^^^^^^^^^^^^^^^^',
+    ],
+    startGold: 600,
+    hpMult: 0.95, // 탐색 봇 ★3 기준 난이도 계수
+    waves: [
+      'cinder_lizard*6/1',
+      'frost_wolf*8/0.8 ; cinder_lizard*4/1@4',
+      'thermal_vulture*3/2',
+      'cinder_lizard*10/0.7 ; ice_tortoise*2/3@3',
+      'thermal_vulture*5/1.4>0 ; thermal_vulture*3/1.4@3>1',
+      'avalanche_golem*3/2.5 ; cinder_lizard*8/0.7@3',
+      'thermal_vulture*8/1 ; snow_wisp*6/1@3',
+      'cinder_lizard*16/0.5 ; yeti_shaman*2/3@4',
+      'thermal_vulture*10/0.9 ; ice_shieldbearer*4/2@3',
+      'cinder_lizard*14/0.5 ; thermal_vulture*8/0.9@4 ; ice_tortoise*3/2@6',
+    ],
+    task: { type: 'effects', ids: ['flash'], text: '뇌광 켜기' },
+    challenge: { type: 'countdown', value: 5, text: '카운트다운 5초' },
+    newTowers: ['gale_cannon'], newEnemies: ['cinder_lizard', 'thermal_vulture'], hero: 'zena',
+    story: { before: 's3_1' },
+    tips: ['immune'],
+  },
+  {
+    id: '3-2', region: 3, name: '굴착충 둥지', type: 'fixed',
+    grid: [
+      '^##############^',
+      'S.............#^',
+      '^############.#^',
+      '^#............#^',
+      '^#.###########^^',
+      '^#............#^',
+      '^############.#^',
+      '^^###########..L',
+      '^^^^^^^^^^^^^^^^',
+    ],
+    startGold: 620,
+    hpMult: 0.85, // 탐색 봇 ★3 기준 난이도 계수
+    waves: [
+      'cinder_lizard*8/0.9',
+      'sand_burrower*2/3',
+      'thermal_vulture*5/1.3 ; sand_burrower*2/3@3',
+      'sand_burrower*4/2.2 ; frost_wolf*8/0.7@3',
+      'cinder_lizard*12/0.6 ; ice_tortoise*3/2.5@4',
+      'sand_burrower*6/1.8',
+      'thermal_vulture*8/1 ; sand_burrower*4/2@3',
+      'avalanche_golem*4/2 ; cinder_lizard*10/0.6@4',
+      'sand_burrower*8/1.5 ; yeti_shaman*2/3@4',
+      'thermal_vulture*10/0.8 ; cinder_lizard*12/0.5@3',
+      'sand_burrower*10/1.3 ; ice_shieldbearer*4/2@4',
+      'sand_burrower*10/1.2 ; thermal_vulture*10/0.8@3 ; cinder_lizard*12/0.5@6',
+    ],
+    task: { type: 'elementEffects', element: 'dark', n: 2, text: '어둠 원소가 낀 공명 2가지 동시에' },
+    challenge: { type: 'noSupport', text: '지원 탑 없이' },
+    newTowers: ['shadow_snare'], newEnemies: ['sand_burrower'],
+    tips: ['burrow'],
+  },
+  {
+    id: '3-3', region: 3, name: '용암 강', type: 'maze',
+    grid: [
+      '%%%%##########%%',
+      'S.,,,,%,,,,,,,#%',
+      '%#,,,,%,,,,%,,#%',
+      '%#,,,,,,,,,%,,##',
+      '%#,,%,,,,,,%,,.L',
+      '%#,,%,,,%,,,,,##',
+      '%#,,%,,,%,,,,,#%',
+      '%###%,,,%,,,,,#%',
+      '%%%%##########%%',
+    ],
+    startGold: 650,
+    hpMult: 0.85, // 탐색 봇 ★3 기준 난이도 계수
+    waves: [
+      'cinder_lizard*8/0.9',
+      'magma_brute*1',
+      'sand_burrower*4/2 ; thermal_vulture*4/1.4@3',
+      'magma_brute*2/4',
+      'cinder_lizard*14/0.5 ; magma_brute*1@6',
+      'thermal_vulture*8/1 ; sand_burrower*4/2@3',
+      'magma_brute*3/3 ; ice_tortoise*3/2.5@3',
+      'cinder_lizard*16/0.45 ; thermal_vulture*6/1@4',
+      'magma_brute*4/2.5 ; sand_burrower*5/1.8@3',
+      'avalanche_golem*5/1.8 ; thermal_vulture*10/0.8@4',
+      'magma_brute*5/2.2 ; cinder_lizard*14/0.5@3',
+      'magma_brute*6/2 ; sand_burrower*6/1.6@3 ; thermal_vulture*10/0.8@6',
+    ],
+    task: { type: 'effects', ids: ['twilight'], text: '황혼 켜기' },
+    challenge: { type: 'lives', value: 3, text: '불꽃 3개로 시작' },
+    newTowers: ['sun_lens'], newEnemies: ['magma_brute'],
+    tips: ['beam'],
+  },
+  {
+    id: '3-4', region: 3, name: '약탈자 야영지', type: 'fixed',
+    grid: [
+      '^##############A',
+      'S..............^',
+      '^#############.^',
+      '^............#.^',
+      '^.##########.#.^',
+      '^.##L........#.^',
+      '^.############.^',
+      '^..............^',
+      '^##############^',
+    ],
+    startGold: 650,
+    waves: [
+      'cinder_lizard*10/0.8',
+      'dune_raider*2/3',
+      'canyon_slinger*3/2.5',
+      'dune_raider*4/2 ; thermal_vulture*5/1.2@3',
+      'canyon_slinger*5/1.8 ; sand_burrower*3/2.5@3',
+      'dune_raider*6/1.6 ; cinder_lizard*10/0.6@3',
+      'magma_brute*3/3 ; canyon_slinger*4/2@3',
+      'thermal_vulture*10/0.8 ; dune_raider*5/1.6@4',
+      'canyon_slinger*8/1.4 ; sand_burrower*5/1.8@3',
+      'dune_raider*8/1.3 ; magma_brute*3/2.5@4',
+      'cinder_lizard*18/0.4 ; canyon_slinger*6/1.5@3',
+      'dune_raider*10/1.1 ; canyon_slinger*8/1.3@3 ; magma_brute*4/2.4@6',
+      'thermal_vulture*14/0.6 ; dune_raider*8/1.2@3 ; sand_burrower*6/1.6@6',
+    ],
+    task: { type: 'distinct', n: 9, text: '서로 다른 공명 효과 9가지 동시에' },
+    challenge: { type: 'noHero', text: '영웅 없이' },
+    newTowers: ['hex_spire'], newEnemies: ['dune_raider', 'canyon_slinger'],
+    tips: ['ranged'],
+  },
+  {
+    id: '3-5', region: 3, name: '흑요석 골짜기', type: 'mixed',
+    grid: [
+      '^^###^^########^',
+      '^####^#,,,,,,,#^',
+      'S......,,,,,,,#^',
+      '^####^#,,,^,,,#^',
+      '^###^^#,,,,,,,#^',
+      '^####^#,,^,,,,#^',
+      '^###^^#,,,,,,,.L',
+      '^####^#,,,,,,,#^',
+      '^^^^^^##########',
+    ],
+    startGold: 680,
+    hpMult: 0.7, // 탐색 봇 ★3 기준 난이도 계수
+    waves: [
+      'dune_raider*6/1.2',
+      'obsidian_beetle*2/3',
+      'flame_spirit*4/1.6',
+      'obsidian_beetle*4/2.2 ; canyon_slinger*4/1.8@3',
+      'flame_spirit*6/1.2 ; thermal_vulture*6/1.2@3',
+      'obsidian_beetle*5/2 ; sand_burrower*4/2@3',
+      'magma_brute*4/2.5 ; flame_spirit*6/1.2@4',
+      'dune_raider*10/1 ; obsidian_beetle*4/2@4',
+      'flame_spirit*10/0.9 ; canyon_slinger*6/1.5@3',
+      'obsidian_beetle*7/1.6 ; magma_brute*3/2.5@4',
+      'thermal_vulture*12/0.7 ; flame_spirit*10/0.8@3',
+      'obsidian_beetle*8/1.4 ; dune_raider*8/1.2@3 ; canyon_slinger*6/1.5@6',
+      'magma_brute*5/2 ; flame_spirit*12/0.7@3 ; obsidian_beetle*6/1.6@6',
+    ],
+    task: { type: 'stack', n: 5, text: '한 탑에 공명 효과 5개' },
+    challenge: { type: 'maxLevel', value: 3, text: 'Lv3까지(분기 금지)' },
+    newTowers: ['radiance_spire'], newEnemies: ['obsidian_beetle', 'flame_spirit'],
+  },
+  {
+    id: '3-6', region: 3, name: '벌레왕의 굴', type: 'fixed', boss: 'pyre_worm',
+    grid: [
+      '^##############A',
+      'S..............#',
+      '^#############.^',
+      '^#.............^',
+      '^#.############^',
+      '^#.............^',
+      '^#############.^',
+      '^#L............^',
+      '^^##############',
+    ],
+    startGold: 750,
+    hpMult: 0.82, // 탐색 봇 ★3 기준 난이도 계수
+    waves: [
+      'cinder_lizard*14/0.6',
+      'sand_burrower*5/2',
+      'dune_raider*6/1.4 ; canyon_slinger*4/1.8@3',
+      'magma_brute*3/3',
+      'thermal_vulture*10/0.9 ; flame_spirit*6/1.2@4',
+      'obsidian_beetle*5/2 ; sand_burrower*5/1.8@3',
+      'dune_raider*10/1 ; canyon_slinger*6/1.5@4',
+      'magma_brute*5/2.4 ; cinder_lizard*14/0.5@4',
+      'flame_spirit*12/0.8 ; thermal_vulture*10/0.8@3',
+      'obsidian_beetle*8/1.5 ; dune_raider*8/1.2@4',
+      'sand_burrower*10/1.3 ; magma_brute*4/2.4@4',
+      'canyon_slinger*10/1.2 ; flame_spirit*10/0.8@3 ; obsidian_beetle*5/1.8@6',
+      'magma_brute*6/2 ; dune_raider*10/1@3 ; thermal_vulture*12/0.7@6',
+      'obsidian_beetle*10/1.2 ; sand_burrower*10/1.2@3 ; flame_spirit*12/0.7@6',
+      'pyre_worm*1 ; cinder_lizard*16/0.6@5 ; dune_raider*6/1.5@10',
+    ],
+    task: { type: 'allElements', text: '여섯 원소 탑을 모두 지은 채 승리' },
+    challenge: { type: 'allowElements', value: ['frost', 'light', 'dark'], text: '얼음·빛·어둠 탑만' },
+    newEnemies: ['pyre_worm'],
+    story: { after: 's3_end' },
+  },
+
+  /* ===================== 4지역 · 폭풍 해안 ===================== */
+  {
+    id: '4-1', region: 4, name: '난파선 해변', type: 'fixed',
+    grid: [
+      'TT####TT####TTTT',
+      'T#####T#####T##T',
+      'S..........#####',
+      'T##^####^#.##..L',
+      'T#########.##.#T',
+      '~###~~####....#~',
+      '~~~~~~######~~~~',
+      '~~~~~~~~~~~~~~~~',
+      '~~~~~A~~~~~A~~~~',
+    ],
+    startGold: 820,
+    waves: [
+      'thermal_vulture*4/1.2',
+      'rock_crab*1/1.2 ; thermal_vulture*2/1.2@3',
+      'spray_sprite*4/0.6 ; rock_crab*1/1.2@3',
+      'thermal_vulture*7/1.2 ; spray_sprite*3/0.6@6 ; rock_crab*1/1.2@9',
+      'spray_sprite*9/0.6 ; thermal_vulture*4/1.2@5',
+      'spray_sprite*11/0.5 ; rock_crab*1/1.2@5',
+      'rock_crab*3/1.2 ; cinder_lizard*9/0.6@4 ; spray_sprite*2/0.6@9',
+      'rock_crab*4/1.2 ; cinder_lizard*9/0.6@4',
+      'magma_brute*3/2 ; rock_crab*2/1.2@5 ; spray_sprite*3/0.6@8',
+      'rock_crab*5/1.2 ; canyon_slinger*8/1.2@5',
+      'rock_crab*6/1.2',
+      'spray_sprite*32/0.5 ; thermal_vulture*13/1@8 ; dune_raider*3/1.2@16',
+    ],
+    task: { type: 'effects', ids: ['gravity', 'refraction'], text: '중력과 굴절 함께 켜기' },
+    challenge: { type: 'allowElements', value: ['light', 'dark'], text: '빛·어둠 탑만' },
+    newTowers: ['void_orb'], newEnemies: ['rock_crab', 'spray_sprite'], hero: 'bawi',
+    story: { before: 's4_1' },
+  },
+  {
+    id: '4-2', region: 4, name: '등대 절벽', type: 'fixed',
+    grid: [
+      '^^^^###^^^####^^',
+      '^###^###^##...L^',
+      '^####^####^.###^',
+      '~~###^#.....##^^',
+      '~~~##^#.###^##^^',
+      '~~~.....###^^^^^',
+      '~~~.####^^^~~~~~',
+      'S...####~~~~~~~~',
+      '####~~~~~~~~~~~~',
+    ],
+    startGold: 860,
+    waves: [
+      'rock_crab*1/1.2 ; obsidian_beetle*1/1.2@3 ; spray_sprite*1/0.6@5',
+      'spray_sprite*6/0.6 ; dune_raider*2/1.2@4',
+      'volt_jelly*3/1.2 ; spray_sprite*2/0.6@4',
+      'spray_sprite*9/0.6',
+      'rock_crab*2/1.2',
+      'volt_jelly*5/1.2 ; rock_crab*1/1.2@5',
+      'volt_jelly*6/1.2 ; spray_sprite*7/0.6@6 ; rock_crab*1/1.2@10',
+      'spray_sprite*17/0.5 ; rock_crab*2/1.2@6',
+      'volt_jelly*9/1.2 ; rock_crab*2/1.2@7',
+      'spray_sprite*25/0.5 ; volt_jelly*5/1.2@8 ; rock_crab*1/1.2@13',
+      'dune_raider*20/1 ; rock_crab*3/1.2@8',
+      'spray_sprite*35/0.5 ; volt_jelly*7/1.2@8',
+      'spray_sprite*41/0.5 ; volt_jelly*9/1.2@8',
+    ],
+    task: { type: 'amp', tower: 'dynamo', n: 4, text: '축전기 하나가 공명 증폭 4개 받기' },
+    challenge: { type: 'noSell', text: '판매 금지' },
+    newTowers: ['dynamo'], newEnemies: ['volt_jelly'],
+    tips: ['shock'],
+  },
+  {
+    id: '4-3', region: 4, name: '산호 미궁', type: 'maze',
+    grid: [
+      '~~############~~',
+      'S.,,,,^,,,,,,,#~',
+      '~#,,^,,,,^,,^,#~',
+      '~#,,,,,^,,,,,,##',
+      '~#,^,,,,,,,^,,.L',
+      '~#,,,,^,,,,,,,##',
+      '~#,,^,,,,^,,^,#~',
+      '~#,,,,,,^,,,,,#~',
+      '~~############~~',
+    ],
+    startGold: 900,
+    hpMult: 0.85, // 탐색 봇 ★3 기준 난이도 계수
+    waves: [
+      'spray_sprite*6/0.6 ; rock_crab*1/1.2@4',
+      'drowned_corsair*2/1.2 ; volt_jelly*1/1.2@3',
+      'rock_crab*2/1.2 ; drowned_corsair*1/1.2@3',
+      'rock_crab*2/1.2 ; spray_sprite*5/0.6@3 ; volt_jelly*1/1.2@7',
+      'coral_colossus*1/2',
+      'coral_colossus*1/2 ; rock_crab*1/1.2@3',
+      'volt_jelly*7/1.2 ; drowned_corsair*2/1.2@6',
+      'coral_colossus*1/2 ; volt_jelly*4/1.2@3',
+      'rock_crab*5/1.2 ; coral_colossus*1/2@5',
+      'coral_colossus*1/2 ; drowned_corsair*5/1.2@3 ; magma_brute*1/2@8',
+      'spray_sprite*31/0.5 ; drowned_corsair*4/1.2@8',
+      'drowned_corsair*10/1.2 ; spray_sprite*18/0.5@8 ; rock_crab*1/1.2@14',
+      'coral_colossus*2/2 ; volt_jelly*11/1@4',
+    ],
+    task: { type: 'links', n: 14, text: '공명 연결 14개 동시에' },
+    challenge: { type: 'noOpenBuild', text: '공터 건설 금지' },
+    newEnemies: ['drowned_corsair', 'coral_colossus'],
+    tips: ['undying'],
+  },
+  {
+    id: '4-4', region: 4, name: '폭풍의 눈', type: 'fixed',
+    grid: [
+      '^##############^',
+      '^..............^',
+      '^.############.^',
+      '^.#L.........#.^',
+      '^.##########.#.^',
+      '^............#.^',
+      '^#############.^',
+      'S..............^',
+      '^##############A',
+    ],
+    startGold: 900,
+    hpMult: 0.9, // 탐색 봇 ★3 기준 난이도 계수
+    waves: [
+      'rock_crab*1/1.2 ; coral_colossus*1/2@3',
+      'volt_eel*3/1.2 ; volt_jelly*1/1.2@4',
+      'volt_jelly*4/1.2 ; coral_colossus*1/2@4',
+      'tide_caller*3/1.2 ; rock_crab*1/1.2@4',
+      'volt_eel*5/1.2 ; rock_crab*1/1.2@5 ; coral_colossus*1/2@8',
+      'drowned_corsair*4/1.2 ; volt_jelly*2/1.2@4 ; rock_crab*1/1.2@8',
+      'tide_caller*4/1.2 ; coral_colossus*1/2@4',
+      'spray_sprite*19/0.5 ; volt_jelly*4/1.2@7 ; rock_crab*1/1.2@11',
+      'volt_jelly*10/1.2 ; coral_colossus*1/2@8',
+      'coral_colossus*1/2 ; tide_caller*5/1.2@3 ; drowned_corsair*1/1.2@8',
+      'drowned_corsair*8/1.2 ; spray_sprite*16/0.5@7 ; volt_eel*2/1.2@13',
+      'rock_crab*8/1.2 ; spray_sprite*18/0.5@7',
+      'volt_jelly*19/1 ; spray_sprite*20/0.5@8 ; tide_caller*2/1.2@15',
+      'volt_eel*21/1 ; spray_sprite*23/0.5@8',
+    ],
+    task: { type: 'effects', ids: ['tempest'], text: '폭풍우 켜기' },
+    challenge: { type: 'banElements', value: ['storm'], text: '폭풍 탑 없이' },
+    newEnemies: ['volt_eel', 'tide_caller'],
+  },
+  {
+    id: '4-5', region: 4, name: '안개 항구', type: 'fixed',
+    grid: [
+      '~###~###~#######',
+      'S......##^######',
+      '~~~~~~.#########',
+      '~###~#.###^#####',
+      'S..............L',
+      '~###~#.###^#####',
+      '~~~~~~.#########',
+      'S......##^######',
+      '~###~###~#######',
+    ],
+    startGold: 950,
+    waves: [
+      'tide_caller*2/1.2>0 ; volt_jelly*1/1.2@3>1',
+      'volt_jelly*3/1.2>1 ; volt_eel*2/1.2@4>2',
+      'mist_mariner*3/1.2>2 ; volt_eel*1/1.2@4>0',
+      'mist_mariner*4/1.2>0 ; rock_crab*1/1.2@4>1',
+      'tide_caller*3/1.2>1 ; mist_mariner*2/1.2@4>2',
+      'tide_caller*4/1.2>2 ; volt_jelly*3/1.2@4>0 ; rock_crab*1/1.2@8>1',
+      'spray_sprite*17/0.5>0 ; mist_mariner*3/1.2@6>1 ; rock_crab*1/1.2@10>2',
+      'volt_jelly*9/1.2>1 ; mist_mariner*3/1.2@7>2 ; tide_caller*1/1.2@11>0',
+      'spray_sprite*24/0.5>2 ; drowned_corsair*3/1.2@8>0',
+      'rock_crab*6/1.2>0 ; volt_jelly*6/1.2@6>1',
+      'mist_mariner*12/1>1 ; volt_jelly*7/1.2@8>2 ; drowned_corsair*1/1.2@14>0',
+      'rock_crab*9/1.2>2 ; spray_sprite*18/0.5@7>0 ; volt_eel*2/1.2@14>1',
+      'volt_jelly*20/1>0 ; drowned_corsair*6/1.2@8>1 ; volt_eel*3/1.2@14>2',
+      'volt_jelly*24/1>1 ; mist_mariner*9/1.2@8>2',
+    ],
+    task: { type: 'distinct', n: 11, text: '서로 다른 공명 효과 11가지 동시에' },
+    challenge: { type: 'banTowers', value: ['sanctuary', 'radiance_spire'], text: '성소·광휘 탑 없이' },
+    newEnemies: ['mist_mariner'],
+  },
+  {
+    id: '4-6', region: 4, name: '고래의 하늘', type: 'fixed',
+    grid: [
+      'A######A######A^',
+      '################',
+      '##^####~~####^##',
+      '################',
+      '###~~########~~#',
+      '################',
+      'S.............L#',
+      '################',
+      '~~~~~~~~~~~~~~~~',
+    ],
+    startGold: 1000,
+    waves: [
+      'tide_caller*2/1.2 ; mist_mariner*1/1.2@3',
+      'spray_sprite*8/0.6 ; rock_crab*1/1.2@4',
+      'volt_eel*4/1.2 ; volt_jelly*2/1.2@4',
+      'tide_caller*3/1.2 ; volt_eel*2/1.2@4 ; spray_sprite*1/0.6@7',
+      'spray_sprite*13/0.5 ; tide_caller*2/1.2@5',
+      'spray_sprite*15/0.5 ; volt_eel*3/1.2@6',
+      'volt_jelly*8/1.2 ; coral_colossus*1/2@7',
+      'volt_jelly*9/1.2 ; tide_caller*2/1.2@7',
+      'mist_mariner*8/1.2 ; coral_colossus*1/2@7',
+      'coral_colossus*1/2 ; spray_sprite*19/0.5@3 ; mist_mariner*2/1.2@10',
+      'tide_caller*9/1.2 ; coral_colossus*1/2@7',
+      'coral_colossus*2/2 ; mist_mariner*6/1.2@4 ; drowned_corsair*1/1.2@10',
+      'volt_eel*18/1 ; rock_crab*5/1.2@8',
+      'drowned_corsair*14/1 ; tide_caller*7/1.2@8 ; coral_colossus*1/2@14',
+      'tempest_whale*1/2 ; spray_sprite*10/0.6@3 ; volt_jelly*3/1.2@8',
+    ],
+    task: { type: 'stack', n: 6, text: '한 탑에 공명 효과 6개' },
+    challenge: { type: 'lives', value: 5, text: '불꽃 5개로 시작' },
+    newEnemies: ['tempest_whale'], boss: 'tempest_whale',
+    story: { after: 's4_end' },
+  },
+
+  /* ===================== 5지역 · 깨진 대종 ===================== */
+  {
+    id: '5-1', region: 5, name: '회색 평원', type: 'fixed',
+    grid: [
+      '^###^####^####^^',
+      '^##############^',
+      'S...........####',
+      '^##########.####',
+      '^###=##=###....L',
+      '^##########.####',
+      'S...........####',
+      '^##############^',
+      '^###^####^####^^',
+    ],
+    startGold: 1100,
+    hpMult: 0.9, // 탐색 봇 ★3 기준 난이도 계수
+    waves: [
+      'rock_crab*2/1.2>0 ; drowned_corsair*1/1.2@3>1',
+      'grey_legionnaire*2/1.2>1 ; drowned_corsair*1/1.2@3>0',
+      'grey_legionnaire*2/1.2>0',
+      'hush_monk*2/1.2>1 ; grey_legionnaire*1/1.2@3>0',
+      'tide_caller*4/1.2>0 ; hush_monk*1/1.2@4>1',
+      'grey_legionnaire*3/1.2>1 ; hush_monk*2/1.2@4>0',
+      'hush_monk*4/1.2>0 ; grey_legionnaire*2/1.2@4>1',
+      'grey_legionnaire*4/1.2>1 ; hush_monk*2/1.2@4>0',
+      'rock_crab*7/1.2>0 ; hush_monk*2/1.2@6>1 ; grey_legionnaire*1/1.2@9>0',
+      'grey_legionnaire*6/1.2>1 ; tide_caller*4/1.2@6>0 ; hush_monk*1/1.2@10>1',
+      'hush_monk*7/1.2>0',
+      'hush_monk*8/1.2>1 ; rock_crab*5/1.2@7>0',
+      'hush_monk*10/1.2>0 ; grey_legionnaire*4/1.2@8>1',
+      'rock_crab*14/1>1 ; grey_legionnaire*5/1.2@8>0',
+    ],
+    task: { type: 'distinct', n: 12, text: '서로 다른 공명 효과 12가지 동시에' },
+    challenge: { type: 'noHero', text: '영웅 없이' },
+    newEnemies: ['grey_legionnaire', 'hush_monk'], hero: 'yaro',
+    story: { before: 's5_1' },
+    tips: ['silence'],
+  },
+  {
+    id: '5-2', region: 5, name: '침묵의 회랑', type: 'fixed',
+    grid: [
+      '=##=##=##=##=##=',
+      'S..............#',
+      '=#=##=##=##=##.=',
+      '=#############.=',
+      '=..............=',
+      '=.#=##=##=##=##=',
+      '=.#############=',
+      '=..............L',
+      '=##=##=##=##=##=',
+    ],
+    startGold: 1150,
+    waves: [
+      'grey_legionnaire*2/1.2 ; hush_monk*1/1.2@3',
+      'void_stalker*2/1.2 ; hush_monk*1/1.2@3',
+      'grey_legionnaire*2/1.2 ; coral_colossus*1/2@3',
+      'ashen_paladin*1/2',
+      'coral_colossus*1/2 ; mist_mariner*2/1.2@3 ; ashen_paladin*1/2@6',
+      'void_stalker*4/1.2 ; hush_monk*2/1.2@4',
+      'coral_colossus*1/2 ; grey_legionnaire*2/1.2@3 ; void_stalker*1/1.2@6',
+      'void_stalker*6/1.2',
+      'hush_monk*6/1.2 ; grey_legionnaire*2/1.2@6',
+      'ashen_paladin*2/2 ; hush_monk*3/1.2@4',
+      'hush_monk*8/1.2 ; ashen_paladin*1/2@7 ; grey_legionnaire*1/1.2@10',
+      'void_stalker*10/1.2 ; grey_legionnaire*4/1.2@8',
+      'hush_monk*11/1 ; grey_legionnaire*5/1.2@7',
+      'grey_legionnaire*12/1 ; hush_monk*6/1.2@8 ; void_stalker*2/1.2@13',
+    ],
+    task: { type: 'pureAll', text: '여섯 원소 모두에서 순수 공명 켜기' },
+    challenge: { type: 'maxTowers', value: 12, text: '탑 12개 이하' },
+    newEnemies: ['void_stalker', 'ashen_paladin'],
+  },
+  {
+    id: '5-3', region: 5, name: '메아리 골짜기', type: 'maze',
+    grid: [
+      '^^############^^',
+      'S.,,,,,,^,,,,,#^',
+      '^#,,^,,,,,,,^,#^',
+      '^#,,,,,^,,,,,,##',
+      '^#,^,,,,,,^,,,.L',
+      '^#,,,,,^,,,,,,##',
+      '^#,,^,,,,,,,^,#^',
+      'S.,,,,,,^,,,,,#^',
+      '^^############^^',
+    ],
+    startGold: 1200,
+    waves: [
+      'ashen_paladin*1/2>0',
+      'echo_shade*2/1.2>1 ; ashen_paladin*1/2@3>0',
+      'void_stalker*3/1.2>0 ; ashen_paladin*1/2@4>1',
+      'echo_shade*2/1.2>1',
+      'bellshard_golem*1/2>0 ; void_stalker*2/1.2@3>1',
+      'echo_shade*3/1.2>1 ; ashen_paladin*1/2@4>0',
+      'bellshard_golem*2/2>0 ; echo_shade*1/1.2@4>1',
+      'grey_legionnaire*5/1.2>1 ; ashen_paladin*1/2@5>0',
+      'grey_legionnaire*6/1.2>0 ; hush_monk*2/1.2@6>1 ; bellshard_golem*1/2@9>0',
+      'bellshard_golem*3/2>1 ; void_stalker*3/1.2@5>0 ; hush_monk*1/1.2@9>1',
+      'bellshard_golem*3/2>0 ; echo_shade*4/1.2@5>1',
+      'bellshard_golem*4/2>1 ; grey_legionnaire*4/1.2@6>0',
+      'bellshard_golem*4/2>0 ; ashen_paladin*2/2@6>1',
+      'ashen_paladin*3/2>1 ; grey_legionnaire*7/1.2@5>0',
+      'void_stalker*16/1>0 ; hush_monk*7/1.2@8>1',
+    ],
+    task: { type: 'distinct', n: 13, text: '서로 다른 공명 효과 13가지 동시에' },
+    challenge: { type: 'allowElements', value: ['fire', 'frost', 'storm'], text: '불·얼음·폭풍 탑만' },
+    newEnemies: ['echo_shade', 'bellshard_golem'],
+    tips: ['adaptive'],
+  },
+  {
+    id: '5-4', region: 5, name: '무너진 종루', type: 'mixed',
+    grid: [
+      '^######=========',
+      'S.....##########',
+      '^####.#,,,,,,#==',
+      '^####..,,,,,,#==',
+      '^#####=,,,=,,#==',
+      '^######,,,,,,#==',
+      '^######,,,,,,..L',
+      '^######,,=,,,#==',
+      '^^^^^^^=========',
+    ],
+    startGold: 1250,
+    waves: [
+      'ashen_paladin*1/2',
+      'silent_drake*1/2 ; void_stalker*1/1.2@3',
+      'echo_shade*2/1.2 ; bellshard_golem*1/2@3',
+      'resonance_eater*3/1.2 ; ashen_paladin*1/2@4',
+      'resonance_eater*3/1.2 ; ashen_paladin*1/2@4',
+      'resonance_eater*4/1.2 ; bellshard_golem*1/2@4',
+      'silent_drake*2/2 ; bellshard_golem*1/2@4 ; void_stalker*1/1.2@7',
+      'void_stalker*6/1.2 ; ashen_paladin*1/2@6',
+      'silent_drake*3/2 ; ashen_paladin*1/2@5',
+      'hush_monk*7/1.2 ; echo_shade*3/1.2@6',
+      'void_stalker*10/1.2 ; ashen_paladin*1/2@8',
+      'hush_monk*10/1.2',
+      'grey_legionnaire*11/1 ; echo_shade*5/1.2@7',
+      'hush_monk*13/1 ; ashen_paladin*2/2@8',
+      'grey_legionnaire*15/1 ; echo_shade*6/1.2@8',
+    ],
+    task: { type: 'links', n: 20, text: '공명 연결 20개 동시에' },
+    challenge: { type: 'noAdjacent', text: '탑끼리 이웃 금지(공명 없음)' },
+    newEnemies: ['silent_drake', 'resonance_eater'],
+    tips: ['dampen'],
+  },
+  {
+    id: '5-5', region: 5, name: '종지기의 문', type: 'fixed',
+    grid: [
+      '^##############^',
+      '^L.............^',
+      '^#############.^',
+      '^..............^',
+      '^.##############',
+      '^..............^',
+      '^#############.^',
+      'S..............^',
+      '^##############A',
+    ],
+    startGold: 1350,
+    waves: [
+      'silent_drake*1/2 ; bellshard_golem*1/2@3',
+      'hush_monk*2/1.2 ; void_stalker*2/1.2@3',
+      'grey_legionnaire*3/1.2 ; ashen_paladin*1/2@4',
+      'grey_legionnaire*3/1.2 ; ashen_paladin*1/2@4',
+      'grey_legionnaire*3/1.2 ; hush_monk*2/1.2@4 ; silent_drake*1/2@7',
+      'silent_drake*2/2 ; bellshard_golem*1/2@4',
+      'grey_legionnaire*5/1.2 ; bellshard_golem*1/2@5',
+      'grey_legionnaire*5/1.2 ; resonance_eater*3/1.2@5',
+      'hush_monk*6/1.2 ; echo_shade*3/1.2@6 ; resonance_eater*1/1.2@9',
+      'bellshard_golem*3/2 ; ashen_paladin*1/2@5 ; silent_drake*1/2@8',
+      'resonance_eater*8/1.2 ; hush_monk*4/1.2@7',
+      'ashen_paladin*3/2 ; resonance_eater*3/1.2@5',
+      'grey_legionnaire*11/1 ; bellshard_golem*2/2@7 ; void_stalker*2/1.2@11',
+      'void_stalker*14/1 ; echo_shade*5/1.2@8 ; hush_monk*2/1.2@13',
+      'bellshard_golem*6/2 ; grey_legionnaire*7/1.2@8',
+      'bellkeeper*1/2 ; grey_legionnaire*6/1.2@3 ; ashen_paladin*2/2@9',
+    ],
+    task: { type: 'distinct', n: 14, text: '서로 다른 공명 효과 14가지 동시에' },
+    challenge: { type: 'lives', value: 1, text: '불꽃 1개로 시작' },
+    newEnemies: ['bellkeeper'], boss: 'bellkeeper',
+    story: { before: 's5_5', after: 's5_5_end' },
+  },
+  {
+    id: '5-6', region: 5, name: '대종의 심장', type: 'mixed',
+    grid: [
+      '^^^^^^^^^^^^^^^A',
+      'S...#######...S^',
+      '~##.........###~',
+      '~##.,,,,,,,.###~',
+      '~##.,,,L,,,.###~',
+      '~##.,,,,,,,.###~',
+      '~##.........###~',
+      'S...#######~~~~~',
+      'A^^^^^^^^^^^^^^^',
+    ],
+    startGold: 1500,
+    waves: [
+      'ashen_paladin*1/2>0',
+      'void_stalker*3/1.2>1 ; echo_shade*1/1.2@4>2',
+      'ashen_paladin*1/2>2 ; void_stalker*1/1.2@3>0',
+      'hush_monk*3/1.2>0 ; ashen_paladin*1/2@4>1',
+      'grey_legionnaire*3/1.2>1 ; bellshard_golem*1/2@4>2',
+      'bellshard_golem*2/2>2 ; void_stalker*1/1.2@4>0',
+      'void_stalker*5/1.2>0 ; grey_legionnaire*2/1.2@5>1 ; silent_drake*1/2@8>2',
+      'resonance_eater*5/1.2>1 ; grey_legionnaire*2/1.2@5>2 ; hush_monk*1/1.2@8>0',
+      'resonance_eater*5/1.2>2 ; silent_drake*1/2@5>0 ; grey_legionnaire*1/1.2@8>1',
+      'silent_drake*3/2>0 ; void_stalker*4/1.2@5>1',
+      'grey_legionnaire*7/1.2>1 ; resonance_eater*3/1.2@6>2 ; echo_shade*1/1.2@10>0',
+      'grey_legionnaire*8/1.2>2 ; resonance_eater*3/1.2@7>0 ; bellshard_golem*1/2@11>1',
+      'silent_drake*5/2>0 ; void_stalker*4/1.2@7>1',
+      'ashen_paladin*3/2>1 ; resonance_eater*4/1.2@5>2 ; void_stalker*2/1.2@9>0',
+      'resonance_eater*11/1>2 ; hush_monk*5/1.2@7>0',
+      'silent_drake*7/2>0 ; ashen_paladin*2/2@8>1',
+      'echo_shade*13/1>1 ; hush_monk*7/1.2@8>2',
+      'silent_drake*9/2>2 ; resonance_eater*7/1.2@8>0 ; ashen_paladin*1/2@14>1',
+      'silent_drake*10/2>0 ; ashen_paladin*2/2@8>1 ; grey_legionnaire*3/1.2@12>2',
+      'the_silence*1/2>1 ; echo_shade*4/1.2@3>2 ; silent_drake*3/2@7>0',
+    ],
+    task: { type: 'distinct', n: 16, text: '공명 효과 16가지 모두 동시에' },
+    challenge: { type: 'lives', value: 3, text: '불꽃 3개로 시작' },
+    newEnemies: ['the_silence'], boss: 'the_silence',
+    story: { before: 's5_6', after: 'ending' },
+  },
 ];
 
-/** 무한 맵 (지역 보스 처치 후) — 3단계에서 채움 */
-RG.data.endless = [];
+/** 무한 맵 (지역 보스 처치 후) */
+RG.data.endless = [
+  {
+    id: 'E1', region: 1, name: '솔빛 외곽 들판', type: 'maze', unlockAfter: '1-6', startGold: 600,
+    grid: [
+      'TT############TT',
+      'T#,,,,,,,,,,,,#T',
+      'T#,,,,,,,,,,,,#T',
+      '##,,,,,,,,,,,,##',
+      'S.,,,,,,,,,,,,.L',
+      '##,,,,,,,,,,,,##',
+      'T#,,,,,,,,,,,,#T',
+      'T#,,,,,,,,,,,,#T',
+      'TT############TT',
+    ],
+  },
+  {
+    id: 'E2', region: 2, name: '끝없는 설원', type: 'maze', unlockAfter: '2-6', startGold: 700,
+    grid: [
+      '^^############^^',
+      'S.,,,,^,,,,,,,#^',
+      '^#,,,,,,,,^,,,#^',
+      '^#,,^,,,,,,,,,##',
+      '^#,,,,,,^,,,,,.L',
+      '^#,,,,,,,,,,^,##',
+      '^#,,^,,,,,,,,,#^',
+      'S.,,,,,,,^,,,,#^',
+      '^^############^^',
+    ],
+  },
+  {
+    id: 'E3', region: 3, name: '불타는 분지', type: 'maze', unlockAfter: '3-6', startGold: 850,
+    grid: [
+      '%%############%%',
+      'S.,,,,,%,,,,,,#%',
+      '%#,,%,,,,,,%,,#%',
+      '%#,,,,,,%,,,,,##',
+      '%#,,,%,,,,,,,,.L',
+      '%#,,,,,,,%,,,,##',
+      '%#,%,,,,,,,%,,#%',
+      'S.,,,,,%,,,,,,#%',
+      '%%############%%',
+    ],
+  },
+  {
+    id: 'E4', region: 4, name: '폭풍 바다 위', type: 'fixed', unlockAfter: '4-6', startGold: 1000,
+    grid: [
+      'A#######A######A',
+      '################',
+      '##~~########~~##',
+      '################',
+      'S..............L',
+      '################',
+      '##~~########~~##',
+      '################',
+      '~~~~~~~~~~~~~~~~',
+    ],
+  },
+  {
+    id: 'E5', region: 5, name: '울림 없는 들', type: 'maze', unlockAfter: '5-6', startGold: 1300,
+    grid: [
+      '^^^^###S###^^^^^',
+      '^^##,,,,,,,,##^^',
+      '^#,,,,,,,,,,,,#^',
+      '##,,,,,,,,,,,,##',
+      'S.,,,,,L,,,,,,.S',
+      '##,,,,,,,,,,,,##',
+      '^#,,,,,,,,,,,,#^',
+      '^^##,,,,,,,,##^^',
+      '^^^^###S###^^^^^',
+    ],
+  },
+];
 
 /** 지역별 적 목록 (무한 모드 웨이브 생성용) */
 RG.data.regionPools = {
@@ -1955,6 +2885,172 @@ RG.data.story = {
       { who: 'elder', mood: 'worried', text: '서리 고개를 넘어야 할 게다. 몸 조심하려무나.' },
       { who: 'sera', mood: 'normal', text: '이제 탑을 더 크게 키울 수 있어요. 한 탑을 두 갈래 중 하나로 다듬는 법을 스승님이 적어 두셨거든요.' },
       { who: 'kara', mood: 'happy', text: '분기 강화! 좋아, 출발이다!' },
+    ],
+  },
+
+  s2_1: {
+    title: '얼음 다리의 파수꾼', region: 2,
+    lines: [
+      { who: 'narration', text: '서리 고개. 협곡 위에 걸린 얼음 다리 두 개만이 대종으로 가는 길이었다.' },
+      { who: 'kara', mood: 'worried', text: '으, 추워…! 언니, 다리 위에 누가 있어.' },
+      { who: 'sio', mood: 'normal', text: '멈춰. 더 오면 쏜다.' },
+      { who: 'sera', mood: 'normal', text: '저희는 솔빛 마을에서 왔어요. 안개의 근원을 찾아 대종으로 가는 길이에요.' },
+      { who: 'sio', mood: 'normal', text: '…대종. 안개는 거기서 온다.' },
+      { who: 'narration', text: '그때 협곡 아래에서 하얀 늑대 떼가 몰려왔다. 털끝이 모두 고드름이었다.' },
+      { who: 'sio', mood: 'worried', text: '서리 늑대. 빠르다. 얼음은 잘 안 먹힌다.' },
+      { who: 'kara', mood: 'happy', text: '그럼 불이지! 그리고 이 종으로 느리게 만들면 돼!' },
+      { who: 'sio', mood: 'normal', text: '…같이 막는다. 이름은 시오.' },
+    ],
+  },
+
+  s2_5: {
+    title: '보이지 않는 그림자', region: 2,
+    lines: [
+      { who: 'narration', text: '수정 동굴 안은 푸른빛으로 반짝였지만, 그림자가 소리 없이 지나갔다.' },
+      { who: 'sera', mood: 'worried', text: '지금… 뭔가 지나가지 않았어요?' },
+      { who: 'sio', mood: 'normal', text: '서리 망령. 눈에 안 보인다. 등불 빛이 닿아야 보인다.' },
+      { who: 'sera', mood: 'normal', text: '성소의 빛이나 제 등불이 닿으면 모습을 드러낼 거예요. 폭발이나 파동 같은 공격은 보이지 않아도 맞고요.' },
+      { who: 'sio', mood: 'worried', text: '…동생도 이런 눈보라 속에서 사라졌다. 이름은 하루. 열두 살.' },
+      { who: 'sera', mood: 'worried', text: '시오 씨…' },
+      { who: 'sio', mood: 'normal', text: '안개 속 어딘가에 있다. 그렇게 믿는다. 그러니까 멈출 수 없다.' },
+      { who: 'sera', mood: 'happy', text: '대종을 고치면 안개에 삼켜진 것들도 돌아올지 몰라요. 같이 찾아요.' },
+    ],
+  },
+
+  s2_end: {
+    title: '녹기 시작한 산', region: 2,
+    lines: [
+      { who: 'narration', text: '흰뿔이 쓰러지자, 꽁꽁 얼어 있던 정상에 처음으로 물방울이 떨어졌다.' },
+      { who: 'sio', mood: 'worried', text: '흰뿔은 이 산의 주인이었다. 아버지 같은… 산이었다.' },
+      { who: 'kara', mood: 'normal', text: '안개가 울림을 빼앗아서 그렇게 된 거잖아. 흰뿔 잘못이 아니야.' },
+      { who: 'sera', mood: 'happy', text: '봐요, 얼음이 녹고 있어요. 울림이 돌아오고 있는 거예요.' },
+      { who: 'sio', mood: 'normal', text: '…하루를 찾을 때까지. 그때까지 같이 간다.' },
+      { who: 'kara', mood: 'happy', text: '좋아! 수호대가 셋이 됐다!' },
+      { who: 'narration', text: '고개 너머로 붉은 협곡이 보였다. 바람에 실려 모래와 불씨가 날아왔다.' },
+    ],
+  },
+
+  s3_1: {
+    title: '협곡의 발명가', region: 3,
+    lines: [
+      { who: 'narration', text: '붉은 협곡. 뜨거운 모래바람 속에서 누군가 소리쳤다.' },
+      { who: 'zena', mood: 'worried', text: '거기 누구 있어요?! 약탈자들이 제 장치를 다 빼앗아 갔어요! 저는 덤으로 묶어 놨고요!' },
+      { who: 'kara', mood: 'normal', text: '기다려, 지금 풀어 줄게!' },
+      { who: 'zena', mood: 'happy', text: '살았다! 저는 제나, 떠돌이 발명가예요. 공명석으로 움직이는 번개 장치를 만들죠. 아, 이건 번개 드론 3호!' },
+      { who: 'sio', mood: 'normal', text: '…말이 많다.' },
+      { who: 'zena', mood: 'happy', text: '선배는 말이 적네요! 균형이 딱 맞아요!' },
+      { who: 'narration', text: '모래 너머에서 불도마뱀과 열풍 독수리가 몰려왔다.' },
+      { who: 'zena', mood: 'normal', text: '저 도마뱀들은 불이 전혀 안 통해요. 얼음이나 번개로! 하늘의 독수리는 바람 포탑이면 두 배로 아플 거예요.' },
+      { who: 'sera', mood: 'happy', text: '같이 가요, 제나 씨. 대종을 고치려면 발명가가 꼭 필요할 거예요.' },
+    ],
+  },
+
+  s3_end: {
+    title: '울림의 빈자리', region: 3,
+    lines: [
+      { who: 'narration', text: '용암 벌레왕이 협곡 깊은 곳으로 잠들자, 끓어오르던 땅이 조용해졌다.' },
+      { who: 'zena', mood: 'normal', text: '안개 표본을 분석해 봤어요. 놀라운 결과가 나왔어요.' },
+      { who: 'zena', mood: 'worried', text: '안개는 뭔가가 "있는" 게 아니에요. 울림이 "없는" 거예요. 소리의 반대, 빈자리 그 자체.' },
+      { who: 'sera', mood: 'worried', text: '빈자리… 그래서 등불을 향해 오는 거군요. 채워지고 싶어서.' },
+      { who: 'zena', mood: 'happy', text: '그러니까 대종의 금을 메우면 돼요! 여섯 울림을 하나로 이어 줄 이음쇠를 만들면!' },
+      { who: 'sio', mood: 'normal', text: '여섯… 우리는 아직 넷이다.' },
+      { who: 'kara', mood: 'happy', text: '그럼 더 모으면 되지! 다음은 바다 쪽이야!' },
+    ],
+  },
+
+  s4_1: {
+    title: '일어선 절벽', region: 4,
+    lines: [
+      { who: 'narration', text: '폭풍 해안. 난파선 사이로 파도가 부서지고, 하늘에서는 물보라 요정이 떼 지어 날았다.' },
+      { who: 'zena', mood: 'worried', text: '으앗, 하늘에서도 와요! 바위게는 단단하고… 어디 숨을 데 없나요?!' },
+      { who: 'narration', text: '그때, 해안 절벽 하나가 천천히 몸을 일으켰다. 이끼와 작은 꽃이 핀 거대한 돌이었다.' },
+      { who: 'bawi', mood: 'normal', text: '허허… 오래 잤구려. 등불 냄새에 눈을 떴소.' },
+      { who: 'kara', mood: 'worried', text: '바위가… 말을 해?!' },
+      { who: 'bawi', mood: 'happy', text: '나는 바위요. 대종이 처음 울리던 날 태어났지. 그 울림이 그리워 바다를 지키며 잠들어 있었소.' },
+      { who: 'sera', mood: 'normal', text: '대종에 금이 가서 안개가 흘러나와요. 저희는 그걸 고치러 가는 길이에요.' },
+      { who: 'bawi', mood: 'normal', text: '…그랬구려. 그렇다면 이 늙은 돌도 함께 가겠소. 앞은 내가 막으리다.' },
+    ],
+  },
+
+  s4_end: {
+    title: '대종과 종지기', region: 4,
+    lines: [
+      { who: 'narration', text: '폭풍 고래가 하늘 너머로 사라지자 먹구름이 걷히고, 바다 건너 땅의 심장이 보였다.' },
+      { who: 'bawi', mood: 'normal', text: '저기가 대종이 있는 곳이오. 옛날엔 백 년에 한 번, 온 땅이 함께 울렸지.' },
+      { who: 'bawi', mood: 'worried', text: '대종을 지키는 종지기 가문이 있었소. 마지막 종지기는… 내 오랜 친구였지.' },
+      { who: 'sera', mood: 'worried', text: '그분은 지금 어디에 계세요?' },
+      { who: 'bawi', mood: 'worried', text: '종에 금이 간 날, 자기가 지키지 못했다며 몹시 슬퍼했다고 들었소. 그 뒤로는 소식이 없소.' },
+      { who: 'zena', mood: 'normal', text: '이음쇠 설계는 거의 끝났어요. 이제 대종 앞까지만 가면 돼요.' },
+      { who: 'kara', mood: 'normal', text: '가자. 마지막 지역이야.' },
+    ],
+  },
+
+  s5_1: {
+    title: '그림자의 배신자', region: 5,
+    lines: [
+      { who: 'narration', text: '회색 평원. 얼굴 없는 회색 군단이 발맞춰 행진하고 있었다.' },
+      { who: 'yaro', mood: 'normal', text: '거기 등불 든 녀석들. 그대로 가면 군단 한가운데로 들어간다.' },
+      { who: 'kara', mood: 'worried', text: '누구야! 잿빛 교단이지?' },
+      { who: 'yaro', mood: 'normal', text: '…였지. 오늘부로 그만뒀어. 침묵이 평화라니, 웃기는 소리야.' },
+      { who: 'sio', mood: 'normal', text: '믿을 수 없다.' },
+      { who: 'yaro', mood: 'happy', text: '안 믿어도 돼. 대신 하나 알려 주지. 저 수도사들 근처의 탑은 침묵에 빠져. 멀리서 잡아.' },
+      { who: 'sera', mood: 'normal', text: '…왜 도와주시는 거예요?' },
+      { who: 'yaro', mood: 'worried', text: '그림자는 등불 옆에 있어야 생기는 거니까. 흥, 빨리 끝내자.' },
+    ],
+  },
+
+  s5_5: {
+    title: '스승과 제자', region: 5,
+    lines: [
+      { who: 'narration', text: '종지기의 문. 거대한 종을 등에 진 회색 인물이 길을 막고 서 있었다.' },
+      { who: 'yaro', mood: 'worried', text: '…스승님.' },
+      { who: 'bawi', mood: 'worried', text: '저 종 모양 가면… 틀림없소. 마지막 종지기요.' },
+      { who: 'bellkeeper', mood: 'normal', text: '돌아왔느냐, 야로. 등불 따위를 들고서.' },
+      { who: 'bellkeeper', mood: 'normal', text: '종은 깨졌노라. 울림은 다툼과 슬픔을 낳을 뿐. 이제 모두 고요해지면 되느니라.' },
+      { who: 'yaro', mood: 'normal', text: '아니야. 스승님은 그냥… 종을 지키지 못한 게 너무 아팠던 거야.' },
+      { who: 'kara', mood: 'normal', text: '야로, 같이 가자. 네 스승님은 우리가 같이 멈춰 줄게.' },
+      { who: 'yaro', mood: 'normal', text: '…고마워. 그리고 조심해. 스승님은 순간이동을 해.' },
+    ],
+  },
+
+  s5_5_end: {
+    title: '깨진 가면', region: 5,
+    lines: [
+      { who: 'narration', text: '종지기가 무릎을 꿇었다. 종 모양 가면에 금이 가더니, 조용히 둘로 갈라졌다.' },
+      { who: 'bellkeeper', mood: 'worried', text: '…미안하다. 지키지 못한 종 앞에서, 나는 울림을 놓아 버렸느니라.' },
+      { who: 'yaro', mood: 'worried', text: '이제 됐어요. 남은 건 우리가 할게요.' },
+      { who: 'bellkeeper', mood: 'happy', text: '야로… 등불 곁의 그림자라. 좋은 이름을 얻었구나.' },
+      { who: 'bawi', mood: 'normal', text: '쉬게, 친구여. 종은 이 아이들이 다시 울릴 거요.' },
+      { who: 'narration', text: '야로는 깨진 가면을 품에 넣었다. 문 너머에서 대종의 심장이 낮게 울렁였다.' },
+    ],
+  },
+
+  s5_6: {
+    title: '여섯 개의 울림', region: 5,
+    lines: [
+      { who: 'narration', text: '대종의 심장. 금 간 틈에서 잿빛 형체가 천천히 일어섰다. 얼굴 대신 깨진 종의 입구가 있었다.' },
+      { who: 'zena', mood: 'worried', text: '측정이 안 돼요… 저건 무언가가 아니라, 울림이 완전히 없는 자리예요.' },
+      { who: 'sera', mood: 'normal', text: '침묵. 안개의 근원이에요.' },
+      { who: 'sio', mood: 'normal', text: '불, 얼음, 폭풍, 대지, 빛, 어둠. 여섯이 다 있다.' },
+      { who: 'bawi', mood: 'normal', text: '한 가지 울림만으로는 저것을 채울 수 없소. 모두 함께 울려야 하오.' },
+      { who: 'yaro', mood: 'happy', text: '흥, 한 원소에만 기대면 그때마다 막힌다는 거지. 알겠어.' },
+      { who: 'kara', mood: 'happy', text: '좋아! 공명 수호대, 마지막 전투다!' },
+    ],
+  },
+
+  ending: {
+    title: '다시 울리는 종', region: 5,
+    lines: [
+      { who: 'narration', text: '여섯 울림이 하나로 모였다. 카라가 벼린 종메가 제나의 이음쇠를 두드리자, 대종이 다시 울렸다.' },
+      { who: 'narration', text: '종소리는 땅끝까지 퍼졌다. 안개가 걷히고, 잿빛 것들은 하나둘 원래 모습으로 돌아갔다.' },
+      { who: 'haru', mood: 'happy', text: '형! 시오 형!' },
+      { who: 'sio', mood: 'happy', text: '…하루. 늦어서 미안하다. 정말… 다행이다.' },
+      { who: 'bawi', mood: 'happy', text: '나는 여기 남겠소. 대종 곁에서 이제 좀 쉬겠소. 백 년 뒤에 또 울려 주시오.' },
+      { who: 'yaro', mood: 'normal', text: '교단에 남은 아이들은 내가 데려갈게. 솔빛 마을이면… 등불이 따뜻하니까.' },
+      { who: 'zena', mood: 'happy', text: '가설 입증 완료! 여섯 울림은 함께일 때 가장 세다!' },
+      { who: 'elder', mood: 'happy', text: '어서들 오려무나. 보아라, 너희가 심고 간 새싹이 이렇게 자랐단다.' },
+      { who: 'kara', mood: 'happy', text: '우와… 진짜 나무가 됐어!' },
+      { who: 'sera', mood: 'happy', text: '스승님의 일지 마지막 장에 이렇게 적을게요. "등불은 꺼지지 않았다. 여섯 울림이 함께 지켰다."' },
     ],
   },
 };
@@ -3011,6 +4107,7 @@ RG.sim = (() => {
       }
       let hp = ed.hp;
       if (o.hpMult) hp *= o.hpMult;
+      if (def.hpMult) hp *= def.hpMult; // 맵 난이도 계수 (밸런스 조정)
       if (from && from.hpPct) hp *= from.hpPct;
       if (st.wave.hpScale) hp *= st.wave.hpScale;
       const e = {
@@ -4752,7 +5849,7 @@ RG.progress = (() => {
   /** 이 맵에서 쓸 수 있는 탑 (해금 맵이 이 맵 이전이거나 같음) */
   function towersFor(mapId) {
     let idx = mapIndex(mapId);
-    if (idx < 0) idx = D().maps.length - 1;
+    if (idx < 0) idx = mapIndex(frontierCleared());
     return D().towerOrder.filter((t) => {
       const u = mapIndex(D().towers[t].unlock);
       return u >= 0 && u <= idx;
@@ -4761,7 +5858,7 @@ RG.progress = (() => {
 
   function heroesFor(mapId) {
     let idx = mapIndex(mapId);
-    if (idx < 0) idx = D().maps.length - 1;
+    if (idx < 0) idx = mapIndex(frontierCleared());
     return D().heroOrder.filter((h) => {
       const u = mapIndex(D().heroes[h].unlock);
       return u >= 0 && u <= idx;
@@ -4862,6 +5959,13 @@ RG.progress = (() => {
     return false;
   }
   function seen(kind, id) { return get().seen[kind] && get().seen[kind].includes(id); }
+
+  /** 클리어한 맵 중 가장 뒤의 맵 (무한 모드 해금 기준) */
+  function frontierCleared() {
+    let last = D().maps[0].id;
+    for (const m of D().maps) if (mapRec(m.id).cleared) last = m.id;
+    return last;
+  }
 
   /** 다음에 할 맵 (아직 클리어 안 한 첫 맵) */
   function frontier() {
@@ -10596,11 +11700,16 @@ RG.art.icon = (() => {
         + SLASH();
     },
     adaptive() {
-      return '<g transform="rotate(35 32 32)">'
-        + bold('M26 12.5H38M26 25.5H38M26 38.5H38M26 51.5H38', K.creamL, 3)
-        + bold('M40 4C40 18 24 18 24 32C24 46 40 46 40 60', E('frost').color, 5)
-        + bold('M24 4C24 18 40 18 40 32C40 46 24 46 24 60', E('fire').color, 5)
-        + '</g>';
+      // 적응: 맞은 원소 쪽으로 바뀌는 방패 (반은 불, 반은 얼음 + 돌고 도는 화살)
+      const sh = xf(SHIELD, 0.6, 0, 1);
+      const cut = H.uid('ic');
+      defs += `<clipPath id="${cut}"><rect x="32" y="0" width="32" height="64"/></clipPath>`;
+      return arcArrow(32, 32, 25, 196, 336, E('fire').color, 4.5)
+        + arcArrow(32, 32, 25, 16, 156, E('frost').color, 4.5)
+        + P(sh, grad(E('fire').light, E('fire').color))
+        + `<g clip-path="url(#${cut})">${P(sh, grad(E('frost').light, E('frost').color), NS)}</g>`
+        + O(sh) + sk('M32 18V48', OL, 2.5)
+        + hl('M24 23C24 21 25 20 27 19', 3);
     },
     dampen() {
       const link = (x, c) => `<rect x="-11" y="-6.5" width="22" height="13" rx="6.5" fill="none" transform="translate(${x} ${x}) rotate(45)"${c}/>`;
@@ -14157,8 +15266,9 @@ RG.render = (() => {
     R.over = el('div', { class: 'stage-over' });
     R.boss = el('div', { class: 'boss-bar hidden' }, [el('span', { class: 'boss-name' }), el('div', { class: 'boss-hp' }, [el('i')])]);
     R.banner = el('div', { class: 'banner' });
+    R.bossIntro = el('div', { class: 'boss-intro' });
     R.loading = el('div', { class: 'stage-loading', text: '그림 준비 중…' });
-    stage.append(canvas, R.over, R.boss, R.banner, R.loading);
+    stage.append(canvas, R.over, R.boss, R.banner, R.bossIntro, R.loading);
 
     const right = el('aside', { class: 'rail rail-right' });
     R.heroCard = el('div', { class: 'hero-card' });
@@ -14279,7 +15389,7 @@ RG.render = (() => {
     const ed = D().enemies[e.enemyType];
     if (ed.boss) {
       UI.sfx('bossAppear');
-      banner(`👑 ${ed.name}`, ed.desc);
+      bossIntro(e.enemyType);
       if (!bossTrackOn) { UI.music('boss'); bossTrackOn = true; }
     }
     if (!RG.progress.seen('enemies', e.enemyType)) {
@@ -14287,8 +15397,29 @@ RG.render = (() => {
       if (!ed.minion && !ed.boss) UI.toast(`새 적: ${ed.name} — ${ed.desc}`, 'info', 3200);
     }
   }
+  let bossIntroTimer = 0;
+  /** 보스 등장 카드: 큰 그림 + 이름 + 설명 (판은 멈추지 않음) */
+  function bossIntro(type) {
+    const ed = D().enemies[type];
+    R.bossIntro.innerHTML = '';
+    R.bossIntro.append(
+      el('div', { class: 'bi-art' }, [UI.enemyImg(type, 'bi-img')]),
+      el('div', { class: 'bi-text' }, [el('small', { text: '보스 등장' }), el('b', { text: ed.name }), el('span', { text: ed.desc })]),
+    );
+    R.bossIntro.classList.remove('show');
+    R.banner.classList.remove('show'); // 웨이브 알림과 겹치지 않게
+    void R.bossIntro.offsetWidth;
+    R.bossIntro.classList.add('show');
+    clearTimeout(bossIntroTimer);
+    bossIntroTimer = setTimeout(() => R.bossIntro.classList.remove('show'), 3400);
+  }
   function onBossDown() {
-    if (bossTrackOn && !game.state.enemies.some((q) => !q.dead && D().enemies[q.type].boss)) {
+    const alive = game.state.enemies.some((q) => !q.dead && D().enemies[q.type].boss);
+    if (!alive) {
+      const ed = D().enemies[game.def.boss] || null;
+      if (ed) { R.bossIntro.classList.remove('show'); banner(`👑 ${ed.name} 처치!`, '등불이 다시 환하게 빛납니다'); }
+    }
+    if (bossTrackOn && !alive) {
       bossTrackOn = false;
       const region = D().regions.find((r) => r.id === game.def.region);
       UI.music(region ? region.music : 'meadow');
@@ -15087,6 +16218,21 @@ RG.render = (() => {
     mine: { title: '수정 광산', text: '광산은 웨이브가 시작될 때마다 골드를 줍니다. 일찍 지을수록 이득이지만, 그만큼 지금 쓸 화력이 줄어요. 광산은 공명하지 않습니다.' },
     regen: { title: '재생', text: '덩굴 거머리는 2초 동안 안 맞으면 빠르게 회복합니다. 화상처럼 끊김 없이 때리는 공격이 좋아요.' },
     split: { title: '분열', text: '포자 주머니는 죽으면 작은 포자 새끼 셋으로 갈라집니다. 터지는 곳 뒤쪽에도 화력을 두세요.' },
+    branch: { title: '분기 강화', text: 'Lv3 탑은 두 갈래 중 하나로 분기할 수 있습니다. 탑을 누르고 분기 카드를 고르세요. 한 번 고르면 바꿀 수 없으니, 그 맵의 적을 보고 정하세요.' },
+    shred: { title: '갑옷 파쇄', text: '얼음 거북은 갑옷이 아주 두껍습니다. 대지 망치는 주변 적의 갑옷을 깎아, 다른 모든 탑의 피해를 늘려 줍니다.' },
+    healer: { title: '치유사', text: '설인 주술사는 주변 적을 치유합니다. 표적을 "강한 적"으로 바꿔 먼저 잡거나, 겨울 종을 "정적의 종"으로 분기해 치유를 막으세요.' },
+    forge: { title: '대장간', text: '대장간은 이웃 탑의 피해를 높입니다. 여러 원소의 탑으로 둘러쌀수록 대장간의 효과(공명 증폭)도 커집니다.' },
+    stealth: { title: '숨은 적', text: '서리 망령은 탐지 범위 밖에서는 표적이 될 수 없습니다. 성소의 빛, 영웅 세라, 그리고 폭발·파동·관통 같은 범위 공격으로 대응하세요. 병사는 붙잡아 공격할 수 있습니다.' },
+    shield: { title: '보호막', text: '얼음 방패병의 보호막은 잠시 안 맞으면 다시 찹니다. 끊김 없이 때리거나, 한 방이 큰 공격(빙창 쇠뇌), 얼음 송곳탑으로 깨세요.' },
+    immune: { title: '면역', text: '불도마뱀은 불에 면역입니다. 탑은 자기 원소에 면역인 적을 표적으로 삼지 않으니, 얼음·폭풍 탑을 섞어 두세요.' },
+    burrow: { title: '굴착', text: '모래 굴착충은 주기적으로 땅속에 숨어 어떤 피해도 받지 않습니다. 길 전체에 고루 탑을 두거나, 그림자 덫(땅에서 나오는 순간에도 걸림)을 쓰세요.' },
+    beam: { title: '햇살 렌즈', text: '햇살 렌즈는 한 적을 오래 비출수록 피해가 커집니다. 표적을 "강한 적"으로 바꾸면 체력 높은 적을 끝까지 비춥니다.' },
+    ranged: { title: '원거리 적', text: '협곡 투석병은 걸으면서 영웅과 병사에게 돌을 던집니다. 영웅을 사거리 밖에 두거나, 광휘 탑의 실명으로 막으세요.' },
+    shock: { title: '마비 폭발', text: '번개 해파리는 죽을 때 터지며 주변 탑을 잠시 멈춥니다. 사거리 긴 탑으로 탑 무리에서 먼 곳에서 잡으세요.' },
+    undying: { title: '부활', text: '익사한 해적은 처음 쓰러지면 다시 일어납니다. 길 뒤쪽까지 화력을 이어 두거나, 파멸 첨탑으로 처형하세요.' },
+    silence: { title: '침묵', text: '침묵 수도사 근처의 탑은 공격·지원·공명을 모두 멈춥니다. 사거리 긴 탑으로 멀리서 잡거나, 병영으로 붙잡아 한곳에 묶어 두세요.' },
+    adaptive: { title: '적응', text: '종 조각 골렘은 같은 원소에 계속 맞으면 그 원소에 강해집니다. 여러 원소의 탑을 섞어 두면 저항이 계속 초기화됩니다.' },
+    dampen: { title: '공명 차단', text: '울림 포식자 주변의 탑은 공명이 끊깁니다. 공명 없이도 버틸 기본 화력을 갖추고, 먼저 잡으세요.' },
     support: { title: '지원 탑', text: '성소는 직접 공격하지 않지만 이웃 탑의 사거리를 늘리고 숨은 적을 드러내며 병사를 치료합니다. 지원 탑은 공명할수록 효과가 커집니다.' },
   };
   function nextTip() {

@@ -195,7 +195,7 @@ RG.data.enemies = {
     desc: '주변 적에게 보호막을 씌웁니다.',
   },
   tempest_whale: {
-    name: '폭풍 고래', region: 4, size: 2.0, hp: 21000, speed: 0.4, armor: 0, bounty: 700, lives: 99, boss: true, elite: true,
+    name: '폭풍 고래', region: 4, size: 2.0, hp: 14000, speed: 0.4, armor: 0, bounty: 700, lives: 99, boss: true, elite: true,
     melee: null, traits: { flying: true }, affinity: { storm: 'resist' },
     bossData: { bolt: { every: 10, towers: 3, width: 0.8, dur: 4 }, phase: { at: 0.5, summon: { type: 'volt_jelly', n: 4 } } },
     desc: '하늘을 헤엄치는 보스. 10초마다 일직선 위의 탑을 멈춥니다.',
@@ -243,13 +243,13 @@ RG.data.enemies = {
     desc: '주변 탑들의 공명 연결을 끊습니다.',
   },
   bellkeeper: {
-    name: '종지기', region: 5, size: 1.6, hp: 27000, speed: 0.5, armor: 0, bounty: 900, lives: 99, boss: true, elite: true,
+    name: '종지기', region: 5, size: 1.6, hp: 20000, speed: 0.5, armor: 0, bounty: 900, lives: 99, boss: true, elite: true,
     melee: { damage: 120, interval: 1.5 }, traits: {}, affinity: {},
     bossData: { blink: { every: 6, tiles: 2 }, ward: { every: 10, radius: 2.5, pct: 0.3 }, phase: { at: 0.5, summon: { type: 'hush_monk', n: 3 } } },
     desc: '6초마다 앞으로 순간이동하고, 주변 적에게 보호막을 씌웁니다.',
   },
   the_silence: {
-    name: '침묵', region: 5, size: 2.0, hp: 54000, speed: 0.35, armor: 0, bounty: 0, lives: 99, boss: true, elite: true,
+    name: '침묵', region: 5, size: 2.0, hp: 40000, speed: 0.35, armor: 0, bounty: 0, lives: 99, boss: true, elite: true,
     melee: { damage: 200, interval: 1.5 }, traits: {}, affinity: { fire: 'immune', frost: 'immune' },
     bossData: {
       phases: [

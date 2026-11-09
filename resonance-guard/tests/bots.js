@@ -111,6 +111,9 @@ function makeEnv(RG) {
     const cov = coverage(route, air, c, r, spec.range || 1.5, spec.targets || td.targets);
     // 이 맵의 적 구성에 대한 상성(원소 친화·비행)
     const mix = enemyMix(g);
+    // 갑옷을 덜 타는 정도: 화상(지속 피해)·갑옷 파쇄·장판은 갑옷에 덜 막힘
+    const oh = spec.onHit || {};
+    const ign = td.kind === 'orb' ? 0.6 : (oh.shred || spec.shred) ? 0.5 : (oh.burn || spec.burn) ? 0.3 : 0;
     let fit = 0;
     for (const [e, w] of mix) {
       const ed = D.enemies[e];
@@ -118,7 +121,8 @@ function makeEnv(RG) {
       if (ed.traits.flying && tg === 'ground') continue;
       if (!ed.traits.flying && tg === 'air') continue;
       const a = ed.affinity[td.element];
-      fit += w * (a === 'weak' ? 1.5 : a === 'resist' ? 0.5 : a === 'immune' || a === 'absorb' ? 0 : 1);
+      const armorK = 1 - (ed.armor || 0) * (1 - ign * (ed.traits.shredResist && (oh.shred || spec.shred) ? 0.5 : 1));
+      fit += w * armorK * (a === 'weak' ? 1.5 : a === 'resist' ? 0.5 : a === 'immune' || a === 'absorb' ? 0 : 1);
     }
     return dps * Math.sqrt(cov + 0.5) * ((W && W[type]) || TYPE_W[type] || 0.8) * fit;
   }
@@ -147,6 +151,7 @@ function makeEnv(RG) {
     { W: { frost_crystal: 1.4, winter_bell: 1.2, lightning_rod: 1.3 }, res: 0.3 },
     { res: 0.45, same: 0.4 },
     { mine: 3, W: { flame_mortar: 1.2 } },
+    { up: 2.2 }, // 소수 정예: 새로 짓기보다 강화·분기
   ];
 
   /* ---------------- 봇들 ---------------- */
@@ -176,11 +181,12 @@ function makeEnv(RG) {
     const RES = options.res != null ? options.res : 0.12;
     const SAME = options.same != null ? options.same : 0.12;
     const MINES = options.mine != null ? options.mine : 2;
+    const UP = options.up != null ? options.up : 1;
     let t = 0;
     let route = routeTiles(g);
     let air = airSegs(g);
     const types = (g.opts.towers || D.towerOrder).filter((x) => D.towers[x]);
-    const hasStealth = (g.def.waves || []).some((w) => /rime_wraith|mist_mariner|void_stalker/.test(w));
+    const hasStealth = RG.grid.parseWaves(g.def.waves || []).some((w) => w.groups.some((gr) => D.enemies[gr.e].traits.stealth));
     const allowOpen = g.def.type !== 'fixed';
     const maze = options.noMaze ? [] : mazePlan(g);
     let mazeI = 0;
@@ -222,7 +228,13 @@ function makeEnv(RG) {
         const cost = RG.stats.costOf(type, 1, null, g.meta);
         if (cost > st.gold) continue;
         for (const tile of tiles) {
-          let v = td.role === 'support' ? 30 : towerValue(g, type, 1, null, tile.c, tile.r, route, air, W);
+          let v;
+          if (td.role === 'support') {
+            // 은신 적이 있으면 성소(탐지)를 길이 많이 지나는 곳에 일찍 — 하나는 꼭, 둘째는 덜 급하게
+            const det = RG.stats.specOf(type, 1, null).detect || 0;
+            const have = st.towers.filter((x) => x.type === type).length;
+            v = det ? coverage(route, [], tile.c, tile.r, det, 'ground') * (have === 0 ? 60 : have === 1 ? 6 : 0.3) : 30;
+          } else v = towerValue(g, type, 1, null, tile.c, tile.r, route, air, W);
           if (tile.open) {
             // 길을 늘리면 가산점
             const before = g.flow[g.map.spawns[0].r * g.map.cols + g.map.spawns[0].c];
@@ -242,18 +254,20 @@ function makeEnv(RG) {
           consider(v, cost, { type: 'build', tower: type, c: tile.c, r: tile.r });
         }
       }
+      // 보스 맵 막바지엔 강화·분기를 더 높이 침
+      const up = UP * (g.def.boss && st.wave.index >= st.wave.total - 5 ? 2 : 1);
       for (const tw of st.towers) {
         const td = D.towers[tw.type];
         if (tw.level >= 4) continue;
         if (tw.level < 3) {
           const cost = g.upgradeCost(tw);
           const v = td.role === 'economy' ? (st.wave.total - st.wave.index) * 1.0 : (towerValue(g, tw.type, tw.level + 1, null, tw.c, tw.r, route, air, W) - towerValue(g, tw.type, tw.level, null, tw.c, tw.r, route, air, W) * 0.3) * 1.15;
-          consider(v, cost, { type: 'upgrade', id: tw.id });
+          consider(td.role === 'economy' ? v : v * up, cost, { type: 'upgrade', id: tw.id });
         } else if (g.opts.branches !== false) {
           for (const b of ['A', 'B']) {
             const cost = g.upgradeCost(tw, b);
             const v = td.role === 'economy' ? 0 : towerValue(g, tw.type, 4, b, tw.c, tw.r, route, air, W) - towerValue(g, tw.type, 3, null, tw.c, tw.r, route, air, W) * 0.3;
-            consider(v, cost, { type: 'branch', id: tw.id, branch: b });
+            consider(v * up, cost, { type: 'branch', id: tw.id, branch: b });
           }
         }
       }
@@ -328,10 +342,12 @@ function makeEnv(RG) {
     const rng = RG.util.makeRng((opts.seed || 1) * 7 + 3);
     const tick = botKind === 'random' ? randomBot(g, rng) : botKind === 'plan' ? planBot(g, extra.plan || [], extra) : greedyBot(g, rng, extra);
     let guard = 0;
+    let bossMin = 1; // 보스 남은 체력 비율의 최소 (보스에서 졌을 때 얼마나 가까웠나)
     while (!g.state.result && guard++ < 30 * 60 * 30) {
       tick();
       g.step();
       if (extra.invariants) checkInvariants(g);
+      if (guard % 15 === 0) for (const e of g.state.enemies) if (!e.dead && D.enemies[e.type].boss) bossMin = Math.min(bossMin, e.hp / e.maxHp);
     }
     const st = g.state;
     const byType = {};
@@ -343,7 +359,7 @@ function makeEnv(RG) {
     return {
       result: st.result || 'timeout', lives: st.lives, waves: st.wave.index, total: st.wave.total, time: st.time,
       towers: st.towers.map((t) => `${t.type}:${t.level}${t.branch || ''}`), byType, task: st.task ? st.task.done : null,
-      resonance: Object.keys(st.stats.resonanceSeen), log: g.log, game: g,
+      resonance: Object.keys(st.stats.resonanceSeen), log: g.log, game: g, bossDone: st.result === 'win' ? 1 : (g.def.boss ? 1 - bossMin : 0),
     };
   }
 
@@ -389,6 +405,14 @@ function makeEnv(RG) {
     const types = (g.opts.towers || D.towerOrder).filter((x) => D.towers[x].role !== 'support' || x === 'sanctuary');
     const tiles = buildableTiles(g, g.def.type !== 'fixed');
     const nBuild = () => p.filter((a) => a.type === 'build').length;
+    if (rng() < 0.18 && nBuild()) {
+      // 키우기: 지은 탑 하나를 Lv3 + 분기까지 한 번에 (낱개 변이로는 거의 안 나오는 조합)
+      const builds = p.map((a, i) => (a.type === 'build' ? i : -1)).filter((i) => i >= 0);
+      const bi = Math.floor(rng() * builds.length);
+      const at = builds[bi] + 1 + Math.floor(rng() * (p.length - builds[bi]));
+      p.splice(at, 0, { type: 'upgrade', ref: bi }, { type: 'upgrade', ref: bi }, { type: 'branch', ref: bi, branch: rng() < 0.5 ? 'A' : 'B' });
+      return p;
+    }
     const k = rng();
     if (k < 0.25 && p.length) {
       const i = Math.floor(rng() * p.length);
@@ -410,7 +434,7 @@ function makeEnv(RG) {
 
   function fitness(r, objective) {
     if (objective === 'task') return (r.result === 'win' ? 10000 : 0) + (r.task ? 6000 : 0) + r.lives * 100 + r.waves * 100;
-    return (r.result === 'win' ? 10000 : 0) + r.lives * 300 + r.waves * 100 + (r.task ? 150 : 0);
+    return (r.result === 'win' ? 10000 : 0) + r.lives * 300 + r.waves * 100 + (r.task ? 150 : 0) + (r.bossDone || 0) * 1200;
   }
 
   /** 공명 과제를 노리는 초기 계획: 건설지가 넓은 곳에 원소를 섞어 뭉쳐 짓기 */
@@ -443,9 +467,10 @@ function makeEnv(RG) {
     if (td.type === 'amp') center = td.tower;
     if (td.type === 'effects') {
       // 필요한 원소 짝을 찾아 이웃으로
-      const need = new Set();
-      for (const id of td.ids) for (const [k, res] of Object.entries(D.resonance)) if (res.id === id) k === 'pure' ? need.add(els[0]) : k.split('+').forEach((e) => need.add(e));
-      const list = [...need].filter((e) => byEl[e]);
+      const need = new Map();
+      for (const id of td.ids) for (const [k, res] of Object.entries(D.resonance)) if (res.id === id) (k === 'pure' ? [els[0], els[0]] : k.split('+')).forEach((e) => need.set(e, (need.get(e) || 0) + 1));
+      // 여러 짝에 낀 원소를 가운데에 (예: 초전도+과열 → 폭풍)
+      const list = [...need.keys()].filter((e) => byEl[e]).sort((x, y) => need.get(y) - need.get(x));
       center = pickEl(list[0]) || center;
       plan.push({ type: 'build', tower: center, c: best.c, r: best.r });
       list.slice(1).forEach((e, i) => ring[i] && plan.push({ type: 'build', tower: pickEl(e), c: ring[i].c, r: ring[i].r }));

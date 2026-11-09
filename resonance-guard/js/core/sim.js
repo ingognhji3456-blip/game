@@ -412,6 +412,7 @@ RG.sim = (() => {
       }
       let hp = ed.hp;
       if (o.hpMult) hp *= o.hpMult;
+      if (def.hpMult) hp *= def.hpMult; // 맵 난이도 계수 (밸런스 조정)
       if (from && from.hpPct) hp *= from.hpPct;
       if (st.wave.hpScale) hp *= st.wave.hpScale;
       const e = {

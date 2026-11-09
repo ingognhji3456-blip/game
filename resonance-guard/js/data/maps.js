@@ -132,7 +132,7 @@ RG.data.maps = [
       'ash_boar*6/1.2 ; vine_leech*6/1.2@3 ; straw_husk*4/1.5@6',
     ],
     task: { type: 'stack', n: 3, text: '한 탑에 공명 효과 3개' },
-    challenge: { type: 'noOpenBuild', text: '공터 건설 금지' },
+    challenge: { type: 'maxTowers', value: 6, text: '탑 6개 이하' },
     newTowers: ['crystal_mine'], newEnemies: ['vine_leech'], hero: 'sera',
     story: { before: 's1_4' },
     tips: ['maze', 'mine', 'regen'],
@@ -151,6 +151,7 @@ RG.data.maps = [
       'TT##^^^^^^^^#TTT',
     ],
     startGold: 350,
+    hpMult: 0.9, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'mist_rat*10/0.8',
       'ash_boar*4/1.8',
@@ -184,6 +185,7 @@ RG.data.maps = [
       'TT####TTT###TTTT',
     ],
     startGold: 420,
+    hpMult: 0.9, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'mist_rat*12/0.7',
       'vine_leech*4/2',
@@ -199,7 +201,7 @@ RG.data.maps = [
       'hollow_elder*1 ; vine_leech*3/2.5@8 ; mist_rat*10/0.7@3',
     ],
     task: { type: 'distinct', n: 5, text: '서로 다른 공명 효과 5가지 동시에' },
-    challenge: { type: 'lives', value: 1, text: '불꽃 1개로 시작' },
+    challenge: { type: 'lives', value: 3, text: '불꽃 3개로 시작' },
     newEnemies: ['hollow_elder'],
     story: { before: 's1_6', after: 's1_end' },
     unlocksBranches: true,
@@ -232,7 +234,7 @@ RG.data.maps = [
       'frost_wolf*16/0.5 ; rust_knight*4/1.5@3 ; snow_wisp*6/1@8',
     ],
     task: { type: 'links', n: 8, text: '공명 연결 8개 동시에' },
-    challenge: { type: 'banElements', value: ['fire'], text: '불 탑 없이' },
+    challenge: { type: 'maxLevel', value: 2, text: '강화 Lv2까지' },
     newTowers: ['winter_bell'], newEnemies: ['frost_wolf', 'snow_wisp'], hero: 'sio',
     story: { before: 's2_1' },
     tips: ['branch'],
@@ -351,6 +353,7 @@ RG.data.maps = [
       '^^###^###^###^^^',
     ],
     startGold: 520,
+    hpMult: 0.9, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'frost_wolf*10/0.8',
       'ice_shieldbearer*2/3',
@@ -424,6 +427,7 @@ RG.data.maps = [
       '^^^^^^^^^^^^^^^^',
     ],
     startGold: 600,
+    hpMult: 0.95, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'cinder_lizard*6/1',
       'frost_wolf*8/0.8 ; cinder_lizard*4/1@4',
@@ -456,6 +460,7 @@ RG.data.maps = [
       '^^^^^^^^^^^^^^^^',
     ],
     startGold: 620,
+    hpMult: 0.85, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'cinder_lizard*8/0.9',
       'sand_burrower*2/3',
@@ -489,6 +494,7 @@ RG.data.maps = [
       '%%%%##########%%',
     ],
     startGold: 650,
+    hpMult: 0.85, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'cinder_lizard*8/0.9',
       'magma_brute*1',
@@ -504,14 +510,14 @@ RG.data.maps = [
       'magma_brute*6/2 ; sand_burrower*6/1.6@3 ; thermal_vulture*10/0.8@6',
     ],
     task: { type: 'effects', ids: ['twilight'], text: '황혼 켜기' },
-    challenge: { type: 'lives', value: 1, text: '불꽃 1개로 시작' },
+    challenge: { type: 'lives', value: 3, text: '불꽃 3개로 시작' },
     newTowers: ['sun_lens'], newEnemies: ['magma_brute'],
     tips: ['beam'],
   },
   {
     id: '3-4', region: 3, name: '약탈자 야영지', type: 'fixed',
     grid: [
-      '^##############^',
+      '^##############A',
       'S..............^',
       '^#############.^',
       '^............#.^',
@@ -556,6 +562,7 @@ RG.data.maps = [
       '^^^^^^##########',
     ],
     startGold: 680,
+    hpMult: 0.7, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'dune_raider*6/1.2',
       'obsidian_beetle*2/3',
@@ -578,7 +585,7 @@ RG.data.maps = [
   {
     id: '3-6', region: 3, name: '벌레왕의 굴', type: 'fixed', boss: 'pyre_worm',
     grid: [
-      '^##############^',
+      '^##############A',
       'S..............#',
       '^#############.^',
       '^#.............^',
@@ -589,6 +596,7 @@ RG.data.maps = [
       '^^##############',
     ],
     startGold: 750,
+    hpMult: 0.82, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'cinder_lizard*14/0.6',
       'sand_burrower*5/2',
@@ -694,6 +702,7 @@ RG.data.maps = [
       '~~############~~',
     ],
     startGold: 900,
+    hpMult: 0.85, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'spray_sprite*6/0.6 ; rock_crab*1/1.2@4',
       'drowned_corsair*2/1.2 ; volt_jelly*1/1.2@3',
@@ -725,9 +734,10 @@ RG.data.maps = [
       '^............#.^',
       '^#############.^',
       'S..............^',
-      '^##############^',
+      '^##############A',
     ],
     startGold: 900,
+    hpMult: 0.9, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'rock_crab*1/1.2 ; coral_colossus*1/2@3',
       'volt_eel*3/1.2 ; volt_jelly*1/1.2@4',
@@ -834,6 +844,7 @@ RG.data.maps = [
       '^###^####^####^^',
     ],
     startGold: 1100,
+    hpMult: 0.9, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'rock_crab*2/1.2>0 ; drowned_corsair*1/1.2@3>1',
       'grey_legionnaire*2/1.2>1 ; drowned_corsair*1/1.2@3>0',
@@ -973,7 +984,7 @@ RG.data.maps = [
       '^..............^',
       '^#############.^',
       'S..............^',
-      '^##############^',
+      '^##############A',
     ],
     startGold: 1350,
     waves: [
@@ -1002,7 +1013,7 @@ RG.data.maps = [
   {
     id: '5-6', region: 5, name: '대종의 심장', type: 'mixed',
     grid: [
-      '^^^^^^^A^^^^^^^^',
+      '^^^^^^^^^^^^^^^A',
       'S...#######...S^',
       '~##.........###~',
       '~##.,,,,,,,.###~',
@@ -1010,7 +1021,7 @@ RG.data.maps = [
       '~##.,,,,,,,.###~',
       '~##.........###~',
       'S...#######~~~~~',
-      '^^^^^^^A^^^^^^^^',
+      'A^^^^^^^^^^^^^^^',
     ],
     startGold: 1500,
     waves: [

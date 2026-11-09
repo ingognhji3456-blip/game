@@ -92,8 +92,8 @@ function heroesTable() {
 }
 
 function mapsSummary() {
-  const rows = ['| 맵 | 이름 | 종류 | 웨이브 | 시작 골드 | 공명 과제 | 도전 |', '|---|---|---|---|---|---|---|'];
-  for (const m of D.maps) rows.push(`| ${m.id} | ${m.name} | ${({ fixed: '고정', maze: '길 만들기', mixed: '혼합' })[m.type]} | ${m.waves.length} | ${m.startGold} | ${m.task ? m.task.text : '—'} | ${m.challenge ? m.challenge.text : '—'} |`);
+  const rows = ['| 맵 | 이름 | 종류 | 웨이브 | 시작 골드 | 적 체력 | 공명 과제 | 도전 |', '|---|---|---|---|---|---|---|---|'];
+  for (const m of D.maps) rows.push(`| ${m.id} | ${m.name} | ${({ fixed: '고정', maze: '길 만들기', mixed: '혼합' })[m.type]} | ${m.waves.length} | ${m.startGold} | ${m.hpMult ? `×${m.hpMult}` : '×1'} | ${m.task ? m.task.text : '—'} | ${m.challenge ? m.challenge.text : '—'} |`);
   return rows.join('\n');
 }
 
