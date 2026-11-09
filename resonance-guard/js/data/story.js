@@ -81,4 +81,74 @@ RG.data.story = {
       { who: 'kara', mood: 'happy', text: '분기 강화! 좋아, 출발이다!' },
     ],
   },
+
+  s2_1: {
+    title: '얼음 다리의 파수꾼', region: 2,
+    lines: [
+      { who: 'narration', text: '서리 고개. 협곡 위에 걸린 얼음 다리 두 개만이 대종으로 가는 길이었다.' },
+      { who: 'kara', mood: 'worried', text: '으, 추워…! 언니, 다리 위에 누가 있어.' },
+      { who: 'sio', mood: 'normal', text: '멈춰. 더 오면 쏜다.' },
+      { who: 'sera', mood: 'normal', text: '저희는 솔빛 마을에서 왔어요. 안개의 근원을 찾아 대종으로 가는 길이에요.' },
+      { who: 'sio', mood: 'normal', text: '…대종. 안개는 거기서 온다.' },
+      { who: 'narration', text: '그때 협곡 아래에서 하얀 늑대 떼가 몰려왔다. 털끝이 모두 고드름이었다.' },
+      { who: 'sio', mood: 'worried', text: '서리 늑대. 빠르다. 얼음은 잘 안 먹힌다.' },
+      { who: 'kara', mood: 'happy', text: '그럼 불이지! 그리고 이 종으로 느리게 만들면 돼!' },
+      { who: 'sio', mood: 'normal', text: '…같이 막는다. 이름은 시오.' },
+    ],
+  },
+
+  s2_5: {
+    title: '보이지 않는 그림자', region: 2,
+    lines: [
+      { who: 'narration', text: '수정 동굴 안은 푸른빛으로 반짝였지만, 그림자가 소리 없이 지나갔다.' },
+      { who: 'sera', mood: 'worried', text: '지금… 뭔가 지나가지 않았어요?' },
+      { who: 'sio', mood: 'normal', text: '서리 망령. 눈에 안 보인다. 등불 빛이 닿아야 보인다.' },
+      { who: 'sera', mood: 'normal', text: '성소의 빛이나 제 등불이 닿으면 모습을 드러낼 거예요. 폭발이나 파동 같은 공격은 보이지 않아도 맞고요.' },
+      { who: 'sio', mood: 'worried', text: '…동생도 이런 눈보라 속에서 사라졌다. 이름은 하루. 열두 살.' },
+      { who: 'sera', mood: 'worried', text: '시오 씨…' },
+      { who: 'sio', mood: 'normal', text: '안개 속 어딘가에 있다. 그렇게 믿는다. 그러니까 멈출 수 없다.' },
+      { who: 'sera', mood: 'happy', text: '대종을 고치면 안개에 삼켜진 것들도 돌아올지 몰라요. 같이 찾아요.' },
+    ],
+  },
+
+  s2_end: {
+    title: '녹기 시작한 산', region: 2,
+    lines: [
+      { who: 'narration', text: '흰뿔이 쓰러지자, 꽁꽁 얼어 있던 정상에 처음으로 물방울이 떨어졌다.' },
+      { who: 'sio', mood: 'worried', text: '흰뿔은 이 산의 주인이었다. 아버지 같은… 산이었다.' },
+      { who: 'kara', mood: 'normal', text: '안개가 울림을 빼앗아서 그렇게 된 거잖아. 흰뿔 잘못이 아니야.' },
+      { who: 'sera', mood: 'happy', text: '봐요, 얼음이 녹고 있어요. 울림이 돌아오고 있는 거예요.' },
+      { who: 'sio', mood: 'normal', text: '…하루를 찾을 때까지. 그때까지 같이 간다.' },
+      { who: 'kara', mood: 'happy', text: '좋아! 수호대가 셋이 됐다!' },
+      { who: 'narration', text: '고개 너머로 붉은 협곡이 보였다. 바람에 실려 모래와 불씨가 날아왔다.' },
+    ],
+  },
+
+  s3_1: {
+    title: '협곡의 발명가', region: 3,
+    lines: [
+      { who: 'narration', text: '붉은 협곡. 뜨거운 모래바람 속에서 누군가 소리쳤다.' },
+      { who: 'zena', mood: 'worried', text: '거기 누구 있어요?! 약탈자들이 제 장치를 다 빼앗아 갔어요! 저는 덤으로 묶어 놨고요!' },
+      { who: 'kara', mood: 'normal', text: '기다려, 지금 풀어 줄게!' },
+      { who: 'zena', mood: 'happy', text: '살았다! 저는 제나, 떠돌이 발명가예요. 공명석으로 움직이는 번개 장치를 만들죠. 아, 이건 번개 드론 3호!' },
+      { who: 'sio', mood: 'normal', text: '…말이 많다.' },
+      { who: 'zena', mood: 'happy', text: '선배는 말이 적네요! 균형이 딱 맞아요!' },
+      { who: 'narration', text: '모래 너머에서 불도마뱀과 열풍 독수리가 몰려왔다.' },
+      { who: 'zena', mood: 'normal', text: '저 도마뱀들은 불이 전혀 안 통해요. 얼음이나 번개로! 하늘의 독수리는 바람 포탑이면 두 배로 아플 거예요.' },
+      { who: 'sera', mood: 'happy', text: '같이 가요, 제나 씨. 대종을 고치려면 발명가가 꼭 필요할 거예요.' },
+    ],
+  },
+
+  s3_end: {
+    title: '울림의 빈자리', region: 3,
+    lines: [
+      { who: 'narration', text: '용암 벌레왕이 협곡 깊은 곳으로 잠들자, 끓어오르던 땅이 조용해졌다.' },
+      { who: 'zena', mood: 'normal', text: '안개 표본을 분석해 봤어요. 놀라운 결과가 나왔어요.' },
+      { who: 'zena', mood: 'worried', text: '안개는 뭔가가 "있는" 게 아니에요. 울림이 "없는" 거예요. 소리의 반대, 빈자리 그 자체.' },
+      { who: 'sera', mood: 'worried', text: '빈자리… 그래서 등불을 향해 오는 거군요. 채워지고 싶어서.' },
+      { who: 'zena', mood: 'happy', text: '그러니까 대종의 금을 메우면 돼요! 여섯 울림을 하나로 이어 줄 이음쇠를 만들면!' },
+      { who: 'sio', mood: 'normal', text: '여섯… 우리는 아직 넷이다.' },
+      { who: 'kara', mood: 'happy', text: '그럼 더 모으면 되지! 다음은 바다 쪽이야!' },
+    ],
+  },
 };

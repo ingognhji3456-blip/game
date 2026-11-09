@@ -59,47 +59,47 @@ RG.data.enemies = {
 
   /* ============ 2지역 · 서리 고개 ============ */
   frost_wolf: {
-    name: '서리 늑대', region: 2, size: 0.7, hp: 85, speed: 1.5, armor: 0, bounty: 6, lives: 1,
+    name: '서리 늑대', region: 2, size: 0.7, hp: 120, speed: 1.5, armor: 0, bounty: 8, lives: 1,
     melee: { damage: 8, interval: 0.9 }, traits: {}, affinity: { frost: 'resist', fire: 'weak' },
     desc: '빠른 무리. 얼음에 강하고 불에 약합니다.',
   },
   snow_wisp: {
-    name: '눈 요정', region: 2, size: 0.5, hp: 70, speed: 1.25, armor: 0, bounty: 7, lives: 1,
+    name: '눈 요정', region: 2, size: 0.5, hp: 110, speed: 1.25, armor: 0, bounty: 9, lives: 1,
     melee: null, traits: { flying: true }, affinity: { frost: 'resist', fire: 'weak' },
     desc: '얼음이 잘 안 통하는 비행 적.',
   },
   ice_tortoise: {
-    name: '얼음 거북', region: 2, size: 0.9, hp: 420, speed: 0.55, armor: 0.6, bounty: 20, lives: 2, elite: true,
+    name: '얼음 거북', region: 2, size: 0.9, hp: 560, speed: 0.55, armor: 0.6, bounty: 26, lives: 2, elite: true,
     melee: { damage: 14, interval: 1.5 }, traits: {}, affinity: { fire: 'weak' },
     desc: '매우 두꺼운 갑옷.',
   },
   avalanche_golem: {
-    name: '눈사태 골렘', region: 2, size: 0.9, hp: 380, speed: 0.7, armor: 0, bounty: 14, lives: 2, elite: true,
+    name: '눈사태 골렘', region: 2, size: 0.9, hp: 520, speed: 0.7, armor: 0, bounty: 18, lives: 2, elite: true,
     melee: { damage: 14, interval: 1.4 }, traits: { split: { into: 'snowball_golem', n: 2 } }, affinity: {},
     desc: '죽으면 눈덩이 골렘 둘로 갈라집니다.',
   },
   snowball_golem: {
-    name: '눈덩이 골렘', region: 2, size: 0.5, hp: 90, speed: 1.15, armor: 0, bounty: 3, lives: 1,
+    name: '눈덩이 골렘', region: 2, size: 0.5, hp: 130, speed: 1.15, armor: 0, bounty: 4, lives: 1,
     melee: { damage: 6, interval: 1.0 }, traits: {}, affinity: {}, minion: true,
     desc: '눈사태 골렘에서 나오는 작은 적.',
   },
   yeti_shaman: {
-    name: '설인 주술사', region: 2, size: 0.9, hp: 300, speed: 0.75, armor: 0, bounty: 18, lives: 2, elite: true,
+    name: '설인 주술사', region: 2, size: 0.9, hp: 420, speed: 0.75, armor: 0, bounty: 24, lives: 2, elite: true,
     melee: { damage: 12, interval: 1.3 }, traits: { healer: { radius: 2.0, pct: 0.08, every: 4 } }, affinity: {},
     desc: '주기적으로 주변 적을 치유합니다.',
   },
   rime_wraith: {
-    name: '서리 망령', region: 2, size: 0.7, hp: 160, speed: 1.0, armor: 0, bounty: 12, lives: 1,
+    name: '서리 망령', region: 2, size: 0.7, hp: 200, speed: 1.0, armor: 0, bounty: 15, lives: 1,
     melee: { damage: 10, interval: 1.0 }, traits: { stealth: true }, affinity: { frost: 'resist' },
     desc: '탐지 없이는 표적이 될 수 없습니다.',
   },
   ice_shieldbearer: {
-    name: '얼음 방패병', region: 2, size: 0.7, hp: 220, speed: 0.8, armor: 0, bounty: 14, lives: 1,
+    name: '얼음 방패병', region: 2, size: 0.7, hp: 280, speed: 0.8, armor: 0, bounty: 18, lives: 1,
     melee: { damage: 12, interval: 1.2 }, traits: { shield: { amount: 0.6, delay: 4, rate: 0.15 } }, affinity: {},
     desc: '보호막이 체력을 지키고, 잠시 안 맞으면 다시 찹니다.',
   },
   whitehorn: {
-    name: '서리 군주 흰뿔', region: 2, size: 1.8, hp: 9000, speed: 0.5, armor: 0, bounty: 300, lives: 99, boss: true, elite: true,
+    name: '서리 군주 흰뿔', region: 2, size: 1.8, hp: 7000, speed: 0.5, armor: 0, bounty: 300, lives: 99, boss: true, elite: true,
     melee: { damage: 60, interval: 1.5 }, traits: {}, affinity: { frost: 'immune', fire: 'weak' },
     bossData: { breath: { every: 12, towers: 2, range: 3.5, dur: 3 }, phase: { at: 0.5, summon: { type: 'frost_wolf', n: 5 }, speedMul: 1.2 } },
     desc: '12초마다 가까운 탑 둘을 멈추고, 체력이 절반이 되면 늑대 무리를 부릅니다.',
@@ -107,47 +107,47 @@ RG.data.enemies = {
 
   /* ============ 3지역 · 붉은 협곡 ============ */
   cinder_lizard: {
-    name: '불도마뱀', region: 3, size: 0.5, hp: 140, speed: 1.55, armor: 0, bounty: 6, lives: 1,
+    name: '불도마뱀', region: 3, size: 0.5, hp: 170, speed: 1.55, armor: 0, bounty: 8, lives: 1,
     melee: { damage: 10, interval: 0.9 }, traits: { unstoppable: true }, affinity: { fire: 'immune', frost: 'weak' },
     desc: '빠르고 불이 안 통하며, 병사에게 붙잡히지 않습니다.',
   },
   sand_burrower: {
-    name: '모래 굴착충', region: 3, size: 0.7, hp: 420, speed: 0.85, armor: 0, bounty: 16, lives: 1,
+    name: '모래 굴착충', region: 3, size: 0.7, hp: 520, speed: 0.85, armor: 0, bounty: 20, lives: 1,
     melee: { damage: 14, interval: 1.2 }, traits: { burrow: { every: 4, dur: 2 } }, affinity: {},
     desc: '주기적으로 땅속에 숨습니다.',
   },
   magma_brute: {
-    name: '용암 덩치', region: 3, size: 0.9, hp: 900, speed: 0.6, armor: 0.3, bounty: 30, lives: 2, elite: true,
+    name: '용암 덩치', region: 3, size: 0.9, hp: 1100, speed: 0.6, armor: 0.3, bounty: 38, lives: 2, elite: true,
     melee: { damage: 28, interval: 1.6 }, traits: { deathburst: { radius: 1.2, damage: 80 } }, affinity: { fire: 'immune', frost: 'weak' },
     desc: '단단하고, 죽을 때 터져 주변 영웅·병사를 다치게 합니다.',
   },
   thermal_vulture: {
-    name: '열풍 독수리', region: 3, size: 0.7, hp: 220, speed: 1.45, armor: 0, bounty: 10, lives: 1,
+    name: '열풍 독수리', region: 3, size: 0.7, hp: 260, speed: 1.45, armor: 0, bounty: 13, lives: 1,
     melee: null, traits: { flying: true }, affinity: { fire: 'resist' },
     desc: '빠른 비행 적.',
   },
   dune_raider: {
-    name: '모래 약탈자', region: 3, size: 0.7, hp: 360, speed: 0.95, armor: 0, bounty: 14, lives: 1,
+    name: '모래 약탈자', region: 3, size: 0.7, hp: 450, speed: 0.95, armor: 0, bounty: 18, lives: 1,
     melee: { damage: 16, interval: 1.0 }, traits: { dash: { mult: 2, dur: 3 } }, affinity: {},
     desc: '처음 맞으면 잠시 두 배로 달립니다.',
   },
   obsidian_beetle: {
-    name: '흑요석 딱정벌레', region: 3, size: 0.7, hp: 520, speed: 0.8, armor: 0.55, bounty: 20, lives: 1,
+    name: '흑요석 딱정벌레', region: 3, size: 0.7, hp: 600, speed: 0.8, armor: 0.55, bounty: 26, lives: 1,
     melee: { damage: 18, interval: 1.3 }, traits: { shredResist: 0.5 }, affinity: {},
     desc: '매우 단단하고, 갑옷 파쇄도 절반만 먹힙니다.',
   },
   flame_spirit: {
-    name: '불꽃 정령', region: 3, size: 0.5, hp: 200, speed: 1.2, armor: 0, bounty: 9, lives: 1,
+    name: '불꽃 정령', region: 3, size: 0.5, hp: 240, speed: 1.2, armor: 0, bounty: 12, lives: 1,
     melee: null, traits: { flying: true }, affinity: { fire: 'absorb', frost: 'weak' },
     desc: '불에 맞으면 오히려 회복합니다.',
   },
   canyon_slinger: {
-    name: '협곡 투석병', region: 3, size: 0.7, hp: 300, speed: 0.9, armor: 0, bounty: 14, lives: 1,
+    name: '협곡 투석병', region: 3, size: 0.7, hp: 380, speed: 0.9, armor: 0, bounty: 18, lives: 1,
     melee: { damage: 8, interval: 1.2 }, traits: { ranged: { range: 2.4, damage: 14, interval: 1.6 } }, affinity: {},
     desc: '걸으면서 영웅·병사에게 돌을 던집니다.',
   },
   pyre_worm: {
-    name: '용암 벌레왕', region: 3, size: 1.8, hp: 22000, speed: 0.55, armor: 0, bounty: 450, lives: 99, boss: true, elite: true,
+    name: '용암 벌레왕', region: 3, size: 1.8, hp: 15000, speed: 0.55, armor: 0, bounty: 450, lives: 99, boss: true, elite: true,
     melee: { damage: 80, interval: 1.5 }, traits: {}, affinity: { fire: 'immune', frost: 'weak' },
     bossData: { dive: { every: 8, tiles: 3, under: 1.0, stunRadius: 1.2, stun: 1 }, phase: { at: 0.5, summon: { type: 'flame_spirit', n: 4 } } },
     desc: '8초마다 땅속으로 들어가 3칸 앞에서 튀어나옵니다.',

@@ -41,7 +41,7 @@ RG.progress = (() => {
   /** 이 맵에서 쓸 수 있는 탑 (해금 맵이 이 맵 이전이거나 같음) */
   function towersFor(mapId) {
     let idx = mapIndex(mapId);
-    if (idx < 0) idx = D().maps.length - 1;
+    if (idx < 0) idx = mapIndex(frontierCleared());
     return D().towerOrder.filter((t) => {
       const u = mapIndex(D().towers[t].unlock);
       return u >= 0 && u <= idx;
@@ -50,7 +50,7 @@ RG.progress = (() => {
 
   function heroesFor(mapId) {
     let idx = mapIndex(mapId);
-    if (idx < 0) idx = D().maps.length - 1;
+    if (idx < 0) idx = mapIndex(frontierCleared());
     return D().heroOrder.filter((h) => {
       const u = mapIndex(D().heroes[h].unlock);
       return u >= 0 && u <= idx;
@@ -151,6 +151,13 @@ RG.progress = (() => {
     return false;
   }
   function seen(kind, id) { return get().seen[kind] && get().seen[kind].includes(id); }
+
+  /** 클리어한 맵 중 가장 뒤의 맵 (무한 모드 해금 기준) */
+  function frontierCleared() {
+    let last = D().maps[0].id;
+    for (const m of D().maps) if (mapRec(m.id).cleared) last = m.id;
+    return last;
+  }
 
   /** 다음에 할 맵 (아직 클리어 안 한 첫 맵) */
   function frontier() {

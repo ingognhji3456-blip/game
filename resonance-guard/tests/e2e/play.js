@@ -70,7 +70,14 @@ const mapId = process.argv.includes('--map') ? process.argv[process.argv.indexOf
     loop();
   });
   const t0 = Date.now();
-  await page.waitForSelector('#screen-result.active', { timeout: 240000 });
+  for (let i = 0; i < 60; i++) {
+    if (await page.$('#screen-result.active')) break;
+    await page.waitForTimeout(4000);
+    const s = await page.evaluate(() => ({ scr: RG.ui.currentId(), modal: RG.ui.modalOpen(), loading: document.querySelector('#screen-game').classList.contains('loading'), tick: RG.ui.game.game && RG.ui.game.game.state.tick, wave: RG.ui.game.game && RG.ui.game.game.state.wave.index, lives: RG.ui.game.game && RG.ui.game.game.state.lives, towers: RG.ui.game.game && RG.ui.game.game.state.towers.length }));
+    if (process.argv.includes('--verbose') || i % 5 === 4) console.log(JSON.stringify(s));
+    if (s.modal) await page.evaluate(() => RG.ui.closeAllModals());
+  }
+  await page.waitForSelector('#screen-result.active', { timeout: 5000 });
   const res = await page.evaluate(() => document.querySelector('.result-box h2').textContent);
   await page.screenshot({ path: path.join(ROOT, 'docs', 'reports', 'screens', `play-${mapId}-result.png`) });
   // 결과 → 지도 (이야기 있으면 넘김)

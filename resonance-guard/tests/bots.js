@@ -64,6 +64,32 @@ function makeEnv(RG) {
     return out;
   }
 
+  /** 길 만들기 맵: 공터를 지그재그 벽으로 막는 칸 목록 (사람이 흔히 쓰는 미로) */
+  function mazePlan(g) {
+    const m = g.map;
+    const open = [];
+    for (let r = 0; r < m.rows; r++) for (let c = 0; c < m.cols; c++) if (m.kinds[r * m.cols + c] === RG.grid.T.OPEN) open.push({ c, r });
+    if (open.length < 12) return [];
+    const c0 = Math.min(...open.map((t) => t.c)); const c1 = Math.max(...open.map((t) => t.c));
+    const r0 = Math.min(...open.map((t) => t.r)); const r1 = Math.max(...open.map((t) => t.r));
+    const isOpen = (c, r) => m.kinds[r * m.cols + c] === RG.grid.T.OPEN;
+    const plan = [];
+    let k = 0;
+    // 세로 벽 (가로로 긴 공터) 또는 가로 벽 (세로로 긴 공터)
+    if (c1 - c0 >= r1 - r0) {
+      for (let c = c0 + 1; c <= c1 - 1; c += 2, k++) {
+        const gap = k % 2 === 0 ? r1 : r0;
+        for (let r = r0; r <= r1; r++) if (r !== gap && isOpen(c, r)) plan.push({ c, r });
+      }
+    } else {
+      for (let r = r0 + 1; r <= r1 - 1; r += 2, k++) {
+        const gap = k % 2 === 0 ? c1 : c0;
+        for (let c = c0; c <= c1; c++) if (c !== gap && isOpen(c, r)) plan.push({ c, r });
+      }
+    }
+    return plan;
+  }
+
   const TYPE_W = {
     ember_archer: 1.0, flame_mortar: 1.0, frost_crystal: 0.85, ice_ballista: 1.0, winter_bell: 0.7, lightning_rod: 1.0, gale_cannon: 0.7,
     stone_barracks: 0.75, quake_hammer: 1.0, sun_lens: 1.0, radiance_spire: 0.95, hex_spire: 0.9, void_orb: 0.9, shadow_snare: 0.8,
@@ -156,6 +182,8 @@ function makeEnv(RG) {
     const types = (g.opts.towers || D.towerOrder).filter((x) => D.towers[x]);
     const hasStealth = (g.def.waves || []).some((w) => /rime_wraith|mist_mariner|void_stalker/.test(w));
     const allowOpen = g.def.type !== 'fixed';
+    const maze = options.noMaze ? [] : mazePlan(g);
+    let mazeI = 0;
     return () => {
       t += 1;
       const st = g.state;
@@ -168,6 +196,17 @@ function makeEnv(RG) {
         if (!best || score > best.score) best = { score, action };
       };
       const tiles = buildableTiles(g, allowOpen);
+      // 미로 벽 먼저: 다음 미로 칸에 값싼 공격 탑을 지음
+      while (mazeI < maze.length && g.tileTower(maze[mazeI].c, maze[mazeI].r)) mazeI += 1;
+      if (mazeI < maze.length && st.towers.length >= 1) {
+        const t = maze[mazeI];
+        const cheap = types.filter((x) => D.towers[x].role === 'attack' && D.towers[x].targets !== 'air').sort((a2, b2) => RG.stats.costOf(a2, 1, null, g.meta) - RG.stats.costOf(b2, 1, null, g.meta));
+        const pick = cheap.find((x) => g.canBuild(x, t.c, t.r).ok) || null;
+        if (pick) {
+          const v = towerValue(g, pick, 1, null, t.c, t.r, route, air, W) * 1.6 + 40;
+          consider(v, RG.stats.costOf(pick, 1, null, g.meta), { type: 'build', tower: pick, c: t.c, r: t.r });
+        } else if (!g.canBuild(cheap[0] || 'ember_archer', t.c, t.r).ok && !/골드/.test(g.canBuild(cheap[0] || 'ember_archer', t.c, t.r).reason)) mazeI += 1;
+      }
       for (const type of types) {
         const td = D.towers[type];
         if (td.role === 'support' && !(type === 'sanctuary' && hasStealth)) continue;
@@ -224,7 +263,7 @@ function makeEnv(RG) {
       }
       // 웨이브 호출
       if (st.wave.index === 0 && (!best || st.gold < 60)) g.cmd({ type: 'callWave' });
-      if (options.early !== false && st.wave.countdown !== null && st.enemies.length <= 2 && st.lives >= st.maxLives - 1) g.cmd({ type: 'callWave' });
+      if (options.early !== false && st.wave.countdown !== null && st.enemies.length <= 2 && st.lives >= st.maxLives - 1 && !best && st.wave.countdown < 10) g.cmd({ type: 'callWave' });
       // 영웅 기술
       heroAI(g);
     };
@@ -408,7 +447,7 @@ function makeEnv(RG) {
     return { greedy, best };
   }
 
-  return { run, searchPlan, routeTiles, coverage, logToPlan, fitness, STYLES };
+  return { run, searchPlan, routeTiles, coverage, logToPlan, fitness, STYLES, mazePlan };
 }
 
 module.exports = { makeEnv, loadGame };
