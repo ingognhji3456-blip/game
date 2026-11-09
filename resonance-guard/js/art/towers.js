@@ -757,7 +757,7 @@
       o += snowRoof(c, 18, 82, 26, 46, '#6f8fb0');
       o += snowRoof(c, 8, 92, 46, 68, '#6f8fb0') + icicles(c, 12, 88, 71, 7, 9, E.light);
       o += bell(c, 12, 70, 12, 14, E.color, false) + bell(c, 88, 70, 12, 14, E.color, false);
-      o += crystal(c, 50, 4, 9, 13, E.color, 2.2);
+      o += crystal(c, 50, 7, 9, 12, E.color, 2.2);
       return o;
     },
   };
@@ -1061,7 +1061,7 @@
         o += archDoor(c, 50, 104, 18, 20, M.woodD);
         o += c.p('M50 50C58 53 64 53 66 52V66C66 76 58 82 50 86C42 82 34 76 34 66V52C36 53 42 53 50 50Z', c.vg(MOSS, 0.3, -0.25), 3);
         o += c.p('M40 74L47 62L51 68L54 64L60 74Z', c.vg(E.light, 0.2, -0.1), 2);
-        o += flag(c, 80, 24, 20, E.color, 1, 14);
+        o += flag(c, 80, 26, 18, E.color, 1, 14);
         return o;
       }
       // 'B' 흑요석 검사 — 날카로운 흑요석 가시 막사, 엇갈린 칼
@@ -1326,9 +1326,11 @@
       if (v === 1) {
         let o = plat(c, 1);
         o += aura(c, 50, 102, 40, 12, E.color, 0.6);
-        o += altar(c, 33, 67, 82, 106, st);
-        o += c.p('M44 94L50 88L56 94L50 100Z', E.color, 1.6);
-        o += lamp(c, 50, 78, 1);
+        o += c.ol('M26 106V70M74 106V70', M.wood, 3.4) + c.ol('M22 70H78', M.wood, 3.4);
+        o += c.ol('M34 70V76M66 70V76', M.rope, 1.4) + c.ci(34, 79, 3, c.sg(E.color), 1.8) + c.ci(66, 79, 3, c.sg(E.color), 1.8);
+        o += altar(c, 32, 68, 80, 106, st);
+        o += c.p('M44 93L50 87L56 93L50 99Z', E.color, 1.6);
+        o += lamp(c, 50, 75, 1.2);
         return o;
       }
       if (v === 2 || v === 3) {
@@ -1343,7 +1345,7 @@
         o += c.p('M12 54L50 30L88 54Q50 58 12 54Z', c.vg(L3 ? '#f2e6c8' : st, 0.2, -0.2), 3);
         o += c.ol('M12 54L50 30L88 54', L3 ? M.gold : '#d8b46a', 3);
         if (L3) {
-          o += c.ci(50, 24, 11, 'none', 0, ` stroke="${E.light}" stroke-width="${c.sw(2.4)}"`) + c.p(starPathS(50, 24, 11, 6, 8), c.vg('#ffe48a', 0.4, -0.1), 1.6) + c.ci(50, 24, 3, '#fff', 0);
+          o += aura(c, 50, 24, 14, 14, E.color, 0.8) + spark(c, 50, 24, 12, '#ffe48a', 2) + c.ci(50, 24, 4.5, c.sg('#fff3b0'), 1.8);
           o += ring0(42, 12.5, 0.6);
         } else o += c.ci(50, 28, 4, c.sg(M.gold), 2);
         return o;
@@ -1403,7 +1405,7 @@
       const ws = '#f2ede2';
       if (v === 1) {
         let o = plat(c, 1);
-        o += obelisk(c, 50, 70, 106, 12, 20, M.silver === '' ? ws : '#ddd6c6');
+        o += obelisk(c, 50, 70, 106, 12, 20, '#ddd6c6');
         o += aura(c, 50, 42, 18, 18, E.color, 0.8);
         o += orb(c, 50, 42, 8, '#fff3b0', 2.6);
         return o;
@@ -1472,7 +1474,7 @@
       c.p(poly([[52, yt], [50 + bw * 0.18, L(0.78)], [50 + bw * 0.3, L(0.62)], [50 + bw * 0.24, L(0.54)], [50 + bw * 0.44, L(0.25)], [50 + bw / 2, yb], [52, yb + 3], [50, L(0.5)]]), h.shade(col, -0.35), 0, ' opacity="0.7"');
   }
   T.hex_spire = {
-    muzzle: [[50, 30], [50, 22], [50, 16], [50, 22], [50, 22]],
+    muzzle: [[50, 30], [50, 22], [50, 16], [50, 26], [50, 30]],
     draw(c, v) {
       const h = c.h;
       const E = c.E;
@@ -1636,7 +1638,7 @@
           // 그림자 사냥꾼
           o += c.p('M80 112C78 98 76 86 80 78C82 72 90 72 92 78C96 86 94 98 92 112Z', c.vg('#2a1e34', 0.2, -0.2), 2.6) +
             c.p('M79 80C78 70 82 64 86 62C90 64 94 70 93 80Q86 76 79 80Z', '#1e1428', 2.4) + c.ci(84, 74, 1.4, E.light, 0) + c.ci(88, 74, 1.4, E.light, 0);
-          o += bearTrap(c, 18, 92, 1);
+          o += runeCircle(20, 108, 9);
         } else o += c.ol('M78 72V80', M.iron, 1.4) + bearTrap(c, 78, 84, 0.9);
         return o;
       }
@@ -1733,10 +1735,10 @@
     let o = '';
     // 빛 번짐 + 빛줄기
     if (r > 0.02) o += aura(c, 50, 42, 20 + 30 * r, 18 + 28 * r, glow, f(0.25 + 0.55 * r));
-    const n = Math.round(r * 8);
+    const n = Math.floor(r * 8);
     let rays = '';
     for (let i = 0; i < n; i++) {
-      const a = ((i * 360) / 8 - 90 + 22.5) * (Math.PI / 180);
+      const a = ((i * 360) / n - 67.5) * (Math.PI / 180);
       rays += `M${f(50 + Math.cos(a) * 25)} ${f(42 + Math.sin(a) * 23)}L${f(50 + Math.cos(a) * (32 + 10 * r))} ${f(42 + Math.sin(a) * (30 + 9 * r))}`;
     }
     if (rays) o += c.ln(rays, '#fff3c0', 3.2, f(0.4 + 0.5 * r));
@@ -1754,8 +1756,8 @@
     const gl = h.mix('#57536a', '#ffe9a0', r);
     const gg = c.def(`lg${gl}`, (id) => c.rgc(id, [[0, h.mix(gl, '#ffffff', 0.55 * r)], [0.6, gl], [1, h.shade(gl, -0.3)]], 0.5, 0.6, 0.6));
     o += frus(c, 50, 32, 57, 16, 12.5, gg, null);
-    if (r > 0.02) o += flame(c, 50, 54, 7 + 5 * r, 6 + 14 * r);
-    o += c.ln('M43.5 33.5L45 57.5M56.5 33.5L55 57.5', h.shade(M.bronze, -0.2), 2.6);
+    o += c.ln('M43.5 33.5L45 57.5M56.5 33.5L55 57.5', h.shade(M.bronze, -0.2), 2.6, 0.6);
+    if (r > 0.02) o += flame(c, 50, 54, 6 + 4 * r, 6 + 14 * r);
     o += cyl(c, 50, 55, 59, 15, 4.5, c.cg(M.bronze), null) + c.e(50, 55, 15, 4.5, 'none', 2.4);
     // 종 모양 지붕
     o += c.p('M29 35Q33 31 37 29C37 18 43 12 50 12C57 12 63 18 63 29Q67 31 71 35Q50 41 29 35Z', c.cg(M.gold), 3);

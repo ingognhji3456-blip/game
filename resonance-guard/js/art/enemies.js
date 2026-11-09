@@ -11,12 +11,10 @@ RG.art.enemy = (() => {
   const H = RG.art._h;
   const OL = H.OL;
   const sh = H.shade;
-  const mx = H.mix;
 
   /* ---------- 팔레트 ---------- */
   const GREY = '#8e8a9b';     // 안개에 물든 몸
   const GREY_L = '#c3c0cd';
-  const GREY_D = '#5c596a';
   const MISTC = '#ebe8f4';    // 안개 김
   const HALO = '#f2f8ff';     // 눈 빛 번짐
   const GREEN = '#9fd45f';    // 1지역 들판
@@ -24,9 +22,7 @@ RG.art.enemy = (() => {
   const ICE_L = '#c8f2ff';
   const EMBER = '#ff7a3d';    // 3지역 불씨
   const EMBER_L = '#ffc46b';
-  const SAND = '#cfae7a';
   const VOLT = '#9b8cff';     // 4지역 번개
-  const VOLT_L = '#e4ddff';
   const SEA = '#3fbcb0';      // 4지역 바다
   const BELL = '#9a90b4';     // 5지역 대종(잿빛 보라)
   const GOLD = '#e2b650';
@@ -164,8 +160,6 @@ RG.art.enemy = (() => {
     const s = f ? -1 : 1;
     const legF = sh('#857b78', -0.3);
     const legN = '#857b78';
-    const hoof = (x) => '';
-    void hoof;
     const mane = f
       ? 'M20 48C19 42 22 38 26 36L23 27L32 33L33 22L41 31L46 20L50 30L57 22L59 31L67 26L66 35L73 35L71 43Z'
       : 'M20 48C19 42 22 38 26 36L21 28L31 32L31 23L40 30L44 21L49 29L56 21L58 30L66 24L66 34L74 33L71 43Z';
@@ -394,13 +388,15 @@ RG.art.enemy = (() => {
         c.mist([[46, 74, 3], [58, 76, 2.5], [52, 80, 2]], MISTC, 0.6),
         f ? 'translate(0 -1)' : ''
       ) +
-      g(c.P('M0 0C2-4 6-5 9-4C7 0 4 2 0 0Z', '#b4c88a'), f ? 'translate(84 62) rotate(30)' : 'translate(86 56) rotate(-10)') +
       root(44, 76, -8 - 3 * s, 9, bark, f ? 0 : 1.5) + root(56, 76, 8 - 3 * s, 9, bark, f ? 1.5 : 0) +
       c.P('M28 78C28 74 34 74 34 78Z', '#d8c8b0') + c.L('M31 78V81', '#d8c8b0', 2) +
       c.P('M66 80C66 77 71 77 71 80Z', '#c9a88a') + c.L('M68.5 80V82', '#c9a88a', 2)
     );
   };
 
+  /* =========================================================
+   * 2지역 · 서리 고개
+   * ========================================================= */
   D.frost_wolf = (f) => {
     const c = make(3);
     const fur = '#d2d7e1';
@@ -671,6 +667,9 @@ RG.art.enemy = (() => {
     );
   };
 
+  /* =========================================================
+   * 3지역 · 붉은 협곡
+   * ========================================================= */
   D.cinder_lizard = (f) => {
     const c = make(3.5);
     const red = '#ab5a50';
@@ -702,7 +701,7 @@ RG.art.enemy = (() => {
     const c = make(3);
     const shell = '#b39a7a';
     const sand = '#d9bb84';
-    const hx = 63;
+    const hx = 61;
     const hy = f ? 36 : 33;
     const segs = [];
     for (let i = 0; i < 6; i++) {
@@ -711,9 +710,9 @@ RG.art.enemy = (() => {
       const y = 80 - t * (80 - hy - 6) - Math.sin(t * Math.PI) * 6;
       segs.push(c.E(H.n(x), H.n(y), H.n(14 - t * 2), H.n(12.5 - t * 1.5), c.body(i % 2 ? shell : sh(shell, -0.08), 0.3)));
     }
-    const jaw = (a) => g(c.P('M0 0C9-5 18-3 21 6C16 2 10 2 2 6Z', c.lin([[0, '#efe3c8'], [1, '#8a7258']])), `translate(${hx + 9} ${hy + 5}) rotate(${a}) scale(1.22)`);
-    const jawB = (a) => g(c.P('M0 0C9 5 18 3 21-6C16-2 10-2 2-6Z', c.lin([[0, '#8a7258'], [1, '#efe3c8']])), `translate(${hx + 9} ${hy + 8}) rotate(${a}) scale(1.22)`);
-    return c.out(
+    const jaw = (a) => g(c.P('M0 0C9-5 18-3 21 6C16 2 10 2 2 6Z', c.lin([[0, '#efe3c8'], [1, '#8a7258']])), `translate(${hx + 9} ${hy + 5}) rotate(${a}) scale(1.1)`);
+    const jawB = (a) => g(c.P('M0 0C9 5 18 3 21-6C16-2 10-2 2-6Z', c.lin([[0, '#8a7258'], [1, '#efe3c8']])), `translate(${hx + 9} ${hy + 8}) rotate(${a}) scale(1.1)`);
+    return c.out('<g transform="translate(5 0)">' +
       segs.join('') +
       c.L('M30 66l-6 4M40 58l-6 2M48 48l-6 0', OL, 2.5) +
       jaw(f ? -4 : -18) + jawB(f ? 4 : 18) +
@@ -723,7 +722,7 @@ RG.art.enemy = (() => {
       c.P('M6 88.5C10 78 24 72 38 73C52 74 60 80 66 88.5Z', c.body(sand, 0.3, -0.25)) +
       c.En(22, 82, 2, 1.2, sh(sand, -0.3)) + c.En(40, 79, 2, 1.2, sh(sand, -0.3)) + c.En(52, 84, 1.6, 1, sh(sand, -0.3)) +
       c.mist(f ? [[44, 64, 1.6], [56, 54, 1.3], [64, 72, 1.5]] : [[46, 60, 1.4], [58, 58, 1.6], [62, 68, 1.2]], sand, 1) +
-      c.shine(hx - 6, hy - 4, 4, 2, 0.4)
+      c.shine(hx - 6, hy - 4, 4, 2, 0.4) + '</g>'
     );
   };
 
@@ -909,6 +908,9 @@ RG.art.enemy = (() => {
     );
   };
 
+  /* =========================================================
+   * 4지역 · 폭풍 해안
+   * ========================================================= */
   D.rock_crab = (f) => {
     const c = make(3);
     const shell = '#7f7f8e';
@@ -1135,7 +1137,7 @@ RG.art.enemy = (() => {
       c.cloud([[26, 32, 8], [36, 25, 10], [50, 20, 10], [64, 19, 9], [77, 22, 8], [88, 28, 6]], c.body(cloud, 0.35, -0.2)) +
       c.En(48, 15, 6, 2.4, '#a9a4c4', 0.7) + c.En(66, 14, 4, 2, '#a9a4c4', 0.7) +
       c.limb(`M30 52C26 52 24 ${ty < 50 ? 46 : 56} 21 ${ty}`, 11, skin) +
-      g(c.P(fluke, c.body(skin, 0.3)), `translate(22 ${ty}) rotate(${f ? 30 : -30}) scale(0.9)`) +
+      g(c.P(fluke, c.body(skin, 0.3)), `translate(23 ${ty}) rotate(${f ? 30 : -30}) scale(1.02)`) +
       c.limb(f ? 'M54 62L44 54' : 'M54 62L46 72', 7, sh(skin, -0.3)) +
       c.P('M22 50C28 32 46 25 65 25C82 25 96 36 97 50C98 60 92 66 82 70C66 77 44 76 31 68C26 64 23 58 22 50Z', c.body(skin, 0.35, -0.35)) +
       c.P('M30 62C42 71 66 73 82 68C90 65 95 60 97 52C89 58 75 61 60 61C48 61 38 61 30 62Z', c.lin([[0, belly], [1, sh(belly, -0.25)]])) +
@@ -1152,6 +1154,9 @@ RG.art.enemy = (() => {
     );
   };
 
+  /* =========================================================
+   * 5지역 · 깨진 대종
+   * ========================================================= */
   D.grey_legionnaire = (f) => {
     const c = make(3);
     const steel = '#8e8c9e';
@@ -1284,7 +1289,7 @@ RG.art.enemy = (() => {
       c.leg(44, 62, -6 * s, 7, legC) + c.leg(56, 62, 6 * s, 7, legC) +
       c.P('M36 40C38 34 46 32 50 32C56 32 64 34 66 40L66 68L60 63L55 69L50 64L45 69L40 63L36 68Z', fill) +
       c.limb(`M40 42Q30 52 ${34 - 3 * s} 62`, 6, legC) + c.limb(`M62 42Q72 50 ${74 + 3 * s} 58`, 6, legC) +
-      c.E(52, 22, 13, 13, fill);
+      c.P('M40 26C38 12 46 8 52 8C58 8 66 12 65 24C65 32 60 36 52 36C46 36 41 32 40 26ZM42 18C36 14 32 16 28 12C34 10 38 10 44 13Z', fill);
     const body = '#4c4462';
     return c.out(
       `<g opacity=".45" stroke="#c4b6ff" transform="translate(${f ? -12 : -9} ${f ? 1 : 0})">${fig('#6a5a9a', '#6a5a9a')}</g>` +
@@ -1293,7 +1298,7 @@ RG.art.enemy = (() => {
         fig(c.body(body, 0.35, -0.3), sh(body, -0.2)) +
         c.L('M40 40C46 44 56 44 62 40', '#8f7fc0', 1.8, ' opacity=".8"') +
         c.eye(56, 21, 2.8) + c.eye(63, 21, 2.4) +
-        c.L('M38 22C38 14 44 9 52 9', '#b8a8e8', 2, ' opacity=".7"'),
+        c.L('M42 22C42 15 46 11 52 11', '#b8a8e8', 2, ' opacity=".7"'),
         f ? 'translate(0 -1)' : ''
       )
     );
@@ -1467,11 +1472,11 @@ RG.art.enemy = (() => {
   /* ---------- 자리표시 (알 수 없는 종류) ---------- */
   function placeholder(f) {
     const c = make(3);
-    return c.out(
-      c.P(`M20 88C14 70 22 40 50 38C78 40 86 70 80 88Z`, c.body(GREY)) +
-      c.eye(58, 58, 3.5) + c.eye(70, 58, 3) + c.shine(36, 52, 8, 4) +
-      (f ? '' : '')
-    );
+    return c.out(g(
+      c.P('M20 88.5C14 70 22 40 50 38C78 40 86 70 80 88.5Z', c.body(GREY)) +
+      c.eye(58, 58, 3.5) + c.eye(70, 58, 3) + c.shine(36, 52, 8, 4),
+      f ? 'translate(0 -1)' : ''
+    ));
   }
 
   return function enemy(type, frame) {
