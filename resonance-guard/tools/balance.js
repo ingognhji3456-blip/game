@@ -73,7 +73,13 @@ if (has('challenge') || has('tasks')) {
       if (noSanct && stealth && detectHero) o.heroId = detectHero;
     }
     const t0 = Date.now();
-    const s = env.searchBest(o, { gens: +arg('gens', 12), pop: +arg('pop', 10), objective: kind === 'challenge' ? 'challenge' : 'task', maxGens: +arg('maxgens', 20) });
+    let seeds = [];
+    if (kind === 'task') {
+      // 먼저 이기는 계획을 찾고(별 목표), 그 위에 과제 묶음을 얹어 탐색
+      const win = env.searchBest(o, { gens: +arg('gens', 12), pop: +arg('pop', 10), maxGens: +arg('maxgens', 20) });
+      if (win.best.r.result === 'win') seeds = [win.best.plan];
+    }
+    const s = env.searchBest(o, { gens: +arg('gens', 12), pop: +arg('pop', 10), objective: kind === 'challenge' ? 'challenge' : 'task', maxGens: +arg('maxgens', 20), seeds });
     const r = s.best.r;
     const ok = kind === 'challenge' ? r.result === 'win' : r.result === 'win' && r.task;
     outRows.push({ mapId, text: kind === 'challenge' ? def.challenge.text : def.task.text, ok, r, ms: Date.now() - t0 });

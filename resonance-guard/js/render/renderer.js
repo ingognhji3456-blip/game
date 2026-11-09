@@ -38,7 +38,7 @@ RG.render = (() => {
   function resize() {
     if (!canvas || !game) return;
     const rect = canvas.parentElement.getBoundingClientRect();
-    dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    dpr = Math.min(window.devicePixelRatio || 1, 2); // 2배 넘는 화면은 2배로 (휴대폰에서 채우기 비용을 줄임, 선명도 차이는 거의 없음)
     W = Math.max(100, rect.width);
     H = Math.max(80, rect.height);
     canvas.width = Math.round(W * dpr);

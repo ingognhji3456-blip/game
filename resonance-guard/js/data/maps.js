@@ -428,7 +428,7 @@ RG.data.maps = [
       '^^^^^^^^^^^^^^^^',
     ],
     startGold: 600,
-    hpMult: 0.95, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.9, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'cinder_lizard*6/1',
       'frost_wolf*8/0.8 ; cinder_lizard*4/1@4',
@@ -461,7 +461,7 @@ RG.data.maps = [
       '^^^^^^^^^^^^^^^^',
     ],
     startGold: 620,
-    hpMult: 0.85, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.8, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'cinder_lizard*8/0.9',
       'sand_burrower*2/3',
@@ -495,7 +495,7 @@ RG.data.maps = [
       '%%%%##########%%',
     ],
     startGold: 650,
-    hpMult: 0.85, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.8, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'cinder_lizard*8/0.9',
       'magma_brute*1',
@@ -651,7 +651,7 @@ RG.data.maps = [
       'spray_sprite*32/0.5 ; thermal_vulture*13/1@8 ; dune_raider*3/1.2@16',
     ],
     task: { type: 'effects', ids: ['gravity', 'refraction'], text: '중력과 굴절 함께 켜기' },
-    challenge: { type: 'allowElements', value: ['light', 'dark'], text: '빛·어둠 탑만' },
+    challenge: { type: 'allowElements', value: ['light', 'dark', 'storm'], text: '빛·어둠·폭풍 탑만' },
     newTowers: ['void_orb'], newEnemies: ['rock_crab', 'spray_sprite'], hero: 'bawi',
     story: { before: 's4_1' },
   },
@@ -704,7 +704,7 @@ RG.data.maps = [
       '~~############~~',
     ],
     startGold: 900,
-    hpMult: 0.85, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.78, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'spray_sprite*6/0.6 ; rock_crab*1/1.2@4',
       'drowned_corsair*2/1.2 ; volt_jelly*1/1.2@3',
@@ -721,7 +721,7 @@ RG.data.maps = [
       'coral_colossus*2/2 ; volt_jelly*11/1@4',
     ],
     task: { type: 'links', n: 14, text: '공명 연결 14개 동시에' },
-    challenge: { type: 'noOpenBuild', text: '공터 건설 금지' },
+    challenge: { type: 'maxTowers', value: 10, text: '탑 10개 이하' },
     newEnemies: ['drowned_corsair', 'coral_colossus'],
     tips: ['undying'],
   },
@@ -792,7 +792,7 @@ RG.data.maps = [
       'volt_jelly*24/1>1 ; mist_mariner*9/1.2@8>2',
     ],
     task: { type: 'distinct', n: 11, text: '서로 다른 공명 효과 11가지 동시에' },
-    challenge: { type: 'banTowers', value: ['sanctuary', 'radiance_spire'], text: '성소·광휘 탑 없이' },
+    challenge: { type: 'banTowers', value: ['radiance_spire'], text: '광휘 탑 없이' },
     newEnemies: ['mist_mariner'],
   },
   {
@@ -809,7 +809,7 @@ RG.data.maps = [
       '~~~~~~~~~~~~~~~~',
     ],
     startGold: 1000,
-    hpMult: 0.82, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.5, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'tide_caller*2/1.2 ; mist_mariner*1/1.2@3',
       'spray_sprite*8/0.6 ; rock_crab*1/1.2@4',
@@ -921,7 +921,7 @@ RG.data.maps = [
       '^^############^^',
     ],
     startGold: 1200,
-    hpMult: 0.78, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.64, // 탐색 봇 ★3 기준 난이도 계수
     ramp: [0.6, 0.75, 0.9], // 웨이브 1~3 적 체력 (정예만 나오는 지역의 몸풀기)
     waves: [
       'ashen_paladin*1/2>0',
@@ -997,7 +997,7 @@ RG.data.maps = [
       '^##############A',
     ],
     startGold: 1350,
-    hpMult: 0.72, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.52, // 탐색 봇 ★3 기준 난이도 계수
     ramp: [0.6, 0.75, 0.9], // 웨이브 1~3 적 체력 (정예만 나오는 지역의 몸풀기)
     waves: [
       'silent_drake*1/2 ; bellshard_golem*1/2@3',
@@ -1017,7 +1017,7 @@ RG.data.maps = [
       'bellshard_golem*6/2 ; grey_legionnaire*7/1.2@8',
       'bellkeeper*1/2 ; grey_legionnaire*6/1.2@3 ; ashen_paladin*2/2@9',
     ],
-    task: { type: 'distinct', n: 14, text: '서로 다른 공명 효과 14가지 동시에' },
+    task: { type: 'effects', ids: ['twilight', 'gravity', 'tempest'], text: '황혼·중력·폭풍우 함께 켜기' },
     challenge: { type: 'lives', value: 1, text: '불꽃 1개로 시작' },
     newEnemies: ['bellkeeper'], boss: 'bellkeeper',
     story: { before: 's5_5', after: 's5_5_end' },
@@ -1036,7 +1036,7 @@ RG.data.maps = [
       'A^^^^^^^^^^^^^^^',
     ],
     startGold: 1500,
-    hpMult: 0.6, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.52, // 탐색 봇 ★3 기준 난이도 계수
     ramp: [0.6, 0.75, 0.9], // 웨이브 1~3 적 체력 (정예만 나오는 지역의 몸풀기)
     waves: [
       'ashen_paladin*1/2>0',

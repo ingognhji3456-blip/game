@@ -108,6 +108,9 @@ function makeEnv(RG) {
     else dps = (spec.damage * (spec.multishot || 1)) / spec.interval;
     if (spec.splash || td.kind === 'pulse' || spec.chain || spec.pierce) dps *= 1.8;
     if (spec.zone && td.kind !== 'orb') dps += spec.zone.dps * 0.8;
+    // 저주: 같은 적을 때리는 다른 탑 피해까지 늘림 → 이웃 화력의 일부로 셈
+    const curse = (spec.onHit && spec.onHit.curse) || null;
+    if (curse) dps *= 1 + curse.pct * 4;
     const cov = coverage(route, air, c, r, spec.range || 1.5, spec.targets || td.targets);
     // 이 맵의 적 구성에 대한 상성(원소 친화·비행)
     const mix = enemyMix(g);
@@ -310,6 +313,8 @@ function makeEnv(RG) {
   function planBot(g, plan, options = {}) {
     let i = 0;
     let t = 0;
+    let stuck = 0;          // 골드를 기다린 횟수
+    const early = new Map(); // 막혔을 때 먼저 지은 뒤쪽 건설: plan 위치 → 탑 id
     const fallback = greedyBot(g, () => 0.5, options.style || {});
     const ids = [];   // plan에서 지은 탑 id (index로 참조)
     return () => {
@@ -321,10 +326,20 @@ function makeEnv(RG) {
         const a = plan[i];
         let res;
         if (a.type === 'build') {
+          if (early.has(i)) { ids.push(early.get(i)); i += 1; continue; }
           res = g.cmd({ type: 'build', tower: a.tower, c: a.c, r: a.r });
-          if (res.ok) ids.push(res.id);
-          else if (/골드/.test(res.reason)) break;
-          else ids.push(null);
+          if (res.ok) { ids.push(res.id); stuck = 0; } else if (/골드/.test(res.reason)) {
+            // (과제 검증용) 오래 막히면 뒤쪽의 살 수 있는 건설을 먼저
+            if (options.skipStuck && ++stuck > 150) {
+              for (let j = i + 1; j < plan.length; j++) {
+                const b2 = plan[j];
+                if (b2.type !== 'build' || early.has(j)) continue;
+                const r2 = g.cmd({ type: 'build', tower: b2.tower, c: b2.c, r: b2.r });
+                if (r2.ok) { early.set(j, r2.id); break; }
+              }
+            }
+            break;
+          } else ids.push(null);
         } else {
           const id = ids[a.ref % Math.max(1, ids.length)];
           const tw = id && st.towers.find((x) => x.id === id);
@@ -344,7 +359,7 @@ function makeEnv(RG) {
     };
   }
 
-  function run(opts, botKind, extra = {}) {
+  function runBase(opts, botKind, extra = {}) {
     const g = RG.sim.create(Object.assign({ mode: 'normal', seed: 1, heroId: null }, opts));
     const rng = RG.util.makeRng((opts.seed || 1) * 7 + 3);
     const tick = botKind === 'random' ? randomBot(g, rng) : botKind === 'plan' ? planBot(g, extra.plan || [], extra) : greedyBot(g, rng, extra);
@@ -369,6 +384,8 @@ function makeEnv(RG) {
       resonance: Object.keys(st.stats.resonanceSeen), log: g.log, game: g, bossDone: st.result === 'win' ? 1 : (g.def.boss ? 1 - bossMin : 0),
     };
   }
+
+  const run = runBase;
 
   function checkInvariants(g) {
     const st = g.state;
@@ -440,12 +457,13 @@ function makeEnv(RG) {
   }
 
   function fitness(r, objective) {
-    if (objective === 'task') return (r.result === 'win' ? 10000 : 0) + (r.task ? 6000 : 0) + r.lives * 100 + r.waves * 100;
+    // 과제: 이기는 것이 먼저 — 진 판의 과제 달성은 조금만 쳐서, 이길 수 있는 계열이 밀려나지 않게
+    if (objective === 'task') return (r.result === 'win' ? 10000 + (r.task ? 6000 : 0) : (r.task ? 400 : 0)) + r.lives * 100 + r.waves * 100 + (r.bossDone || 0) * 600;
     return (r.result === 'win' ? 10000 : 0) + r.lives * 300 + r.waves * 100 + (r.task ? 150 : 0) + (r.bossDone || 0) * 1200;
   }
 
   /** 공명 과제를 노리는 초기 계획: 건설지가 넓은 곳에 원소를 섞어 뭉쳐 짓기 */
-  function taskSeedPlan(g) {
+  function taskSeedPlan(g, avoid) {
     const td = g.def.task;
     if (!td) return null;
     const m = g.map;
@@ -453,7 +471,7 @@ function makeEnv(RG) {
     const byEl = {};
     for (const t of types) { const e = D.towers[t].element; (byEl[e] = byEl[e] || []).push(t); }
     const pickEl = (e) => (byEl[e] || []).find((t) => D.towers[t].role === 'attack') || (byEl[e] || [])[0];
-    const free = (c, r) => c >= 0 && r >= 0 && c < m.cols && r < m.rows && (m.kinds[r * m.cols + c] === RG.grid.T.BUILD || (m.kinds[r * m.cols + c] === RG.grid.T.OPEN && g.canBuild(types[0], c, r).ok));
+    const free = (c, r) => c >= 0 && r >= 0 && c < m.cols && r < m.rows && !(avoid && avoid.has(r * m.cols + c)) && (m.kinds[r * m.cols + c] === RG.grid.T.BUILD || (m.kinds[r * m.cols + c] === RG.grid.T.OPEN && g.canBuild(types[0], c, r).ok));
     // 중심 후보: 이웃 8칸 중 건설지가 가장 많은 칸 (길 가까운 쪽 우선)
     const route = routeTiles(g);
     let best = null;
@@ -480,8 +498,8 @@ function makeEnv(RG) {
       ring.forEach((t, i) => plan.push({ type: 'build', tower: pickEl(i < others.length ? others[i] : td.element), c: t.c, r: t.r }));
       return plan;
     }
-    if (td.type === 'effects') {
-      // 필요한 원소 짝을 찾아 이웃으로
+    if (td.type === 'effects' && td.ids.length < 2) {
+      // 필요한 원소 짝을 찾아 이웃으로 (둘 이상이면 아래의 배치 최적화)
       const need = new Map();
       for (const id of td.ids) for (const [k, res] of Object.entries(D.resonance)) if (res.id === id) (k === 'pure' ? [els[0], els[0]] : k.split('+')).forEach((e) => need.set(e, (need.get(e) || 0) + 1));
       // 여러 짝에 낀 원소를 가운데에 (예: 초전도+과열 → 폭풍)
@@ -490,6 +508,58 @@ function makeEnv(RG) {
       plan.push({ type: 'build', tower: center, c: best.c, r: best.r });
       list.slice(1).forEach((e, i) => ring[i] && plan.push({ type: 'build', tower: pickEl(e), c: ring[i].c, r: ring[i].r }));
       if (list.length > 2) ring.slice(list.length - 1).forEach((t, i) => plan.push({ type: 'build', tower: pickEl(list[i % list.length]), c: t.c, r: t.r }));
+      return plan;
+    }
+    if ((td.type === 'distinct' && td.n >= 6) || (td.type === 'links' && td.n >= 10) || (td.type === 'effects' && td.ids.length >= 2)) {
+      // 큰 묶음: 중심에서 가까운 건설지 12칸을 모으고, 원소 배치를 언덕 오르기로 최적화
+      // 건설지가 한 줄짜리인 맵도 있으니, 한 덩어리가 끝나면 가장 가까운 다른 덩어리로 이어서 모음
+      const K = td.type === 'distinct' ? Math.min(26, td.n + 10) : td.type === 'effects' ? 10 : 14;
+      const wantKeys = td.type === 'effects' ? new Set(Object.entries(D.resonance).filter(([, res]) => td.ids.includes(res.id)).map(([k]) => k)) : null;
+      const cells = [];
+      const seen = new Set([best.r * m.cols + best.c]);
+      const q = [{ c: best.c, r: best.r }];
+      while (cells.length < K) {
+        if (!q.length) {
+          let nb = null;
+          for (let r = 0; r < m.rows; r++) for (let c = 0; c < m.cols; c++) {
+            if (seen.has(r * m.cols + c) || !free(c, r)) continue;
+            const d = Math.min(...cells.map((x) => Math.hypot(x.c - c, x.r - r)));
+            if (!nb || d < nb.d) nb = { c, r, d };
+          }
+          if (!nb) break;
+          seen.add(nb.r * m.cols + nb.c);
+          q.push({ c: nb.c, r: nb.r });
+        }
+        const cur = q.shift();
+        cells.push(cur);
+        for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
+          const c2 = cur.c + dc; const r2 = cur.r + dr; const k = r2 * m.cols + c2;
+          if (!seen.has(k) && free(c2, r2)) { seen.add(k); q.push({ c: c2, r: r2 }); }
+        }
+      }
+      const adj = [];
+      for (let i = 0; i < cells.length; i++) for (let j = i + 1; j < cells.length; j++) if (Math.max(Math.abs(cells[i].c - cells[j].c), Math.abs(cells[i].r - cells[j].r)) === 1) adj.push([i, j]);
+      const keyOf = (a2, b2) => (a2 === b2 ? 'pure' : D.resonance[`${a2}+${b2}`] ? `${a2}+${b2}` : `${b2}+${a2}`);
+      const score = (as) => { const ks = new Set(); for (const [i, j] of adj) ks.add(keyOf(as[i], as[j])); return td.type === 'links' ? adj.length : wantKeys ? [...ks].filter((k) => wantKeys.has(k)).length : ks.size; };
+      let asg = cells.map((_, i) => els[i % els.length]);
+      let sc = score(asg);
+      const rr = RG.util.makeRng(97);
+      for (let it = 0; it < 8000; it++) {
+        const i = Math.floor(rr() * asg.length);
+        const prev = asg[i];
+        asg[i] = els[Math.floor(rr() * els.length)];
+        const s2 = score(asg);
+        if (s2 >= sc) sc = s2; else asg[i] = prev;
+      }
+      // 목표를 채우는 한에서 탑을 하나씩 빼 비용을 줄임
+      const need = wantKeys ? wantKeys.size : td.n;
+      const on = cells.map(() => true);
+      const scoreOn = () => { const ks = new Set(); let links = 0; for (const [i, j] of adj) if (on[i] && on[j]) { ks.add(keyOf(asg[i], asg[j])); links++; } return td.type === 'links' ? links : wantKeys ? [...ks].filter((k) => wantKeys.has(k)).length : ks.size; };
+      if (scoreOn() >= need) {
+        const order = cells.map((_, i) => i).sort((x, y) => (cells[y].c * 7 + cells[y].r * 13) % 11 - (cells[x].c * 7 + cells[x].r * 13) % 11);
+        for (const i of order) { on[i] = false; if (scoreOn() < need) on[i] = true; }
+      }
+      cells.forEach((t, i) => { if (on[i]) plan.push({ type: 'build', tower: pickEl(asg[i]), c: t.c, r: t.r }); });
       return plan;
     }
     if (td.type === 'pureAll') {
@@ -514,8 +584,9 @@ function makeEnv(RG) {
   }
 
   /** 계획 탐색: 그리디 해법에서 출발해 진화 */
-  function searchPlan(opts, { gens = 10, pop = 12, seed = 1, goal = 'stars3', early = false, maxGens = 30, objective = 'stars' } = {}) {
+  function searchPlan(opts, { gens = 10, pop = 12, seed = 1, goal = 'stars3', early = false, maxGens = 30, objective = 'stars', seeds = [] } = {}) {
     const rng = RG.util.makeRng(seed * 131 + 7);
+    const run = objective === 'task' ? (o2, kind, extra = {}) => runBase(o2, kind, kind === 'plan' ? Object.assign({ skipStuck: true }, extra) : extra) : runBase;
     const greedy = run(opts, 'greedy');
     const g0 = RG.sim.create(Object.assign({ mode: 'normal', seed: 1 }, opts));
     let popu = [];
@@ -523,6 +594,22 @@ function makeEnv(RG) {
       const gr = style === STYLES[0] ? greedy : run(opts, 'greedy', style);
       const plan = logToPlan(gr.log, gr.game);
       popu.push({ plan, r: run(opts, 'plan', { plan, early }) });
+    }
+    // 미리 찾은 좋은 계획(예: 이기는 계획)을 초기값으로
+    for (const pl of seeds) {
+      popu.push({ plan: pl, r: run(opts, 'plan', { plan: pl, early }) });
+      if (objective === 'task') {
+        // 이긴 배치는 그대로 두고, 그 배치가 안 쓰는 칸에 과제용 묶음을 뒤쪽에 덧붙임 (사람이 하는 순서)
+        const used = new Set(pl.filter((a) => a.type === 'build').map((a) => a.r * g0.map.cols + a.c));
+        const extra = taskSeedPlan(g0, used);
+        if (extra) {
+          for (const frac of [1, 0.9, 0.8, 0.7, 0.6, 0.5]) {
+            const k = Math.floor(pl.length * frac);
+            const p2 = pl.slice(0, k).concat(extra, pl.slice(k));
+            popu.push({ plan: p2, r: run(opts, 'plan', { plan: p2, early }) });
+          }
+        }
+      }
     }
     if (objective === 'task') {
       const seedPlan = taskSeedPlan(g0);
@@ -572,7 +659,7 @@ function makeEnv(RG) {
     return best;
   }
 
-  return { run, searchPlan, searchBest, routeTiles, coverage, logToPlan, fitness, STYLES, mazePlan };
+  return { run, searchPlan, searchBest, routeTiles, coverage, logToPlan, fitness, STYLES, mazePlan, taskSeedPlan };
 }
 
 module.exports = { makeEnv, loadGame };

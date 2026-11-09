@@ -266,13 +266,13 @@ RG.data.towers = {
     name: '광휘 탑', element: 'light', role: 'attack', targets: 'both', kind: 'pulse', unlock: '3-5',
     desc: '주기적인 섬광으로 주변 모두를 태우고 눈멀게 합니다.',
     levels: [
-      { cost: 120, range: 2.0, interval: 3.2, damage: 26, onHit: { blind: 2 } },
-      { cost: 120, range: 2.1, interval: 3.0, damage: 40, onHit: { blind: 2 } },
-      { cost: 170, range: 2.3, interval: 2.8, damage: 60, onHit: { blind: 2 } },
+      { cost: 120, range: 2.2, interval: 3.2, damage: 32, onHit: { blind: 2 } },
+      { cost: 120, range: 2.3, interval: 3.0, damage: 48, onHit: { blind: 2 } },
+      { cost: 170, range: 2.5, interval: 2.8, damage: 72, onHit: { blind: 2 } },
     ],
     branches: {
-      A: { id: 'dawn_spire', name: '일출 탑', desc: '섬광이 더 세고 자주 터집니다.', cost: 290, range: 2.5, interval: 2.2, damage: 95, onHit: { blind: 2.5 } },
-      B: { id: 'purifier', name: '정화의 탑', desc: '섬광이 보호막을 걷어 내고 3초간 재생·치유를 막습니다.', cost: 280, range: 2.5, interval: 2.6, damage: 70, onHit: { blind: 2, purify: 3 } },
+      A: { id: 'dawn_spire', name: '일출 탑', desc: '섬광이 더 세고 자주 터집니다.', cost: 290, range: 2.7, interval: 2.2, damage: 110, onHit: { blind: 2.5 } },
+      B: { id: 'purifier', name: '정화의 탑', desc: '섬광이 보호막을 걷어 내고 3초간 재생·치유를 막습니다.', cost: 280, range: 2.7, interval: 2.6, damage: 84, onHit: { blind: 2, purify: 3 } },
     },
   },
 
@@ -281,9 +281,9 @@ RG.data.towers = {
     name: '저주 첨탑', element: 'dark', role: 'attack', targets: 'both', kind: 'bolt', unlock: '3-4',
     desc: '저주를 걸어 그 적이 받는 모든 피해를 늘립니다.',
     levels: [
-      { cost: 100, range: 3.0, interval: 1.2, damage: 9, projSpeed: 8, onHit: { curse: { pct: 0.15, dur: 4 } } },
-      { cost: 100, range: 3.0, interval: 1.1, damage: 14, projSpeed: 8, onHit: { curse: { pct: 0.18, dur: 4 } } },
-      { cost: 150, range: 3.2, interval: 1.0, damage: 21, projSpeed: 9, onHit: { curse: { pct: 0.22, dur: 4 } } },
+      { cost: 100, range: 3.0, interval: 1.2, damage: 10, projSpeed: 8, onHit: { curse: { pct: 0.15, dur: 4 } } },
+      { cost: 100, range: 3.0, interval: 1.1, damage: 16, projSpeed: 8, onHit: { curse: { pct: 0.18, dur: 4 } } },
+      { cost: 150, range: 3.2, interval: 1.0, damage: 24, projSpeed: 9, onHit: { curse: { pct: 0.22, dur: 4 } } },
     ],
     branches: {
       A: { id: 'doom_spire', name: '파멸 첨탑', desc: '체력 12% 이하인 적을 즉시 처치합니다(보스 제외).', cost: 280, range: 3.2, interval: 1.0, damage: 30, projSpeed: 9, onHit: { curse: { pct: 0.3, dur: 4 }, execute: 0.12 } },

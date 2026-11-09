@@ -65,7 +65,8 @@
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 모듈 구조와 약속 |
 | [docs/QUALITY.md](docs/QUALITY.md) | 품질 합격 기준 |
 | [docs/PROGRESS.md](docs/PROGRESS.md) | 진행 기록과 결정 사항 |
-| [docs/reports/](docs/reports/) | 밸런스·그림 검수·화면 검사 보고서 |
+| [docs/reports/QUALITY-REPORT.md](docs/reports/QUALITY-REPORT.md) | **품질 보고서** (QUALITY.md 항목별 결과와 근거) |
+| [docs/reports/](docs/reports/) | 밸런스·도전·과제·그림 검수·화면 검사 보고서 |
 
 ## 검사
 
@@ -93,12 +94,17 @@ node tests/e2e/play.js --dist --map 1-1
 node tests/e2e/flows.js --dist
 ```
 
-- `tests/run.js`: 규칙 테스트(피해 계산·공명·제어 감쇠·은신·보스 등), 데이터 무결성, 설계서와 데이터 일치
+```bash
+node tests/e2e/perf.js --dist
+```
+
+- `tests/run.js`: 규칙 테스트(피해 계산·공명·제어 감쇠·은신·보스 등), 항목별 동작(탑 18×5단계·특성 18·보스 6·영웅 6·도전 13·과제 8·공명 16), 데이터 무결성, 설계서와 데이터 일치
 - `tools/balance.js`: 무작위·그리디·탐색 봇으로 맵마다 여러 판을 돌려 `docs/reports/balance.md` 작성 (`--challenge`, `--tasks`, `--soak N`)
 - `tools/art-review.js`: 모든 그림을 대상별 이미지로 찍기 (`docs/reports/art/`)
 - `tests/e2e/screens.js`: 데스크톱·휴대폰 가로·세로 화면 캡처와 콘솔 오류 검사
 - `tests/e2e/play.js`: 타이틀부터 결과까지 실제 화면 흐름으로 한 판 진행
 - `tests/e2e/flows.js`: 키보드만으로 한 판, 터치만으로 한 판(휴대폰 가로), 판 도중 새로고침 → 이어하기
+- `tests/e2e/perf.js`: 시작 시간, 부하 맵 프레임(데스크톱, 휴대폰 CPU 4배 느리게)
 
 ## 한 파일로 만들기
 
