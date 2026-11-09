@@ -24,6 +24,7 @@
   let placing = null;        // 건설 미리보기 { type, c, r }
   let skillAim = null;
   let hudT = 0;
+  let beamT = 0;
   let saveT = 0;
   let bossTrackOn = false;
   let tipsQueue = [];
@@ -160,6 +161,7 @@
       if (n >= 16) acc = 0;
     }
     if (events.length) handleEvents(events);
+    if (running && st.beams.length) { beamT -= dt; if (beamT <= 0) { UI.sfx('beam', { vol: 0.3 }); beamT = 0.2; } }
     RG.render.frame(running ? acc / DT() : 1, running ? dt : dt * 0.25);
     hudT -= dt;
     if (hudT <= 0) { updateHud(false); hudT = 0.1; }
@@ -176,7 +178,7 @@
     RG.fx.onEvents(events, game);
     for (const e of events) {
       switch (e.type) {
-        case 'fire': UI.sfx(FIRE_SFX[e.kind] || 'arrow', { vol: 0.5 }); break;
+        case 'fire': UI.sfx(e.kind === 'bolt' && e.element === 'dark' ? 'hex' : FIRE_SFX[e.kind] || 'arrow', { vol: 0.5 }); break;
         case 'pulse': if (e.towerId) { const t = game.state.towers.find((q) => q.id === e.towerId); UI.sfx(t ? PULSE_SFX[t.type] || 'bell' : 'bell', { vol: 0.5 }); } break;
         case 'chain': if (!e.small) UI.sfx('chain', { vol: 0.5 }); break;
         case 'splash': if (e.element === 'fire' || e.big) UI.sfx('explosion', { vol: 0.55 }); break;
@@ -1045,5 +1047,5 @@
   }
 
   UI.register('game', { enter, leave });
-  RG.ui.game = { get game() { return game; }, doCmd, banner };
+  RG.ui.game = { get game() { return game; }, doCmd, banner, setSpeed: (n) => { speed = Math.max(1, Math.min(8, n)); } };
 })();

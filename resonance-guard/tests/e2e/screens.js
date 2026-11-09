@@ -11,7 +11,7 @@ const { chromium } = require('playwright');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const OUT = path.join(ROOT, 'docs', 'reports', 'screens');
-const URL = `file://${path.join(ROOT, 'index.html')}`;
+const URL = `file://${path.join(ROOT, process.argv.includes('--dist') ? 'dist/resonance-guard.html' : 'index.html')}`;
 const SIZES = {
   desktop: { width: 1280, height: 800 },
   phoneLand: { width: 844, height: 390, isMobile: true, hasTouch: true },
