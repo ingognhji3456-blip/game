@@ -87,18 +87,18 @@ RG.data.towers = {
     name: '빙창 쇠뇌', element: 'frost', role: 'attack', targets: 'both', kind: 'ballista', unlock: '2-5',
     desc: '사거리 끝까지 일직선 위의 모든 적을 꿰뚫습니다.',
     levels: [
-      { cost: 110, range: 3.6, interval: 2.4, damage: 30, pierce: true },
-      { cost: 120, range: 3.8, interval: 2.2, damage: 46, pierce: true },
-      { cost: 170, range: 4.0, interval: 2.0, damage: 68, pierce: true },
+      { cost: 110, range: 3.6, interval: 2.4, damage: 24, pierce: true },
+      { cost: 120, range: 3.8, interval: 2.2, damage: 37, pierce: true },
+      { cost: 170, range: 4.0, interval: 2.0, damage: 55, pierce: true },
     ],
     branches: {
       A: {
         id: 'frost_lancer', name: '빙창 사수', desc: '관통한 모든 적의 갑옷을 깎습니다.',
-        cost: 300, range: 4.4, interval: 1.9, damage: 95, pierce: true, onHit: { shred: { pct: 0.15, max: 0.3, dur: 5 } },
+        cost: 300, range: 4.4, interval: 1.9, damage: 80, pierce: true, onHit: { shred: { pct: 0.15, max: 0.3, dur: 5 } },
       },
       B: {
         id: 'shatter_ballista', name: '빙하 파쇄기', desc: '감속·빙결된 적에게 피해 2배.',
-        cost: 300, range: 4.2, interval: 2.0, damage: 90, pierce: true, onHit: { bonusVsSlowed: 1.0 },
+        cost: 300, range: 4.2, interval: 2.0, damage: 76, pierce: true, onHit: { bonusVsSlowed: 1.0 },
       },
     },
   },

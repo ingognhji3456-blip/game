@@ -215,7 +215,7 @@ function makeEnv(RG) {
       }
       for (const type of types) {
         const td = D.towers[type];
-        if (td.role === 'support' && !(type === 'sanctuary' && hasStealth)) continue;
+        if (td.role === 'support' && st.towers.length < 3 && !(type === 'sanctuary' && hasStealth)) continue; // 지원은 이웃 공격 탑이 생긴 뒤
         if (td.role === 'economy') {
           const left = st.wave.total - st.wave.index;
           const mines = st.towers.filter((x) => x.type === type).length;
@@ -231,9 +231,16 @@ function makeEnv(RG) {
           let v;
           if (td.role === 'support') {
             // 은신 적이 있으면 성소(탐지)를 길이 많이 지나는 곳에 일찍 — 하나는 꼭, 둘째는 덜 급하게
-            const det = RG.stats.specOf(type, 1, null).detect || 0;
+            const sp = RG.stats.specOf(type, 1, null);
+            const det = (type === 'sanctuary' && hasStealth && sp.detect) || 0;
             const have = st.towers.filter((x) => x.type === type).length;
-            v = det ? coverage(route, [], tile.c, tile.r, det, 'ground') * (have === 0 ? 60 : have === 1 ? 6 : 0.3) : 30;
+            // 지원 효과: 이웃 공격 탑 가치 × (피해·속도 보너스 + 사거리 보너스 절반)
+            const a = sp.aura || {};
+            const gain = (a.damagePct || 0) + (a.speedPct || 0) + (a.rangePct || 0) * 0.5 + (a.critChance || 0);
+            let nb = 0;
+            for (const o of st.towers) if (Math.max(Math.abs(o.c - tile.c), Math.abs(o.r - tile.r)) === 1 && D.towers[o.type].role === 'attack') nb += towerValue(g, o.type, o.level, o.branch, o.c, o.r, route, air, W);
+            v = nb * gain * 1.1 + (det ? coverage(route, [], tile.c, tile.r, det, 'ground') * (have === 0 ? 60 : have === 1 ? 6 : 0.3) : 0);
+            if (v <= 0) continue;
           } else v = towerValue(g, type, 1, null, tile.c, tile.r, route, air, W);
           if (tile.open) {
             // 길을 늘리면 가산점
@@ -402,7 +409,7 @@ function makeEnv(RG) {
 
   function mutate(plan, g, rng) {
     const p = plan.map((a) => Object.assign({}, a));
-    const types = (g.opts.towers || D.towerOrder).filter((x) => D.towers[x].role !== 'support' || x === 'sanctuary');
+    const types = (g.opts.towers || D.towerOrder).filter((x) => D.towers[x]);
     const tiles = buildableTiles(g, g.def.type !== 'fixed');
     const nBuild = () => p.filter((a) => a.type === 'build').length;
     if (rng() < 0.18 && nBuild()) {

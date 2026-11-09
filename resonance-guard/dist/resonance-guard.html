@@ -967,18 +967,18 @@ RG.data.towers = {
     name: '빙창 쇠뇌', element: 'frost', role: 'attack', targets: 'both', kind: 'ballista', unlock: '2-5',
     desc: '사거리 끝까지 일직선 위의 모든 적을 꿰뚫습니다.',
     levels: [
-      { cost: 110, range: 3.6, interval: 2.4, damage: 30, pierce: true },
-      { cost: 120, range: 3.8, interval: 2.2, damage: 46, pierce: true },
-      { cost: 170, range: 4.0, interval: 2.0, damage: 68, pierce: true },
+      { cost: 110, range: 3.6, interval: 2.4, damage: 24, pierce: true },
+      { cost: 120, range: 3.8, interval: 2.2, damage: 37, pierce: true },
+      { cost: 170, range: 4.0, interval: 2.0, damage: 55, pierce: true },
     ],
     branches: {
       A: {
         id: 'frost_lancer', name: '빙창 사수', desc: '관통한 모든 적의 갑옷을 깎습니다.',
-        cost: 300, range: 4.4, interval: 1.9, damage: 95, pierce: true, onHit: { shred: { pct: 0.15, max: 0.3, dur: 5 } },
+        cost: 300, range: 4.4, interval: 1.9, damage: 80, pierce: true, onHit: { shred: { pct: 0.15, max: 0.3, dur: 5 } },
       },
       B: {
         id: 'shatter_ballista', name: '빙하 파쇄기', desc: '감속·빙결된 적에게 피해 2배.',
-        cost: 300, range: 4.2, interval: 2.0, damage: 90, pierce: true, onHit: { bonusVsSlowed: 1.0 },
+        cost: 300, range: 4.2, interval: 2.0, damage: 76, pierce: true, onHit: { bonusVsSlowed: 1.0 },
       },
     },
   },
@@ -1912,6 +1912,7 @@ RG.data.maps = [
       '~~~~##########~~',
     ],
     startGold: 500,
+    hpMult: 0.85, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'frost_wolf*3/1.4>0 ; frost_wolf*3/1.4@3>1',
       'avalanche_golem*1>0',
@@ -2294,6 +2295,7 @@ RG.data.maps = [
       '####~~~~~~~~~~~~',
     ],
     startGold: 860,
+    hpMult: 0.85, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'rock_crab*1/1.2 ; obsidian_beetle*1/1.2@3 ; spray_sprite*1/0.6@5',
       'spray_sprite*6/0.6 ; dune_raider*2/1.2@4',
@@ -2363,7 +2365,7 @@ RG.data.maps = [
       '^##############A',
     ],
     startGold: 900,
-    hpMult: 0.9, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.83, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'rock_crab*1/1.2 ; coral_colossus*1/2@3',
       'volt_eel*3/1.2 ; volt_jelly*1/1.2@4',
@@ -2398,7 +2400,7 @@ RG.data.maps = [
       '~###~###~#######',
     ],
     startGold: 950,
-    hpMult: 0.9, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.65, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'tide_caller*2/1.2>0 ; volt_jelly*1/1.2@3>1',
       'volt_jelly*3/1.2>1 ; volt_eel*2/1.2@4>2',
@@ -2545,7 +2547,7 @@ RG.data.maps = [
       '^^############^^',
     ],
     startGold: 1200,
-    hpMult: 0.92, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.78, // 탐색 봇 ★3 기준 난이도 계수
     ramp: [0.6, 0.75, 0.9], // 웨이브 1~3 적 체력 (정예만 나오는 지역의 몸풀기)
     waves: [
       'ashen_paladin*1/2>0',
@@ -2583,7 +2585,7 @@ RG.data.maps = [
       '^^^^^^^=========',
     ],
     startGold: 1250,
-    hpMult: 0.92, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.85, // 탐색 봇 ★3 기준 난이도 계수
     ramp: [0.6, 0.75, 0.9], // 웨이브 1~3 적 체력 (정예만 나오는 지역의 몸풀기)
     waves: [
       'ashen_paladin*1/2',
@@ -2621,7 +2623,7 @@ RG.data.maps = [
       '^##############A',
     ],
     startGold: 1350,
-    hpMult: 0.85, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.72, // 탐색 봇 ★3 기준 난이도 계수
     ramp: [0.6, 0.75, 0.9], // 웨이브 1~3 적 체력 (정예만 나오는 지역의 몸풀기)
     waves: [
       'silent_drake*1/2 ; bellshard_golem*1/2@3',
@@ -2660,7 +2662,7 @@ RG.data.maps = [
       'A^^^^^^^^^^^^^^^',
     ],
     startGold: 1500,
-    hpMult: 0.68, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.6, // 탐색 봇 ★3 기준 난이도 계수
     ramp: [0.6, 0.75, 0.9], // 웨이브 1~3 적 체력 (정예만 나오는 지역의 몸풀기)
     waves: [
       'ashen_paladin*1/2>0',

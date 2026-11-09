@@ -286,6 +286,7 @@ RG.data.maps = [
       '~~~~##########~~',
     ],
     startGold: 500,
+    hpMult: 0.85, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'frost_wolf*3/1.4>0 ; frost_wolf*3/1.4@3>1',
       'avalanche_golem*1>0',
@@ -668,6 +669,7 @@ RG.data.maps = [
       '####~~~~~~~~~~~~',
     ],
     startGold: 860,
+    hpMult: 0.85, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'rock_crab*1/1.2 ; obsidian_beetle*1/1.2@3 ; spray_sprite*1/0.6@5',
       'spray_sprite*6/0.6 ; dune_raider*2/1.2@4',
@@ -737,7 +739,7 @@ RG.data.maps = [
       '^##############A',
     ],
     startGold: 900,
-    hpMult: 0.9, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.83, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'rock_crab*1/1.2 ; coral_colossus*1/2@3',
       'volt_eel*3/1.2 ; volt_jelly*1/1.2@4',
@@ -772,7 +774,7 @@ RG.data.maps = [
       '~###~###~#######',
     ],
     startGold: 950,
-    hpMult: 0.9, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.65, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'tide_caller*2/1.2>0 ; volt_jelly*1/1.2@3>1',
       'volt_jelly*3/1.2>1 ; volt_eel*2/1.2@4>2',
@@ -919,7 +921,7 @@ RG.data.maps = [
       '^^############^^',
     ],
     startGold: 1200,
-    hpMult: 0.92, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.78, // 탐색 봇 ★3 기준 난이도 계수
     ramp: [0.6, 0.75, 0.9], // 웨이브 1~3 적 체력 (정예만 나오는 지역의 몸풀기)
     waves: [
       'ashen_paladin*1/2>0',
@@ -957,7 +959,7 @@ RG.data.maps = [
       '^^^^^^^=========',
     ],
     startGold: 1250,
-    hpMult: 0.92, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.85, // 탐색 봇 ★3 기준 난이도 계수
     ramp: [0.6, 0.75, 0.9], // 웨이브 1~3 적 체력 (정예만 나오는 지역의 몸풀기)
     waves: [
       'ashen_paladin*1/2',
@@ -995,7 +997,7 @@ RG.data.maps = [
       '^##############A',
     ],
     startGold: 1350,
-    hpMult: 0.85, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.72, // 탐색 봇 ★3 기준 난이도 계수
     ramp: [0.6, 0.75, 0.9], // 웨이브 1~3 적 체력 (정예만 나오는 지역의 몸풀기)
     waves: [
       'silent_drake*1/2 ; bellshard_golem*1/2@3',
@@ -1034,7 +1036,7 @@ RG.data.maps = [
       'A^^^^^^^^^^^^^^^',
     ],
     startGold: 1500,
-    hpMult: 0.68, // 탐색 봇 ★3 기준 난이도 계수
+    hpMult: 0.6, // 탐색 봇 ★3 기준 난이도 계수
     ramp: [0.6, 0.75, 0.9], // 웨이브 1~3 적 체력 (정예만 나오는 지역의 몸풀기)
     waves: [
       'ashen_paladin*1/2>0',
