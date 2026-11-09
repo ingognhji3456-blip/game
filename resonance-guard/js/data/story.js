@@ -151,4 +151,100 @@ RG.data.story = {
       { who: 'kara', mood: 'happy', text: '그럼 더 모으면 되지! 다음은 바다 쪽이야!' },
     ],
   },
+
+  s4_1: {
+    title: '일어선 절벽', region: 4,
+    lines: [
+      { who: 'narration', text: '폭풍 해안. 난파선 사이로 파도가 부서지고, 하늘에서는 물보라 요정이 떼 지어 날았다.' },
+      { who: 'zena', mood: 'worried', text: '으앗, 하늘에서도 와요! 바위게는 단단하고… 어디 숨을 데 없나요?!' },
+      { who: 'narration', text: '그때, 해안 절벽 하나가 천천히 몸을 일으켰다. 이끼와 작은 꽃이 핀 거대한 돌이었다.' },
+      { who: 'bawi', mood: 'normal', text: '허허… 오래 잤구려. 등불 냄새에 눈을 떴소.' },
+      { who: 'kara', mood: 'worried', text: '바위가… 말을 해?!' },
+      { who: 'bawi', mood: 'happy', text: '나는 바위요. 대종이 처음 울리던 날 태어났지. 그 울림이 그리워 바다를 지키며 잠들어 있었소.' },
+      { who: 'sera', mood: 'normal', text: '대종에 금이 가서 안개가 흘러나와요. 저희는 그걸 고치러 가는 길이에요.' },
+      { who: 'bawi', mood: 'normal', text: '…그랬구려. 그렇다면 이 늙은 돌도 함께 가겠소. 앞은 내가 막으리다.' },
+    ],
+  },
+
+  s4_end: {
+    title: '대종과 종지기', region: 4,
+    lines: [
+      { who: 'narration', text: '폭풍 고래가 하늘 너머로 사라지자 먹구름이 걷히고, 바다 건너 땅의 심장이 보였다.' },
+      { who: 'bawi', mood: 'normal', text: '저기가 대종이 있는 곳이오. 옛날엔 백 년에 한 번, 온 땅이 함께 울렸지.' },
+      { who: 'bawi', mood: 'worried', text: '대종을 지키는 종지기 가문이 있었소. 마지막 종지기는… 내 오랜 친구였지.' },
+      { who: 'sera', mood: 'worried', text: '그분은 지금 어디에 계세요?' },
+      { who: 'bawi', mood: 'worried', text: '종에 금이 간 날, 자기가 지키지 못했다며 몹시 슬퍼했다고 들었소. 그 뒤로는 소식이 없소.' },
+      { who: 'zena', mood: 'normal', text: '이음쇠 설계는 거의 끝났어요. 이제 대종 앞까지만 가면 돼요.' },
+      { who: 'kara', mood: 'normal', text: '가자. 마지막 지역이야.' },
+    ],
+  },
+
+  s5_1: {
+    title: '그림자의 배신자', region: 5,
+    lines: [
+      { who: 'narration', text: '회색 평원. 얼굴 없는 회색 군단이 발맞춰 행진하고 있었다.' },
+      { who: 'yaro', mood: 'normal', text: '거기 등불 든 녀석들. 그대로 가면 군단 한가운데로 들어간다.' },
+      { who: 'kara', mood: 'worried', text: '누구야! 잿빛 교단이지?' },
+      { who: 'yaro', mood: 'normal', text: '…였지. 오늘부로 그만뒀어. 침묵이 평화라니, 웃기는 소리야.' },
+      { who: 'sio', mood: 'normal', text: '믿을 수 없다.' },
+      { who: 'yaro', mood: 'happy', text: '안 믿어도 돼. 대신 하나 알려 주지. 저 수도사들 근처의 탑은 침묵에 빠져. 멀리서 잡아.' },
+      { who: 'sera', mood: 'normal', text: '…왜 도와주시는 거예요?' },
+      { who: 'yaro', mood: 'worried', text: '그림자는 등불 옆에 있어야 생기는 거니까. 흥, 빨리 끝내자.' },
+    ],
+  },
+
+  s5_5: {
+    title: '스승과 제자', region: 5,
+    lines: [
+      { who: 'narration', text: '종지기의 문. 거대한 종을 등에 진 회색 인물이 길을 막고 서 있었다.' },
+      { who: 'yaro', mood: 'worried', text: '…스승님.' },
+      { who: 'bawi', mood: 'worried', text: '저 종 모양 가면… 틀림없소. 마지막 종지기요.' },
+      { who: 'bellkeeper', mood: 'normal', text: '돌아왔느냐, 야로. 등불 따위를 들고서.' },
+      { who: 'bellkeeper', mood: 'normal', text: '종은 깨졌노라. 울림은 다툼과 슬픔을 낳을 뿐. 이제 모두 고요해지면 되느니라.' },
+      { who: 'yaro', mood: 'normal', text: '아니야. 스승님은 그냥… 종을 지키지 못한 게 너무 아팠던 거야.' },
+      { who: 'kara', mood: 'normal', text: '야로, 같이 가자. 네 스승님은 우리가 같이 멈춰 줄게.' },
+      { who: 'yaro', mood: 'normal', text: '…고마워. 그리고 조심해. 스승님은 순간이동을 해.' },
+    ],
+  },
+
+  s5_5_end: {
+    title: '깨진 가면', region: 5,
+    lines: [
+      { who: 'narration', text: '종지기가 무릎을 꿇었다. 종 모양 가면에 금이 가더니, 조용히 둘로 갈라졌다.' },
+      { who: 'bellkeeper', mood: 'worried', text: '…미안하다. 지키지 못한 종 앞에서, 나는 울림을 놓아 버렸느니라.' },
+      { who: 'yaro', mood: 'worried', text: '이제 됐어요. 남은 건 우리가 할게요.' },
+      { who: 'bellkeeper', mood: 'happy', text: '야로… 등불 곁의 그림자라. 좋은 이름을 얻었구나.' },
+      { who: 'bawi', mood: 'normal', text: '쉬게, 친구여. 종은 이 아이들이 다시 울릴 거요.' },
+      { who: 'narration', text: '야로는 깨진 가면을 품에 넣었다. 문 너머에서 대종의 심장이 낮게 울렁였다.' },
+    ],
+  },
+
+  s5_6: {
+    title: '여섯 개의 울림', region: 5,
+    lines: [
+      { who: 'narration', text: '대종의 심장. 금 간 틈에서 잿빛 형체가 천천히 일어섰다. 얼굴 대신 깨진 종의 입구가 있었다.' },
+      { who: 'zena', mood: 'worried', text: '측정이 안 돼요… 저건 무언가가 아니라, 울림이 완전히 없는 자리예요.' },
+      { who: 'sera', mood: 'normal', text: '침묵. 안개의 근원이에요.' },
+      { who: 'sio', mood: 'normal', text: '불, 얼음, 폭풍, 대지, 빛, 어둠. 여섯이 다 있다.' },
+      { who: 'bawi', mood: 'normal', text: '한 가지 울림만으로는 저것을 채울 수 없소. 모두 함께 울려야 하오.' },
+      { who: 'yaro', mood: 'happy', text: '흥, 한 원소에만 기대면 그때마다 막힌다는 거지. 알겠어.' },
+      { who: 'kara', mood: 'happy', text: '좋아! 공명 수호대, 마지막 전투다!' },
+    ],
+  },
+
+  ending: {
+    title: '다시 울리는 종', region: 5,
+    lines: [
+      { who: 'narration', text: '여섯 울림이 하나로 모였다. 카라가 벼린 종메가 제나의 이음쇠를 두드리자, 대종이 다시 울렸다.' },
+      { who: 'narration', text: '종소리는 땅끝까지 퍼졌다. 안개가 걷히고, 잿빛 것들은 하나둘 원래 모습으로 돌아갔다.' },
+      { who: 'haru', mood: 'happy', text: '형! 시오 형!' },
+      { who: 'sio', mood: 'happy', text: '…하루. 늦어서 미안하다. 정말… 다행이다.' },
+      { who: 'bawi', mood: 'happy', text: '나는 여기 남겠소. 대종 곁에서 이제 좀 쉬겠소. 백 년 뒤에 또 울려 주시오.' },
+      { who: 'yaro', mood: 'normal', text: '교단에 남은 아이들은 내가 데려갈게. 솔빛 마을이면… 등불이 따뜻하니까.' },
+      { who: 'zena', mood: 'happy', text: '가설 입증 완료! 여섯 울림은 함께일 때 가장 세다!' },
+      { who: 'elder', mood: 'happy', text: '어서들 오려무나. 보아라, 너희가 심고 간 새싹이 이렇게 자랐단다.' },
+      { who: 'kara', mood: 'happy', text: '우와… 진짜 나무가 됐어!' },
+      { who: 'sera', mood: 'happy', text: '스승님의 일지 마지막 장에 이렇게 적을게요. "등불은 꺼지지 않았다. 여섯 울림이 함께 지켰다."' },
+    ],
+  },
 };
