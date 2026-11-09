@@ -125,7 +125,7 @@ async function touchRun(browser) {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await openGame(page, '1-1');
-  const closeModals = async () => { for (let i = 0; i < 6 && (await state(page)).modal; i++) { const b = await page.$('.modal-buttons .btn:last-child'); if (b) await b.tap(); await page.waitForTimeout(200); } };
+  const closeModals = async () => { for (let i = 0; i < 6 && (await state(page)).modal; i++) { const b = await page.$('.modal-buttons .btn:last-child'); if (b) { try { await b.tap({ timeout: 3000 }); } catch (e) { /* 애니메이션 중 — 다시 */ } } await page.waitForTimeout(200); } };
   const tapTile = async (c, r) => {
     const p = await page.evaluate(([c2, r2]) => { const s = RG.render.worldToScreen(c2 + 0.5, r2 + 0.5); const b = document.querySelector('#screen-game canvas').getBoundingClientRect(); return { x: b.left + s.x, y: b.top + s.y }; }, [c, r]);
     await page.touchscreen.tap(p.x, p.y);
@@ -137,17 +137,22 @@ async function touchRun(browser) {
     const t = (await page.evaluate(targetsInPage))[0];
     if (!t) return false;
     const before = (await state(page)).towers;
-    await tapTile(t.c, t.r);
-    const item = await page.$('.build-menu .build-item:not(.disabled)');
-    if (!item) { await tapTile(t.c, t.r); return false; }
-    await item.tap();
-    await page.waitForTimeout(100);
-    const ok2 = await page.$('.build-confirm .btn-build');
-    if (ok2) await ok2.tap();
-    await page.waitForTimeout(120);
-    const ok = (await state(page)).towers === before + 1;
-    if (ok) built.push(t);
-    return ok;
+    // 팁 창이 늦게 떠서 탭을 가릴 수 있으니 단계마다 창을 닫고, 실패하면 한 번 더
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await closeModals();
+      await tapTile(t.c, t.r);
+      await closeModals();
+      const item = await page.$('.build-menu .build-item:not(.disabled)');
+      if (!item) continue;
+      try { await item.tap({ timeout: 3000 }); } catch (e) { continue; }
+      await page.waitForTimeout(100);
+      await closeModals();
+      const ok2 = await page.$('.build-confirm .btn-build');
+      if (ok2) { try { await ok2.tap({ timeout: 3000 }); } catch (e) { continue; } }
+      await page.waitForTimeout(120);
+      if ((await state(page)).towers === before + 1) { built.push(t); return true; }
+    }
+    return false;
   };
   for (let i = 0; i < 3; i++) if (!(await buildOne())) break;
   if (built.length < 2) throw new Error(`터치로 지은 탑 ${built.length}개`);

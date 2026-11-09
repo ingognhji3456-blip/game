@@ -65,7 +65,7 @@ if (has('challenge') || has('tasks')) {
     outRows.push({ mapId, text: kind === 'challenge' ? def.challenge.text : def.task.text, ok, r, ms: Date.now() - t0 });
     console.log(`${mapId} ${kind === 'challenge' ? '도전' : '과제'} "${kind === 'challenge' ? def.challenge.text : def.task.text}": ${ok ? '통과' : '실패'} (${r.result} 불꽃 ${r.lives} 웨이브 ${r.waves} 과제 ${r.task}) ${Math.round((Date.now() - t0) / 1000)}초`);
   }
-  const file = path.join(ROOT, 'docs', 'reports', kind === 'challenge' ? 'challenges.md' : 'tasks.md');
+  const file = path.resolve(ROOT, arg('out', path.join('docs', 'reports', kind === 'challenge' ? 'challenges.md' : 'tasks.md')));
   const lines = [`# ${kind === 'challenge' ? '도전 규칙' : '공명 과제'} 검증 (탐색 봇)`, '', `생성: ${new Date().toISOString().slice(0, 16)}`, '', '| 맵 | 내용 | 결과 | 세부 |', '|---|---|---|---|'];
   for (const x of outRows) lines.push(`| ${x.mapId} | ${x.text} | ${x.ok ? '✅ 통과' : '❌ 실패'} | ${x.r.result} · 불꽃 ${x.r.lives} · 웨이브 ${x.r.waves}/${x.r.total} |`);
   lines.push('', `통과 ${outRows.filter((x) => x.ok).length}/${outRows.length}`);

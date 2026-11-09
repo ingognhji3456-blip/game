@@ -172,7 +172,11 @@
     if (st.result && !resultShown) {
       resultShown = true;
       RG.save.remove(RG.save.KEYS.run);
-      setTimeout(() => finish(), st.result === 'win' ? 1400 : 900);
+      // 기록은 결과가 난 순간 바로 (연출 시간 안에 지도로 나가도 별·해금이 남게),
+      // 결과 화면은 잠시 뒤 — 그 사이 다시 시작했으면 띄우지 않음
+      const payload = finish();
+      const which = game;
+      setTimeout(() => { if (game === which && UI.currentId() === 'game' && payload) UI.show('result', payload); }, st.result === 'win' ? 1400 : 900);
     }
   }
 
@@ -468,7 +472,9 @@
     const inside = c >= 0 && r >= 0 && c < game.map.cols && r < game.map.rows;
     if (mode === 'skill') {
       const h = st.hero;
-      const hd = h && D().heroes[h.heroId];
+      // 조준 중에 영웅이 쓰러졌거나 맵 밖을 누르면 조준 취소 (터치 기기에서 Esc 없이도 빠져나오게)
+      if (!h || h.dead || !inside) { endSkill(); if (h && h.dead) UI.toast('영웅이 쓰러져 기술을 취소했습니다', 'warn'); return; }
+      const hd = D().heroes[h.heroId];
       const tgt = hd && hd.skill.target === 'enemy' ? pickEnemy(p) : null;
       const res = doCmd({ type: 'heroSkill', x: round(p.x, 3), y: round(p.y, 3), targetId: tgt ? tgt.id : undefined });
       if (res.ok) endSkill();
@@ -541,9 +547,9 @@
   function startSkill() {
     const h = game && game.state.hero;
     if (!h) return;
+    if (mode === 'skill') { endSkill(); return; } // 조준 중이면 언제든 다시 눌러 취소
     if (h.dead) { UI.toast('영웅이 쓰러져 있습니다', 'warn'); return; }
     if (h.skillCd > 0) { UI.toast(`기술을 ${Math.ceil(h.skillCd)}초 뒤에 쓸 수 있습니다`, 'warn'); return; }
-    if (mode === 'skill') { endSkill(); return; }
     closePanels();
     const sk = D().heroes[h.heroId].skill;
     mode = 'skill';
@@ -1070,15 +1076,16 @@
   /* =====================================================
    * 끝
    * ===================================================== */
+  /** 진행 기록을 남기고 결과 화면에 넘길 내용을 돌려줌 */
   function finish() {
-    if (!game) return;
+    if (!game || !game.state.result) return null;
     const st = game.state;
     const rec = RG.progress.record(game.def.id, opts.mode, st);
     const stats = {
       damage: st.stats.damageByTower, kills: st.stats.kills, gold: st.stats.goldEarned, heroDamage: st.stats.heroDamage,
       towers: st.towers.map((t) => ({ id: t.id, type: t.type, level: t.level, branch: t.branch })), time: st.time,
     };
-    UI.show('result', { mapId: game.def.id, mode: opts.mode, result: st.result, lives: st.lives, maxLives: st.maxLives, task: st.task, rec, stats, opts, waves: st.wave.index, timeout: st.timeout });
+    return { mapId: game.def.id, mode: opts.mode, result: st.result, lives: st.lives, maxLives: st.maxLives, task: st.task, rec, stats, opts, waves: st.wave.index, timeout: st.timeout };
   }
 
   /* =====================================================

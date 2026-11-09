@@ -156,7 +156,13 @@
       const heroes = P().heroesFor(def.id);
       let hero = data.hero || (heroes.includes(P().get().lastHero) ? P().get().lastHero : (def.hero && heroes.includes(def.hero) ? def.hero : heroes[0]));
       if (def.hero && !RG.progress.mapRec(def.id).cleared && heroes.includes(def.hero) && !data.hero) hero = def.hero;
-      const towers = P().towersFor(def.id);
+      // 도전은 "그 시점까지 해금된 탑 전부"(§11.3): 이 맵과 지금까지 연 맵 중 더 뒤쪽 기준
+      const later = P().mapIndex(P().frontier()) > P().mapIndex(def.id) ? P().frontier() : def.id;
+      const towers = P().towersFor(mode === 'challenge' && !isEndless ? later : def.id);
+      // "붙잡기 없이" 도전에서 근접 영웅이 골라져 있으면 근접 아닌 영웅으로 바꿈 (영웅이 조용히 빠지지 않게)
+      if (mode === 'challenge' && def.challenge && def.challenge.type === 'noBlock' && hero && D().heroes[hero].melee) {
+        hero = heroes.find((h) => !D().heroes[h].melee) || null;
+      }
       const pm = RG.grid.parseMap(def);
 
       const head = el('header', { class: 'top-bar' }, [

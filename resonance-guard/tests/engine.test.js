@@ -665,3 +665,92 @@ test('맵 난이도 계수와 초반 몸풀기(ramp)가 적 체력에 곱해진�
   const want = D.enemies[first].hp * (def.hpMult || 1) * def.ramp[0];
   assert.ok(Math.abs(e.maxHp - want) < 1e-6, `${e.maxHp} vs ${want}`);
 });
+
+/* ---- 독립 코드 검토에서 나온 결함의 회귀 테스트 ---- */
+function reviewGame(o = {}) { const g = RG.sim.create(Object.assign({ mapId: '1-1', seed: 1, heroId: null }, o)); g.state.gold = 1e6; return g; }
+function spawnAtXY(g, type, x, y) { const e = g.api.spawnEnemy(type, 0); Object.assign(e, { x, y, px: x, py: y, c: Math.floor(x), r: Math.floor(y), tc: Math.floor(x), tr: Math.floor(y) }); return e; }
+
+test('검토: 화상의 공격 보너스는 한 번만 (걸 때 곱하고 틱에서 다시 곱하지 않음)', () => {
+  const g = reviewGame();
+  g.cmd({ type: 'build', tower: 'ember_archer', c: 1, r: 2 });
+  g.cmd({ type: 'build', tower: 'forge', c: 2, r: 2 });
+  const t = g.state.towers[0];
+  const e = spawnAtXY(g, 'mist_rat', 2.5, 1.5); e.hp = e.maxHp = 1e6; e.ccUntil = 1e9; e.ccKind = 'root';
+  let n = 0; while (!e.st.burns.length && n++ < 300) g.step();
+  assert.ok(e.st.burns.length, '화상이 걸림');
+  g.cmd({ type: 'sell', id: t.id }); g.state.projectiles = [];
+  const hp0 = e.hp; for (let i = 0; i < 15; i++) g.step();
+  const want = RG.data.towers.ember_archer.levels[0].onHit.burn.dps * (1 + t.calc.dmgBonus);
+  assert.ok(Math.abs((hp0 - e.hp) / 0.5 - want) < 0.01, `${(hp0 - e.hp) / 0.5} vs ${want}`);
+});
+
+test('검토: 감속은 장판과 상태를 합쳐 가장 센 것 하나만', () => {
+  const g = reviewGame();
+  const e = spawnAtXY(g, 'mist_rat', 2.5, 1.5); e.tc = 3; e.tr = 1;
+  for (let i = 0; i < 3; i++) g.state.zones.push({ id: 900 + i, kind: 'void', element: 'dark', x: 2.6, y: 1.5, radius: 3, until: 99, dps: 0, slowPct: 0.55, src: { calc: { dmgBonus: 0, mods: {} } } });
+  e.st.slowPct = 0.5; e.st.slowUntil = 99;
+  const x0 = e.x; g.step();
+  const frac = (e.x - x0) / (RG.data.enemies.mist_rat.speed / 30);
+  assert.ok(Math.abs(frac - 0.45) < 1e-3, `속도 비율 ${frac}`);
+});
+
+test('검토: 빛줄기는 0.5초마다 한 번만 "명중" (적응 중첩이 틱마다 쌓이지 않음)', () => {
+  const g = reviewGame();
+  g.cmd({ type: 'build', tower: 'sun_lens', c: 1, r: 2 });
+  const e = spawnAtXY(g, 'bellshard_golem', 2.5, 1.5); e.hp = e.maxHp = 1e7; e.ccUntil = 1e9; e.ccKind = 'root';
+  for (let i = 0; i < 30 * 2; i++) g.step();
+  const stacks = e.adapt ? e.adapt.stacks : 0;
+  assert.ok(stacks >= 2 && stacks <= 5, `2초 동안 적응 ${stacks}중첩`);
+});
+
+test('검토: 밀려나 막힌 주머니에 들어가도 새어 든 것으로 치지 않음', () => {
+  const g = RG.sim.create({ mapId: '1-4', seed: 1, heroId: null }); g.state.gold = 1e6;
+  g.cmd({ type: 'callWave' }); g.state.wave.queue = [];
+  const e = g.api.spawnEnemy('mist_rat', 0);
+  Object.assign(e, { x: 5.5, y: 3.5, px: 5.5, py: 3.5, c: 5, r: 3, trail: [{ x: 4.5, y: 2.5 }, { x: 5.5, y: 3.5 }] });
+  const nx = RG.grid.nextStep(g.map, g.flow, g.blocked, 5, 3, e.lane); e.tc = nx.c; e.tr = nx.r;
+  g.cmd({ type: 'build', tower: 'ember_archer', c: 5, r: 2 }); g.cmd({ type: 'build', tower: 'ember_archer', c: 4, r: 3 });
+  e.ccUntil = 1e9; e.ccKind = 'root'; e.hp = e.maxHp = 1e6;
+  g.cmd({ type: 'build', tower: 'gale_cannon', c: 3, r: 3 });
+  for (let i = 0; i < 200; i++) { g.step(); if (g.state.events.some((v) => v.type === 'push')) break; }
+  e.ccUntil = 0;
+  for (let i = 0; i < 60; i++) g.step();
+  assert.strictEqual(g.state.lives, g.state.maxLives);
+  assert.ok(!e.leaked);
+});
+
+test('검토: 그림자 덫은 적이 지나는 길에만 깔리고, 탑을 지으면 그 칸의 덫은 사라짐', () => {
+  const g = RG.sim.create({ mapId: '1-4', seed: 1, heroId: null }); g.state.gold = 1e6;
+  g.cmd({ type: 'build', tower: 'shadow_snare', c: 6, r: 2 });
+  g.cmd({ type: 'callWave' });
+  let placed = null;
+  for (let i = 0; i < 30 * 20 && !placed; i++) { g.step(); placed = g.state.traps[0] || null; }
+  assert.ok(placed, '덫이 깔림');
+  assert.strictEqual(placed.r, 4, `길(4번째 줄) 위: ${placed.c},${placed.r}`);
+  // 덫 칸 옆에 미로 벽으로 탑을 지어도 되는 칸이면 그 칸의 덫은 없어짐
+  const tr = g.state.traps[0];
+  const before = g.state.traps.length;
+  const res = g.cmd({ type: 'build', tower: 'ember_archer', c: tr.c, r: tr.r });
+  if (res.ok) assert.strictEqual(g.state.traps.filter((x) => x.c === tr.c && x.r === tr.r).length, 0, `${before}`);
+});
+
+test('검토: 과충전 방전은 받은 탑의 원소 (불 탑이면 불 피해)', () => {
+  const g = reviewGame();
+  g.cmd({ type: 'build', tower: 'ember_archer', c: 1, r: 2 });
+  const d = g.cmd({ type: 'build', tower: 'dynamo', c: 2, r: 2 });
+  const dyn = g.state.towers.find((t) => t.id === d.id);
+  for (let i = 0; i < 2; i++) g.cmd({ type: 'upgrade', id: dyn.id });
+  g.cmd({ type: 'branch', id: dyn.id, branch: 'A' });
+  for (let i = 0; i < 40; i++) g.step();
+  const archer = g.state.towers[0];
+  assert.ok(archer.calc.mods && archer.calc.mods.zap, '궁수탑이 방전을 받음');
+  const e = spawnAtXY(g, 'volt_eel', 2.5, 1.5); e.hp = e.maxHp = 1e6; e.ccUntil = 1e9; e.ccKind = 'root';
+  let immune = 0;
+  let fire = 0;
+  for (let i = 0; i < 30 * 8; i++) {
+    g.step();
+    for (const v of g.state.events) if (v.targetId === e.id) { if (v.type === 'immune') immune++; if (v.type === 'hit' && v.element === 'fire') fire++; }
+  }
+  assert.ok(fire > 0, '불 피해가 들어감');
+  assert.strictEqual(immune, 0);
+});

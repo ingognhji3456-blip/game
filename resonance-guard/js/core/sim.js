@@ -70,7 +70,7 @@ RG.sim = (() => {
       alerts: [],                           // 보스 경고(1.5초 뒤 탑 멈춤) — 그리기용
       linksFrozenUntil: 0,
       leakShield: meta.leakShield || 0,
-      maxTicks: 30 * 60 * 40,
+      maxTicks: o.mode === 'endless' ? Infinity : 30 * 60 * 40, // 무한 모드는 시간 제한 없음
     };
 
     const blocked = new Uint8Array(n);       // 탑이 있는 칸
@@ -193,7 +193,40 @@ RG.sim = (() => {
       const s = e.st;
       if (st.time >= s.slowUntil || pct > s.slowPct + 1e-9) { s.slowPct = pct; s.slowUntil = st.time + dur; } else if (Math.abs(pct - s.slowPct) < 1e-9) s.slowUntil = Math.max(s.slowUntil, st.time + dur);
     }
-    const isSlowed = (e) => st.time < e.st.slowUntil || isHardCC(e);
+    /** 땅 적이 지나는 칸 모음 (입구마다 갈림길 lane 3개) — 흐름장이 바뀔 때만 다시 계산 */
+    let routeCache = null;
+    let routeFlow = null;
+    function routeSet() {
+      if (routeCache && routeFlow === flow) return routeCache;
+      const set = new Set();
+      for (const s0 of map.spawns) {
+        for (let lane = 0; lane < 3; lane++) {
+          let c = s0.c;
+          let r = s0.r;
+          for (let guard = 0; guard < map.cols * map.rows; guard++) {
+            set.add(r * map.cols + c);
+            const nx = RG.grid.nextStep(map, flow, blocked, c, r, lane);
+            if (!nx) break;
+            c = nx.c; r = nx.r;
+          }
+        }
+      }
+      routeCache = set;
+      routeFlow = flow;
+      return set;
+    }
+
+    /** 장판(공허 구슬 등) 감속 중 가장 센 것 */
+    function zoneSlowOf(e) {
+      let best = 0;
+      for (const z of st.zones) {
+        if (!z.slowPct || st.time > z.until) continue;
+        if (z.kind !== 'void' && e.flying) continue;
+        if (d2(z.x, z.y, e.x, e.y) <= z.radius * z.radius) best = Math.max(best, D().enemies[e.type].boss ? z.slowPct * 0.5 : z.slowPct);
+      }
+      return best;
+    }
+    const isSlowed = (e) => st.time < e.st.slowUntil || isHardCC(e) || zoneSlowOf(e) > 0;
 
     function addShred(e, key, pct, max, dur) {
       const ed = D().enemies[e.type];
@@ -240,7 +273,9 @@ RG.sim = (() => {
      * 피해를 줍니다. src: { tower, unit, calc, heroHit }  o: { dot, secondary, crit, shieldMult, area }
      * 반환: 실제로 깎은 양
      */
+    let lastAttackSide = 0;
     function damage(e, base, element, src, o2 = {}) {
+      lastAttackSide = 0;
       if (e.dead || e.burrowed || e.invulnUntil > st.time || base <= 0) return 0;
       const ed = D().enemies[e.type];
       const aff = affinityOf(e, element);
@@ -256,7 +291,8 @@ RG.sim = (() => {
       }
       const calc = src && src.calc;
       const mods = (calc && calc.mods) || {};
-      let bonus = (calc && calc.dmgBonus) || 0;
+      // 지속 피해(화상·출혈·장판)는 걸 때 이미 공격 보너스를 곱했으므로 틱에서는 다시 곱하지 않음
+      let bonus = (calc && !o2.dot && calc.dmgBonus) || 0;
       if (calc && !o2.dot) {
         if (mods.bonusVsControlled && isHardCC(e)) bonus += mods.bonusVsControlled;
         if (calc.onHit && calc.onHit.bonusVsSlowed && isSlowed(e)) bonus += calc.onHit.bonusVsSlowed;
@@ -276,6 +312,7 @@ RG.sim = (() => {
       }
       let affMult = aff === 'weak' ? 1.5 : aff === 'resist' ? 0.5 : 1;
       if (e.adapt && e.adapt.el === element) affMult *= 1 - Math.min(ed.traits.adaptive.max, e.adapt.stacks * ed.traits.adaptive.per);
+      lastAttackSide = base * (1 + bonus) * (o2.crit || 1); // 받는 쪽 배율 전 (잿불 화상 등 파생 화상의 기준)
       let final = base * (1 + bonus) * (1 + vuln) * (1 - armorEff) * affMult;
       if (o2.crit) final *= o2.crit;
       if (final <= 0) return 0;
@@ -302,7 +339,7 @@ RG.sim = (() => {
       // 질주
       if (ed.traits.dash && !e.dashUsed) { e.dashUsed = true; e.dashUntil = st.time + ed.traits.dash.dur; }
       // 적응: 직접 명중만
-      if (ed.traits.adaptive && !o2.dot && !o2.secondary) {
+      if (ed.traits.adaptive && !o2.dot && !o2.secondary && !o2.beamTick) {
         if (e.adapt && e.adapt.el === element) e.adapt.stacks += 1;
         else e.adapt = { el: element, stacks: 1 };
       }
@@ -454,13 +491,10 @@ RG.sim = (() => {
     function enemySpeed(e) {
       const ed = D().enemies[e.type];
       let s = ed.speed * e.speedMul;
-      if (st.time < e.st.slowUntil) s *= 1 - e.st.slowPct;
+      // 감속은 가장 센 것 하나만 (상태 감속과 장판 감속도 서로 곱하지 않음 — §7.1)
+      const slow = Math.max(st.time < e.st.slowUntil ? e.st.slowPct : 0, zoneSlowOf(e));
+      s *= 1 - slow;
       if (e.dashUntil > st.time) s *= ed.traits.dash.mult;
-      for (const z of st.zones) {
-        if (!z.slowPct) continue;
-        if (z.kind !== 'void' && e.flying) continue;
-        if (d2(z.x, z.y, e.x, e.y) <= z.radius * z.radius) s *= 1 - (ed.boss ? z.slowPct * 0.5 : z.slowPct);
-      }
       return s;
     }
 
@@ -495,10 +529,29 @@ RG.sim = (() => {
         }
         e.c = e.tc; e.r = e.tr;
         if (e.c === map.lantern.c && e.r === map.lantern.r) { leak(e); return; }
-        const nx = RG.grid.nextStep(map, flow, blocked, e.c, e.r, e.lane);
+        let nx = RG.grid.nextStep(map, flow, blocked, e.c, e.r, e.lane);
+        if (!nx) nx = escapeStep(e.c, e.r); // 갇힌 칸(밀려나 막힌 주머니 등): 이웃 중 길이 이어진 칸으로
         if (!nx) { leak(e); return; }
         e.tc = nx.c; e.tr = nx.r;
       }
+    }
+
+    /** 흐름장이 끊긴 칸에서 빠져나갈 이웃 칸 (모서리 규칙 무시 — 비상용) */
+    function escapeStep(c, r) {
+      let best = null;
+      let bf = Infinity;
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (!dc && !dr) continue;
+          const c2 = c + dc;
+          const r2 = r + dr;
+          if (c2 < 0 || r2 < 0 || c2 >= map.cols || r2 >= map.rows) continue;
+          if (!RG.grid.enemyWalkable(map, blocked, c2, r2)) continue;
+          const f = flow[r2 * map.cols + c2];
+          if (isFinite(f) && f < bf) { bf = f; best = { c: c2, r: r2 }; }
+        }
+      }
+      return best;
     }
 
     function moveFlying(e, step) {
@@ -527,6 +580,7 @@ RG.sim = (() => {
         const pc = Math.floor(p.x);
         const pr = Math.floor(p.y);
         if (!RG.grid.enemyWalkable(map, blocked, pc, pr)) break;
+        if (!isFinite(flow[pr * map.cols + pc])) break; // 등불로 이어지지 않는 칸(막힌 주머니)으로는 밀지 않음
         const dd = dist(x, y, p.x, p.y);
         if (dd >= remain) { x += ((p.x - x) / dd) * remain; y += ((p.y - y) / dd) * remain; remain = 0; break; }
         x = p.x; y = p.y; remain -= dd;
@@ -640,7 +694,8 @@ RG.sim = (() => {
         });
       }
       // 배정: 영웅 → 벽 → 병사
-      const blockers = st.units.filter((u) => !u.dead && u.block > 0 && !(u.kind === 'hero' && u.path.length));
+      const building = new Set(st.towers.filter((t) => t.building).map((t) => t.id)); // 짓는 중인 병영의 병사는 아직 싸우지 않음
+      const blockers = st.units.filter((u) => !u.dead && u.block > 0 && !(u.kind === 'hero' && u.path.length) && !(u.kind === 'soldier' && building.has(u.owner)));
       blockers.sort((a, b) => (a.kind === 'hero' ? 0 : a.kind === 'wall' ? 1 : 2) - (b.kind === 'hero' ? 0 : b.kind === 'wall' ? 1 : 2));
       for (const u of blockers) {
         if (u.blocking.length >= u.block) continue;
@@ -770,6 +825,7 @@ RG.sim = (() => {
     }
 
     function applyOnHit(e, dealt, src, hit) {
+      const attackSide = lastAttackSide; // 이 명중의 공격 쪽 피해 (받는 쪽 배율이 틱에서 다시 곱해지지 않게)
       const calc = src.calc;
       const oh = calc.onHit || {};
       const mods = calc.mods || {};
@@ -798,14 +854,14 @@ RG.sim = (() => {
       // 공명
       if (mods.steam && rng() < mods.steam.chance * pm) steamBurst(e, dealt, src);
       if (mods.shredOnHit && !e.dead) addShred(e, 'magma', mods.shredOnHit.pct, mods.shredOnHit.max, mods.shredOnHit.dur);
-      if (mods.burnOnHit && !e.dead) addDot(e, 'burn', `res:${t ? t.id : 'u'}`, (dealt * mods.burnOnHit.pct) / mods.burnOnHit.dur, mods.burnOnHit.dur, el, src);
+      if (mods.burnOnHit && !e.dead) addDot(e, 'burn', `res:${t ? t.id : 'u'}`, ((attackSide || dealt) * mods.burnOnHit.pct) / mods.burnOnHit.dur, mods.burnOnHit.dur, el, src);
       if (mods.slowOnHit && !e.dead) applySlow(e, mods.slowOnHit.pct, mods.slowOnHit.dur);
       if (mods.stillness && !e.dead) e.st.stillUntil = st.time + mods.stillness.dur;
       if (mods.stunOnHit && !e.dead && rng() < mods.stunOnHit.chance * pm) hardCC(e, 'stun', mods.stunOnHit.dur);
       if (mods.chainExtra) tempestJump(e, dealt, src);
       if (mods.zap && t && !e.dead) {
         t.zapCount = (t.zapCount || 0) + 1;
-        if (t.zapCount % mods.zap.n === 0) { damage(e, mods.zap.damage, 'storm', src, { secondary: true }); ev('chain', { points: [[t.x, t.y - 0.4], [e.x, e.y]], element: 'storm', small: true }); }
+        if (t.zapCount % mods.zap.n === 0) { damage(e, mods.zap.damage, el, src, { secondary: true }); ev('chain', { points: [[t.x, t.y - 0.4], [e.x, e.y]], element: el, small: true }); }
       }
       // 영웅 제나: 현장 개조
       if (t && st.hero && !st.hero.dead && st.hero.heroId === 'zena' && !e.dead) {
@@ -915,9 +971,11 @@ RG.sim = (() => {
           let best = null;
           let bestD = -1;
           const R = c.range;
+          // 적이 실제로 지나는 칸(입구에서 흐름장을 따라간 길)에만 — 공터 구석에 깔려 안 밟히던 문제
+          const route = routeSet();
           for (let r = Math.max(0, Math.floor(t.y - R)); r <= Math.min(map.rows - 1, Math.floor(t.y + R)); r++) {
             for (let cc = Math.max(0, Math.floor(t.x - R)); cc <= Math.min(map.cols - 1, Math.floor(t.x + R)); cc++) {
-              if (!RG.grid.enemyWalkable(map, blocked, cc, r)) continue;
+              if (!route.has(r * map.cols + cc)) continue;
               const k = map.kinds[r * map.cols + cc];
               if (k === RG.grid.T.LANTERN) continue;
               if (d2(cc + 0.5, r + 0.5, t.x, t.y) > R * R) continue;
@@ -974,9 +1032,13 @@ RG.sim = (() => {
         const mult = 1 + (c.beam.maxMult - 1) * Math.min(1, b.t / c.beam.rampTime);
         b.mult = mult;
         const per = c.dps * mult * DT;
-        damage(e, per, c.element, src, { quiet: true });
+        damage(e, per, c.element, src, { quiet: true, beamTick: true }); // 틱 피해는 "명중"이 아님 (적응 쌓기 없음)
         if (b.proc >= rules.beamProcEvery && !e.dead) {
           b.proc -= rules.beamProcEvery;
+          // 0.5초마다 한 번 "명중": 적응 1중첩 + 명중 효과
+          const ed = D().enemies[e.type];
+          if (ed.traits.adaptive) { if (e.adapt && e.adapt.el === c.element) e.adapt.stacks += 1; else e.adapt = { el: c.element, stacks: 1 }; }
+          lastAttackSide = c.dps * mult * rules.beamProcEvery * (1 + (c.dmgBonus || 0));
           applyOnHit(e, c.dps * mult * rules.beamProcEvery, src, {});
           ev('hit', { x: e.x, y: e.y, element: c.element, amount: c.dps * mult * rules.beamProcEvery, targetId: e.id, beam: true });
         }
@@ -1117,8 +1179,9 @@ RG.sim = (() => {
       st.towers.push(t);
       tileTowers[i] = t;
       blocked[i] = 1;
-      if (map.kinds[i] === RG.grid.T.OPEN) refreshFlow();
-      else refreshFlow();
+      // 탑 밑에 깔린 덫은 없앰 (밟힐 수 없어 영원히 남던 문제)
+      st.traps = st.traps.filter((tr) => !(tr.c === cmd.c && tr.r === cmd.r));
+      refreshFlow();
       RG.stats.computeAll(game);
       if (td.role === 'barracks') { t.rally = defaultRally(t); syncSoldiers(t); }
       statsDirty = true;
@@ -1291,7 +1354,7 @@ RG.sim = (() => {
         }
         case 'shadow_strike': {
           let target = cmd.targetId ? enemyById(cmd.targetId) : null;
-          if (!target || target.dead) {
+          if (!target || target.dead || !targetable(target)) { // 땅속·은신 적은 지정해도 안 됨
             let bd = 1.5 * 1.5;
             for (const e of st.enemies) {
               if (e.dead || !targetable(e)) continue;
@@ -1651,7 +1714,7 @@ RG.sim = (() => {
           hitEnemy(e, s.damage, src, { area: true });
           if (!e.dead) {
             hardCC(e, 'root', s.root);
-            if (s.bleed) addDot(e, 'bleed', `snare:${tr.owner}`, s.bleed.dps, s.bleed.dur, 'dark', src);
+            if (s.bleed) addDot(e, 'bleed', `snare:${tr.owner}`, s.bleed.dps * (1 + ((src.calc && src.calc.dmgBonus) || 0)), s.bleed.dur, 'dark', src);
           }
         }
         ev('trapTrigger', { x: tr.x, y: tr.y, element: 'dark' });
@@ -1677,7 +1740,7 @@ RG.sim = (() => {
       if (st.warnings.length > 20) st.warnings.splice(0, st.warnings.length - 20);
 
       /* --- 공명 과제 --- */
-      if (st.task && !st.task.done && st.tick % 10 === 0) checkTask(false);
+      if (st.task && !st.task.done && st.wave.started && st.tick % 10 === 0) checkTask(false); // 첫 웨이브 전엔 세지 않음 (지었다 100% 환불로 공짜 별 방지)
       for (const t of st.towers) for (const id of (t.calc ? t.calc.resIds : [])) st.stats.resonanceSeen[id] = true;
 
       /* --- 결과 --- */
