@@ -22,6 +22,7 @@
   let mode = 'idle';
   let sel = null;            // { kind:'tower'|'enemy'|'build', id, c, r }
   let placing = null;        // 건설 미리보기 { type, c, r }
+  let keyCursor = null;      // 방향키로 고른 칸 { c, r }
   let skillAim = null;
   let hudT = 0;
   let beamT = 0;
@@ -41,7 +42,7 @@
     paused = false;
     acc = 0;
     mode = 'idle';
-    sel = null; placing = null; skillAim = null; bossTrackOn = false;
+    sel = null; placing = null; skillAim = null; bossTrackOn = false; keyCursor = null;
     speed = UI.getSettings().speed || 1;
     if (data.resume) {
       opts = data.resume.opts;
@@ -422,6 +423,7 @@
       const r = Math.floor(p.y);
       const inside = c >= 0 && r >= 0 && c < game.map.cols && r < game.map.rows;
       RG.render.overlay.hover = inside ? { c, r } : null;
+      keyCursor = null;
       if (mode === 'skill') RG.render.overlay.skillPos = p;
       if (e.pointerType === 'mouse' && inside) hoverTip(p, e);
     });
@@ -985,11 +987,30 @@
       if (type) choosePlacing(type);
       return;
     }
+    // 방향키 커서: 마우스·터치 없이 칸 고르기 (Enter = 그 칸 누르기)
+    const arrows = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+    if (arrows[k]) {
+      const m = game.map;
+      const cur = keyCursor || (sel && sel.c != null ? { c: sel.c, r: sel.r } : { c: Math.floor(m.cols / 2), r: Math.floor(m.rows / 2) });
+      keyCursor = { c: Math.max(0, Math.min(m.cols - 1, cur.c + arrows[k][0])), r: Math.max(0, Math.min(m.rows - 1, cur.r + arrows[k][1])) };
+      RG.render.overlay.hover = { c: keyCursor.c, r: keyCursor.r };
+      if (mode === 'skill') RG.render.overlay.skillPos = { x: keyCursor.c + 0.5, y: keyCursor.r + 0.5 };
+      e.preventDefault();
+      return;
+    }
+    if (k === 'Enter' && placing && (!keyCursor || (placing.c === keyCursor.c && placing.r === keyCursor.r))) { confirmBuild(); return; }
+    if (k === 'Enter' && keyCursor) { onTap({ x: keyCursor.c + 0.5, y: keyCursor.r + 0.5 }, false, 'keyboard'); e.preventDefault(); return; }
     if (k === 'Enter' && placing) { confirmBuild(); return; }
     if (sel && sel.kind === 'tower') {
       const t = game.state.towers.find((q) => q.id === sel.id);
       if (!t) return;
       if (k === 'u' || k === 'U') { if (t.level < 3) doCmd({ type: 'upgrade', id: t.id }); return; }
+      if (k === '1' || k === '2') {
+        // 분기: 1 = A, 2 = B (확인 창은 Enter로 확정)
+        const n = game.towerInfo(t.id).next.find((x) => x.type !== 'upgrade' && x.branch === (k === '1' ? 'A' : 'B'));
+        if (n && !n.locked && game.state.gold >= n.cost && !t.building) confirmBranch(t, n);
+        return;
+      }
       if (k === 's' || k === 'S') { const info = game.towerInfo(t.id); if (info.canSell) confirmSell(t, info.sellValue); }
     }
   }
@@ -1013,11 +1034,32 @@
       title: '일시정지',
       buttons: [
         { text: '설정', onClick: () => RG.ui.openSettings && RG.ui.openSettings() },
+        { text: '조작법', onClick: openControls },
         { text: '다시 시작', onClick: () => UI.confirmBox('처음부터 다시 시작할까요?', () => { RG.save.remove(RG.save.KEYS.run); UI.show('game', { opts }); }) },
         { text: '지도로', onClick: () => UI.confirmBox('지도로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('world', {})) },
         { text: '계속하기', primary: true },
       ],
     });
+  }
+
+  const CONTROLS = [
+    ['빈 칸 누르기 → 탑 고르기 → 한 번 더', '방향키 → Enter → 1~9 → Enter', '탑 짓기'],
+    ['탑 누르기', '방향키 → Enter', '탑 정보 · 강화 · 분기 · 판매'],
+    ['강화 버튼', 'U', '선택한 탑 강화'],
+    ['분기 카드', '1 / 2', '분기 A / B (확인 창은 Enter)'],
+    ['판매 버튼', 'S', '선택한 탑 판매'],
+    ['전투 시작 / 다음 웨이브', 'Space', '웨이브 호출 (일찍 부르면 보너스 골드)'],
+    ['영웅 누르기 → 땅 누르기', 'H → 방향키 → Enter', '영웅 이동'],
+    ['기술 버튼 → 땅·적 누르기', 'Q → 방향키 → Enter', '영웅 기술'],
+    ['배속 / 일시정지 버튼', 'F / P', '배속 바꾸기 / 일시정지 (멈춘 동안에도 건설 가능)'],
+    ['✕ · 바깥 누르기', 'Esc', '취소 · 창 닫기 · 일시정지 메뉴'],
+  ];
+  function openControls() {
+    const t = el('table', { class: 'controls-table' }, [
+      el('tr', {}, [el('th', { text: '마우스 · 터치' }), el('th', { text: '키보드' }), el('th', { text: '하는 일' })]),
+      ...CONTROLS.map(([m, k, w]) => el('tr', {}, [el('td', { text: m }), el('td', {}, [el('kbd', { text: k })]), el('td', { class: 'dim', text: w })])),
+    ]);
+    UI.modal(el('div', { class: 'controls-body' }, [t, el('p', { class: 'small dim', text: '휴대폰에서는 적을 길게 누르면 정보가 나옵니다.' })]), { title: '조작법', buttons: [{ text: '닫기', primary: true }] });
   }
 
   function saveRun() {

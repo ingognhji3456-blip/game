@@ -76,6 +76,9 @@
     back.appendChild(box);
     if (opts.dismiss !== false) back.addEventListener('pointerdown', (e) => { if (e.target === back) { close(); if (opts.onClose) opts.onClose(); } });
     root.appendChild(back);
+    // 키보드: 마지막(확인) 버튼에 초점 → Enter로 확정, Esc로 닫기
+    const btns = box.querySelectorAll('.modal-buttons .btn');
+    if (btns.length) btns[btns.length - 1].focus({ preventScroll: true });
     const handle = { el: box, close, onClose: opts.onClose };
     modals.push(handle);
     function close() {

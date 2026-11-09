@@ -544,7 +544,20 @@ function makeEnv(RG) {
     return { greedy, best };
   }
 
-  return { run, searchPlan, routeTiles, coverage, logToPlan, fitness, STYLES, mazePlan };
+  /** 탐색은 시드에 따라 결과가 크게 흔들림 → 목표를 못 채우면 다른 시드로 다시 (최대 tries번), 가장 좋은 것 */
+  function searchBest(opts, params = {}, tries = 3) {
+    const objective = params.objective || 'stars';
+    const met = (r) => (objective === 'task' ? r.result === 'win' && r.task : objective === 'challenge' ? r.result === 'win' : r.result === 'win' && r.lives >= RG.data.rules.starLives[1]);
+    let best = null;
+    for (let i = 0; i < tries; i++) {
+      const s = searchPlan(opts, Object.assign({}, params, { seed: (params.seed || 1) + i }));
+      if (!best || fitness(s.best.r, objective) > fitness(best.best.r, objective)) best = s;
+      if (met(best.best.r)) break;
+    }
+    return best;
+  }
+
+  return { run, searchPlan, searchBest, routeTiles, coverage, logToPlan, fitness, STYLES, mazePlan };
 }
 
 module.exports = { makeEnv, loadGame };

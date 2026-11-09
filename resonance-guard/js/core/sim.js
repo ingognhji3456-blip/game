@@ -392,7 +392,7 @@ RG.sim = (() => {
     /* =====================================================
      * 적 생성과 이동
      * ===================================================== */
-    function spawnEnemy(type, spawnIdx, from) {
+    function spawnEnemy(type, spawnIdx, from, waveIdx) {
       const ed = D().enemies[type];
       if (!ed) { st.warnings.push(`알 수 없는 적 ${type}`); return null; }
       const flying = !!ed.traits.flying;
@@ -413,6 +413,7 @@ RG.sim = (() => {
       let hp = ed.hp;
       if (o.hpMult) hp *= o.hpMult;
       if (def.hpMult) hp *= def.hpMult; // 맵 난이도 계수 (밸런스 조정)
+      if (def.ramp && o.mode !== 'endless' && waveIdx != null && waveIdx < def.ramp.length) hp *= def.ramp[waveIdx]; // 초반 몸풀기
       if (from && from.hpPct) hp *= from.hpPct;
       if (st.wave.hpScale) hp *= st.wave.hpScale;
       const e = {
@@ -1423,7 +1424,7 @@ RG.sim = (() => {
       const w = st.wave;
       while (w.queue.length && w.queue[0].at <= time) {
         const q = w.queue.shift();
-        spawnEnemy(q.e, q.s);
+        spawnEnemy(q.e, q.s, null, q.wave);
       }
       if (w.started && !w.queue.length && w.countdown === null && w.index < w.total) {
         w.countdown = challenge && challenge.type === 'countdown' ? challenge.value : rules.countdown;

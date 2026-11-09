@@ -844,6 +844,7 @@ RG.data.maps = [
       '^###^####^####^^',
     ],
     startGold: 1100,
+    ramp: [0.6, 0.75, 0.9], // 웨이브 1~3 적 체력 (정예만 나오는 지역의 몸풀기)
     hpMult: 0.9, // 탐색 봇 ★3 기준 난이도 계수
     waves: [
       'rock_crab*2/1.2>0 ; drowned_corsair*1/1.2@3>1',
@@ -881,6 +882,7 @@ RG.data.maps = [
       '=##=##=##=##=##=',
     ],
     startGold: 1150,
+    ramp: [0.6, 0.75, 0.9], // 웨이브 1~3 적 체력 (정예만 나오는 지역의 몸풀기)
     waves: [
       'grey_legionnaire*2/1.2 ; hush_monk*1/1.2@3',
       'void_stalker*2/1.2 ; hush_monk*1/1.2@3',
@@ -915,6 +917,7 @@ RG.data.maps = [
       '^^############^^',
     ],
     startGold: 1200,
+    ramp: [0.6, 0.75, 0.9], // 웨이브 1~3 적 체력 (정예만 나오는 지역의 몸풀기)
     waves: [
       'ashen_paladin*1/2>0',
       'echo_shade*2/1.2>1 ; ashen_paladin*1/2@3>0',
@@ -951,6 +954,7 @@ RG.data.maps = [
       '^^^^^^^=========',
     ],
     startGold: 1250,
+    ramp: [0.6, 0.75, 0.9], // 웨이브 1~3 적 체력 (정예만 나오는 지역의 몸풀기)
     waves: [
       'ashen_paladin*1/2',
       'silent_drake*1/2 ; void_stalker*1/1.2@3',
@@ -987,6 +991,7 @@ RG.data.maps = [
       '^##############A',
     ],
     startGold: 1350,
+    ramp: [0.6, 0.75, 0.9], // 웨이브 1~3 적 체력 (정예만 나오는 지역의 몸풀기)
     waves: [
       'silent_drake*1/2 ; bellshard_golem*1/2@3',
       'hush_monk*2/1.2 ; void_stalker*2/1.2@3',
@@ -1024,6 +1029,7 @@ RG.data.maps = [
       'A^^^^^^^^^^^^^^^',
     ],
     startGold: 1500,
+    ramp: [0.6, 0.75, 0.9], // 웨이브 1~3 적 체력 (정예만 나오는 지역의 몸풀기)
     waves: [
       'ashen_paladin*1/2>0',
       'void_stalker*3/1.2>1 ; echo_shade*1/1.2@4>2',

@@ -165,3 +165,10 @@
 @media (min-height: 521px) and (min-width: 901px) {
   .info-panel { overflow-y: auto; min-height: 0; flex: 1 1 auto; }
 }
+
+/* 조작법 표 */
+.controls-body { max-height: 62vh; overflow: auto; padding-bottom: 14px; -webkit-mask-image: linear-gradient(#000 calc(100% - 28px), transparent); mask-image: linear-gradient(#000 calc(100% - 28px), transparent); }
+.controls-table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+.controls-table th { text-align: left; color: var(--gold2); font-weight: 800; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+.controls-table td { padding: 5px 8px; border-bottom: 1px solid #ffffff10; vertical-align: top; }
+.controls-table kbd { display: inline-block; font-family: inherit; font-size: 0.8rem; background: #ffffff14; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 1px 6px; white-space: nowrap; }

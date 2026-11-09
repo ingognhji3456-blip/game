@@ -651,3 +651,17 @@ test('모든 맵이 무작위 시드로 30초 동안 오류 없이 돈다 (영�
     assert.ok(isFinite(g.state.gold));
   });
 });
+
+test('맵 난이도 계수와 초반 몸풀기(ramp)가 적 체력에 곱해진다', () => {
+  const D = RG.data;
+  const def = D.maps.find((m) => m.ramp);
+  assert.ok(def, 'ramp 있는 맵');
+  const g = RG.sim.create({ mapId: def.id, seed: 1, heroId: null });
+  g.cmd({ type: 'callWave' });
+  let e = null;
+  for (let i = 0; i < 30 * 20 && !e; i++) { g.step(); e = g.state.enemies[0]; }
+  assert.ok(e, '첫 적이 나옴');
+  const first = RG.grid.parseWaves(def.waves)[0].groups[0].e;
+  const want = D.enemies[first].hp * (def.hpMult || 1) * def.ramp[0];
+  assert.ok(Math.abs(e.maxHp - want) < 1e-6, `${e.maxHp} vs ${want}`);
+});

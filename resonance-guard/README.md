@@ -42,7 +42,8 @@
 | 적 누르기(휴대폰은 길게) | 적 정보 |
 | `Space` | 웨이브 호출 (일찍 부르면 보너스 골드) |
 | `Q` / `H` | 영웅 기술 / 영웅 선택 |
-| `U` / `S` | 선택한 탑 강화 / 판매 |
+| 방향키 → `Enter` → `1`~`9` → `Enter` | 키보드로 칸 고르기 → 탑 고르기 → 건설 |
+| `U` / `S` / `1`·`2` | 선택한 탑 강화 / 판매 / 분기 A·B |
 | `F` / `P` / `Esc` | 배속 / 일시정지(일시정지 중에도 건설 가능) / 취소 |
 
 ## 콘텐츠
@@ -88,11 +89,16 @@ node tests/e2e/screens.js --dist
 node tests/e2e/play.js --dist --map 1-1
 ```
 
+```bash
+node tests/e2e/flows.js --dist
+```
+
 - `tests/run.js`: 규칙 테스트(피해 계산·공명·제어 감쇠·은신·보스 등), 데이터 무결성, 설계서와 데이터 일치
 - `tools/balance.js`: 무작위·그리디·탐색 봇으로 맵마다 여러 판을 돌려 `docs/reports/balance.md` 작성 (`--challenge`, `--tasks`, `--soak N`)
 - `tools/art-review.js`: 모든 그림을 대상별 이미지로 찍기 (`docs/reports/art/`)
 - `tests/e2e/screens.js`: 데스크톱·휴대폰 가로·세로 화면 캡처와 콘솔 오류 검사
 - `tests/e2e/play.js`: 타이틀부터 결과까지 실제 화면 흐름으로 한 판 진행
+- `tests/e2e/flows.js`: 키보드만으로 한 판, 터치만으로 한 판(휴대폰 가로), 판 도중 새로고침 → 이어하기
 
 ## 한 파일로 만들기
 
