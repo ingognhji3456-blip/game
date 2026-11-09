@@ -616,3 +616,38 @@ test('명령으로 생긴 이벤트는 다음 틱에서도 보인다', () => {
   g.step();
   assert.ok(!g.state.events.some((x) => x.type === 'waveStart'), '한 번만');
 });
+
+test('무한 모드: 웨이브가 끝없이 만들어지고 갈수록 단단해진다', () => {
+  const g = RG.sim.create({ mapId: 'E1', mode: 'endless', seed: 5, heroId: null });
+  assert.strictEqual(g.state.wave.total, Infinity);
+  g.state.gold = 1e6;
+  for (const [c, r] of [[3, 2], [5, 2], [7, 2], [9, 2], [11, 2], [3, 6], [5, 6], [7, 6], [9, 6], [11, 6]]) g.cmd({ type: 'build', tower: 'ember_archer', c, r });
+  g.cmd({ type: 'callWave' });
+  let maxHp1 = 0;
+  let maxHpLate = 0;
+  for (let i = 0; i < 30 * 400 && !g.state.result; i++) {
+    g.step();
+    if (g.state.wave.countdown !== null) g.cmd({ type: 'callWave' });
+    for (const e of g.state.enemies) {
+      const ratio = e.maxHp / RG.data.enemies[e.type].hp;
+      if (g.state.wave.index <= 2) maxHp1 = Math.max(maxHp1, ratio); else maxHpLate = Math.max(maxHpLate, ratio);
+    }
+  }
+  assert.ok(g.state.wave.index >= 5, `웨이브 ${g.state.wave.index}`);
+  assert.ok(maxHpLate > maxHp1, '뒤 웨이브일수록 체력 배율이 커야 함');
+});
+
+test('모든 맵이 무작위 시드로 30초 동안 오류 없이 돈다 (영웅 6명 돌아가며)', () => {
+  const heroes = RG.data.heroOrder;
+  RG.data.maps.concat(RG.data.endless).forEach((m, i) => {
+    const g = RG.sim.create({ mapId: m.id, seed: 100 + i, heroId: heroes[i % heroes.length], mode: m.waves ? 'normal' : 'endless' });
+    g.state.gold = 5000;
+    let n = 0;
+    for (let r = 0; r < g.map.rows && n < 6; r++) for (let c = 0; c < g.map.cols && n < 6; c++) if (g.cmd({ type: 'build', tower: RG.data.towerOrder[(n * 5) % 18], c, r }).ok) n++;
+    g.cmd({ type: 'callWave' });
+    for (let k = 0; k < 30 * 30; k++) { g.step(); if (g.state.wave.countdown !== null) g.cmd({ type: 'callWave' }); }
+    if (g.state.hero) g.cmd({ type: 'heroSkill', x: g.state.hero.x, y: g.state.hero.y });
+    for (let k = 0; k < 30 * 5; k++) g.step();
+    assert.ok(isFinite(g.state.gold));
+  });
+});

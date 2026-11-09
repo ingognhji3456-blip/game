@@ -408,12 +408,73 @@ function makeEnv(RG) {
     return p;
   }
 
-  function fitness(r) {
+  function fitness(r, objective) {
+    if (objective === 'task') return (r.result === 'win' ? 10000 : 0) + (r.task ? 6000 : 0) + r.lives * 100 + r.waves * 100;
     return (r.result === 'win' ? 10000 : 0) + r.lives * 300 + r.waves * 100 + (r.task ? 150 : 0);
   }
 
+  /** 공명 과제를 노리는 초기 계획: 건설지가 넓은 곳에 원소를 섞어 뭉쳐 짓기 */
+  function taskSeedPlan(g) {
+    const td = g.def.task;
+    if (!td) return null;
+    const m = g.map;
+    const types = (g.opts.towers || D.towerOrder).filter((x) => D.towers[x] && !D.towers[x].noResonance);
+    const byEl = {};
+    for (const t of types) { const e = D.towers[t].element; (byEl[e] = byEl[e] || []).push(t); }
+    const pickEl = (e) => (byEl[e] || []).find((t) => D.towers[t].role === 'attack') || (byEl[e] || [])[0];
+    const free = (c, r) => c >= 0 && r >= 0 && c < m.cols && r < m.rows && (m.kinds[r * m.cols + c] === RG.grid.T.BUILD || (m.kinds[r * m.cols + c] === RG.grid.T.OPEN && g.canBuild(types[0], c, r).ok));
+    // 중심 후보: 이웃 8칸 중 건설지가 가장 많은 칸 (길 가까운 쪽 우선)
+    const route = routeTiles(g);
+    let best = null;
+    for (let r = 0; r < m.rows; r++) for (let c = 0; c < m.cols; c++) {
+      if (!free(c, r)) continue;
+      let n = 0;
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) if ((dc || dr) && free(c + dc, r + dr)) n++;
+      const cov = coverage(route, [], c, r, 2.5, 'ground');
+      const score = n * 10 + cov;
+      if (!best || score > best.score) best = { c, r, score };
+    }
+    if (!best) return null;
+    const ring = [];
+    for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) if (free(best.c + dc, best.r + dr)) ring.push({ c: best.c + dc, r: best.r + dr });
+    const els = Object.keys(byEl);
+    const plan = [];
+    let center = pickEl(els[0]);
+    if (td.type === 'amp') center = td.tower;
+    if (td.type === 'effects') {
+      // 필요한 원소 짝을 찾아 이웃으로
+      const need = new Set();
+      for (const id of td.ids) for (const [k, res] of Object.entries(D.resonance)) if (res.id === id) k === 'pure' ? need.add(els[0]) : k.split('+').forEach((e) => need.add(e));
+      const list = [...need].filter((e) => byEl[e]);
+      center = pickEl(list[0]) || center;
+      plan.push({ type: 'build', tower: center, c: best.c, r: best.r });
+      list.slice(1).forEach((e, i) => ring[i] && plan.push({ type: 'build', tower: pickEl(e), c: ring[i].c, r: ring[i].r }));
+      if (list.length > 2) ring.slice(list.length - 1).forEach((t, i) => plan.push({ type: 'build', tower: pickEl(list[i % list.length]), c: t.c, r: t.r }));
+      return plan;
+    }
+    if (td.type === 'pureAll') {
+      // 원소마다 같은 원소 둘을 붙여 짓기 (건설지 짝 찾기)
+      const used = new Set();
+      for (const e of els) {
+        let done = false;
+        for (let r = 0; r < m.rows && !done; r++) for (let c = 0; c < m.cols - 1 && !done; c++) {
+          if (free(c, r) && free(c + 1, r) && !used.has(`${c},${r}`) && !used.has(`${c + 1},${r}`)) {
+            plan.push({ type: 'build', tower: pickEl(e), c, r }, { type: 'build', tower: pickEl(e), c: c + 1, r });
+            used.add(`${c},${r}`); used.add(`${c + 1},${r}`); done = true;
+          }
+        }
+      }
+      return plan;
+    }
+    plan.push({ type: 'build', tower: center, c: best.c, r: best.r });
+    const centerEl = D.towers[center].element;
+    const order = [centerEl, ...els.filter((e) => e !== centerEl)];
+    ring.forEach((t, i) => plan.push({ type: 'build', tower: pickEl(order[i % order.length]), c: t.c, r: t.r }));
+    return plan;
+  }
+
   /** 계획 탐색: 그리디 해법에서 출발해 진화 */
-  function searchPlan(opts, { gens = 10, pop = 12, seed = 1, goal = 'stars3', early = false, maxGens = 30 } = {}) {
+  function searchPlan(opts, { gens = 10, pop = 12, seed = 1, goal = 'stars3', early = false, maxGens = 30, objective = 'stars' } = {}) {
     const rng = RG.util.makeRng(seed * 131 + 7);
     const greedy = run(opts, 'greedy');
     const g0 = RG.sim.create(Object.assign({ mode: 'normal', seed: 1 }, opts));
@@ -423,13 +484,24 @@ function makeEnv(RG) {
       const plan = logToPlan(gr.log, gr.game);
       popu.push({ plan, r: run(opts, 'plan', { plan, early }) });
     }
+    if (objective === 'task') {
+      const seedPlan = taskSeedPlan(g0);
+      if (seedPlan) {
+        for (const pl of popu.slice()) {
+          for (const k of [0, 3, 6]) {
+            const p2 = pl.plan.slice(0, k).concat(seedPlan, pl.plan.slice(k));
+            popu.push({ plan: p2, r: run(opts, 'plan', { plan: p2, early }) });
+          }
+        }
+      }
+    }
     const base = popu[0].plan;
     while (popu.length < pop) { const p = mutate(mutate(popu[popu.length % STYLES.length].plan, g0, rng), g0, rng); popu.push({ plan: p, r: run(opts, 'plan', { plan: p, early }) }); }
-    let best = popu.reduce((a, b) => (fitness(b.r) > fitness(a.r) ? b : a));
-    const goalMet = (r) => r.result === 'win' && r.lives >= RG.data.rules.starLives[1] && (r.task || !opts.needTask);
+    let best = popu.reduce((a, b) => (fitness(b.r, objective) > fitness(a.r, objective) ? b : a));
+    const goalMet = (r) => (objective === 'task' ? r.result === 'win' && r.task : objective === 'challenge' ? r.result === 'win' : r.result === 'win' && r.lives >= RG.data.rules.starLives[1]);
     for (let gen = 0; gen < (goalMet(best.r) ? 0 : maxGens); gen++) {
       if (gen >= gens && best.r.result !== 'win' && gen >= maxGens) break;
-      popu.sort((a, b) => fitness(b.r) - fitness(a.r));
+      popu.sort((a, b) => fitness(b.r, objective) - fitness(a.r, objective));
       const keep = popu.slice(0, Math.max(3, Math.floor(pop / 3)));
       const next = keep.slice();
       while (next.length < pop) {
@@ -439,9 +511,9 @@ function makeEnv(RG) {
         next.push({ plan: child, r: run(opts, 'plan', { plan: child, early }) });
       }
       popu = next;
-      const cand = popu.reduce((a, b) => (fitness(b.r) > fitness(a.r) ? b : a));
-      if (fitness(cand.r) > fitness(best.r)) best = cand;
-      if (goal === 'stars3' && goalMet(best.r)) break;
+      const cand = popu.reduce((a, b) => (fitness(b.r, objective) > fitness(a.r, objective) ? b : a));
+      if (fitness(cand.r, objective) > fitness(best.r, objective)) best = cand;
+      if (goalMet(best.r)) break;
       if (gen + 1 >= gens && best.r.result === 'win' && goal !== 'stars3') break;
     }
     return { greedy, best };

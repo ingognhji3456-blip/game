@@ -1,3 +1,5 @@
+> 🆕 이 저장소에는 두 번째 게임 **[공명 수호대 (Resonance Guard)](resonance-guard/README.md)** — 원소 공명 타워 디펜스 — 도 들어 있습니다. [`resonance-guard/dist/resonance-guard.html`](resonance-guard/dist/resonance-guard.html) 하나로 실행됩니다.
+
 # 카드 원정대 (Deck Expedition)
 
 브라우저에서 바로 즐기는 **로그라이크 덱빌딩 카드 배틀 게임**입니다.
