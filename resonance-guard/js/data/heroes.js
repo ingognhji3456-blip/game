@@ -12,7 +12,7 @@ RG.data.heroLevelBonus = { stat: 0.12, skill: 0.1, lv5Cooldown: 0.1 };
 RG.data.heroes = {
   kara: {
     name: '카라', element: 'fire', title: '솔빛의 망치', color: '#ff6b3d', unlock: '1-1',
-    hp: 360, damage: 16, interval: 1.0, range: 0.75, melee: true, block: 3, speed: 1.6, armor: 0.15,
+    hp: 300, damage: 8, interval: 1.0, range: 0.75, melee: true, block: 3, speed: 1.6, armor: 0.15,
     splash: 0.6, targets: 'ground',
     skill: {
       id: 'flame_slam', name: '불꽃 내려찍기', cooldown: 18, target: 'point', radius: 1.5, damage: 70, burn: { dps: 10, dur: 3 },
@@ -32,7 +32,7 @@ RG.data.heroes = {
 
   sera: {
     name: '세라', element: 'light', title: '견습 등불지기', color: '#ffe48a', unlock: '1-4',
-    hp: 200, damage: 12, interval: 1.1, range: 2.6, melee: false, block: 1, speed: 1.5, armor: 0.05,
+    hp: 200, damage: 9, interval: 1.1, range: 2.6, melee: false, block: 1, speed: 1.5, armor: 0.05,
     projSpeed: 8, targets: 'both',
     skill: {
       id: 'dawn_prayer', name: '새벽의 기도', cooldown: 22, target: 'point', radius: 2.0, heal: 120, damage: 60, blind: 3,

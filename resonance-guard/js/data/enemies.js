@@ -11,47 +11,47 @@
 RG.data.enemies = {
   /* ============ 1지역 · 솔빛 들판 ============ */
   mist_rat: {
-    name: '안개 쥐', region: 1, size: 0.5, hp: 24, speed: 1.35, armor: 0, bounty: 3, lives: 1,
+    name: '안개 쥐', region: 1, size: 0.5, hp: 44, speed: 1.35, armor: 0, bounty: 4, lives: 1,
     melee: { damage: 2, interval: 1.0 }, traits: {}, affinity: {},
     desc: '빠르고 많습니다.',
   },
   ash_boar: {
-    name: '잿빛 멧돼지', region: 1, size: 0.7, hp: 110, speed: 0.85, armor: 0, bounty: 9, lives: 1,
+    name: '잿빛 멧돼지', region: 1, size: 0.7, hp: 200, speed: 0.85, armor: 0, bounty: 14, lives: 1,
     melee: { damage: 8, interval: 1.2 }, traits: {}, affinity: {},
     desc: '체력이 높아 한 탑으로는 잡기 어렵습니다.',
   },
   mist_crow: {
-    name: '안개 까마귀', region: 1, size: 0.5, hp: 36, speed: 1.2, armor: 0, bounty: 5, lives: 1,
+    name: '안개 까마귀', region: 1, size: 0.5, hp: 80, speed: 1.2, armor: 0, bounty: 7, lives: 1,
     melee: null, traits: { flying: true }, affinity: {},
     desc: '길을 무시하고 곧장 날아옵니다.',
   },
   straw_husk: {
-    name: '짚 허수아비', region: 1, size: 0.7, hp: 130, speed: 0.7, armor: 0, bounty: 9, lives: 1,
+    name: '짚 허수아비', region: 1, size: 0.7, hp: 230, speed: 0.7, armor: 0, bounty: 14, lives: 1,
     melee: { damage: 6, interval: 1.2 }, traits: {}, affinity: { fire: 'weak' },
     desc: '느리지만 단단합니다. 불에 약합니다.',
   },
   vine_leech: {
-    name: '덩굴 거머리', region: 1, size: 0.7, hp: 115, speed: 0.8, armor: 0, bounty: 9, lives: 1,
+    name: '덩굴 거머리', region: 1, size: 0.7, hp: 210, speed: 0.8, armor: 0, bounty: 14, lives: 1,
     melee: { damage: 5, interval: 1.0 }, traits: { regen: 0.06 }, affinity: {},
     desc: '2초 동안 안 맞으면 빠르게 회복합니다.',
   },
   spore_sac: {
-    name: '포자 주머니', region: 1, size: 0.7, hp: 90, speed: 0.8, armor: 0, bounty: 6, lives: 1,
+    name: '포자 주머니', region: 1, size: 0.7, hp: 170, speed: 0.8, armor: 0, bounty: 9, lives: 1,
     melee: { damage: 4, interval: 1.2 }, traits: { split: { into: 'sporeling', n: 3 } }, affinity: {},
     desc: '죽으면 포자 새끼 셋이 터져 나옵니다.',
   },
   sporeling: {
-    name: '포자 새끼', region: 1, size: 0.5, hp: 18, speed: 1.4, armor: 0, bounty: 1, lives: 1,
+    name: '포자 새끼', region: 1, size: 0.5, hp: 32, speed: 1.4, armor: 0, bounty: 2, lives: 1,
     melee: { damage: 2, interval: 1.0 }, traits: {}, affinity: {}, minion: true,
     desc: '포자 주머니에서 나오는 작은 적.',
   },
   rust_knight: {
-    name: '녹슨 기사', region: 1, size: 0.7, hp: 140, speed: 0.8, armor: 0.4, bounty: 12, lives: 1,
+    name: '녹슨 기사', region: 1, size: 0.7, hp: 250, speed: 0.8, armor: 0.4, bounty: 18, lives: 1,
     melee: { damage: 10, interval: 1.2 }, traits: {}, affinity: {},
     desc: '갑옷이 피해를 크게 줄입니다.',
   },
   hollow_elder: {
-    name: '속 빈 고목', region: 1, size: 1.8, hp: 2600, speed: 0.4, armor: 0, bounty: 150, lives: 99, boss: true, elite: true,
+    name: '속 빈 고목', region: 1, size: 1.8, hp: 3600, speed: 0.4, armor: 0, bounty: 200, lives: 99, boss: true, elite: true,
     melee: { damage: 40, interval: 1.5 }, traits: {}, affinity: { fire: 'weak' },
     bossData: { summon: { type: 'vine_leech', n: 3, every: 15 }, phase: { at: 0.5, armor: 0.3, speedMul: 1.25 } },
     desc: '15초마다 덩굴 거머리를 부르고, 체력이 절반이 되면 나무껍질 갑옷을 두릅니다.',

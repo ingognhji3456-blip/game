@@ -12,9 +12,9 @@ RG.data.towers = {
     name: '불씨 궁수탑', element: 'fire', role: 'attack', targets: 'both', kind: 'arrow', unlock: '1-1',
     desc: '불붙인 화살을 빠르게 쏩니다. 어디에 세워도 제 몫을 합니다.',
     levels: [
-      { cost: 70, range: 3.0, interval: 0.8, damage: 7, projSpeed: 10, onHit: { burn: { dps: 1.5, dur: 2 } } },
-      { cost: 80, range: 3.2, interval: 0.75, damage: 11, projSpeed: 10, onHit: { burn: { dps: 2.5, dur: 2 } } },
-      { cost: 130, range: 3.4, interval: 0.7, damage: 17, projSpeed: 11, onHit: { burn: { dps: 4, dur: 2 } } },
+      { cost: 70, range: 3.0, interval: 0.85, damage: 6, projSpeed: 10, onHit: { burn: { dps: 1.5, dur: 2 } } },
+      { cost: 80, range: 3.2, interval: 0.8, damage: 9.5, projSpeed: 10, onHit: { burn: { dps: 2.5, dur: 2 } } },
+      { cost: 130, range: 3.4, interval: 0.75, damage: 15, projSpeed: 11, onHit: { burn: { dps: 4, dur: 2 } } },
     ],
     branches: {
       A: {
@@ -67,9 +67,9 @@ RG.data.towers = {
     name: '서리 결정탑', element: 'frost', role: 'attack', targets: 'both', kind: 'bolt', unlock: '1-2',
     desc: '서리탄으로 적을 느리게 만듭니다.',
     levels: [
-      { cost: 80, range: 2.8, interval: 1.1, damage: 6, projSpeed: 8, onHit: { slow: { pct: 0.3, dur: 1.5 } } },
-      { cost: 80, range: 3.0, interval: 1.0, damage: 9, projSpeed: 8, onHit: { slow: { pct: 0.35, dur: 1.6 } } },
-      { cost: 130, range: 3.2, interval: 0.95, damage: 14, projSpeed: 9, onHit: { slow: { pct: 0.4, dur: 1.8 } } },
+      { cost: 75, range: 2.9, interval: 1.0, damage: 7, projSpeed: 9, onHit: { slow: { pct: 0.3, dur: 1.5 } } },
+      { cost: 80, range: 3.0, interval: 0.95, damage: 11, projSpeed: 9, onHit: { slow: { pct: 0.35, dur: 1.6 } } },
+      { cost: 130, range: 3.2, interval: 0.9, damage: 17, projSpeed: 9, onHit: { slow: { pct: 0.4, dur: 1.8 } } },
     ],
     branches: {
       A: {

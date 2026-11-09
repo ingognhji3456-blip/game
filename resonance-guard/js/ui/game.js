@@ -219,14 +219,14 @@
   }
 
   function onSpawn(e) {
-    const ed = D().enemies[e.type];
+    const ed = D().enemies[e.enemyType];
     if (ed.boss) {
       UI.sfx('bossAppear');
       banner(`👑 ${ed.name}`, ed.desc);
       if (!bossTrackOn) { UI.music('boss'); bossTrackOn = true; }
     }
-    if (!RG.progress.seen('enemies', e.type)) {
-      RG.progress.markSeen('enemies', e.type);
+    if (!RG.progress.seen('enemies', e.enemyType)) {
+      RG.progress.markSeen('enemies', e.enemyType);
       if (!ed.minion && !ed.boss) UI.toast(`새 적: ${ed.name} — ${ed.desc}`, 'info', 3200);
     }
   }

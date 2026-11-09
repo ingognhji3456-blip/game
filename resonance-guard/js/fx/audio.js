@@ -11,7 +11,7 @@
  *   잔향:   목소리·트랙 버스 → 보내기 → (sfx/music 잔향 버스) → 합성 잔향(Convolver) ┘
  *
  * 과부하 방지: 같은 효과음은 40ms 간격 이하로 다시 나지 않고, 이름마다 동시 6개,
- * 전체 동시 48개까지만 울립니다(중요 효과음 pri는 전체 제한을 넘어도 울림).
+ * 전체 동시 48개, 25ms마다 새 목소리 14개까지만 울립니다(중요 효과음 pri는 전체·순간 제한을 넘어도 울림).
  * 탭이 숨겨지면 오디오 컨텍스트를 멈추고, 돌아오면 다시 켭니다.
  * ========================================================= */
 RG.audio = (() => {
@@ -27,6 +27,8 @@ RG.audio = (() => {
   const MAX_VOICES = 48;
   const MAX_PER_NAME = 6;
   const MIN_GAP = 0.04;      // 같은 효과음 최소 간격(초)
+  const BURST_WIN = 0.025;   // 이 시간 안에 새로 만드는 목소리는
+  const BURST_MAX = 14;      // 이 수까지만(한 프레임에 노드를 몰아 만들어 끊기지 않게)
   const LOOKAHEAD = 0.3;     // 음악 미리 예약 구간(초)
   const FADE_IN = 0.8;
   const FADE_OUT = 1.2;
@@ -41,6 +43,8 @@ RG.audio = (() => {
   const lastAt = Object.create(null);
   const perName = Object.create(null);
   let active = [];
+  let burstAt = -1;
+  let burstN = 0;
 
   // 합성 도우미가 쓰는 "현재" 상태 (자바스크립트는 단일 스레드라 안전)
   let X = null;              // 엔진
@@ -522,7 +526,7 @@ RG.audio = (() => {
       tone({ type: 'triangle', f: 500 * p, f2: 250 * p, d: 0.12, v: 0.1 });
     } },
     kill: { fn: (p) => { noise({ fl: 'bandpass', ff: 1300 * p, q: 1.2, d: 0.06, v: 0.1 }); tone({ f: 520 * p, f2: 240 * p, d: 0.08, v: 0.09 }); } },
-    killBig: { pri: 1, fn: (p) => {
+    killBig: { fn: (p) => {
       tone({ f: 120 * p, f2: 42 * p, d: 0.4, v: 0.4 });
       noise({ fl: 'lowpass', ff: 2200, ff2: 180, d: 0.45, v: 0.24 });
       tone({ f: 1760 * p, at: 0.05, d: 0.25, v: 0.04 });
@@ -620,7 +624,7 @@ RG.audio = (() => {
   const TR = {
     // 타이틀 — D장조, 4/4, 80bpm. 호른 선율 + 하프 분산화음 + 현악 패드, 후반에 글로켄슈필이 겹침.
     title: {
-      bpm: 80, beats: 4, sub: 2, rev: 0.35, vol: 1,
+      bpm: 80, beats: 4, sub: 2, rev: 0.35, vol: 0.93,
       sec: {
         A: { ch: 'D A/C# Bm F#m G D/F# Em7 Asus4,A',
           mel: 'f#4 - - - a4 - d5 - | e5 - - - - - c#5 - | d5 - - - c#5 b4 a4 b4 | c#5 - - - - - . . | b4 - - - d5 - g5 - | f#5 - - - e5 - d5 - | e5 - - - d5 - b4 - | d5 - - - c#5 - - -' },
@@ -640,7 +644,7 @@ RG.audio = (() => {
 
     // 월드 지도 — G 믹솔리디안, 6/8(점4분 66bpm). 리코더 선율 + 류트 분산화음 + 피치카토 베이스 + 프레임 드럼.
     worldmap: {
-      bpm: 66, beats: 2, sub: 3, rev: 0.22, vol: 1,
+      bpm: 66, beats: 2, sub: 3, rev: 0.22, vol: 1.15,
       sec: {
         A: { ch: 'G F C G Em Am F G',
           mel: 'd5 - b4 d5 - g5 | f5 - - c5 - a4 | c5 - e5 g5 - e5 | d5 - - - - . | b4 - e5 g5 - e5 | e5 - c5 a4 - c5 | f5 - e5 d5 - c5 | g4 - b4 d5 - -' },
@@ -659,7 +663,7 @@ RG.audio = (() => {
 
     // 1지역 들판 — F장조 왈츠, 3/4, 160bpm. 플루트 선율 + 클라리넷 대선율 + 쿵짝짝(피치카토·하프) + 셰이커.
     meadow: {
-      bpm: 160, beats: 3, sub: 2, rev: 0.25, vol: 1,
+      bpm: 160, beats: 3, sub: 2, rev: 0.25, vol: 0.86,
       sec: {
         A: { ch: 'F F C/E C Dm Bb C7 F',
           mel: 'c5 - f5 - a5 - | c6 - - - a5 - | g5 - e5 - c5 - | g5 - - - f5 e5 | d5 - f5 - a5 - | bb5 - a5 - g5 - | g5 - - - e5 - | f5 - - - - .' },
@@ -681,7 +685,7 @@ RG.audio = (() => {
 
     // 2지역 고개 — A 리디안, 느린 3/4, 76bpm. 맑은 종(FM) 선율 + 첼레스타 분산화음 + 현악 패드 + 바람.
     frost: {
-      bpm: 76, beats: 3, sub: 2, rev: 0.5, vol: 1,
+      bpm: 76, beats: 3, sub: 2, rev: 0.5, vol: 1.1,
       sec: {
         A: { ch: 'Amaj7 B/A Amaj7 B/A F#m7 C#m7 Bsus4 B',
           mel: 'e5 - - - a5 - | d#6 - - - c#6 b5 | c#6 - - - - - | . . f#5 - b5 - | a5 - c#6 - e6 - | d#6 - - - b5 - | e5 - f#5 - b5 - | d#6 - - - - -' },
@@ -701,7 +705,7 @@ RG.audio = (() => {
 
     // 3지역 협곡 — D 도리안, 4/4, 112bpm. 타이코·톰·셰이커 + 낮은 현 오스티나토, 첼로 선율 → 오보에 선율, 마림바.
     canyon: {
-      bpm: 112, beats: 4, sub: 2, rev: 0.18, vol: 1,
+      bpm: 112, beats: 4, sub: 2, rev: 0.18, vol: 1.5,
       sec: {
         I: { ch: 'Dm Dm C Dm' },
         A: { ch: 'Dm G Dm C F G Em Am',
@@ -716,7 +720,7 @@ RG.audio = (() => {
         { t: 'bass', inst: 'stacc', low: 38, pat: ['r.r5r.ro'], len: 0.5, v: 0.55 },
         { t: 'pad', inst: 'strings', low: 45, v: 0.18, only: 'AB' },
         { t: 'arp', inst: 'marimba', low: 62, pat: ['0.2.1.2.', '0.2.1.23'], v: 0.26, only: 'IB' },
-        { t: 'drum', k: 'taiko', pat: ['x..x..x.', 'x..x.xx.'], v: 0.9 },
+        { t: 'drum', k: 'taiko', pat: ['x..x..x.', 'x..x.xx.'], v: 0.75 },
         { t: 'drum', k: 'tomH', pat: ['..o...o.', '..o..o.o'], v: 0.5 },
         { t: 'drum', k: 'shaker', pat: ['xoxoxoxo'], v: 0.5 },
         { t: 'drum', k: 'rim', pat: ['....x...'], v: 0.6 },
@@ -725,7 +729,7 @@ RG.audio = (() => {
 
     // 4지역 해안 — E♭장조, 6/8(점4분 52bpm). 넓게 펼친 화음 패드 + 파도 소리, 하프가 파도처럼 오르내리고 오카리나 선율.
     coast: {
-      bpm: 52, beats: 2, sub: 3, rev: 0.45, vol: 1,
+      bpm: 52, beats: 2, sub: 3, rev: 0.45, vol: 0.72,
       sec: {
         A: { ch: 'Ebadd9 Bb/D Cm7 Abmaj7 Ebadd9 Bbsus4 Abmaj7 Bb',
           mel: 'bb4 - - eb5 - f5 | g5 - - - - - | eb5 - - g5 - bb5 | c6 - - bb5 - g5 | bb5 - - - - g5 | eb5 - - f5 - - | eb5 - - c5 - eb5 | d5 - - - - -' },
@@ -744,7 +748,7 @@ RG.audio = (() => {
 
     // 5지역 대종 — C단조 느린 행진, 4/4, 76bpm. 큰 종 타종 + 행진 베이스 + 팀파니·행진 스네어, 호른 선율, 합창 패드.
     bell: {
-      bpm: 76, beats: 4, sub: 2, rev: 0.4, vol: 1,
+      bpm: 76, beats: 4, sub: 2, rev: 0.4, vol: 0.86,
       sec: {
         A: { ch: 'Cm Ab Eb Bb Fm Cm Dm7b5 G',
           mel: 'c5 - - - g4 - eb4 - | ab4 - - - c5 - eb5 - | eb5 - - - d5 - eb5 - | bb4 - - - - - . . | c5 - - - ab4 - f4 - | g4 - - - c5 - eb5 - | f5 - - - eb5 - d5 - | d5 - - - b4 - - -' },
@@ -765,7 +769,7 @@ RG.audio = (() => {
 
     // 보스 — B단조(프리지안 ♭II 섞음), 4/4, 150bpm. 8분음표 신스 베이스, 스타카토 현, 금관 선율, 킥·스네어·톰, 합창.
     boss: {
-      bpm: 150, beats: 4, sub: 2, rev: 0.2, vol: 1,
+      bpm: 150, beats: 4, sub: 2, rev: 0.2, vol: 1.45,
       sec: {
         I: { ch: 'Bm C Bm C' },
         A: { ch: 'Bm C Bm A G C F# F#',
@@ -1054,9 +1058,12 @@ RG.audio = (() => {
     const mine = (perName[name] || []).filter((x) => x > now);
     perName[name] = mine;
     if (mine.length >= MAX_PER_NAME) return;
+    if (now - burstAt >= BURST_WIN) { burstAt = now; burstN = 0; }
+    if (burstN >= BURST_MAX && !def.pri) return;
     if (active.length >= MAX_VOICES) active = active.filter((x) => x > now);
     if (active.length >= MAX_VOICES && !def.pri) return;
     lastAt[name] = now;
+    burstN++;
     // 같은 소리가 겹쳐 있을수록 조금씩 작게
     const end = voice(E, def, now + 0.005, o, v / (1 + 0.3 * mine.length));
     mine.push(end);
@@ -1112,7 +1119,7 @@ RG.audio = (() => {
     applyVol(e, true);
     e.master.gain.value = vol.master * 0.5; // 음소거와 무관하게 렌더링
     if (sp.track && TR[sp.track]) {
-      const s = makeSeq(e, sp.track, 0.02);
+      const s = makeSeq(e, sp.track, sp.at || 0.02);
       if (!s.once) pump(s, sec);
     }
     for (const it of sp.sfx || []) {

@@ -90,7 +90,7 @@ RG.sim = (() => {
     };
 
     /* ---------------- 이벤트 ---------------- */
-    const ev = (type, data) => { st.events.push(Object.assign({ type }, data)); };
+    const ev = (type, data) => { st.events.push(Object.assign({}, data, { type })); };   // type은 항상 이벤트 종류
 
     /* ---------------- 영웅 ---------------- */
     function heroStat(h) {
@@ -344,7 +344,7 @@ RG.sim = (() => {
       st.gold += bounty;
       st.stats.goldEarned += bounty;
       st.stats.kills += 1;
-      ev('kill', { enemyId: e.id, type: e.type, x: e.x, y: e.y, bounty, boss: !!ed.boss, flying: e.flying });
+      ev('kill', { enemyId: e.id, enemyType: e.type, x: e.x, y: e.y, bounty, boss: !!ed.boss, flying: e.flying });
       // 경험치
       if (st.hero && !st.hero.dead) {
         if (src && src.heroHit) heroXp(e, true);
@@ -438,7 +438,7 @@ RG.sim = (() => {
       }
       updateProg(e);
       st.enemies.push(e);
-      ev('spawn', { enemyId: e.id, type });
+      ev('spawn', { enemyId: e.id, enemyType: type });
       return e;
     }
 
@@ -471,7 +471,7 @@ RG.sim = (() => {
       if (!ed.boss && !ed.elite && st.leakShield > 0) { st.leakShield -= 1; lost = 0; }
       st.lives = Math.max(0, st.lives - lost);
       st.stats.leaked += lost ? 1 : 0;
-      ev('leak', { enemyId: e.id, lives: lost, type: e.type, shielded: lost === 0 });
+      ev('leak', { enemyId: e.id, lives: lost, enemyType: e.type, shielded: lost === 0 });
     }
 
     function moveGround(e, step) {
@@ -1120,7 +1120,7 @@ RG.sim = (() => {
       RG.stats.computeAll(game);
       if (td.role === 'barracks') { t.rally = defaultRally(t); syncSoldiers(t); }
       statsDirty = true;
-      ev('build', { towerId: t.id, c: t.c, r: t.r, type: t.type });
+      ev('build', { towerId: t.id, c: t.c, r: t.r, towerType: t.type });
       return { ok: true, id: t.id };
     }
 
@@ -1398,8 +1398,12 @@ RG.sim = (() => {
      * 한 틱
      * ===================================================== */
     function step() {
-      if (st.result) { st.events = []; return; }
-      st.events = [];
+      try { stepInner(); } finally { st.eventsEnd = st.events.length; }
+    }
+    function stepInner() {
+      // 지난 틱 이후 명령으로 생긴 이벤트는 남기고, 지난 틱의 이벤트만 비움
+      st.events = st.events.slice(st.eventsEnd || 0);
+      if (st.result) return;
       st.beams = [];
       st.tick += 1;
       st.time = st.tick * DT;

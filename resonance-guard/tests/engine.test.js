@@ -382,7 +382,7 @@ test('현상금 보너스 상한 +75%', () => {
   const g0 = g.state.gold;
   const calc = { element: 'earth', dmgBonus: 0, mods: { bountyPct: 0.9 }, onHit: {} };
   g.api.damage(e, 1e6, 'earth', { calc }, {});
-  assert.strictEqual(g.state.gold - g0, Math.round(9 * 1.75));
+  assert.strictEqual(g.state.gold - g0, Math.round(RG.data.enemies.ash_boar.bounty * 1.75));
 });
 
 test('광산 수입 감소: 100% · 80% · 60%', () => {
@@ -462,10 +462,11 @@ test('도전: 탑 개수·판매 금지·원소 제한·이웃 금지·강화 �
 });
 
 test('도전에서는 기술 나무 효과가 없다', () => {
+  const base = RG.data.maps[0].startGold;
   const g = game({ mode: 'challenge', skills: ['lamp1'] });
-  assert.strictEqual(g.state.gold, 220);
+  assert.strictEqual(g.state.gold, base);
   const g2 = game({ skills: ['lamp1'] });
-  assert.strictEqual(g2.state.gold, Math.round(220 * 1.08));
+  assert.strictEqual(g2.state.gold, Math.round(base * 1.08));
 });
 
 /* ---------------- 공명 과제 ---------------- */
@@ -590,4 +591,28 @@ test('보스 페이즈: 고목은 절반에서 갑옷, 침묵은 면역이 바�
   run(g, 0.1);
   near(g.api.damage(s, 10, 'storm', null, {}), 0);
   assert.ok(g.api.damage(s, 10, 'fire', null, {}) > 0, '2페이즈에서는 불이 통함');
+});
+
+test('이벤트 종류가 데이터에 덮어쓰이지 않는다', () => {
+  const g = rich(game());
+  build(g, 'ember_archer', 4, 2);
+  const e = spawn(g, 'mist_rat', 13.5, 7.5);
+  e.tc = 14; e.tr = 7;
+  run(g, 0.1);
+  const types = new Set();
+  for (let i = 0; i < 60; i++) { g.step(); g.state.events.forEach((x) => types.add(x.type)); }
+  assert.ok(types.has('leak'), `leak 이벤트가 있어야 함: ${[...types].join(',')}`);
+  const s2 = spawn(g, 'ash_boar', 5.5, 1.5);
+  g.api.damage(s2, 1e6, 'fire', null, {});
+  assert.ok(g.state.events.some((x) => x.type === 'kill' && x.enemyType === 'ash_boar'));
+});
+
+test('명령으로 생긴 이벤트는 다음 틱에서도 보인다', () => {
+  const g = game();
+  g.step();
+  g.cmd({ type: 'callWave' });
+  g.step();
+  assert.ok(g.state.events.some((x) => x.type === 'waveStart'));
+  g.step();
+  assert.ok(!g.state.events.some((x) => x.type === 'waveStart'), '한 번만');
 });
