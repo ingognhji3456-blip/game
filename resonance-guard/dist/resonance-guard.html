@@ -4116,7 +4116,7 @@ RG.sim = (() => {
       st.gold += bounty;
       st.stats.goldEarned += bounty;
       st.stats.kills += 1;
-      ev('kill', { enemyId: e.id, enemyType: e.type, x: e.x, y: e.y, bounty, boss: !!ed.boss, flying: e.flying });
+      ev('kill', { enemyId: e.id, enemyType: e.type, x: e.x, y: e.y, bounty, boss: !!ed.boss, flying: e.flying, dir: e.dir, size: e.size }); // dir·size는 죽는 연출용
       // 경험치
       if (st.hero && !st.hero.dead) {
         if (src && src.heroHit) heroXp(e, true);
@@ -8158,45 +8158,292 @@ RG.art._h = (() => {
   const zig = (pts) => `M${pts.map((p) => p.join(' ')).join('L')}`;
 
   /* 지역 파일(enemies-*.js)이 쓰는 공용 도구와 적 목록 */
-  RG.art._en = { H, OL, sh, GREY, GREY_L, MISTC, HALO, GREEN, ICE, ICE_L, EMBER, EMBER_L, VOLT, SEA, BELL, GOLD, BRONZE, make, g, zig, D: {} };
+  RG.art._en = { H, OL, sh, GREY, GREY_L, MISTC, HALO, GREEN, ICE, ICE_L, EMBER, EMBER_L, VOLT, SEA, BELL, GOLD, BRONZE, make, g, zig, D: {}, MOTION: {} };
+  /**
+   * 몬스터별 움직임·죽음 연출 (렌더러가 읽음, docs/design/animation.md §2.5)
+   * MOTION[type] = { gait, bob, tilt, sway, squash, hover, deathFx, deathTime }
+   */
+  RG.art.ENEMY_MOTION = RG.art._en.MOTION;
 })();
 
 </script>
   <script>/* js/art/enemies-r12.js */
 'use strict';
 
-/* 적 그림 — 1지역 솔빛 들판 · 2지역 서리 고개 (공용 도구: enemies.js) */
+/* =========================================================
+ * 적 그림 — 1지역 솔빛 들판 · 2지역 서리 고개 (공용 도구: enemies.js)
+ * 프레임(docs/design/animation.md §2.2·§2.5):
+ *   walk0~walk3 걷기 한 바퀴(walk0 = 서 있기) · aim 공격 직전 · attack 공격 순간
+ *   die0 맞고 휘청 · die1 쓰러짐·깨짐·터짐 · die2 남은 모습
+ * 짜임: 적마다 "자세 표"(몸 기울기·관절 목표점·무기 각도)를 두고, 같은 그리기 함수가 표를 읽어 그림.
+ *   팔다리는 뿌리(어깨·엉덩이) → 관절(IK) → 끝(손·발) 두 마디로 잇고, 무기는 손 좌표에서 돌려 쥠.
+ * 빛: 늘 왼쪽 위(§2.6). 몸이 돌아가도 그라데이션 중심을 되돌려 빛 방향을 지킴.
+ *   땅에 떨어지는 그림자는 그리지 않음(렌더러 몫). 몸 아래쪽 형태 그림자·발끝 접지 그늘만 그림.
+ * ========================================================= */
 (() => {
-  const { H, OL, sh, GREY, GREY_L, MISTC, HALO, GREEN, ICE, ICE_L, EMBER, EMBER_L, VOLT, SEA, BELL, GOLD, BRONZE, make, g, zig } = RG.art._en;
+  const { H, OL, sh, GREY, GREY_L, MISTC, HALO, GREEN, ICE, ICE_L, make, g } = RG.art._en;
   const D = RG.art._en.D;
+  const MOTION = RG.art._en.MOTION || (RG.art._en.MOTION = {});
+
+  /* =========================================================
+   * 짜임 도우미 (이 파일 전용)
+   * ========================================================= */
+  const n = H.n;
+  const RAD = Math.PI / 180;
+  const pt = (p) => `${n(p[0])} ${n(p[1])}`;
+  const pol = (p, len, deg) => [p[0] + Math.cos(deg * RAD) * len, p[1] + Math.sin(deg * RAD) * len];
+  const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  const add = (a, b) => [a[0] + b[0], a[1] + b[1]];
+  const angOf = (a, b) => Math.atan2(b[1] - a[1], b[0] - a[0]) / RAD;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  /** 두 마디 IK: 뿌리 a → 끝 b, 마디 길이 l1·l2. bend +1이면 관절이 a→b 방향의 왼쪽(아래로 뻗을 때 앞쪽 = 무릎) */
+  function ik(a, b, l1, l2, bend) {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const d = clamp(Math.hypot(dx, dy), Math.abs(l1 - l2) + 0.01, l1 + l2 - 0.01);
+    const base = Math.atan2(dy, dx);
+    const k = Math.acos(clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1));
+    const t = base - bend * k;
+    return [a[0] + Math.cos(t) * l1, a[1] + Math.sin(t) * l1];
+  }
+
+  /** 몸 좌표계: 기준점 (cx,cy)에서 크기(sx,sy) → 회전 rot → 이동(dx,dy). f(점)=세계 좌표, f.g(그림)=같은 변환으로 감쌈 */
+  function frame(dx = 0, dy = 0, rot = 0, cx = 50, cy = 90, sx = 1, sy = 1) {
+    const cs = Math.cos(rot * RAD);
+    const sn = Math.sin(rot * RAD);
+    const f = (p) => {
+      const x = (p[0] - cx) * sx;
+      const y = (p[1] - cy) * sy;
+      return [cx + x * cs - y * sn + dx, cy + x * sn + y * cs + dy];
+    };
+    f.rot = rot; f.sx = sx; f.sy = sy;
+    f.t = `translate(${n(dx)} ${n(dy)}) rotate(${n(rot)} ${n(cx)} ${n(cy)})` +
+      (sx !== 1 || sy !== 1 ? ` translate(${n(cx)} ${n(cy)}) scale(${sx} ${sy}) translate(${n(-cx)} ${n(-cy)})` : '');
+    f.g = (body) => `<g transform="${f.t}">${body}</g>`;
+    f.flip = Math.sign(sx * sy) || 1;
+    return f;
+  }
+  /** 몸 안의 부분 좌표계(머리 등): 부모 f 안에서 (cx,cy) 기준 rot만큼 */
+  function sub(f, rot, cx, cy, dx = 0, dy = 0) {
+    const s = frame(dx, dy, rot, cx, cy);
+    const w = (p) => f(s(p));
+    w.rot = f.rot + rot * f.flip; w.sx = f.sx; w.sy = f.sy; w.flip = f.flip;
+    w.t = `${f.t} ${s.t}`;
+    w.g = (body) => f.g(`<g transform="${s.t}">${body}</g>`);
+    return w;
+  }
+
+  /** 빛(왼쪽 위)을 몸 좌표계 안에서 본 그라데이션 중심 */
+  function litC(f, lx0 = -0.17, ly0 = -0.23) {
+    const r = -(f ? f.rot : 0) * RAD;
+    let lx = lx0 * Math.cos(r) - ly0 * Math.sin(r);
+    let ly = lx0 * Math.sin(r) + ly0 * Math.cos(r);
+    if (f && f.sx < 0) lx = -lx;
+    if (f && f.sy < 0) ly = -ly;
+    return [n(0.5 + lx), n(0.5 + ly)];
+  }
+  /** 빛 방향을 지키는 몸통 그라데이션 */
+  const lit = (c, base, f, hi = 0.42, lo = -0.42, r = 0.9) => { const [x, y] = litC(f); return c.body(base, hi, lo, x, y, r); };
+  /** 팔다리용: 위는 밝고 발끝은 접지 그늘로 어두움 */
+  const legG = (c, base, hi = 0.18, lo = -0.42) => c.lin([[0, sh(base, hi)], [0.55, base], [1, sh(base, lo)]]);
+
+  /** 원 경로(시계 방향, cap()과 같은 감김) */
+  const circ = (p, r) => `M${n(p[0] - r)} ${n(p[1])}A${n(r)} ${n(r)} 0 1 0 ${n(p[0] + r)} ${n(p[1])}A${n(r)} ${n(r)} 0 1 0 ${n(p[0] - r)} ${n(p[1])}Z`;
+  /** 굵기가 변하는 막대(캡슐) 경로: p1(반지름 r1) → p2(r2) */
+  function cap(p1, r1, p2, r2) {
+    const dx = p2[0] - p1[0];
+    const dy = p2[1] - p1[1];
+    const d = Math.hypot(dx, dy);
+    if (d <= Math.abs(r1 - r2) + 0.05) return r1 > r2 ? circ(p1, r1) : circ(p2, r2);
+    const a = Math.atan2(dy, dx);
+    const o = Math.acos(clamp((r1 - r2) / d, -1, 1));
+    const P = (p, r, t) => pt([p[0] + Math.cos(t) * r, p[1] + Math.sin(t) * r]);
+    const big2 = o > Math.PI / 2 ? 1 : 0;
+    return `M${P(p1, r1, a + o)}L${P(p2, r2, a + o)}A${n(r2)} ${n(r2)} 0 ${big2} 0 ${P(p2, r2, a - o)}L${P(p1, r1, a - o)}A${n(r1)} ${n(r1)} 0 ${1 - big2} 0 ${P(p1, r1, a + o)}Z`;
+  }
+  /** 점들을 따라 굵기가 r0→r1로 줄어드는 띠(꼬리·덩굴·뿌리) */
+  function taper(pts, r0, r1) {
+    const N = pts.length;
+    const Ls = [];
+    const Rs = [];
+    for (let i = 0; i < N; i++) {
+      const p = pts[i];
+      const q0 = pts[Math.max(0, i - 1)];
+      const q1 = pts[Math.min(N - 1, i + 1)];
+      const a = Math.atan2(q1[1] - q0[1], q1[0] - q0[0]);
+      const r = r0 + (r1 - r0) * (i / (N - 1));
+      Ls.push([p[0] + Math.sin(a) * r, p[1] - Math.cos(a) * r]);
+      Rs.push([p[0] - Math.sin(a) * r, p[1] + Math.cos(a) * r]);
+    }
+    return `M${Ls.map(pt).join('L')}A${n(r1)} ${n(r1)} 0 0 1 ${pt(Rs[N - 1])}L${Rs.reverse().map(pt).join('L')}A${n(r0)} ${n(r0)} 0 0 1 ${pt(Ls[0])}Z`;
+  }
+  /** 3차 베지어 위의 점 N+1개 */
+  function bez(p0, p1, p2, p3, N = 10) {
+    const out = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const u = 1 - t;
+      out.push([u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0],
+        u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1]]);
+    }
+    return out;
+  }
+  const paths = (ds) => ds.map((d) => `<path d="${d}"/>`).join('');
+  /** 여러 조각을 이음매 없는 한 덩어리로: 외곽선을 모두 먼저, 면은 그 위에 */
+  const blob = (c, ds, fill) => `<g fill="${OL}" stroke-width="${n(c.ow * 2)}">${paths(ds)}</g><g fill="${fill}" stroke="none">${paths(ds)}</g>`;
+  /** 두 마디 팔다리 조각: 뿌리 a(r0) → 관절 j(r1) → 끝 e(r2) */
+  const seg2 = (a, j, e, r0, r1, r2) => [cap(a, r0, j, r1), cap(j, r1, e, r2)];
+
+  /**
+   * 형태 그림자: 몸 모양 d(몸 좌표계 f) 안쪽에만, 세계 좌표로 오른쪽 아래 그늘과 왼쪽 위 반사광.
+   * box: 세계 좌표 [가운데x, 가운데y, 반폭, 반높이]
+   */
+  function form(c, d, f, box, dark = 0.3, light = 0.22) {
+    const id = H.uid('ec');
+    const [x, y, w, h] = box;
+    return `<clipPath id="${id}"><path d="${d}"${f ? ` transform="${f.t}"` : ''}/></clipPath>` +
+      `<g clip-path="url(#${id})" stroke="none">` +
+      `<ellipse cx="${n(x + w * 0.35)}" cy="${n(y + h * 0.95)}" rx="${n(w * 1.05)}" ry="${n(h * 0.62)}" fill="${OL}" opacity="${dark}" ${c.soft()}/>` +
+      (light ? `<ellipse cx="${n(x - w * 0.35)}" cy="${n(y - h * 0.55)}" rx="${n(w * 0.55)}" ry="${n(h * 0.35)}" fill="#fff" opacity="${light}" ${c.soft()}/>` : '') +
+      '</g>';
+  }
+  /** 모양 d(변환 t) 안쪽에만 그리기 */
+  function inside(d, t, body) {
+    const id = H.uid('ec');
+    return `<clipPath id="${id}"><path d="${d}"${t ? ` transform="${t}"` : ''}/></clipPath><g clip-path="url(#${id})" stroke="none">${body}</g>`;
+  }
+  /** 흐린 그늘 덩어리(외곽선 없음) */
+  const shadeE = (c, x, y, rx, ry, op = 0.25, col = OL) => `<ellipse cx="${n(x)}" cy="${n(y)}" rx="${n(rx)}" ry="${n(ry)}" fill="${col}" opacity="${op}" stroke="none" ${c.soft()}/>`;
+  /** 빛나는 눈이 꺼져 가는 모습(죽음): 감긴 눈 */
+  const deadEye = (c, x, y, r) => c.L(`M${n(x - r)} ${n(y)}Q${n(x)} ${n(y + r * 0.9)} ${n(x + r)} ${n(y)}`, OL, 1.8);
+  /** 맞는 순간 번쩍(작은 별) */
+  function hitStar(c, x, y, r, col = '#ffffff') {
+    let d = '';
+    for (let i = 0; i < 8; i++) {
+      const a = i * 45 * RAD;
+      const rr = i % 2 ? r * 0.45 : r;
+      d += `${i ? 'L' : 'M'}${n(x + Math.cos(a) * rr)} ${n(y + Math.sin(a) * rr)}`;
+    }
+    return `<path d="${d}Z" fill="${col}" stroke="${OL}" stroke-width="1.6" opacity=".95"/>`;
+  }
+  /** 휘두름 궤적(초승달) — 중심 (x,y), 반지름 r, 각도 a0→a1(도) */
+  function swoosh(c, x, y, r, a0, a1, w = 6, col = '#ffffff', op = 0.75) {
+    const p = (a, rr) => pt([x + Math.cos(a * RAD) * rr, y + Math.sin(a * RAD) * rr]);
+    const big = Math.abs(a1 - a0) > 180 ? 1 : 0;
+    const sw = a1 > a0 ? 1 : 0;
+    const m = (a0 + a1) / 2;
+    return `<path d="M${p(a0, r)}A${r} ${r} 0 ${big} ${sw} ${p(a1, r)}Q${p(m, r - w * 1.4)} ${p(a0, r)}Z" fill="${col}" opacity="${op}" stroke="none"/>`;
+  }
+  /** 그림 전체를 발 기준선(y=90)에 맞춰 줄이기/옮기기 */
+  const fit = (body, k, cx = 50, dx = 0) => `<g transform="translate(${n(dx)} 0) translate(${cx} 90) scale(${k}) translate(${-cx} -90)">${body}</g>`;
+  /** 속도선 */
+  const speed = (c, lines, col = MISTC, w = 2.2, op = 0.8) => c.L(lines.map(([x, y, l]) => `M${x} ${y}h${-l}`).join(''), col, w, ` opacity="${op}"`);
 
   /* =========================================================
    * 1지역 · 솔빛 들판
    * ========================================================= */
 
-  D.mist_rat = (f) => {
-    const c = make(3.5);
-    const s = f ? -1 : 1;
-    const legC = sh(GREY, -0.25);
-    const tail = f ? 'M24 74C12 74 6 64 10 54C13 46 10 40 5 37' : 'M24 74C10 76 4 66 8 56C11 48 9 42 4 40';
-    const tip = f ? [[8, 35, 5], [14, 29, 4], [6, 26, 3.5], [18, 22, 2.5]] : [[7, 38, 5], [12, 31, 4], [6, 28, 3.5], [16, 25, 2.5]];
-    return c.out(
-      c.limb(tail, 4.5, sh(GREY, -0.1)) +
-      c.mist(tip, MISTC, 0.85) +
-      c.leg(38, 76, -3 * s, 6, legC) + c.leg(68, 76, 3 * s, 6, legC) +
-      g(
-        c.P('M22 80C17 62 33 46 54 47C66 48 74 53 80 59C86 63 91 68 95 74C92 79 85 82 77 83C60 87 34 88 22 80Z', c.body(GREY)) +
-        c.En(54, 79, 20, 5, GREY_L, 0.55) +
-        c.E(68, 50, 10, 10, c.body(GREY)) + c.En(68.5, 51, 5.5, 6, '#c9a6b4') +
-        c.eye(80, 63, 3.6) +
-        c.E(94, 73.5, 3, 2.6, '#d99fb2') +
-        c.shine(40, 56, 9, 4),
-        f ? 'translate(0 -1)' : ''
-      ) +
-      c.leg(44, 78, 3 * s, 6, GREY) + c.leg(74, 78, -3 * s, 6, GREY)
-    );
-  };
+  /* ---------- 01 안개 쥐: 종종 뛰는 네발(대각선 짝) · 앞니로 물어뜯기 · 죽으면 뒤집혀 발랑 ---------- */
+  MOTION.mist_rat = { gait: 'scuttle', bob: 0.03, tilt: 2, sway: 0, squash: 0.04, deathFx: 'mist', deathTime: 0.6 };
+  D.mist_rat = (fr) => {
+    const c = make(3.2);
+    const G = 90 - c.ow / 2;
+    const fur = GREY;
+    const furD = sh(GREY, -0.32);
+    const pink = '#d9a3b5';
+    // f: 몸 [dx, dy, 회전, 기준x, 기준y, sx, sy] · h 머리 · jaw 입 · ear 귀 · tl 꼬리끝 · 발: [x, 들림] 또는 {L:[몸 좌표 손목], T:[몸 좌표 발끝]}
+    const P = {
+      walk0: { f: [0, 0, 0], h: 0, jaw: 3, ear: 0, tl: [0, 0], nf: [75, 0], ff: [61, 0.6], nh: [31, 0.6], fh: [41, 0] },
+      walk1: { f: [0, -1.4, -1.5], h: 3, jaw: 3, ear: 4, tl: [3, -3], nf: [68, 0], ff: [68, 5], nh: [40, 5], fh: [35, 0] },
+      walk2: { f: [0, 0, 0], h: 0, jaw: 3, ear: 0, tl: [0, 2], nf: [61, 0.6], ff: [73, 0], nh: [44, 0], fh: [28, 0.6] },
+      walk3: { f: [0, -1.4, 1.5], h: -3, jaw: 3, ear: -4, tl: [-3, -3], nf: [71, 5], ff: [64, 0], nh: [36, 0], fh: [37, 5] },
+      // 공격 직전: 엉덩이를 낮추고 앞몸을 들어 입을 크게 벌림, 앞발 발톱을 세움, 귀는 뒤로
+      aim: { f: [-5, -1, -17, 34, 84], h: -8, jaw: 34, ear: -30, tl: [-4, -10], nf: { L: [80, 74], T: [85, 72] }, ff: { L: [76, 76], T: [81, 75] }, nh: [33, 0], fh: [28, 0] },
+      // 물어뜯기: 몸을 앞으로 쭉 뻗어 덮침, 뒷발은 뒤로 차고 앞발은 앞으로
+      attack: { f: [5, 1, 8, 34, 84, 1.05], h: 8, jaw: 24, ear: -12, tl: [6, 8], nf: [88, 3], ff: [83, 0], nh: [25, 0], fh: [29, 2.5], bite: true },
+      // 맞고 휘청: 머리가 뒤로 젖혀지고 앞발이 들림
+      die0: { f: [-4, -2, -12, 30, 84], h: -24, jaw: 26, ear: -30, tl: [-6, -6], nf: { L: [74, 82], T: [76, 87] }, ff: { L: [70, 84], T: [72, 88] }, nh: [32, 0], fh: [25, 1.5], hurt: true },
+      // 뒤로 넘어감: 엉덩이를 축으로 몸이 뒤로 젖혀지며 네 발이 허공을 휘저음
+      die1: { f: [6, 1, -38, 26, 84], h: -14, jaw: 18, ear: -30, tl: [-2, 14], nf: { L: [78, 80], T: [83, 82] }, ff: { L: [72, 86], T: [75, 90] }, nh: { L: [48, 86], T: [54, 83] }, fh: { L: [42, 89], T: [47, 88] }, dead: true },
+      // 발랑 뒤집힘: 배를 위로, 다리를 오므려 하늘로, 안개가 빠져나감
+      die2: { f: [0, 6, 0, 50, 69, 1, -1], h: 8, jaw: 6, ear: 10, tl: [0, 0], tailW: [[22, 76], [12, 82], [6, 88], [-2, 87]], nf: { L: [70, 82], T: [67, 85] }, ff: { L: [65, 84], T: [62, 87] }, nh: { L: [46, 88], T: [52, 87] }, fh: { L: [40, 89], T: [45, 89] }, dead: true, gone: true },
+    };
+    const p = P[fr] || P.walk0;
+    const F = frame(...p.f.slice(0, 3), p.f[3] ?? 38, p.f[4] ?? 76, p.f[5] ?? 1, p.f[6] ?? 1);
+    const HF = sub(F, p.h, 68, 64);
+    const bodyD = 'M18 74C16 62 28 54 44 54C56 54 64 57 70 62L72 74C68 80 60 84 48 84C34 85 22 83 18 74Z';
 
+    // 앞다리: 어깨 → 팔꿈치(뒤로 굽음) → 손목 → 발
+    const frontLeg = (sh0, q, col, r = 1) => {
+      const S = F(sh0);
+      let W;
+      let Tp;
+      if (Array.isArray(q)) { W = [q[0] - 1, G - 2.4 - q[1]]; Tp = [q[0] + 3, G - 1.8 - q[1] + (q[1] > 2 ? 1.5 : 0)]; } else { W = F(q.L); Tp = F(q.T); }
+      const E = ik(S, W, 7, 6.6, -F.flip);
+      return blob(c, [...seg2(S, E, W, 3.3 * r, 2.5 * r, 2.1 * r), cap(W, 2.3 * r, Tp, 1.7 * r)], legG(c, col)) +
+        c.L(`M${pt(Tp)}l1.6 1.2M${pt(add(Tp, [-0.6, 0.4]))}l0.6 1.8`, '#f4eef6', 1.5);
+    };
+    // 뒷다리: 엉덩이 → 무릎(앞으로) → 발뒤꿈치 → 긴 발
+    const hindLeg = (h0, q, col, r = 1) => {
+      const Hh = F(h0);
+      let J;
+      let Tp;
+      if (Array.isArray(q)) {
+        J = q[1] > 1 ? [q[0] - 5, G - 4.5 - q[1]] : [q[0] - 6, G - 2.4 - q[1]];
+        Tp = q[1] > 1 ? [q[0] + 2.5, G - 1.8 - q[1] + 1.2] : [q[0] + 3, G - 1.8 - q[1]];
+      } else { J = F(q.L); Tp = F(q.T); }
+      const K = ik(Hh, J, 8, 6.2, F.flip);
+      return blob(c, [cap(Hh, 6.2 * r, K, 3.4 * r), cap(K, 3.4 * r, J, 2.2 * r), cap(J, 2.3 * r, Tp, 1.8 * r)], legG(c, col, 0.1)) +
+        c.L(`M${pt(Tp)}l1.8 0.8`, '#f4eef6', 1.5);
+    };
+
+    // 꼬리: 엉덩이에서 뒤로 휘어 올라가 끝에서 안개로 흩어짐
+    const tb = F([20, 72]);
+    const tip = p.tailW ? p.tailW[3] : add(F([6, 50]), p.tl);
+    const tailPts = p.tailW ? bez(F([20, 72]), ...p.tailW.slice(1), 12) : bez(tb, add(F([8, 78]), [p.tl[0] * 0.3, 0]), add(F([0, 62]), [p.tl[0] * 0.6, p.tl[1] * 0.5]), tip, 12);
+    let s = c.P(taper(tailPts, 3, 1.3), legG(c, sh(GREY, -0.08), 0.15, -0.25)) +
+      c.L(`M${pt(tailPts[3])}l1.5 1.5M${pt(tailPts[6])}l1.5 1M${pt(tailPts[9])}l1.4 0.4`, sh(GREY, -0.35), 1.5) +
+      c.mist([[tip[0], tip[1], 4.6], [tip[0] - 4, tip[1] - 5, 3.6], [tip[0] + 4, tip[1] - 6, 2.8], [tip[0] + 1, tip[1] - 11, 2]], MISTC, p.gone ? 0.5 : 0.88);
+
+    s += hindLeg([33, 73], p.fh, furD, 0.92) + frontLeg([61, 71], p.ff, furD, 0.92);
+
+    // 몸통 + 배 + 털결
+    s += F.g(c.P(bodyD, lit(c, fur, F)));
+    const bc = F([45, 70]);
+    s += form(c, bodyD, F, [bc[0], bc[1], 27, 15], 0.3, 0.2);
+    s += F.g(
+      c.Pn('M26 78C34 83 54 84 66 78C60 82 36 85 26 78Z', GREY_L, 0.6) +
+      c.L('M30 58l-2.5-3M38 55.5l-1.5-3.2M46 55l-0.5-3.4M24 63l-3-2', sh(GREY, -0.3), 1.6) +
+      c.shine(36, 60, 9, 3.4, 0.4)
+    );
+
+    // 머리: 아래턱(경첩) → 입속 → 머리뼈 → 코·눈·수염·앞니
+    const jawT = `rotate(${p.jaw} 79 69)`;
+    s += HF.g(
+      c.P('M64 60C61 54 63 48 66 46C69 47 71 51 71 55Z', sh(fur, -0.25)) + // 먼 쪽 귀
+      (p.jaw > 8 ? c.P('M76 66L93 67L90 74L78 73Z', '#3a1e2e') + c.P('M90 70.5L93.4 70.2L92.6 73L90.6 73.2Z', '#fffbe8') : '') +
+      g(c.P('M77 68L92 69C92.5 72 89 74.5 85 74.5L79 73.5C77 72.5 76 70.5 77 68Z', sh(fur, -0.12)) +
+        c.P('M89.5 69.2L92.5 69.4L92 73.2L90 73.4Z', '#fffbe8'), jawT) +
+      c.P('M64 66C62 57 69 51 77 52C84 53 90 58 95 65C96 68 94 70 91 70L80 71C72 72 66 71 64 66Z', lit(c, fur, HF, 0.45)) +
+      c.Pn('M66 67C72 70 84 70 92 69C86 72 72 73 66 67Z', OL, 0.18) +
+      g(c.E(70, 53, 7.2, 7.8, lit(c, fur, HF)) + c.En(70.6, 54, 4.2, 5, pink), `rotate(${p.ear} 70 60)`) +
+      c.E(95.4, 65.3, 2.5, 2.1, pink) +
+      c.L('M88 66l9-3.5M88.5 67.5l9.5 0.5', '#e9e4f2', 1.5, ' opacity=".85"') +
+      (p.dead ? deadEye(c, 83, 60.5, 3) : c.eye(83, 60, p.hurt ? 4 : 3.5))
+    );
+    if (p.bite) s += hitStar(c, 97, 74, 5) + c.L('M93 79l5 3M95 76l5 0', '#fff', 2, ' opacity=".9"');
+    if (p.hurt) s += hitStar(c, 46, 58, 6);
+
+    s += hindLeg([37, 74], p.nh, fur) + frontLeg([65, 72], p.nf, fur);
+    if (fr === 'attack') s += speed(c, [[16, 66, 10], [14, 74, 12], [18, 82, 8]]);
+    if (p.gone) s += c.mist([[44, 50, 4], [52, 44, 3.2], [40, 40, 2.6], [58, 36, 2]], MISTC, 0.55);
+    return c.out(fit(s, 0.9, 50, -1));
+  };
+  D.mist_rat.frames = true;
+
+  /* ---- (옛 그림: 아직 다시 그리지 않음) ---- */
+  const { EMBER, EMBER_L, VOLT, SEA, BELL, GOLD, BRONZE, zig } = RG.art._en;
   D.ash_boar = (f) => {
     const c = make(3);
     const s = f ? -1 : 1;
@@ -8436,9 +8683,6 @@ RG.art._h = (() => {
     );
   };
 
-  /* =========================================================
-   * 2지역 · 서리 고개
-   * ========================================================= */
   D.frost_wolf = (f) => {
     const c = make(3);
     const fur = '#d2d7e1';
@@ -9213,46 +9457,298 @@ RG.art._h = (() => {
   <script>/* js/art/enemies-r5.js */
 'use strict';
 
-/* 적 그림 — 5지역 깨진 대종 (공용 도구: enemies.js) */
+/* =========================================================
+ * 적 그림 — 5지역 깨진 대종 (공용 도구: enemies.js)
+ * 동작 개정(docs/design/animation.md §2.2·§2.5·§2.6):
+ *   적마다 walk0~3(걸음 한 바퀴) · aim(휘두르기 직전) · attack(때리는 순간) · die0~2(죽음) 9장.
+ *   인물형은 "관절 표"(자세 → 골반 위치·몸 기울기·발목·손·무기 각도)를 두고
+ *   같은 그리기 함수가 표를 읽어 그립니다. 팔·다리는 두 마디(역운동학)로 이어 그립니다.
+ *   빛은 왼쪽 위. 몸통의 형태 그림자·팔이 드리운 그늘은 그리고, 바닥 그림자는 그리지 않음(렌더러 몫).
+ * ========================================================= */
 (() => {
-  const { H, OL, sh, GREY, GREY_L, MISTC, HALO, GREEN, ICE, ICE_L, EMBER, EMBER_L, VOLT, SEA, BELL, GOLD, BRONZE, make, g, zig } = RG.art._en;
+  const { H, OL, sh, MISTC, EMBER, ICE, VOLT, BELL, GOLD, BRONZE, make, g } = RG.art._en;
   const D = RG.art._en.D;
+  const MOTION = RG.art._en.MOTION || (RG.art._en.MOTION = {});
 
+  /* ---------- 좌표 도우미 ---------- */
+  const n = H.n;
+  const RAD = Math.PI / 180;
+  const pt = (p) => `${n(p[0])} ${n(p[1])}`;
+  /** 점 p에서 각도 a(도, 0=오른쪽, 90=아래)로 l만큼 */
+  const pol = (p, a, l) => [p[0] + Math.cos(a * RAD) * l, p[1] + Math.sin(a * RAD) * l];
+  const mid = (a, b, t = 0.5) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  const angOf = (a, b) => Math.atan2(b[1] - a[1], b[0] - a[0]) / RAD;
+  const tr = (p, a = 0, s = 1) => `translate(${pt(p)})${a ? ` rotate(${n(a)})` : ''}${s !== 1 ? ` scale(${n(s)})` : ''}`;
+  const SHADE = '#1c1426';
+
+  /**
+   * 두 마디 관절(역운동학): 시작 s에서 끝 e까지 마디 길이 l1·l2.
+   * 관절(무릎·팔꿈치)은 pref 방향 쪽으로 굽음. 닿지 않으면 곧게 편 채 끝을 향함.
+   */
+  function ik(s, e, l1, l2, pref) {
+    const dx = e[0] - s[0];
+    const dy = e[1] - s[1];
+    const dist = Math.hypot(dx, dy) || 0.001;
+    const d = Math.min(Math.max(dist, Math.abs(l1 - l2) + 0.01), l1 + l2 - 0.01);
+    const ux = dx / dist;
+    const uy = dy / dist;
+    const a = (l1 * l1 - l2 * l2 + d * d) / (2 * d);
+    const h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
+    const m = [s[0] + ux * a, s[1] + uy * a];
+    const c1 = [m[0] - uy * h, m[1] + ux * h];
+    const c2 = [m[0] + uy * h, m[1] - ux * h];
+    const d1 = (c1[0] - m[0]) * pref[0] + (c1[1] - m[1]) * pref[1];
+    const d2 = (c2[0] - m[0]) * pref[0] + (c2[1] - m[1]) * pref[1];
+    return d1 >= d2 ? c1 : c2;
+  }
+
+  /** 끝이 둥근 마디(굵기가 r1→r2로 줄어듦). 외곽선은 감싸는 <g>가 붙임 */
+  function seg(c, a, b, r1, r2, fill, x = '') {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const L = Math.hypot(dx, dy) || 0.001;
+    const nx = -dy / L;
+    const ny = dx / L;
+    const p1 = [a[0] + nx * r1, a[1] + ny * r1];
+    const p2 = [b[0] + nx * r2, b[1] + ny * r2];
+    const p3 = [b[0] - nx * r2, b[1] - ny * r2];
+    const p4 = [a[0] - nx * r1, a[1] - ny * r1];
+    return c.P(`M${pt(p1)}L${pt(p2)}A${n(r2)} ${n(r2)} 0 0 0 ${pt(p3)}L${pt(p4)}A${n(r1)} ${n(r1)} 0 0 0 ${pt(p1)}Z`, fill, x);
+  }
+  /** 외곽선 없는 마디(그늘·하이라이트용) */
+  function segN(c, a, b, r1, r2, fill, op) {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const L = Math.hypot(dx, dy) || 0.001;
+    const nx = -dy / L;
+    const ny = dx / L;
+    const p1 = [a[0] + nx * r1, a[1] + ny * r1];
+    const p2 = [b[0] + nx * r2, b[1] + ny * r2];
+    const p3 = [b[0] - nx * r2, b[1] - ny * r2];
+    const p4 = [a[0] - nx * r1, a[1] - ny * r1];
+    return c.Pn(`M${pt(p1)}L${pt(p2)}A${n(r2)} ${n(r2)} 0 0 0 ${pt(p3)}L${pt(p4)}A${n(r1)} ${n(r1)} 0 0 0 ${pt(p1)}Z`, fill, op);
+  }
+
+  /** 몸 좌표계: 골반 (px,py)에서 lean(도, +는 앞으로 숙임)만큼 기울어짐. p(x,y) → 화면 좌표 */
+  function frameOf(px, py, lean) {
+    const cs = Math.cos(lean * RAD);
+    const sn = Math.sin(lean * RAD);
+    return { t: tr([px, py], lean), p: (x, y) => [px + x * cs - y * sn, py + x * sn + y * cs] };
+  }
+
+  /** 쥔 주먹: 자루 방향 a에 직각으로 감싼 손가락 + 손등 하이라이트 */
+  function fist(c, p, r, fill, a = 0) {
+    return g(
+      c.P(`M${n(-r)} ${n(-r * 0.9)}Q${n(-r)} ${n(-r * 1.25)} 0 ${n(-r * 1.2)}Q${n(r * 1.05)} ${n(-r * 1.15)} ${n(r * 1.05)} 0Q${n(r * 1.05)} ${n(r * 1.15)} 0 ${n(r * 1.2)}Q${n(-r)} ${n(r * 1.25)} ${n(-r)} ${n(r * 0.9)}Z`, fill) +
+      c.L(`M${n(r * 0.35)} ${n(-r * 0.9)}V${n(r * 0.9)}`, sh(fill, -0.4), 1.5),
+      tr(p, a));
+  }
+
+  /**
+   * 장화·발: 발목 a, 발 길이 len, 발목~바닥 h, 기울기 tilt(+: 발끝이 아래로).
+   * 땅에 닿은 발은 발목 y = 88.5 − h (바닥 외곽선이 y=90).
+   */
+  function boot(c, a, len, h, tilt, fill, plate = false) {
+    const t = h * 0.55;
+    const d = `M${n(-len * 0.26)} ${n(-t)}L${n(len * 0.16)} ${n(-t)}C${n(len * 0.3)} ${n(h * 0.15)} ${n(len * 0.66)} ${n(h * 0.25)} ${n(len * 0.74)} ${n(h * 0.72)}Q${n(len * 0.76)} ${n(h)} ${n(len * 0.56)} ${n(h)}L${n(-len * 0.3)} ${n(h)}Q${n(-len * 0.36)} ${n(h * 0.2)} ${n(-len * 0.26)} ${n(-t)}Z`;
+    const sole = c.Pn(`M${n(-len * 0.3)} ${n(h - 1.6)}L${n(len * 0.66)} ${n(h - 1.6)}L${n(len * 0.6)} ${n(h)}L${n(-len * 0.3)} ${n(h)}Z`, SHADE, 0.45);
+    const lam = plate ? c.L(`M${n(len * 0.05)} ${n(-t * 0.2)}Q${n(len * 0.3)} ${n(h * 0.25)} ${n(len * 0.55)} ${n(h * 0.35)}`, sh(fill, -0.35), 1.5) : '';
+    return g(c.P(d, fill) + lam + sole, tr(a, tilt));
+  }
+
+  /** 땅에 닿은 발목 높이 */
+  const groundAnkle = (h) => 88.5 - h;
+
+  /** 다리 하나: 엉덩이 hip, 발목 [x, 들림, 기울기], 마디 길이, 굵기, 색. knee 반환 */
+  function leg(c, hip, foot, o) {
+    const ankle = foot.length > 3 ? [foot[0], foot[3]] : [foot[0], groundAnkle(o.h) - foot[1]];
+    const knee = ik(hip, ankle, o.l1, o.l2, o.pref || [1, -0.2]);
+    let s = seg(c, hip, knee, o.r1, o.r2, o.thigh) + seg(c, knee, ankle, o.r2, o.r3, o.shin);
+    if (o.shade !== false) s += segN(c, mid(knee, ankle, 0.1), ankle, o.r2 * 0.5, o.r3 * 0.5, SHADE, 0.18);
+    if (o.kneecap) s += o.kneecap(knee, angOf(hip, knee));
+    s += boot(c, ankle, o.len, o.h, foot[2] || 0, o.boot, o.plate);
+    return { svg: s, knee, ankle };
+  }
+
+  /** 팔 하나: 어깨 s → 손 hand. 팔꿈치 반환 */
+  function arm(c, s, hand, o) {
+    const el = ik(s, hand, o.l1, o.l2, o.pref || [-0.4, 1]);
+    const svg = seg(c, s, el, o.r1, o.r2, o.upper) + seg(c, el, hand, o.r2, o.r3, o.fore);
+    return { svg, el };
+  }
+
+  /** 움직임 선(잔상) */
+  const streaks = (c, lines, col = '#f2eefa', w = 2, op = 0.7) =>
+    `<g fill="none" stroke="${col}" stroke-width="${w}" opacity="${op}" stroke-linecap="round">${lines.map((d) => `<path d="${d}"/>`).join('')}</g>`;
+  /** 휘두른 자국(초승달 모양 빛) */
+  const swoosh = (c, d, col = '#f2eefa', op = 0.55) => c.Pn(d, col, op);
+  /** 재·안개 알갱이 */
+  const motes = (c, pts, col = '#b8b0c8', op = 0.8) => `<g fill="${col}" stroke="none" opacity="${op}">${pts.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`).join('')}</g>`;
+  /** 마무리: 발 기준점(50,90)을 중심으로 k배 키워 내보냄 */
+  const fin = (c, s, k = 1) => c.out(k === 1 ? s : g(s, `translate(50 90) scale(${k}) translate(-50 -90)`));
+  /** 납작하게 눕힌 물건(땅에 놓인 방패 등): 중심 p, 각도 a, 세로 눌림 sy */
+  const flat = (body, p, a, sy) => `<g transform="translate(${pt(p)}) scale(1 ${sy})"><g transform="rotate(${n(a)})">${body}</g></g>`;
+
+  /* ==== BEGIN grey_legionnaire ==== */
   /* =========================================================
-   * 5지역 · 깨진 대종
+   * 33 · 회색 군단병 — 얼굴 없는 통투구·회색 판갑·종 문양 방패·창. 발맞춰 행진.
+   * 가까운 팔(오른팔)=창, 먼 팔(왼팔)=방패. 가까운 다리 = 오른다리.
+   * 죽음: 맞고 뒤로 휘청 → 무릎 꿇고 방패·창을 떨굼 → 속 빈 갑옷이 와르르 무너져 투구가 굴러감.
    * ========================================================= */
-  D.grey_legionnaire = (f) => {
-    const c = make(3);
-    const steel = '#8e8c9e';
-    const steelD = sh(steel, -0.32);
-    const s = f ? -1 : 1;
-    const shieldF = c.lin([[0, '#a9a5bc'], [1, '#5e5a70']], 'h');
-    return c.out(
-      c.leg(42, 64, -5 * s, 9, steelD, f ? 0 : 3) + c.foot(42 - 5 * s + 2, 6, 3, sh(steelD, -0.2), f ? 0 : 3) +
-      g(
-        c.limb('M30 88L36 8', 3.5, '#6a5a4a') + c.P('M33 12L37 0L41 12L37 15Z', c.lin([[0, '#fff1c0'], [1, GOLD]])) +
-        c.limb('M38 40L32 50', 7, steelD) +
-        c.P('M34 36C38 31 58 31 62 36L62 62L34 62Z', c.body(steel, 0.35)) +
-        c.L('M34 46H62', GOLD, 1.8) +
-        c.P('M33 58L63 58L65 70L31 70Z', c.body(sh(steel, -0.1), 0.3)) +
-        c.L('M40 59L39 70M48 59V70M56 59L57 70', steelD, 1.6) +
-        c.P('M30 38C30 30 40 28 44 34L42 44L30 44Z', c.body(steel, 0.4)) +
-        c.P('M38 22C38 11 46 5 54 5C63 5 69 11 69 22L69 32C63 37 44 37 38 32Z', c.body(steel, 0.45, -0.35)) +
-        c.P('M50 4C52 0 60 0 62 4L60 8L52 8Z', GOLD) +
-        `<path d="M54 22H69" stroke="#fff" stroke-width="5" opacity=".45" ${c.soft()}/>` + c.L('M55 22H68', '#ffffff', 2) +
-        c.shine(45, 14, 3, 6, 0.45, 10),
-        f ? 'translate(0 -1)' : ''
-      ) +
-      c.leg(54, 64, 5 * s, 9, steel, f ? 3 : 0) + c.foot(54 + 5 * s + 2, 6, 3, steelD, f ? 3 : 0) +
-      g(
-        c.P('M58 30L86 27L88 79L60 83Z', shieldF) +
-        c.L('M62 33L83 31L85 75L64 78Z', GOLD, 2) +
-        c.P('M73 44C69 44 68 48 68 54L66 58L82 57L80 53C80 47 78 44 73 44Z', GOLD) + c.E(74, 59, 2, 1.6, GOLD),
-        f ? 'translate(0 -1)' : ''
-      )
-    );
+  const LEGION = {
+    //       골반          기울기  가까운 발 [발목x,들림,기울기(,발목y)]  먼 발      창 손      창 각도  방패 [x,y,각도]  머리 기울기
+    walk0: { p: [43, 63.5], lean: 2, nf: [53, 0, 0], ff: [34, 1.5, 24], hand: [37, 57], spear: -95, sh: [60, 57, 3], head: 0 },
+    walk1: { p: [43, 61.6], lean: 2, nf: [43, 0, 0], ff: [48, 7, 14], hand: [39, 56], spear: -92, sh: [61, 55, 1], head: 0 },
+    walk2: { p: [43, 63.5], lean: 2, nf: [33, 1.5, 24], ff: [53, 0, 0], hand: [41, 57], spear: -88, sh: [62, 57, -1], head: 0 },
+    walk3: { p: [43, 61.6], lean: 2, nf: [48, 7, 14], ff: [43, 0, 0], hand: [39, 56], spear: -92, sh: [61, 55, 1], head: 0 },
+    aim: { p: [40, 64], lean: -9, nf: [30, 0, 6], ff: [55, 0, 0], hand: [30, 23], spear: -9, sh: [61, 53, -6], head: -4 },
+    attack: { p: [44, 65.5], lean: 14, nf: [27, 1, 26], ff: [60, 0, 0], hand: [60, 47], spear: 9, sh: [59, 64, 12], head: 4 },
+    die0: { p: [41, 63], lean: -17, nf: [30, 5, 22], ff: [50, 0, 0], hand: [26, 47], spear: -128, sh: [57, 63, 20], head: -18 },
+    die1: { p: [43, 73], lean: 26, nf: [28, 0, 62, 86], ff: [56, 0, 0], hand: [49, 72], spear: null, sh: null, head: 24 },
   };
 
+  function drawLegionnaire(fr) {
+    const c = make(2.5);
+    const steel = '#8f8ca3';
+    const steelL = sh(steel, 0.3);
+    const steelD = sh(steel, -0.3);
+    const mail = '#6e6a84';
+    const FAR = -0.2;
+    const P = LEGION[fr];
+    const legO = (far) => ({
+      l1: 13, l2: 13, r1: 4.6, r2: 3.6, r3: 3, h: 4.6, len: 11, plate: true,
+      thigh: sh(mail, far ? FAR : 0), shin: c.body(sh(steel, far ? FAR : 0), 0.35, -0.3),
+      boot: c.body(sh(steelD, far ? FAR : 0), 0.3, -0.3),
+      kneecap: (k, a) => g(c.P('M-3.6 -2.6Q0 -5 3.6 -2.6L3.2 2.4Q0 4 -3.2 2.4Z', c.body(sh(steelL, far ? FAR : 0), 0.4, -0.2)) + c.En(-1.2, -1.6, 1, 0.8, '#fff', 0.5), tr(k, a - 90)),
+    });
+
+    /* 창: 쥔 곳 기준 뒤 20 · 앞 37. 물미(끝 쇠)는 금빛 */
+    const spear = (hand, a) => {
+      const butt = pol(hand, a + 180, 20);
+      const neck = pol(hand, a, 28);
+      return seg(c, butt, neck, 1.8, 1.7, c.lin([[0, '#8a7258'], [1, '#5c4a3a']], 'h')) +
+        c.L(`M${pt(pol(hand, a + 180, 4))}L${pt(pol(hand, a + 180, 8))}`, '#3a2e26', 2.4) +
+        g(c.P('M-1 -2.8L3 -3.6Q9 -3.8 11 0Q9 3.8 3 3.6L-1 2.8Z', c.lin([[0, '#f4f2fa'], [0.55, '#b9b6c8'], [1, '#6e6a80']])) +
+          c.L('M2.5 0H9.5', '#6e6a80', 1.4) + c.P('M-2.6 -2.8L0.8 -2.8L0.8 2.8L-2.6 2.8Z', c.body(GOLD, 0.3, -0.3)), tr(neck, a)) +
+        c.E(n(butt[0]), n(butt[1]), 2, 2, c.body(GOLD, 0.2, -0.3));
+    };
+
+    /* 방패: 직사각 방패(휜 면은 가로 그라데이션) + 금 테두리 + 종 문양(좌우 대칭) + 리벳 + 긁힌 자국 */
+    const shield = () =>
+      c.P('M-9.5 -16Q-9.5 -18.5 -6.5 -18.5L6.5 -18.5Q9.5 -18.5 9.5 -16L9.5 16Q9.5 18.5 6.5 18.5L-6.5 18.5Q-9.5 18.5 -9.5 16Z', c.lin([[0, '#cac7d9'], [0.35, '#a09cb4'], [1, '#55516a']], 'h')) +
+      c.Pn('M3.5 -18L9 -16L9 16L3.5 18Z', SHADE, 0.2) +
+      c.L('M-7 -15.5H7V15.5H-7Z', GOLD, 1.6) +
+      c.P('M0 -9C-3.6 -9 -4.6 -5.6 -4.6 -2L-6 2.6L6 2.6L4.6 -2C4.6 -5.6 3.6 -9 0 -9Z', c.body(GOLD, 0.35, -0.35)) +
+      c.E(0, 4.8, 1.8, 1.8, c.body(GOLD, 0.2)) + c.L('M-3 -6Q-2.5 -7.8 -0.5 -8', '#fff6d0', 1.4) +
+      c.En(-5, -12.5, 1.1, 1.1, GOLD) + c.En(5, -12.5, 1.1, 1.1, GOLD) + c.En(-5, 12.5, 1.1, 1.1, GOLD) + c.En(5, 12.5, 1.1, 1.1, GOLD) +
+      c.L('M-9 7L-5 9L-6 12', '#5a5468', 1.5);
+
+    /* 통투구: 가로 눈 틈만 하얗게 빛남(lit=false면 꺼진 빈 투구), 금 볏, 리벳 */
+    const helm = (lit = true) =>
+      c.P('M-3.8 -16.6C-1.2 -22.4 6.6 -22.8 9.4 -16.6L7.8 -15.6C5.2 -19.8 0.2 -19.8 -2.2 -15.6Z', c.body(GOLD, 0.35, -0.35)) +
+      c.P('M-9 -9C-10 -16 -3 -18.5 2 -18.5C9 -18.5 11.5 -13 11.5 -6L11.5 3.5C8 6 -4 6 -8.5 3.5Z', c.body(steel, 0.45, -0.35)) +
+      c.L('M-8.6 -4.5C-3 -3 5 -3 11.4 -4.5', steelD, 1.6) +
+      c.Pn('M-8.6 -4C-3 -2.5 5 -2.5 11.4 -4L11.4 3.5C8 6 -4 6 -8.6 3.5Z', SHADE, 0.18) +
+      (lit ? `<path d="M3.5 -8.4H11.2" stroke="#fff" stroke-width="5" opacity=".5" ${c.soft()}/>` + c.L('M3.5 -8.4H11', '#ffffff', 2.2) : c.L('M3.5 -8.4H11', '#2a2236', 2.4)) +
+      c.En(-1, 0.6, 0.9, 0.9, steelD) + c.En(3.4, 1.2, 0.9, 0.9, steelD) + c.En(7.8, 1.2, 0.9, 0.9, steelD) +
+      c.shine(-3.5, -11, 2.2, 4.6, 0.5, 15);
+
+    /* 흉갑(몸 좌표: 골반 (0,0), 위가 −) */
+    const cuirass = () =>
+      c.P('M-9.5 -1C-11.5 -8 -11.5 -18 -8.5 -23C-3 -26.5 6 -26.5 9.5 -23C12.5 -17 12.5 -8 9.5 -1Z', c.body(steel, 0.42, -0.38)) +
+      c.L('M3.5 -24.5C5.5 -17 5.5 -8 3.8 -1.5', steelD, 1.8) +
+      c.L('M3 -24C4.6 -17 4.6 -9 3.6 -3', steelL, 1.2, ' opacity=".6"') +
+      c.Pn('M5 -24C10 -23 12.5 -17 12 -9L9.5 -1L5 -1.5C6 -8 6 -17 5 -24Z', SHADE, 0.2) +
+      c.L('M-8 -21.5C-3 -24 5 -24.2 9 -21.8', GOLD, 1.8) +
+      c.shine(-5, -16, 2.4, 5, 0.4, 10);
+    /* 허리띠 + 판 치마(태싯) */
+    const skirt = () =>
+      c.P('M-10 -4.5L10.2 -4.5L10.6 -0.5L-10.4 -0.5Z', c.lin([[0, '#5a4a3e'], [1, '#3a2e28']])) +
+      c.P('M1.5 -5.2L5.5 -5.2L5.5 0.2L1.5 0.2Z', c.body(GOLD, 0.3, -0.3)) +
+      c.P('M-11 -0.5L11 -0.5L12.6 10L-12.4 10Z', c.body(sh(steel, -0.08), 0.32, -0.3)) +
+      c.L('M-5 0L-5.6 10M0.5 0V10M6 0L6.5 10', steelD, 1.5) +
+      c.Pn('M-11 6L12.2 6L12.6 10L-12.4 10Z', SHADE, 0.2) +
+      c.En(-8, 3.6, 0.9, 0.9, GOLD) + c.En(-2.3, 3.6, 0.9, 0.9, GOLD) + c.En(3.3, 3.6, 0.9, 0.9, GOLD) + c.En(9, 3.6, 0.9, 0.9, GOLD);
+    const pauldronAt = (p, a) => g(c.P('M-6 -3C-6 -8 2 -9.5 6 -5L5.5 2C2 0 -3 0 -6 2Z', c.body(steelL, 0.3, -0.35)) + c.L('M-5.5 -1C-2 -3 2 -3 5.5 -1', steelD, 1.5), tr(p, a));
+
+    let s = '';
+    if (fr === 'die2') {
+      /* 남은 모습: 속 빈 갑옷 더미. 창은 땅에, 방패는 눕고, 흉갑은 뒤로 넘어지고, 투구는 앞으로 굴러감 */
+      s += spear([30, 86.4], -2);
+      s += flat(shield(), [36, 84], 90, 0.5);
+      s += seg(c, [22, 85], [33, 86.5], 3.2, 2.8, c.body(sh(steel, -0.1), 0.3)) + boot(c, [17, 84.5], 11, 4, -70, c.body(steelD, 0.3), true);
+      s += g(skirt(), tr([52, 82], -84, 0.95));
+      s += g(cuirass() + c.P('M-4 -27L6 -27L6.5 -23L-4.5 -23Z', mail), tr([48, 84], -78, 0.95));
+      s += pauldronAt([44, 78], -40);
+      s += g(helm(false), tr([75, 80], 96));
+      s += seg(c, [61, 87], [70, 86.5], 3.4, 3, c.body(steel, 0.3));
+      s += c.mist([[46, 70, 3], [51, 64, 2.4], [56, 58, 1.8], [72, 70, 2.2], [75, 64, 1.6]], '#cfc8dc', 0.55);
+      s += motes(c, [[40, 74, 1], [60, 72, 0.9], [66, 66, 0.8], [50, 58, 0.7]], '#efeaf8', 0.8);
+      return fin(c, s, 1.12);
+    }
+
+    const B = frameOf(P.p[0], P.p[1], P.lean);
+    const farHip = B.p(3, -1);
+    const nearHip = B.p(-2.5, 1);
+    const farSh = B.p(5.5, -22.5);
+    const nearSh = B.p(-6.5, -21);
+    const lf = leg(c, farHip, P.ff, legO(true));
+    const ln = leg(c, nearHip, P.nf, legO(false));
+    const shC = P.sh ? [P.sh[0], P.sh[1]] : null;
+    // 먼 팔(방패 팔): 위팔만 보이고 아래팔·손은 방패 뒤 손잡이를 쥠
+    const farHand = shC || B.p(14, -6);
+    const farArm = arm(c, farSh, farHand, { l1: 11, l2: 10, r1: 3.6, r2: 3, r3: 2.8, upper: sh(mail, FAR), fore: c.body(sh(steel, FAR), 0.3), pref: [-0.2, 1] });
+    const torso = g(
+      c.P('M6 -23C9 -26 13 -25 13.5 -21L12 -17L6 -18Z', c.body(sh(steel, FAR), 0.3)) +
+      cuirass() + skirt() +
+      c.P('M-4 -27L6 -27L6.5 -23L-4.5 -23Z', mail) +
+      c.Pn('M-4 -24.5L6.5 -24.5L6.5 -23L-4.5 -23Z', SHADE, 0.3) +
+      g(helm(fr !== 'die1'), tr([1.5, -31], P.head)),
+      B.t);
+    const nearArm = arm(c, nearSh, P.hand, { l1: 12, l2: 11, r1: 3.8, r2: 3.2, r3: 2.9, upper: mail, fore: c.body(steel, 0.35, -0.3), pref: fr === 'aim' || fr === 'die0' ? [-1, 0.2] : [-0.5, 1] });
+
+    if (fr === 'die1') {
+      // 떨어지는 창(뒤로 넘어감)과 앞으로 엎어지는 방패
+      s += spear(pol([62, 87], -142, 20), -142);
+    }
+    s += lf.svg + (shC ? farArm.svg : '') + ln.svg + torso;
+    if (!shC) s += farArm.svg + fist(c, farHand, 2.8, c.body(sh(steel, FAR), 0.3), 60);
+    if (shC) s += g(shield(), tr(shC, P.sh[2]));
+    if (fr === 'die1') s += g(shield(), tr([72, 76], 38));
+    // 팔이 몸통에 드리운 그늘(빛이 왼쪽 위 → 오른쪽 아래로)
+    s += segN(c, [nearSh[0] + 2.5, nearSh[1] + 3], [nearArm.el[0] + 2.5, nearArm.el[1] + 2], 3, 2.4, SHADE, 0.16);
+    if (P.spear != null) s += spear(P.hand, P.spear);
+    s += nearArm.svg + pauldronAt(nearSh, angOf(nearSh, nearArm.el) - 90) + fist(c, P.hand, 3, c.body(steel, 0.3, -0.3), (P.spear == null ? 70 : P.spear) + 90);
+
+    if (fr === 'aim') {
+      const tip = pol(P.hand, P.spear, 37);
+      s += c.spark(n(tip[0]), n(tip[1]), 1.5, '#ffffff');
+    }
+    if (fr === 'attack') {
+      const tip = pol(P.hand, P.spear, 37);
+      s += streaks(c, [`M${pt(pol(tip, 189, 20).map((v, i) => v - (i ? 4 : 0)))}L${pt(pol(tip, 189, 34).map((v, i) => v - (i ? 4 : 0)))}`,
+        `M${pt(pol(tip, 189, 16).map((v, i) => v + (i ? 4.5 : 0)))}L${pt(pol(tip, 189, 27).map((v, i) => v + (i ? 4.5 : 0)))}`], '#efeaff', 1.6, 0.55);
+      s += c.spark(n(tip[0]), n(tip[1]), 1.8, '#ffffff');
+    }
+    if (fr === 'die0') {
+      // 가슴판에 금이 가며 잿빛 김이 새어 나옴
+      const hit = B.p(4, -15);
+      s += c.L(`M${pt(hit)}l3 -3l-1 -3l3 -2M${pt(hit)}l2 3l4 1`, '#f4f0ff', 1.6) + c.mist([[hit[0] + 6, hit[1] - 3, 2.6], [hit[0] + 9, hit[1] - 7, 2], [hit[0] + 4, hit[1] - 8, 1.6]], '#d8d2e6', 0.7);
+    }
+    if (fr === 'die1') {
+      // 목 틈으로 잿빛 김이 빠져나감
+      const nk = B.p(1, -27);
+      s += c.mist([[nk[0] - 1, nk[1] - 5, 2.6], [nk[0] - 4, nk[1] - 10, 2.2], [nk[0] - 2, nk[1] - 15, 1.6]], '#d8d2e6', 0.65);
+    }
+    return fin(c, s, 1.12);
+  }
+  D.grey_legionnaire = (fr) => drawLegionnaire(LEGION[fr] || fr === 'die2' ? fr : 'walk0');
+  D.grey_legionnaire.frames = true;
+  // 발맞춘 행진: 보폭 일정, 위아래는 작게, 몸은 곧음
+  MOTION.grey_legionnaire = { gait: 'walk', bob: 0.02, tilt: 1.5, deathFx: 'ash', deathTime: 0.8 };
+  /* ==== END grey_legionnaire ==== */
+
+  /* ===== 아래는 아직 옛 그림 (차례로 다시 그림) ===== */
   D.hush_monk = (f) => {
     const c = make(3);
     const robe = '#8a849c';
@@ -9556,10 +10052,11 @@ RG.art.enemy = (() => {
 
   /**
    * 적 프레임: walk0~walk3(걷기·날갯짓 한 바퀴) · aim(공격 직전: 무기를 들어 올림) · attack(공격하는 순간)
+   *          · die0~die2(죽음: 맞고 휘청 → 무너짐·깨짐 → 남은 모습·흩어짐)
    * 옛 숫자 프레임 0·1은 walk0·walk2로 읽음.
    * 새 방식 그림 함수는 fn.frames = true 로 표시하고 프레임 이름(문자열)을 받음.
    */
-  const FRAMES = ['walk0', 'walk1', 'walk2', 'walk3', 'aim', 'attack'];
+  const FRAMES = ['walk0', 'walk1', 'walk2', 'walk3', 'aim', 'attack', 'die0', 'die1', 'die2'];
   RG.art.ENEMY_FRAMES = FRAMES;
   const legacyBit = (fr) => (fr === 'walk1' || fr === 'walk2' ? 1 : 0);
   return function enemy(type, frame) {
@@ -13537,8 +14034,10 @@ RG.fx = (() => {
           break;
         case 'kill': {
           const big = e.boss;
-          burst(e.x, e.y - 0.25, '#c9c3d6', big ? 60 : 12, big ? 4 : 2.4, big ? 1.2 : 0.6, big ? 0.12 : 0.07, 2);
-          burst(e.x, e.y - 0.25, '#ffffff', big ? 30 : 5, 1.2, 0.8, 0.05, -1.2);
+          // 몬스터마다 죽는 효과가 따로 있으면(렌더러가 그림) 공통 효과는 작게
+          const own = RG.art.ENEMY_MOTION && RG.art.ENEMY_MOTION[e.enemyType] && RG.art.ENEMY_MOTION[e.enemyType].deathFx;
+          burst(e.x, e.y - 0.25, '#c9c3d6', big ? 60 : own ? 4 : 12, big ? 4 : 2.4, big ? 1.2 : 0.6, big ? 0.12 : 0.07, 2);
+          burst(e.x, e.y - 0.25, '#ffffff', big ? 30 : own ? 2 : 5, 1.2, 0.8, 0.05, -1.2);
           if (e.bounty) text(e.x, e.y - 0.8, `+${e.bounty}`, '#ffd34d');
           if (big) { addShake(0.5); ring(e.x, e.y, 2.5, '#ffffff', 0.9, 0.15); }
           break;
@@ -13788,6 +14287,7 @@ RG.render = (() => {
     canvas = cv;
     ctx = canvas.getContext('2d');
     game = g;
+    corpses = [];
     bg = null;
     bgFor = '';
     resize();
@@ -13854,14 +14354,61 @@ RG.render = (() => {
     return true;
   }
 
+  /* ---------------- 그림자 (빛은 늘 왼쪽 위) ---------------- */
+  // 발밑 그늘: 가장자리가 부드러운 타원 (한 번 그려 두고 늘려 씀)
+  let blobCanvas = null;
+  function blob() {
+    if (blobCanvas) return blobCanvas;
+    blobCanvas = document.createElement('canvas');
+    blobCanvas.width = 128; blobCanvas.height = 64;
+    const c2 = blobCanvas.getContext('2d');
+    const g = c2.createRadialGradient(64, 32, 2, 64, 32, 62);
+    g.addColorStop(0, 'rgba(12,7,20,1)'); g.addColorStop(0.55, 'rgba(12,7,20,0.75)'); g.addColorStop(1, 'rgba(12,7,20,0)');
+    c2.fillStyle = g;
+    c2.save(); c2.scale(1, 0.5); c2.beginPath(); c2.arc(64, 64, 64, 0, Math.PI * 2); c2.fill(); c2.restore();
+    return blobCanvas;
+  }
   function shadow(x, y, rx, ry, a = 0.32) {
     ctx.save();
-    ctx.fillStyle = `rgba(10,6,20,${a})`;
-    ctx.beginPath();
-    ctx.ellipse(X(x), Y(y), Math.max(2, rx * T), Math.max(1, ry * T), 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.globalAlpha *= Math.min(1, a * 1.6);
+    const w = Math.max(4, rx * T * 2.2);
+    const h = Math.max(2, ry * T * 2.2);
+    ctx.drawImage(blob(), X(x) - w / 2 + T * 0.03, Y(y) - h / 2 + T * 0.01, w, h);
     ctx.restore();
   }
+  // 드리운 그림자: 그림 모양 그대로 오른쪽 아래로 눕힘 (그림마다 한 번 만들어 둠)
+  const shadowCache = new Map();
+  function shadowCanvas(key) {
+    if (shadowCache.has(key)) return shadowCache.get(key);
+    const s = RG.art.sprites.get(key);
+    if (!s) return null;
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.round(s.canvas.width / 2));
+    cv.height = Math.max(1, Math.round(s.canvas.height / 2));
+    const c2 = cv.getContext('2d');
+    try { c2.filter = 'blur(1.5px)'; } catch (e) { /* 흐림을 못 쓰는 브라우저 */ }
+    c2.drawImage(s.canvas, 0, 0, cv.width, cv.height);
+    c2.filter = 'none';
+    c2.globalCompositeOperation = 'source-in';
+    c2.fillStyle = '#140c1e';
+    c2.fillRect(0, 0, cv.width, cv.height);
+    shadowCache.set(key, cv);
+    return cv;
+  }
+  /** (cx, by) = 바닥 기준점, w·h·ax·ay = 그림 배치, lift = 땅에서 뜬 높이(비행) */
+  function castShadow(key, cx, by, w, h, ax, ay, flip, alpha, lift = 0) {
+    if (!shadowsOn) return;
+    const cv = shadowCanvas(key);
+    if (!cv) return;
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    ctx.translate(cx + lift * 0.55, by);
+    ctx.transform(1, 0, -0.6, -0.4, 0, 0); // 높이 H인 점 → 오른쪽으로 0.6H, 아래로 0.4H
+    if (flip) ctx.scale(-1, 1);
+    ctx.drawImage(cv, -w * ax, -h * ay, w, h);
+    ctx.restore();
+  }
+  let shadowsOn = true;
 
   function bar(cx, top, w, ratio, color, shieldRatio, elite) {
     const h = Math.max(3, Math.round(T * 0.09));
@@ -14233,6 +14780,7 @@ RG.render = (() => {
     const pose = towerPose(t);
     const key = poseSprite(RG.art.sprites.towerKey(t.type, t.level, t.branch, pose), RG.art.sprites.towerKey(t.type, t.level, t.branch, 'idle'),
       () => RG.art.tower(t.type, t.level, t.branch, pose), RG.art.sprites.TW, RG.art.sprites.TH);
+    castShadow(key, cx, baseY, w, h, 0.5, 112 / 130, false, t.building ? 0.2 : 0.42);
     ctx.save();
     if (t.building) ctx.globalAlpha = 0.55;
     if (sy !== 1) { ctx.translate(cx, baseY); ctx.scale(1 + (1 - sy) * 0.5, sy); ctx.translate(-cx, -baseY); }
@@ -14295,7 +14843,43 @@ RG.render = (() => {
     ctx.fillStyle = glow;
     ctx.beginPath(); ctx.arc(cx, baseY - T * 0.7, T * (0.6 + ratio * 0.9), 0, Math.PI * 2); ctx.fill();
     ctx.restore();
+    castShadow(RG.art.sprites.lanternKey(ratio), cx, baseY, T, T * 1.3, 0.5, 112 / 130, false, 0.42);
     sprite(RG.art.sprites.lanternKey(ratio), cx, baseY, T, T * 1.3, 0.5, 112 / 130, false);
+  }
+
+  /* ---------------- 죽는 연출 (docs/design/animation.md §2.5) ---------------- */
+  let corpses = [];
+  const DEATH_FX = {
+    mist: ['#c9c3d6', 14, 1.6, 0.7, 0.08, -0.6], shatter: ['#dfeef5', 12, 3, 0.5, 0.06, 3], burst: ['#b5d86a', 16, 3, 0.5, 0.07, 1],
+    spores: ['#d8e48a', 18, 1.4, 0.9, 0.06, -0.4], ash: ['#5a5560', 14, 1.2, 0.8, 0.07, -0.5], splash: ['#7cc8f0', 16, 2.6, 0.5, 0.06, 3],
+    sparks: ['#ffe066', 14, 3.2, 0.4, 0.05, 0], crumble: ['#9c8f7c', 14, 2, 0.6, 0.07, 3.5], feathers: ['#e8e4f0', 10, 1.2, 1.0, 0.07, 0.6],
+    embers: ['#ff9a3c', 14, 2, 0.7, 0.06, -0.8],
+  };
+  /** 게임 화면이 이벤트를 넘겨줌 (js/ui/game.js) */
+  function onEvents(events) {
+    for (const ev of events) {
+      if (ev.type !== 'kill' || !ev.enemyType) continue;
+      const mo = (RG.art.ENEMY_MOTION && RG.art.ENEMY_MOTION[ev.enemyType]) || {};
+      const ed = RG.data.enemies[ev.enemyType] || {};
+      const dur = mo.deathTime || (ed.boss ? 1.2 : 0.7);
+      if (corpses.length > 60) corpses.shift();
+      corpses.push({ type: ev.enemyType, x: ev.x, y: ev.y, dir: ev.dir || 1, size: ev.size || ed.size || 0.7, flying: !!ev.flying, hover: mo.hover != null ? mo.hover : 0.42, t: 0, dur });
+      const fx = DEATH_FX[mo.deathFx];
+      if (fx) RG.fx.burst(ev.x, ev.y - (ev.size || 0.7) * 0.35, fx[0], ed.boss ? fx[1] * 3 : fx[1], fx[2], fx[3], fx[4], fx[5]);
+    }
+  }
+  function drawCorpse(c) {
+    const k = c.t / c.dur;
+    const frame = k < 0.3 ? 'die0' : k < 0.62 ? 'die1' : 'die2';
+    const alpha = k > 0.7 ? Math.max(0, 1 - (k - 0.7) / 0.3) : 1;
+    const size = c.size * T;
+    const cx = X(c.x);
+    const groundY = Y(c.y);
+    const lift = c.flying ? c.hover * T * Math.max(0, 1 - k / 0.6) : 0; // 비행 적은 떨어짐
+    const big = (RG.data.enemies[c.type] || {}).size >= 1.4 ? 288 : 168;
+    const key = poseSprite(RG.art.sprites.enemyKey(c.type, frame), RG.art.sprites.enemyKey(c.type, 'walk0'), () => RG.art.enemy(c.type, frame), big, big);
+    castShadow(key, cx, groundY, size, size, 0.5, 0.9, c.dir < 0, 0.22 * alpha, lift);
+    sprite(key, cx, groundY - lift, size, size, 0.5, 0.9, c.dir < 0, alpha);
   }
 
   /* ---------------- 적 ---------------- */
@@ -14325,16 +14909,34 @@ RG.render = (() => {
     const lifted = st.time < e.ccUntil && e.ccKind === 'lift';
     const moving = !e.blockedBy && !(st.time < e.ccUntil) ;
     const frame = enemyFrame(e, moving);
+    // 몬스터별 움직임 (그림 파일의 MOTION, docs/design/animation.md §2.5)
+    const mo = (RG.art.ENEMY_MOTION && RG.art.ENEMY_MOTION[e.type]) || {};
+    const stride = 0.45 + e.size * 0.55;
+    const ph = e.flying ? time * 5 + e.id : (e.walkT / stride) * Math.PI * 2;
     let lift = 0;
-    if (e.flying) lift = T * 0.42 + Math.sin(time * 4 + e.id) * T * 0.04;
-    else if (moving) lift = Math.abs(Math.sin(e.walkT * Math.PI * 1.2)) * T * 0.05;
+    let rot = 0;
+    let sxk = 1;
+    let syk = 1;
+    let dx = 0;
+    if (e.flying) lift = T * (mo.hover != null ? mo.hover : 0.42) + Math.sin(time * 4 + e.id) * T * 0.04;
+    else if (moving) {
+      if (mo.hop) lift = Math.pow(Math.max(0, Math.sin(ph / 2)), 0.7) * mo.hop * T;
+      else lift = Math.abs(Math.sin(ph)) * (mo.bob != null ? mo.bob : 0.05) * T;
+      if (mo.tilt) rot = Math.sin(ph) * mo.tilt * Math.PI / 180;
+      if (mo.sway) dx = Math.sin(ph / 2) * mo.sway * T;
+    }
+    if (mo.squash) { syk = 1 + Math.sin(ph * (moving || e.flying ? 1 : 0.3) + (moving ? 0 : time * 2)) * mo.squash; sxk = 1 / syk; }
     if (lifted) lift += T * 0.35 + Math.sin(time * 10) * T * 0.04;
+    const groundY = cy;
     cy -= lift;
     const alphaS = (e.stealth && !e.revealed) ? 0.35 + 0.1 * Math.sin(time * 6) : 1;
     const hurt = st.time - e.lastHurt < 0.08;
     const flip = e.dir < 0;
     const big = ed.size >= 1.4 ? 288 : 168;
     const key = poseSprite(RG.art.sprites.enemyKey(e.type, frame), RG.art.sprites.enemyKey(e.type, 'walk0'), () => RG.art.enemy(e.type, frame), big, big);
+    castShadow(key, cx + dx, groundY, size, size, 0.5, 0.9, flip, (e.flying ? 0.16 : 0.32) * alphaS, lift);
+    const motion = rot || sxk !== 1 || syk !== 1 || dx;
+    if (motion) { ctx.save(); ctx.translate(cx + dx, cy); ctx.rotate(rot); ctx.scale(sxk, syk); ctx.translate(-cx, -cy); }
     const ok = sprite(key, cx, cy, size, size, 0.5, 0.9, flip, alphaS);
     if (!ok) {
       ctx.fillStyle = '#9a94a8';
@@ -14347,6 +14949,7 @@ RG.render = (() => {
       sprite(key, cx, cy, size, size, 0.5, 0.9, flip, 1);
       ctx.restore();
     }
+    if (motion) ctx.restore();
     // 상태 표시
     const top = cy - size * 0.92;
     if (frozen) {
@@ -14430,7 +15033,9 @@ RG.render = (() => {
         ctx.beginPath(); ctx.ellipse(cx, cy, T * 0.42, T * 0.16, 0, 0, Math.PI * 2); ctx.stroke();
         ctx.restore();
       }
-      sprite(poseSprite(RG.art.sprites.heroKey(u.heroId, pose), RG.art.sprites.heroKey(u.heroId, 'idle0'), () => RG.art.hero(u.heroId, pose), 160, 160), cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
+      const hk = poseSprite(RG.art.sprites.heroKey(u.heroId, pose), RG.art.sprites.heroKey(u.heroId, 'idle0'), () => RG.art.hero(u.heroId, pose), 160, 160);
+      castShadow(hk, cx, cy, size, size, 0.5, 0.9, flip, 0.32, bob);
+      sprite(hk, cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
       if (u.stunUntil > st.time) icon('stun', cx, cy - size * 1.0, T * 0.3);
       bar(cx, cy - size * 0.98, Math.max(22, T * 0.8), u.hp / u.maxHp, '#6fd3ff', 0, false);
       // 레벨
@@ -14452,7 +15057,9 @@ RG.render = (() => {
       const pose = u.attackAnim > 0.1 ? 'attack' : u.engaged && u.cd <= 0.3 ? 'aim' : walking ? (Math.floor(time * 6 + u.id) % 2 ? 'walk1' : 'walk0') : 'idle';
       const bob = walking ? Math.abs(Math.sin(time * 10 + u.id)) * T * 0.03 : 0;
       const look = u.look || 'stone_soldier';
-      sprite(poseSprite(RG.art.sprites.unitKey(look, pose), RG.art.sprites.unitKey(look, 'idle'), () => RG.art.unit(look, pose), 128, 128), cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
+      const uk = poseSprite(RG.art.sprites.unitKey(look, pose), RG.art.sprites.unitKey(look, 'idle'), () => RG.art.unit(look, pose), 128, 128);
+      castShadow(uk, cx, cy, size, size, 0.5, 0.9, flip, 0.3, bob);
+      sprite(uk, cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
       if (u.hp < u.maxHp) bar(cx, cy - size * 1.0, Math.max(14, T * 0.5), u.hp / u.maxHp, '#b8e986', 0, false);
       return;
     }
@@ -14612,11 +15219,15 @@ RG.render = (() => {
     list.push([game.map.lantern.r + 0.82, 1, null]);
     for (const e of st.enemies) if (!e.flying) list.push([lerp(e.py, e.y, alpha), 2, e]);
     for (const u of st.units) if (!u.dead) list.push([lerp(u.py, u.y, alpha), 3, u]);
+    for (const c of corpses) c.t += dt;
+    corpses = corpses.filter((c) => c.t < c.dur);
+    for (const c of corpses) list.push([c.y - 0.001, 4, c]);
     list.sort((a, b) => a[0] - b[0]);
     for (const [, kind, obj] of list) {
       if (kind === 0) drawTower(obj);
       else if (kind === 1) drawLantern();
       else if (kind === 2) drawEnemy(obj, alpha);
+      else if (kind === 4) drawCorpse(obj);
       else drawUnit(obj, alpha);
     }
     // 비행 적은 위에
@@ -14637,7 +15248,7 @@ RG.render = (() => {
     ctx.restore();
   }
 
-  return { attach, detach, resize, frame, screenToWorld, worldToScreen, overlay, tileSize, get T() { return T; } };
+  return { attach, detach, resize, frame, onEvents, setShadows: (on) => { shadowsOn = !!on; }, screenToWorld, worldToScreen, overlay, tileSize, get T() { return T; } };
 })();
 
 </script>
@@ -15635,6 +16246,7 @@ RG.render = (() => {
 
   function handleEvents(events) {
     RG.fx.onEvents(events, game);
+    if (RG.render.onEvents) RG.render.onEvents(events);
     for (const e of events) {
       switch (e.type) {
         case 'fire': UI.sfx(e.kind === 'bolt' && e.element === 'dark' ? 'hex' : FIRE_SFX[e.kind] || 'arrow', { vol: 0.5 }); break;

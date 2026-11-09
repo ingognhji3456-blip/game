@@ -1,37 +1,279 @@
 'use strict';
 
-/* 적 그림 — 1지역 솔빛 들판 · 2지역 서리 고개 (공용 도구: enemies.js) */
+/* =========================================================
+ * 적 그림 — 1지역 솔빛 들판 · 2지역 서리 고개 (공용 도구: enemies.js)
+ * 프레임(docs/design/animation.md §2.2·§2.5):
+ *   walk0~walk3 걷기 한 바퀴(walk0 = 서 있기) · aim 공격 직전 · attack 공격 순간
+ *   die0 맞고 휘청 · die1 쓰러짐·깨짐·터짐 · die2 남은 모습
+ * 짜임: 적마다 "자세 표"(몸 기울기·관절 목표점·무기 각도)를 두고, 같은 그리기 함수가 표를 읽어 그림.
+ *   팔다리는 뿌리(어깨·엉덩이) → 관절(IK) → 끝(손·발) 두 마디로 잇고, 무기는 손 좌표에서 돌려 쥠.
+ * 빛: 늘 왼쪽 위(§2.6). 몸이 돌아가도 그라데이션 중심을 되돌려 빛 방향을 지킴.
+ *   땅에 떨어지는 그림자는 그리지 않음(렌더러 몫). 몸 아래쪽 형태 그림자·발끝 접지 그늘만 그림.
+ * ========================================================= */
 (() => {
-  const { H, OL, sh, GREY, GREY_L, MISTC, HALO, GREEN, ICE, ICE_L, EMBER, EMBER_L, VOLT, SEA, BELL, GOLD, BRONZE, make, g, zig } = RG.art._en;
+  const { H, OL, sh, GREY, GREY_L, MISTC, HALO, GREEN, ICE, ICE_L, make, g } = RG.art._en;
   const D = RG.art._en.D;
+  const MOTION = RG.art._en.MOTION || (RG.art._en.MOTION = {});
+
+  /* =========================================================
+   * 짜임 도우미 (이 파일 전용)
+   * ========================================================= */
+  const n = H.n;
+  const RAD = Math.PI / 180;
+  const pt = (p) => `${n(p[0])} ${n(p[1])}`;
+  const pol = (p, len, deg) => [p[0] + Math.cos(deg * RAD) * len, p[1] + Math.sin(deg * RAD) * len];
+  const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  const add = (a, b) => [a[0] + b[0], a[1] + b[1]];
+  const angOf = (a, b) => Math.atan2(b[1] - a[1], b[0] - a[0]) / RAD;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  /** 두 마디 IK: 뿌리 a → 끝 b, 마디 길이 l1·l2. bend +1이면 관절이 a→b 방향의 왼쪽(아래로 뻗을 때 앞쪽 = 무릎) */
+  function ik(a, b, l1, l2, bend) {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const d = clamp(Math.hypot(dx, dy), Math.abs(l1 - l2) + 0.01, l1 + l2 - 0.01);
+    const base = Math.atan2(dy, dx);
+    const k = Math.acos(clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1));
+    const t = base - bend * k;
+    return [a[0] + Math.cos(t) * l1, a[1] + Math.sin(t) * l1];
+  }
+
+  /** 몸 좌표계: 기준점 (cx,cy)에서 크기(sx,sy) → 회전 rot → 이동(dx,dy). f(점)=세계 좌표, f.g(그림)=같은 변환으로 감쌈 */
+  function frame(dx = 0, dy = 0, rot = 0, cx = 50, cy = 90, sx = 1, sy = 1) {
+    const cs = Math.cos(rot * RAD);
+    const sn = Math.sin(rot * RAD);
+    const f = (p) => {
+      const x = (p[0] - cx) * sx;
+      const y = (p[1] - cy) * sy;
+      return [cx + x * cs - y * sn + dx, cy + x * sn + y * cs + dy];
+    };
+    f.rot = rot; f.sx = sx; f.sy = sy;
+    f.t = `translate(${n(dx)} ${n(dy)}) rotate(${n(rot)} ${n(cx)} ${n(cy)})` +
+      (sx !== 1 || sy !== 1 ? ` translate(${n(cx)} ${n(cy)}) scale(${sx} ${sy}) translate(${n(-cx)} ${n(-cy)})` : '');
+    f.g = (body) => `<g transform="${f.t}">${body}</g>`;
+    f.flip = Math.sign(sx * sy) || 1;
+    return f;
+  }
+  /** 몸 안의 부분 좌표계(머리 등): 부모 f 안에서 (cx,cy) 기준 rot만큼 */
+  function sub(f, rot, cx, cy, dx = 0, dy = 0) {
+    const s = frame(dx, dy, rot, cx, cy);
+    const w = (p) => f(s(p));
+    w.rot = f.rot + rot * f.flip; w.sx = f.sx; w.sy = f.sy; w.flip = f.flip;
+    w.t = `${f.t} ${s.t}`;
+    w.g = (body) => f.g(`<g transform="${s.t}">${body}</g>`);
+    return w;
+  }
+
+  /** 빛(왼쪽 위)을 몸 좌표계 안에서 본 그라데이션 중심 */
+  function litC(f, lx0 = -0.17, ly0 = -0.23) {
+    const r = -(f ? f.rot : 0) * RAD;
+    let lx = lx0 * Math.cos(r) - ly0 * Math.sin(r);
+    let ly = lx0 * Math.sin(r) + ly0 * Math.cos(r);
+    if (f && f.sx < 0) lx = -lx;
+    if (f && f.sy < 0) ly = -ly;
+    return [n(0.5 + lx), n(0.5 + ly)];
+  }
+  /** 빛 방향을 지키는 몸통 그라데이션 */
+  const lit = (c, base, f, hi = 0.42, lo = -0.42, r = 0.9) => { const [x, y] = litC(f); return c.body(base, hi, lo, x, y, r); };
+  /** 팔다리용: 위는 밝고 발끝은 접지 그늘로 어두움 */
+  const legG = (c, base, hi = 0.18, lo = -0.42) => c.lin([[0, sh(base, hi)], [0.55, base], [1, sh(base, lo)]]);
+
+  /** 원 경로(시계 방향, cap()과 같은 감김) */
+  const circ = (p, r) => `M${n(p[0] - r)} ${n(p[1])}A${n(r)} ${n(r)} 0 1 0 ${n(p[0] + r)} ${n(p[1])}A${n(r)} ${n(r)} 0 1 0 ${n(p[0] - r)} ${n(p[1])}Z`;
+  /** 굵기가 변하는 막대(캡슐) 경로: p1(반지름 r1) → p2(r2) */
+  function cap(p1, r1, p2, r2) {
+    const dx = p2[0] - p1[0];
+    const dy = p2[1] - p1[1];
+    const d = Math.hypot(dx, dy);
+    if (d <= Math.abs(r1 - r2) + 0.05) return r1 > r2 ? circ(p1, r1) : circ(p2, r2);
+    const a = Math.atan2(dy, dx);
+    const o = Math.acos(clamp((r1 - r2) / d, -1, 1));
+    const P = (p, r, t) => pt([p[0] + Math.cos(t) * r, p[1] + Math.sin(t) * r]);
+    const big2 = o > Math.PI / 2 ? 1 : 0;
+    return `M${P(p1, r1, a + o)}L${P(p2, r2, a + o)}A${n(r2)} ${n(r2)} 0 ${big2} 0 ${P(p2, r2, a - o)}L${P(p1, r1, a - o)}A${n(r1)} ${n(r1)} 0 ${1 - big2} 0 ${P(p1, r1, a + o)}Z`;
+  }
+  /** 점들을 따라 굵기가 r0→r1로 줄어드는 띠(꼬리·덩굴·뿌리) */
+  function taper(pts, r0, r1) {
+    const N = pts.length;
+    const Ls = [];
+    const Rs = [];
+    for (let i = 0; i < N; i++) {
+      const p = pts[i];
+      const q0 = pts[Math.max(0, i - 1)];
+      const q1 = pts[Math.min(N - 1, i + 1)];
+      const a = Math.atan2(q1[1] - q0[1], q1[0] - q0[0]);
+      const r = r0 + (r1 - r0) * (i / (N - 1));
+      Ls.push([p[0] + Math.sin(a) * r, p[1] - Math.cos(a) * r]);
+      Rs.push([p[0] - Math.sin(a) * r, p[1] + Math.cos(a) * r]);
+    }
+    return `M${Ls.map(pt).join('L')}A${n(r1)} ${n(r1)} 0 0 1 ${pt(Rs[N - 1])}L${Rs.reverse().map(pt).join('L')}A${n(r0)} ${n(r0)} 0 0 1 ${pt(Ls[0])}Z`;
+  }
+  /** 3차 베지어 위의 점 N+1개 */
+  function bez(p0, p1, p2, p3, N = 10) {
+    const out = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const u = 1 - t;
+      out.push([u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0],
+        u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1]]);
+    }
+    return out;
+  }
+  const paths = (ds) => ds.map((d) => `<path d="${d}"/>`).join('');
+  /** 여러 조각을 이음매 없는 한 덩어리로: 외곽선을 모두 먼저, 면은 그 위에 */
+  const blob = (c, ds, fill) => `<g fill="${OL}" stroke-width="${n(c.ow * 2)}">${paths(ds)}</g><g fill="${fill}" stroke="none">${paths(ds)}</g>`;
+  /** 두 마디 팔다리 조각: 뿌리 a(r0) → 관절 j(r1) → 끝 e(r2) */
+  const seg2 = (a, j, e, r0, r1, r2) => [cap(a, r0, j, r1), cap(j, r1, e, r2)];
+
+  /**
+   * 형태 그림자: 몸 모양 d(몸 좌표계 f) 안쪽에만, 세계 좌표로 오른쪽 아래 그늘과 왼쪽 위 반사광.
+   * box: 세계 좌표 [가운데x, 가운데y, 반폭, 반높이]
+   */
+  function form(c, d, f, box, dark = 0.3, light = 0.22) {
+    const id = H.uid('ec');
+    const [x, y, w, h] = box;
+    return `<clipPath id="${id}"><path d="${d}"${f ? ` transform="${f.t}"` : ''}/></clipPath>` +
+      `<g clip-path="url(#${id})" stroke="none">` +
+      `<ellipse cx="${n(x + w * 0.35)}" cy="${n(y + h * 0.95)}" rx="${n(w * 1.05)}" ry="${n(h * 0.62)}" fill="${OL}" opacity="${dark}" ${c.soft()}/>` +
+      (light ? `<ellipse cx="${n(x - w * 0.35)}" cy="${n(y - h * 0.55)}" rx="${n(w * 0.55)}" ry="${n(h * 0.35)}" fill="#fff" opacity="${light}" ${c.soft()}/>` : '') +
+      '</g>';
+  }
+  /** 모양 d(변환 t) 안쪽에만 그리기 */
+  function inside(d, t, body) {
+    const id = H.uid('ec');
+    return `<clipPath id="${id}"><path d="${d}"${t ? ` transform="${t}"` : ''}/></clipPath><g clip-path="url(#${id})" stroke="none">${body}</g>`;
+  }
+  /** 흐린 그늘 덩어리(외곽선 없음) */
+  const shadeE = (c, x, y, rx, ry, op = 0.25, col = OL) => `<ellipse cx="${n(x)}" cy="${n(y)}" rx="${n(rx)}" ry="${n(ry)}" fill="${col}" opacity="${op}" stroke="none" ${c.soft()}/>`;
+  /** 빛나는 눈이 꺼져 가는 모습(죽음): 감긴 눈 */
+  const deadEye = (c, x, y, r) => c.L(`M${n(x - r)} ${n(y)}Q${n(x)} ${n(y + r * 0.9)} ${n(x + r)} ${n(y)}`, OL, 1.8);
+  /** 맞는 순간 번쩍(작은 별) */
+  function hitStar(c, x, y, r, col = '#ffffff') {
+    let d = '';
+    for (let i = 0; i < 8; i++) {
+      const a = i * 45 * RAD;
+      const rr = i % 2 ? r * 0.45 : r;
+      d += `${i ? 'L' : 'M'}${n(x + Math.cos(a) * rr)} ${n(y + Math.sin(a) * rr)}`;
+    }
+    return `<path d="${d}Z" fill="${col}" stroke="${OL}" stroke-width="1.6" opacity=".95"/>`;
+  }
+  /** 휘두름 궤적(초승달) — 중심 (x,y), 반지름 r, 각도 a0→a1(도) */
+  function swoosh(c, x, y, r, a0, a1, w = 6, col = '#ffffff', op = 0.75) {
+    const p = (a, rr) => pt([x + Math.cos(a * RAD) * rr, y + Math.sin(a * RAD) * rr]);
+    const big = Math.abs(a1 - a0) > 180 ? 1 : 0;
+    const sw = a1 > a0 ? 1 : 0;
+    const m = (a0 + a1) / 2;
+    return `<path d="M${p(a0, r)}A${r} ${r} 0 ${big} ${sw} ${p(a1, r)}Q${p(m, r - w * 1.4)} ${p(a0, r)}Z" fill="${col}" opacity="${op}" stroke="none"/>`;
+  }
+  /** 그림 전체를 발 기준선(y=90)에 맞춰 줄이기/옮기기 */
+  const fit = (body, k, cx = 50, dx = 0) => `<g transform="translate(${n(dx)} 0) translate(${cx} 90) scale(${k}) translate(${-cx} -90)">${body}</g>`;
+  /** 속도선 */
+  const speed = (c, lines, col = MISTC, w = 2.2, op = 0.8) => c.L(lines.map(([x, y, l]) => `M${x} ${y}h${-l}`).join(''), col, w, ` opacity="${op}"`);
 
   /* =========================================================
    * 1지역 · 솔빛 들판
    * ========================================================= */
 
-  D.mist_rat = (f) => {
-    const c = make(3.5);
-    const s = f ? -1 : 1;
-    const legC = sh(GREY, -0.25);
-    const tail = f ? 'M24 74C12 74 6 64 10 54C13 46 10 40 5 37' : 'M24 74C10 76 4 66 8 56C11 48 9 42 4 40';
-    const tip = f ? [[8, 35, 5], [14, 29, 4], [6, 26, 3.5], [18, 22, 2.5]] : [[7, 38, 5], [12, 31, 4], [6, 28, 3.5], [16, 25, 2.5]];
-    return c.out(
-      c.limb(tail, 4.5, sh(GREY, -0.1)) +
-      c.mist(tip, MISTC, 0.85) +
-      c.leg(38, 76, -3 * s, 6, legC) + c.leg(68, 76, 3 * s, 6, legC) +
-      g(
-        c.P('M22 80C17 62 33 46 54 47C66 48 74 53 80 59C86 63 91 68 95 74C92 79 85 82 77 83C60 87 34 88 22 80Z', c.body(GREY)) +
-        c.En(54, 79, 20, 5, GREY_L, 0.55) +
-        c.E(68, 50, 10, 10, c.body(GREY)) + c.En(68.5, 51, 5.5, 6, '#c9a6b4') +
-        c.eye(80, 63, 3.6) +
-        c.E(94, 73.5, 3, 2.6, '#d99fb2') +
-        c.shine(40, 56, 9, 4),
-        f ? 'translate(0 -1)' : ''
-      ) +
-      c.leg(44, 78, 3 * s, 6, GREY) + c.leg(74, 78, -3 * s, 6, GREY)
-    );
-  };
+  /* ---------- 01 안개 쥐: 종종 뛰는 네발(대각선 짝) · 앞니로 물어뜯기 · 죽으면 뒤집혀 발랑 ---------- */
+  MOTION.mist_rat = { gait: 'scuttle', bob: 0.03, tilt: 2, sway: 0, squash: 0.04, deathFx: 'mist', deathTime: 0.6 };
+  D.mist_rat = (fr) => {
+    const c = make(3.2);
+    const G = 90 - c.ow / 2;
+    const fur = GREY;
+    const furD = sh(GREY, -0.32);
+    const pink = '#d9a3b5';
+    // f: 몸 [dx, dy, 회전, 기준x, 기준y, sx, sy] · h 머리 · jaw 입 · ear 귀 · tl 꼬리끝 · 발: [x, 들림] 또는 {L:[몸 좌표 손목], T:[몸 좌표 발끝]}
+    const P = {
+      walk0: { f: [0, 0, 0], h: 0, jaw: 3, ear: 0, tl: [0, 0], nf: [75, 0], ff: [61, 0.6], nh: [31, 0.6], fh: [41, 0] },
+      walk1: { f: [0, -1.4, -1.5], h: 3, jaw: 3, ear: 4, tl: [3, -3], nf: [68, 0], ff: [68, 5], nh: [40, 5], fh: [35, 0] },
+      walk2: { f: [0, 0, 0], h: 0, jaw: 3, ear: 0, tl: [0, 2], nf: [61, 0.6], ff: [73, 0], nh: [44, 0], fh: [28, 0.6] },
+      walk3: { f: [0, -1.4, 1.5], h: -3, jaw: 3, ear: -4, tl: [-3, -3], nf: [71, 5], ff: [64, 0], nh: [36, 0], fh: [37, 5] },
+      // 공격 직전: 엉덩이를 낮추고 앞몸을 들어 입을 크게 벌림, 앞발 발톱을 세움, 귀는 뒤로
+      aim: { f: [-5, -1, -17, 34, 84], h: -8, jaw: 34, ear: -30, tl: [-4, -10], nf: { L: [80, 74], T: [85, 72] }, ff: { L: [76, 76], T: [81, 75] }, nh: [33, 0], fh: [28, 0] },
+      // 물어뜯기: 몸을 앞으로 쭉 뻗어 덮침, 뒷발은 뒤로 차고 앞발은 앞으로
+      attack: { f: [5, 1, 8, 34, 84, 1.05], h: 8, jaw: 24, ear: -12, tl: [6, 8], nf: [88, 3], ff: [83, 0], nh: [25, 0], fh: [29, 2.5], bite: true },
+      // 맞고 휘청: 머리가 뒤로 젖혀지고 앞발이 들림
+      die0: { f: [-4, -2, -12, 30, 84], h: -24, jaw: 26, ear: -30, tl: [-6, -6], nf: { L: [74, 82], T: [76, 87] }, ff: { L: [70, 84], T: [72, 88] }, nh: [32, 0], fh: [25, 1.5], hurt: true },
+      // 뒤로 넘어감: 엉덩이를 축으로 몸이 뒤로 젖혀지며 네 발이 허공을 휘저음
+      die1: { f: [6, 1, -38, 26, 84], h: -14, jaw: 18, ear: -30, tl: [-2, 14], nf: { L: [78, 80], T: [83, 82] }, ff: { L: [72, 86], T: [75, 90] }, nh: { L: [48, 86], T: [54, 83] }, fh: { L: [42, 89], T: [47, 88] }, dead: true },
+      // 발랑 뒤집힘: 배를 위로, 다리를 오므려 하늘로, 안개가 빠져나감
+      die2: { f: [0, 6, 0, 50, 69, 1, -1], h: 8, jaw: 6, ear: 10, tl: [0, 0], tailW: [[22, 76], [12, 82], [6, 88], [-2, 87]], nf: { L: [70, 82], T: [67, 85] }, ff: { L: [65, 84], T: [62, 87] }, nh: { L: [46, 88], T: [52, 87] }, fh: { L: [40, 89], T: [45, 89] }, dead: true, gone: true },
+    };
+    const p = P[fr] || P.walk0;
+    const F = frame(...p.f.slice(0, 3), p.f[3] ?? 38, p.f[4] ?? 76, p.f[5] ?? 1, p.f[6] ?? 1);
+    const HF = sub(F, p.h, 68, 64);
+    const bodyD = 'M18 74C16 62 28 54 44 54C56 54 64 57 70 62L72 74C68 80 60 84 48 84C34 85 22 83 18 74Z';
 
+    // 앞다리: 어깨 → 팔꿈치(뒤로 굽음) → 손목 → 발
+    const frontLeg = (sh0, q, col, r = 1) => {
+      const S = F(sh0);
+      let W;
+      let Tp;
+      if (Array.isArray(q)) { W = [q[0] - 1, G - 2.4 - q[1]]; Tp = [q[0] + 3, G - 1.8 - q[1] + (q[1] > 2 ? 1.5 : 0)]; } else { W = F(q.L); Tp = F(q.T); }
+      const E = ik(S, W, 7, 6.6, -F.flip);
+      return blob(c, [...seg2(S, E, W, 3.3 * r, 2.5 * r, 2.1 * r), cap(W, 2.3 * r, Tp, 1.7 * r)], legG(c, col)) +
+        c.L(`M${pt(Tp)}l1.6 1.2M${pt(add(Tp, [-0.6, 0.4]))}l0.6 1.8`, '#f4eef6', 1.5);
+    };
+    // 뒷다리: 엉덩이 → 무릎(앞으로) → 발뒤꿈치 → 긴 발
+    const hindLeg = (h0, q, col, r = 1) => {
+      const Hh = F(h0);
+      let J;
+      let Tp;
+      if (Array.isArray(q)) {
+        J = q[1] > 1 ? [q[0] - 5, G - 4.5 - q[1]] : [q[0] - 6, G - 2.4 - q[1]];
+        Tp = q[1] > 1 ? [q[0] + 2.5, G - 1.8 - q[1] + 1.2] : [q[0] + 3, G - 1.8 - q[1]];
+      } else { J = F(q.L); Tp = F(q.T); }
+      const K = ik(Hh, J, 8, 6.2, F.flip);
+      return blob(c, [cap(Hh, 6.2 * r, K, 3.4 * r), cap(K, 3.4 * r, J, 2.2 * r), cap(J, 2.3 * r, Tp, 1.8 * r)], legG(c, col, 0.1)) +
+        c.L(`M${pt(Tp)}l1.8 0.8`, '#f4eef6', 1.5);
+    };
+
+    // 꼬리: 엉덩이에서 뒤로 휘어 올라가 끝에서 안개로 흩어짐
+    const tb = F([20, 72]);
+    const tip = p.tailW ? p.tailW[3] : add(F([6, 50]), p.tl);
+    const tailPts = p.tailW ? bez(F([20, 72]), ...p.tailW.slice(1), 12) : bez(tb, add(F([8, 78]), [p.tl[0] * 0.3, 0]), add(F([0, 62]), [p.tl[0] * 0.6, p.tl[1] * 0.5]), tip, 12);
+    let s = c.P(taper(tailPts, 3, 1.3), legG(c, sh(GREY, -0.08), 0.15, -0.25)) +
+      c.L(`M${pt(tailPts[3])}l1.5 1.5M${pt(tailPts[6])}l1.5 1M${pt(tailPts[9])}l1.4 0.4`, sh(GREY, -0.35), 1.5) +
+      c.mist([[tip[0], tip[1], 4.6], [tip[0] - 4, tip[1] - 5, 3.6], [tip[0] + 4, tip[1] - 6, 2.8], [tip[0] + 1, tip[1] - 11, 2]], MISTC, p.gone ? 0.5 : 0.88);
+
+    s += hindLeg([33, 73], p.fh, furD, 0.92) + frontLeg([61, 71], p.ff, furD, 0.92);
+
+    // 몸통 + 배 + 털결
+    s += F.g(c.P(bodyD, lit(c, fur, F)));
+    const bc = F([45, 70]);
+    s += form(c, bodyD, F, [bc[0], bc[1], 27, 15], 0.3, 0.2);
+    s += F.g(
+      c.Pn('M26 78C34 83 54 84 66 78C60 82 36 85 26 78Z', GREY_L, 0.6) +
+      c.L('M30 58l-2.5-3M38 55.5l-1.5-3.2M46 55l-0.5-3.4M24 63l-3-2', sh(GREY, -0.3), 1.6) +
+      c.shine(36, 60, 9, 3.4, 0.4)
+    );
+
+    // 머리: 아래턱(경첩) → 입속 → 머리뼈 → 코·눈·수염·앞니
+    const jawT = `rotate(${p.jaw} 79 69)`;
+    s += HF.g(
+      c.P('M64 60C61 54 63 48 66 46C69 47 71 51 71 55Z', sh(fur, -0.25)) + // 먼 쪽 귀
+      (p.jaw > 8 ? c.P('M76 66L93 67L90 74L78 73Z', '#3a1e2e') + c.P('M90 70.5L93.4 70.2L92.6 73L90.6 73.2Z', '#fffbe8') : '') +
+      g(c.P('M77 68L92 69C92.5 72 89 74.5 85 74.5L79 73.5C77 72.5 76 70.5 77 68Z', sh(fur, -0.12)) +
+        c.P('M89.5 69.2L92.5 69.4L92 73.2L90 73.4Z', '#fffbe8'), jawT) +
+      c.P('M64 66C62 57 69 51 77 52C84 53 90 58 95 65C96 68 94 70 91 70L80 71C72 72 66 71 64 66Z', lit(c, fur, HF, 0.45)) +
+      c.Pn('M66 67C72 70 84 70 92 69C86 72 72 73 66 67Z', OL, 0.18) +
+      g(c.E(70, 53, 7.2, 7.8, lit(c, fur, HF)) + c.En(70.6, 54, 4.2, 5, pink), `rotate(${p.ear} 70 60)`) +
+      c.E(95.4, 65.3, 2.5, 2.1, pink) +
+      c.L('M88 66l9-3.5M88.5 67.5l9.5 0.5', '#e9e4f2', 1.5, ' opacity=".85"') +
+      (p.dead ? deadEye(c, 83, 60.5, 3) : c.eye(83, 60, p.hurt ? 4 : 3.5))
+    );
+    if (p.bite) s += hitStar(c, 97, 74, 5) + c.L('M93 79l5 3M95 76l5 0', '#fff', 2, ' opacity=".9"');
+    if (p.hurt) s += hitStar(c, 46, 58, 6);
+
+    s += hindLeg([37, 74], p.nh, fur) + frontLeg([65, 72], p.nf, fur);
+    if (fr === 'attack') s += speed(c, [[16, 66, 10], [14, 74, 12], [18, 82, 8]]);
+    if (p.gone) s += c.mist([[44, 50, 4], [52, 44, 3.2], [40, 40, 2.6], [58, 36, 2]], MISTC, 0.55);
+    return c.out(fit(s, 0.9, 50, -1));
+  };
+  D.mist_rat.frames = true;
+
+  /* ---- (옛 그림: 아직 다시 그리지 않음) ---- */
+  const { EMBER, EMBER_L, VOLT, SEA, BELL, GOLD, BRONZE, zig } = RG.art._en;
   D.ash_boar = (f) => {
     const c = make(3);
     const s = f ? -1 : 1;
@@ -271,9 +513,6 @@
     );
   };
 
-  /* =========================================================
-   * 2지역 · 서리 고개
-   * ========================================================= */
   D.frost_wolf = (f) => {
     const c = make(3);
     const fur = '#d2d7e1';
