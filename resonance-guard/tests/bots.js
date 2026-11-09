@@ -465,6 +465,14 @@ function makeEnv(RG) {
     const plan = [];
     let center = pickEl(els[0]);
     if (td.type === 'amp') center = td.tower;
+    if (td.type === 'elementEffects' && byEl[td.element]) {
+      // 그 원소 탑을 가운데에, 서로 다른 원소를 둘레에 (원소마다 다른 공명)
+      center = pickEl(td.element);
+      const others = els.filter((e) => e !== td.element);
+      plan.push({ type: 'build', tower: center, c: best.c, r: best.r });
+      ring.forEach((t, i) => plan.push({ type: 'build', tower: pickEl(i < others.length ? others[i] : td.element), c: t.c, r: t.r }));
+      return plan;
+    }
     if (td.type === 'effects') {
       // 필요한 원소 짝을 찾아 이웃으로
       const need = new Map();

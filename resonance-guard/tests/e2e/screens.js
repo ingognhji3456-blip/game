@@ -24,7 +24,9 @@ async function shot(page, dir, name) {
 }
 
 async function checkLayout(page, label, issues) {
-  const res = await page.evaluate(() => {
+  // 휴대폰은 손가락 기준 최소 40px (QUALITY.md §5), 데스크톱은 30px
+  const min = /^phone/.test(label) ? 40 : 30;
+  const res = await page.evaluate((min) => {
     const out = [];
     const docW = document.documentElement.clientWidth;
     if (document.documentElement.scrollWidth > docW + 1) out.push(`가로 스크롤 (${document.documentElement.scrollWidth} > ${docW})`);
@@ -34,10 +36,10 @@ async function checkLayout(page, label, issues) {
       if (!r.width || !r.height) continue;
       const cs = getComputedStyle(b);
       if (cs.visibility === 'hidden' || cs.display === 'none') continue;
-      if (r.width < 30 || r.height < 30) out.push(`작은 버튼 "${(b.textContent || b.title || '').trim().slice(0, 14)}" ${Math.round(r.width)}×${Math.round(r.height)}`);
+      if (r.width < min || r.height < min) out.push(`작은 버튼 "${(b.textContent || b.title || b.getAttribute('aria-label') || b.className || '').trim().slice(0, 18)}" ${Math.round(r.width)}×${Math.round(r.height)}`);
     }
-    return out.slice(0, 8);
-  });
+    return out.slice(0, 12);
+  }, min);
   for (const r of res) issues.push(`${label}: ${r}`);
 }
 

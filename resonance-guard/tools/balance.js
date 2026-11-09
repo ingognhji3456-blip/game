@@ -34,12 +34,17 @@ if (has('soak')) {
   let errors = 0;
   const t0 = Date.now();
   for (let i = 0; i < n; i++) {
-    const mapId = maps[i % maps.length];
+    // 맵·모드·봇을 섞음: 5판에 1판은 도전, 7판에 1판은 무한 모드
+    const endless = i % 7 === 6;
+    const mapId = endless ? D.endless[i % D.endless.length].id : maps[i % maps.length];
+    const mode = endless ? 'endless' : i % 5 === 4 ? 'challenge' : 'normal';
     const bot = i % 3 === 0 ? 'greedy' : 'random';
     const heroes = RG.progress.heroesFor(mapId);
     try {
-      const r = env.run(optsFor(mapId, 1000 + i, heroes[i % heroes.length]), bot, { invariants: true });
-      if (r.result === 'timeout') { errors += 1; console.log(`시간 초과: ${mapId} #${i}`); }
+      const o = Object.assign(optsFor(mapId, 1000 + i, heroes[i % heroes.length]), { mode });
+      const r = env.run(o, bot, { invariants: true });
+      // 무한 모드는 끝이 없으므로 봇 상한(30분)에 닿는 것은 정상
+      if (r.result === 'timeout' && mode !== 'endless') { errors += 1; console.log(`시간 초과: ${mapId} ${mode} #${i}`); }
     } catch (e) {
       errors += 1;
       console.log(`오류: ${mapId} ${bot} #${i}: ${e.message}`);
@@ -57,7 +62,16 @@ if (has('challenge') || has('tasks')) {
   for (const mapId of maps) {
     const def = D.maps.find((m) => m.id === mapId);
     const o = optsFor(mapId, 1);
-    if (kind === 'challenge') { o.mode = 'challenge'; if (def.challenge.type === 'noHero' || (def.challenge.type === 'noBlock')) o.heroId = def.challenge.type === 'noHero' ? null : 'sio'; }
+    if (kind === 'challenge') {
+      o.mode = 'challenge';
+      const ch = def.challenge;
+      if (ch.type === 'noHero' || ch.type === 'noBlock') o.heroId = ch.type === 'noHero' ? null : 'sio';
+      // 성소를 못 쓰는 도전 + 은신 적 → 탐지 영웅(세라)을 데려감 (사람도 그렇게 풀 수밖에 없음)
+      const noSanct = (ch.type === 'banTowers' && ch.value.includes('sanctuary')) || ch.type === 'noSupport' || (ch.type === 'banElements' && ch.value.includes('light')) || (ch.type === 'allowElements' && !ch.value.includes('light'));
+      const stealth = RG.grid.parseWaves(def.waves).some((w) => w.groups.some((gr) => D.enemies[gr.e].traits.stealth));
+      const detectHero = RG.progress.heroesFor(mapId).find((h) => D.heroes[h].passive.detect);
+      if (noSanct && stealth && detectHero) o.heroId = detectHero;
+    }
     const t0 = Date.now();
     const s = env.searchBest(o, { gens: +arg('gens', 12), pop: +arg('pop', 10), objective: kind === 'challenge' ? 'challenge' : 'task', maxGens: +arg('maxgens', 20) });
     const r = s.best.r;

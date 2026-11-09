@@ -69,7 +69,7 @@ RG.data.maps = [
       'ash_boar*6/1.6 ; mist_rat*12/0.5@2 ; mist_crow*4/1.2@8',
     ],
     task: { type: 'effects', ids: ['steam'], text: '증기 폭발 켜기' },
-    challenge: { type: 'noHero', text: '영웅 없이' },
+    challenge: { type: 'lives', value: 6, text: '불꽃 6개로 시작' },
     newTowers: ['frost_crystal'], newEnemies: ['mist_crow'],
     story: { before: 's1_2' },
     tips: ['resonance', 'flying'],

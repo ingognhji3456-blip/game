@@ -157,6 +157,12 @@ button { font-family: var(--font); color: inherit; }
 .res-row.na { opacity: 0.5; }
 .warn-line { color: var(--warn); font-weight: 700; font-size: 0.86rem; }
 
+/* 손가락으로 누르는 기기: 버튼 최소 40px (QUALITY.md §5) */
+@media (pointer: coarse), (max-width: 900px), (max-height: 520px) {
+  .x-btn { min-width: 40px; min-height: 40px; }
+  .btn.small { min-height: 40px; }
+}
+
 </style>
   <style>/* css/screens.css */
 /* =========================================================
@@ -531,6 +537,15 @@ button { font-family: var(--font); color: inherit; }
 .controls-table th { text-align: left; color: var(--gold2); font-weight: 800; padding: 4px 8px; border-bottom: 1px solid var(--line); }
 .controls-table td { padding: 5px 8px; border-bottom: 1px solid #ffffff10; vertical-align: top; }
 .controls-table kbd { display: inline-block; font-family: inherit; font-size: 0.8rem; background: #ffffff14; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
+
+/* 손가락으로 누르는 기기: 표적 버튼·탑 목록 최소 40px */
+@media (pointer: coarse), (max-width: 900px), (max-height: 520px) {
+  .tm-btn { min-height: 40px; min-width: 40px; }
+  .build-item { min-width: 40px; }
+}
+@media (max-width: 520px) {
+  .build-grid { grid-template-columns: repeat(4, 1fr); }
+}
 
 </style>
 </head>
@@ -1680,7 +1695,7 @@ RG.data.maps = [
       'ash_boar*6/1.6 ; mist_rat*12/0.5@2 ; mist_crow*4/1.2@8',
     ],
     task: { type: 'effects', ids: ['steam'], text: '증기 폭발 켜기' },
-    challenge: { type: 'noHero', text: '영웅 없이' },
+    challenge: { type: 'lives', value: 6, text: '불꽃 6개로 시작' },
     newTowers: ['frost_crystal'], newEnemies: ['mist_crow'],
     story: { before: 's1_2' },
     tips: ['resonance', 'flying'],

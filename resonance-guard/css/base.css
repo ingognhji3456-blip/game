@@ -148,3 +148,9 @@ button { font-family: var(--font); color: inherit; }
 .res-row b { color: var(--gold2); }
 .res-row.na { opacity: 0.5; }
 .warn-line { color: var(--warn); font-weight: 700; font-size: 0.86rem; }
+
+/* 손가락으로 누르는 기기: 버튼 최소 40px (QUALITY.md §5) */
+@media (pointer: coarse), (max-width: 900px), (max-height: 520px) {
+  .x-btn { min-width: 40px; min-height: 40px; }
+  .btn.small { min-height: 40px; }
+}
