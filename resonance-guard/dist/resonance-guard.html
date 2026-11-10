@@ -25636,7 +25636,16 @@ RG.render = (() => {
   let shadeLayer = null;  // 바탕 + 탑 그림자 (탑이 바뀔 때만 다시 그림)
   let shadeFor = '';
   let shadeBaked = false; // 이번 프레임에 탑 그림자를 층에서 그렸는지
-  let manyEnemies = false; // 적이 아주 많으면 적의 드리운 그림자 대신 발밑 그늘만 (성능)
+  let manyEnemies = false;
+  /*
+   * 자동 화질: 느린 기기에서 프레임이 계속 늦으면(2초 동안 60% 넘게 초당 30장 아래) 그리는 해상도를 한 단계(0.5배) 낮춤.
+   * 화면 배율 상한 2 → 1.5 → 1. 낮춘 뒤 6초 동안 거의 늦지 않으면 한 단계 다시 올림.
+   */
+  let dprCap = 2;
+  let perfT = 0;
+  let perfN = 0;
+  let perfSlow = 0;
+  let perfLast = 0; // 적이 아주 많으면 적의 드리운 그림자 대신 발밑 그늘만 (성능)
   const overlay = { hover: null, selectedTower: null, ghost: null, selectedEnemy: null, heroSelected: false, skill: null, rally: null, showPaths: true };
   const REGION_BASE = { 1: '#5d7a3c', 2: '#c9d8e6', 3: '#b9774a', 4: '#3f7f86', 5: '#5d5672' };
 
@@ -25650,6 +25659,7 @@ RG.render = (() => {
     game = g;
     corpses = [];
     projStart.clear();
+    dprCap = 2; perfT = 0; perfN = 0; perfSlow = 0; perfLast = 0; perfWin = 0;
     shadeFor = '';
     ambientFor = '';
     bg = null;
@@ -25662,7 +25672,7 @@ RG.render = (() => {
   function resize() {
     if (!canvas || !game) return;
     const rect = canvas.parentElement.getBoundingClientRect();
-    dpr = Math.min(window.devicePixelRatio || 1, 2); // 2배 넘는 화면은 2배로 (휴대폰에서 채우기 비용을 줄임, 선명도 차이는 거의 없음)
+    dpr = Math.min(window.devicePixelRatio || 1, dprCap); // 2배 넘는 화면은 2배로 (휴대폰에서 채우기 비용을 줄임, 선명도 차이는 거의 없음)
     W = Math.max(100, rect.width);
     H = Math.max(80, rect.height);
     canvas.width = Math.round(W * dpr);
@@ -26780,20 +26790,48 @@ RG.render = (() => {
   }
 
   /* ---------------- 한 프레임 ---------------- */
+  let perfWin = 0;
+  function watchSpeed() {
+    const now = performance.now();
+    const gap = perfLast ? (now - perfLast) / 1000 : 0;
+    perfLast = now;
+    if (!gap || gap > 0.5) return; // 탭 전환·멈춤·그림 만들기 뒤 첫 프레임은 빼고
+    perfT += gap;
+    if (perfT < 1.5) return; // 불러온 직후는 그림을 만드느라 느릴 수 있음
+    perfN++;
+    perfWin += gap;
+    if (gap > 1 / 30) perfSlow++;
+    // 2초마다(높인 뒤 되돌리기는 6초마다) 판단 — 프레임 수가 아니라 시간으로 재야 아주 느릴 때도 빨리 반응함
+    if (perfWin >= 2 && perfN >= 12 && perfSlow / perfN > 0.6 && dprCap > 1 && (window.devicePixelRatio || 1) > 1) {
+      dprCap = Math.max(1, dprCap - 0.5);
+      resize();
+      perfN = 0; perfSlow = 0; perfWin = 0;
+    } else if (dprCap < 2 && perfWin >= 6) {
+      if (perfSlow / perfN < 0.03) { dprCap = Math.min(2, dprCap + 0.5); resize(); }
+      perfN = 0; perfSlow = 0; perfWin = 0;
+    } else if (dprCap >= 2 && perfWin >= 2) {
+      perfN = 0; perfSlow = 0; perfWin = 0;
+    }
+  }
+
   function frame(alpha, dt) {
     if (!game || !ctx) return;
+    watchSpeed();
     time += dt;
     RG.fx.update(dt);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // 맵 바깥 바탕은 캔버스 뒤 CSS 그라데이션(브라우저가 따로 합성 — 매 프레임 칠하지 않음), 캔버스는 비우기만
     const base = REGION_BASE[game.map.def.region] || '#556';
-    const g0 = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.2, W / 2, H / 2, Math.max(W, H) * 0.75);
-    g0.addColorStop(0, RG.art._h.mix(base, '#141019', 0.55));
-    g0.addColorStop(1, '#0d0a12');
-    ctx.fillStyle = g0;
-    ctx.fillRect(0, 0, W, H);
+    if (canvas._bgFor !== base) {
+      canvas._bgFor = base;
+      canvas.style.background = `radial-gradient(ellipse at center, ${RG.art._h.mix(base, '#141019', 0.55)} 20%, #0d0a12 75%)`;
+    }
+    ctx.clearRect(0, 0, W, H);
     // 맵 테두리
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.fillRect(X(0) - 4, Y(0) - 4, game.map.cols * T + 8, game.map.rows * T + 8);
+    // 테두리 그늘: 맵 넓이만큼 칠하지 않고 바깥 띠만 (맵 그림이 안쪽을 덮음)
+    ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(X(0) - 2, Y(0) - 2, game.map.cols * T + 4, game.map.rows * T + 4);
     ctx.strokeStyle = 'rgba(233,196,122,0.55)';
     ctx.lineWidth = 2;
     ctx.strokeRect(X(0) - 3, Y(0) - 3, game.map.cols * T + 6, game.map.rows * T + 6);
@@ -26873,13 +26911,13 @@ RG.render = (() => {
     drawProjectiles(alpha);
     RG.fx.draw(ctx, X, Y, T);
     updateAmbient(dt);
-    drawAmbient();
+    if (!manyEnemies) drawAmbient(); // 적이 아주 많을 땐 분위기 입자는 쉼
     drawAlerts();
     RG.fx.drawTexts(ctx, X, Y, T);
     ctx.restore();
   }
 
-  return { attach, detach, resize, frame, onEvents, muzzleOf, setShadows: (on) => { shadowsOn = !!on; }, screenToWorld, worldToScreen, overlay, tileSize, get T() { return T; } };
+  return { attach, detach, resize, frame, onEvents, muzzleOf, setShadows: (on) => { shadowsOn = !!on; }, setQuality: (cap) => { dprCap = Math.max(1, Math.min(2, cap)); resize(); }, get quality() { return dprCap; }, screenToWorld, worldToScreen, overlay, tileSize, get T() { return T; } };
 })();
 
 </script>
