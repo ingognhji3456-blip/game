@@ -893,7 +893,7 @@
     }
     if (treeSet) F.tree = sdField(treeSet, 10, 14, 60, 481, 5, 12);
     if (rubbleSet) F.rubble = sdField(rubbleSet, 10, 11, 35, 501, 4);
-    if (anyCliff) F.cliff = sdField(cliffSet, 6, 7, 45, 521, 3, 9);
+    if (anyCliff) F.cliff = sdField(cliffSet, 11, 10, 52, 521, 4.5, 13); // 4차: 더 흐리고 굽이를 키워 계단 같은 테두리를 없앰
 
     /* ---- 길: 길 칸 중심을 잇는 뼈대까지의 거리 ---- */
     const HW = 33; // 길 반폭

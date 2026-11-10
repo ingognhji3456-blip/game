@@ -242,20 +242,22 @@
   const TINTS = ['#9aa8c8', '#c8b07a', '#a08ab0', '#ffffff', '#3a2a40'];
   const tintStone = (h, col, q) => (q < 0.5 ? col : h.mix(col, TINTS[Math.floor((q - 0.5) * 10) % 5], q > 0.9 ? 0.1 : 0.16));
   /**
-   * 원기둥 옆면 돌쌓기 — 가운데 cx, 위 yt ~ 아래 yb, 반지름 rx·ry, 돌 색 col.
-   * o: rows 줄 수, bw 돌 너비, rough 막돌(크기·모서리 들쭉날쭉), seed, moss 이끼, noOutline
-   * 돌마다 자리에 따른 밝기(왼쪽 위 빛·오른쪽 그늘·끝 반사광) + 색 흔들림 + 윗모서리 빛·아랫모서리 그늘 + 이 빠짐.
+   * 돌쌓기(원기둥·원뿔대 옆면) — 가운데 cx, 위 yt(반지름 rt) ~ 아래 yb(반지름 rb), 타원 비율 kE, 돌 색 col.
+   * o: rows 줄 수(또는 ch 줄 높이), bw 돌 너비, rough 막돌(크기·모서리 들쭉날쭉), seed, moss 이끼, noOutline, ao(접지 그늘, 기본 켬)
+   * 돌마다 자리에 따른 밝기(왼쪽 위 빛·오른쪽 그늘·끝 반사광) + 색 흔들림(푸른·누런·보랏빛) + 윗모서리 빛·아랫모서리 그늘 + 이 빠짐.
    * 줄눈은 그 돌 색의 어두운 변형(진한 윤곽색 아님). 맨 아래는 땅에 닿아 가장 어둡게.
+   * 바탕은 앞 윗선(타원 호) ~ 아랫선 사이만 칠하므로 고리 담처럼 안쪽이 보여야 하는 곳에도 씀.
    */
-  function masonryCyl(c, cx, yt, yb, rx, ry, col, o = {}) {
+  function masonry(c, cx, yt, yb, rt, rb, kE, col, o = {}) {
     const h = c.h;
-    const rows = o.rows || 2;
+    const rows = o.rows || Math.max(1, Math.round((yb - yt) / (o.ch || 7)));
     const seed = o.seed || 1;
     const g = o.gap != null ? o.gap : 0.5;
     const rough = !!o.rough;
-    const sideD = `M${f(cx - rx)} ${f(yt)}V${f(yb)}A${f(rx)} ${f(ry)} 0 0 0 ${f(cx + rx)} ${f(yb)}V${f(yt)}Z`;
+    const rAt = (y) => rt + (rb - rt) * ((y - yt) / (yb - yt || 1));
+    const sideD = `M${f(cx - rt)} ${f(yt)}A${f(rt)} ${f(rt * kE)} 0 0 0 ${f(cx + rt)} ${f(yt)}L${f(cx + rb)} ${f(yb)}A${f(rb)} ${f(rb * kE)} 0 0 1 ${f(cx - rb)} ${f(yb)}Z`;
     let s = c.p(sideD, o.mortar || dk(h, col, 0.55), 0);
-    const P = (a, y) => [cx + rx * Math.sin(a), y + ry * Math.cos(a)];
+    const P = (a, y) => { const r = rAt(y); return [cx + r * Math.sin(a), y + r * kE * Math.cos(a)]; };
     const dy = (yb - yt) / rows;
     let hi = '';
     let lo = '';
@@ -263,7 +265,8 @@
     for (let i = 0; i < rows; i++) {
       const y1 = yt + i * dy;
       const y2 = y1 + dy;
-      const bw = (o.bw || 12) / rx;
+      const rm = rAt((y1 + y2) / 2);
+      const bw = (o.bw || 12) / rm;
       let a = -H2 - rn(seed * 3 + i * 7) * bw * 0.8 - (i % 2 ? bw * 0.5 : 0);
       let j = 0;
       while (a < H2) {
@@ -274,40 +277,42 @@
         a += w;
         j += 1;
         if (a2 - a1 < 0.06) continue;
-        const ia1 = g / (rx * Math.max(0.22, Math.cos(a1)));
-        const ia2 = g / (rx * Math.max(0.22, Math.cos(a2)));
+        const ia1 = g / (rm * Math.max(0.22, Math.cos(a1)));
+        const ia2 = g / (rm * Math.max(0.22, Math.cos(a2)));
         const b1 = a1 + (a1 > -H2 + 0.01 ? ia1 : 0);
         const b2 = a2 - (a2 < H2 - 0.01 ? ia2 : 0);
         if (b2 - b1 < 0.03) continue;
         const m = (b1 + b2) / 2;
-        const jt = rough ? (rn(seed + i * 13 + j) - 0.5) * 0.9 : 0;
-        const jb = rough ? (rn(seed + i * 19 + j * 3) - 0.5) * 0.9 : 0;
-        const top = i === 0 ? 0 : g;
+        const jt = rough ? (rn(seed + i * 13 + j) - 0.5) * Math.min(0.9, dy * 0.15) : 0;
+        const jb = rough ? (rn(seed + i * 19 + j * 3) - 0.5) * Math.min(0.9, dy * 0.15) : 0;
+        const top = i === 0 ? 0.15 : g;
         const bot = i === rows - 1 ? 0 : g;
-        const pts = [P(b1, y1 + top + jt), P(m, y1 + top), P(b2, y1 + top - jt * 0.5), P(b2, y2 - bot + jb * 0.4), P(m, y2 - bot), P(b1, y2 - bot - jb)];
+        const pts = [P(b1, y1 + top + Math.abs(jt)), P(m, y1 + top), P(b2, y1 + top + Math.abs(jt) * 0.5), P(b2, y2 - bot + jb * 0.4), P(m, y2 - bot), P(b1, y2 - bot - Math.abs(jb))];
         const u = (1 + Math.sin(m)) / 2;
         const fill = tintStone(h, toneAt(h, col, u), rn(seed * 7 + i * 11 + j * 13));
-        s += c.p(roundPoly(pts, rough ? 1.5 : 0.7), fill, 0);
-        if (u < 0.78) hi += `M${f(pts[0][0] + 0.4)} ${f(pts[0][1] + 0.5)}L${f(pts[1][0])} ${f(pts[1][1] + 0.5)}L${f(pts[2][0] - 0.4)} ${f(pts[2][1] + 0.5)}`;
-        lo += `M${f(pts[5][0] + 0.6)} ${f(pts[5][1] - 0.4)}L${f(pts[4][0])} ${f(pts[4][1] - 0.4)}L${f(pts[3][0] - 0.4)} ${f(pts[3][1] - 0.4)}`;
-        if (q > 0.82 && b2 - b1 > 0.16) { const pc = P(m + (b2 - b1) * 0.18, (y1 + y2) / 2); s += c.e(pc[0], pc[1], 0.9, 0.55, dk(h, fill, 0.45), 0); }
+        s += c.p(roundPoly(pts, rough ? Math.min(1.6, dy * 0.25) : 0.7), fill, 0);
+        if (u < 0.8) hi += `M${f(pts[0][0] + 0.4)} ${f(pts[0][1] + 0.55)}L${f(pts[1][0])} ${f(pts[1][1] + 0.55)}L${f(pts[2][0] - 0.4)} ${f(pts[2][1] + 0.55)}`;
+        lo += `M${f(pts[5][0] + 0.6)} ${f(pts[5][1] - 0.45)}L${f(pts[4][0])} ${f(pts[4][1] - 0.45)}L${f(pts[3][0] - 0.4)} ${f(pts[3][1] - 0.45)}`;
+        if (q > 0.8 && b2 - b1 > 0.16 && dy > 4) { const pc = P(m + (b2 - b1) * 0.18, (y1 + y2) / 2); s += c.e(pc[0], pc[1], 0.9, 0.55, dk(h, fill, 0.45), 0); }
       }
     }
     if (hi) s += c.ln(hi, lt(h, col, 0.5), 1.1, 0.75);
     if (lo) s += c.ln(lo, dk(h, col, 0.5), 1.1, 0.6);
-    /* 이끼(왼쪽 아래) */
+    /* 이끼(왼쪽 아래) — 작은 덩이 몇 개 */
     if (o.moss) {
-      const m1 = P(-1.05, yb - 0.4);
-      const m2 = P(-0.62, yb - 0.2);
-      const mm = P(-0.85, yb - dy * 0.9);
-      s += c.p(`M${f(m1[0])} ${f(m1[1])}Q${f(mm[0] - 2)} ${f(mm[1])} ${f(mm[0])} ${f(mm[1] + 1)}Q${f(mm[0] + 3)} ${f(mm[1] - 1.5)} ${f(m2[0])} ${f(m2[1])}Z`, '#6f9a4a', 1.4, c.ink('#6f9a4a'));
-      s += c.ci(mm[0] - 0.6, mm[1] + 1.6, 0.8, '#a8d070', 0);
+      const mc = '#6f9a4a';
+      [[-1.0, 0.0, 3.2], [-0.78, 0.25, 2.2], [-0.6, -0.1, 1.6]].forEach(([am, yo, r], k) => {
+        const p0 = P(am, yb - 0.6 - yo);
+        s += c.p(`M${f(p0[0] - r)} ${f(p0[1])}Q${f(p0[0] - r * 0.8)} ${f(p0[1] - r * 0.9)} ${f(p0[0] - r * 0.1)} ${f(p0[1] - r * 0.7)}Q${f(p0[0] + r * 0.5)} ${f(p0[1] - r * 1.1)} ${f(p0[0] + r)} ${f(p0[1])}Z`, k ? h.mix(mc, '#9ac060', 0.3) : mc, 1.2, c.ink(mc));
+        s += c.ci(p0[0] - r * 0.25, p0[1] - r * 0.45, Math.max(0.5, r * 0.18), '#b8e080', 0, ' opacity="0.8"');
+      });
     }
     /* 땅에 닿는 곳(가장 어둡게) */
-    s += c.p(`M${f(cx - rx)} ${f(yb - 2.4)}A${f(rx)} ${f(ry)} 0 0 0 ${f(cx + rx)} ${f(yb - 2.4)}V${f(yb)}A${f(rx)} ${f(ry)} 0 0 1 ${f(cx - rx)} ${f(yb)}Z`, OL, 0, ' opacity="0.32"');
-    if (!o.noOutline) s += c.p(`M${f(cx - rx)} ${f(yt)}V${f(yb)}A${f(rx)} ${f(ry)} 0 0 0 ${f(cx + rx)} ${f(yb)}V${f(yt)}`, 'none', 3);
+    if (o.ao !== false) s += c.p(`M${f(cx - rb)} ${f(yb - 2.4)}A${f(rb)} ${f(rb * kE)} 0 0 0 ${f(cx + rb)} ${f(yb - 2.4)}V${f(yb)}A${f(rb)} ${f(rb * kE)} 0 0 1 ${f(cx - rb)} ${f(yb)}Z`, OL, 0, ' opacity="0.3"');
+    if (!o.noOutline) s += c.p(sideD, 'none', 3);
     return s;
   }
+  const masonryCyl = (c, cx, yt, yb, rx, ry, col, o = {}) => masonry(c, cx, yt, yb, rx, rx, ry / rx, col, o);
   /**
    * 윗면 판석(타원 안에 돌 고리) — 가운데 (cx,cy), 반지름 rx·ry. 빛은 왼쪽 위.
    */
@@ -420,12 +425,12 @@
     let out = '';
     if (v === 1) {
       const rs = o.rough || M.rough;
-      out += masonryCyl(c, 50, 104, 112, 44, 13, rs, { rows: 2, bw: 11, rough: true, seed: 3, moss: true });
+      out += masonryCyl(c, 50, 104, 112, 44, 13, rs, { rows: 1, bw: 10, rough: true, seed: 3, moss: true });
       out += plankTop(c, 50, 104, 44, 13, o.top || M.plank);
       return out;
     }
     if (v === 2 || v === 3) {
-      out += masonryCyl(c, 50, 104, 112, 44, 13, stone, { rows: 2, bw: 13, seed: v === 3 ? 9 : 7 });
+      out += masonryCyl(c, 50, 104, 112, 44, 13, stone, { rows: 1, bw: 12, seed: v === 3 ? 9 : 7 });
       if (v === 3) {
         out += metalBand(c, 50, 104, 107.4, 44, 13, o.trim || M.gold);
         out += gem(c, 50, 119.6, 3.6, 4.4, E.color, true);
@@ -439,7 +444,7 @@
     const lo = dk(h, s2, 0.22);
     out += masonryCyl(c, 50, 106, 112, 46, 14, lo, { rows: 1, bw: 12, rough: true, seed: 21 });
     out += flagTop(c, 50, 106, 46, 14, lo, { seed: 23 });
-    out += masonryCyl(c, 50, 98, 106, 39, 11.5, s2, { rows: 2, bw: 11, seed: 25 });
+    out += masonryCyl(c, 50, 98, 106, 39, 11.5, s2, { rows: 1, bw: 10, seed: 25 });
     const tr = o.trim || E.color;
     out += band(c, 50, 101, 104.5, 39, 11.5, c.cg(tr), 2) + c.ln(ring(50, 101.8, 38.4, 11.3), lt(h, tr, 0.55), 0.9, 0.8);
     out += [-50, 0, 50].map((d) => {
@@ -475,5 +480,5 @@
   }
 
   /* 그룹 파일(towers-*.js)이 쓰는 공용 도구와 탑 목록 */
-  RG.art._tw = { OL, SC, VKEYS, f, M, STONE, ELEM, Ctx, fine, poly, cyl, frus, ring, band, vseam, flame, crystal, orb, aura, spark, bolt, flag, cone, person, bow, plat, house, shard, rn, roundPoly, toneAt, masonryCyl, flagTop, plankTop, gem, metalBand, T: {} };
+  RG.art._tw = { OL, SC, VKEYS, f, M, STONE, ELEM, Ctx, fine, poly, cyl, frus, ring, band, vseam, flame, crystal, orb, aura, spark, bolt, flag, cone, person, bow, plat, house, shard, rn, roundPoly, toneAt, masonry, masonryCyl, flagTop, plankTop, gem, metalBand, T: {} };
 })();

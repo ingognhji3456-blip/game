@@ -14,6 +14,7 @@
 (() => {
   const { OL, f, M, STONE, poly, crystal, orb, aura, spark, shard } = RG.art._tw;
   const T = RG.art._tw.T;
+  const H0 = RG.art._h;
 
   /* ================= 기본 계산 ================= */
   const RAD = Math.PI / 180;
@@ -22,6 +23,7 @@
   const pol = (o, len, deg) => [o[0] + Math.cos(deg * RAD) * len, o[1] + Math.sin(deg * RAD) * len];
   const lerp = (a, b, t) => a + (b - a) * t;
   const mix2 = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t)];
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   /** 자세별 값 */
   const by = (pose, idle, aim, fire) => (pose === 'aim' ? aim : pose === 'fire' ? fire : idle);
   /** 고정 난수 */
@@ -46,21 +48,71 @@
   /** 선(끝 모양 지정) */
   const lnc = (c, d, col, w, cap = 'butt', ex = '') => `<path d="${d}" fill="none" stroke="${col}" stroke-width="${c.sw(w)}" stroke-linecap="${cap}"${ex}/>`;
   /** 위·아래 그늘 덧칠(돌출부 아래 형태 그림자, 땅에 닿는 접지 그늘) */
-  const vshade = (c, a1, a2, k1 = 0.3, k2 = 0.7) => c.def(`vs${a1}_${a2}_${k1}_${k2}`, (id) => c.lgc(id, [[0, OL, a1], [k1, OL, 0], [k2, OL, 0], [1, OL, a2]]));
+  const vshade = (c, a1, a2, k1 = 0.3, k2 = 0.7) => c.def(`vs${a1}_${a2}_${k1}_${k2}`, (id) => c.lgc(id, [[0, '#24183a', a1], [k1, '#24183a', 0], [k2, '#24183a', 0], [1, '#1c1230', a2]]));
   /** 땅에 닿는 곳 접지 그늘(바닥 그림자가 아니라 맞닿은 틈의 어둠) */
-  const ao = (c, x, y, rx, ry, a = 0.45) => c.e(x, y, rx, ry, c.ag(OL, a), 0);
+  const ao = (c, x, y, rx, ry, a = 0.45) => c.e(x, y, rx, ry, c.ag('#1c1230', a), 0);
   /** 원기둥 옆면 실루엣 */
   const cylD = (cx, yt, yb, rx, ry) => `M${f(cx - rx)} ${f(yt)}V${f(yb)}A${f(rx)} ${f(ry)} 0 0 0 ${f(cx + rx)} ${f(yb)}V${f(yt)}A${f(rx)} ${f(ry)} 0 0 1 ${f(cx - rx)} ${f(yt)}Z`;
   const ellD = (cx, cy, rx, ry) => `M${f(cx - rx)} ${f(cy)}A${f(rx)} ${f(ry)} 0 1 0 ${f(cx + rx)} ${f(cy)}A${f(rx)} ${f(ry)} 0 1 0 ${f(cx - rx)} ${f(cy)}Z`;
+
+  /* ================= 색 (4차: 색을 튼 명암) ================= */
+  /*
+   * docs/design/animation.md §7.2 — 그늘은 검게가 아니라 색을 틀어서(따뜻한 색은 붉은 보라, 차가운 색은 푸른 보라),
+   * 밝은 면은 햇빛(따뜻한 흰색) 쪽으로. hs(색, +밝게 / −어둡게)
+   */
+  const LITC = '#fff4d8';
+  const SH_W = '#3c1838';
+  const SH_C = '#1b2254';
+  const hsMemo = {};
+  function hs(col, amt) {
+    if (!amt || col[0] !== '#') return col;
+    const key = col + amt;
+    if (hsMemo[key]) return hsMemo[key];
+    let out;
+    if (amt > 0) out = H0.mix(col, LITC, Math.min(1, amt));
+    else {
+      const [r, , b] = H0.hexToRgb(col);
+      const w = clamp(0.5 + (r - b) / 150, 0, 1);
+      out = H0.mix(col, H0.mix(SH_C, SH_W, w), Math.min(1, -amt * 1.12));
+    }
+    hsMemo[key] = out;
+    return out;
+  }
+  /** 안쪽 선 색: 그 자리 색의 어두운 변형(§7.1) */
+  const inl = (col, k = 0.58) => H0.mix(hs(col, -0.35), OL, k * 0.6);
+  /** 안쪽 선 속성(외곽선 대신 그 자리 색의 어두운 선) */
+  const ist = (col, k) => ` stroke="${inl(col, k)}"`;
+  /*
+   * 그리기 문맥 다듬기: 공용 Ctx 의 원기둥·위아래·공 그라데이션을 색을 튼 명암 + 반사광으로 바꿈.
+   * 이 파일의 탑을 그릴 때만 바뀝니다(공용 도구는 그대로).
+   */
+  function enhance(c) {
+    if (c._b4) return c;
+    const { def, lgc, rgc } = c;
+    // 원기둥 옆면: 왼쪽 밝은 면 → 본색 → 오른쪽 그늘(색을 튼) → 가장자리 반사광
+    c.cg = (col) => def(`C${col}`, (id) => lgc(id, [[0, hs(col, 0.1)], [0.24, hs(col, 0.32)], [0.58, col], [0.86, hs(col, -0.42)], [1, hs(col, -0.18)]], 'h'));
+    c.vg = (col, a = 0.3, b = -0.25) => def(`V${col}${a}${b}`, (id) => lgc(id, [[0, hs(col, a)], [1, hs(col, b)]]));
+    // 공: 왼쪽 위 햇빛 → 본색 → 그늘 → 가장자리 반사광
+    c.sg = (col) => def(`S${col}`, (id) => rgc(id, [[0, hs(col, 0.62)], [0.42, col], [0.84, hs(col, -0.46)], [1, hs(col, -0.2)]], 0.36, 0.3, 0.78));
+    // 평면(왼쪽 위 → 오른쪽 아래)
+    c.dg = (col, a = 0.28, b = -0.3) => def(`D${col}${a}${b}`, (id) => lgc(id, [[0, hs(col, a)], [0.55, col], [1, hs(col, b)]], 'd'));
+    c._b4 = true;
+    return c;
+  }
+  /** 빛나는 것이 둘레 면에 비추는 색 빛: 실루엣 d 안에만 */
+  const castLight = (c, d, x, y, rx, ry, col, a = 0.45) => clip(c, d, c.e(x, y, rx, ry, c.ag(col, a), 0));
+  /** 반짝점(금속·보석·눈의 반사) */
+  const spec = (c, x, y, r = 0.9, a = 0.95) => c.e(x, y, r, r * 0.8, '#ffffff', 0, ` opacity="${a}"`);
 
   /* ================= 재료 ================= */
   /*
    * 돌쌓기: 실루엣 d 안을 줄눈 있는 돌로 채웁니다. box = [x1, y1, x2, y2]
    * o: rowH 줄 높이, bw 돌 너비, bulge 줄이 가운데서 처지는 양(원기둥이면 ry), round 원기둥 명암,
    *    rough 막돌(크기·모서리 들쭉날쭉), seed, top·bot 위/아래 그늘, mortar 줄눈 색, w 외곽선(0 = 없음), lit 밝기 보정
+   * 4차: 돌마다 세 단계(윗변·왼변 빛, 본색, 아랫변·오른변 그늘), 색을 조금씩 튼 돌(누런·푸른·보랏빛), 작은 구멍,
+   *      원기둥 그늘 쪽 가장자리 반사광. 같은 색의 돌은 한 경로로 묶어 SVG 를 가볍게.
    */
   function masonry(c, d, box, col, o = {}) {
-    const h = c.h;
     const [x1, y1, x2, y2] = box;
     const R = rng(o.seed || 11);
     const rowH = o.rowH || 6;
@@ -70,9 +122,14 @@
     const hw = Math.max(1, (x2 - x1) / 2);
     const g = o.gap != null ? o.gap : 0.55;
     const lit = o.lit || 0;
+    const jit = o.rough ? 0.18 : 0.1;
     const yAt = (x, y) => y + bul * (1 - Math.min(1, ((x - cx) / hw) ** 2));
     const q = (xa, xb, yy) => { const m = (xa + xb) / 2; return [m, 2 * yAt(m, yy) - (yAt(xa, yy) + yAt(xb, yy)) / 2]; };
-    let body = c.r(x1 - 3, y1 - 3, x2 - x1 + 6, y2 - y1 + bul + 6, o.mortar || h.shade(col, -0.5), 0, 0);
+    const tints = [col, H0.mix(col, '#d0a464', 0.16), H0.mix(col, '#7c8ec8', 0.15), H0.mix(col, '#a07cb8', 0.12)];
+    const groups = {};
+    let hi = '';
+    let lo = '';
+    let pits = '';
     let y = y1;
     let row = 0;
     while (y < y2 + bul) {
@@ -95,29 +152,45 @@
         const b = xs[j + 1] - g;
         if (b - a < 0.9) continue;
         const t = Math.max(0, Math.min(1, ((a + b) / 2 - x1) / (x2 - x1)));
-        let lt = lit + (R() - 0.5) * (o.rough ? 0.24 : 0.13);
-        if (o.round) lt += 0.2 - 0.52 * t;
-        const fill = h.shade(col, Math.max(-0.7, Math.min(0.6, lt)));
+        let lt = lit + (R() - 0.5) * jit;
+        if (o.round) lt += 0.22 - 0.58 * t + (t > 0.9 ? 0.14 : 0);
+        lt = Math.round(clamp(lt, -0.7, 0.6) * 20) / 20;
+        const rr = R();
+        const ti = rr < 0.15 ? 1 : rr < 0.28 ? 2 : rr < 0.36 ? 3 : 0;
+        const fill = hs(tints[ti], lt);
         const tp = y + g;
         const bt = y + rh - g;
         const cr = o.rough ? Math.min(1.6, (b - a) * 0.25, rh * 0.25) : 0.5;
         const q1 = q(a + cr, b - cr, tp);
         const q2 = q(b - cr, a + cr, bt);
-        body += c.p(`M${f(a + cr)} ${f(yAt(a + cr, tp))}Q${pp(q1)} ${f(b - cr)} ${f(yAt(b - cr, tp))}L${f(b)} ${f(yAt(b, tp) + cr)}L${f(b)} ${f(yAt(b, bt) - cr)}L${f(b - cr)} ${f(yAt(b - cr, bt))}Q${pp(q2)} ${f(a + cr)} ${f(yAt(a + cr, bt))}L${f(a)} ${f(yAt(a, bt) - cr)}L${f(a)} ${f(yAt(a, tp) + cr)}Z`, fill, 0);
-        // 돌 윗변의 빛(큰 돌만)
-        if (o.bevel !== false && b - a > 6 && rh > 4) body += c.ln(`M${f(a + cr + 0.4)} ${f(yAt(a + cr, tp) + 0.6)}Q${f(q1[0])} ${f(q1[1] + 0.6)} ${f(b - cr - 0.6)} ${f(yAt(b - cr, tp) + 0.6)}`, h.shade(fill, 0.28), 0.8, 0.8);
+        groups[fill] = (groups[fill] || '') + `M${f(a + cr)} ${f(yAt(a + cr, tp))}Q${pp(q1)} ${f(b - cr)} ${f(yAt(b - cr, tp))}L${f(b)} ${f(yAt(b, tp) + cr)}L${f(b)} ${f(yAt(b, bt) - cr)}L${f(b - cr)} ${f(yAt(b - cr, bt))}Q${pp(q2)} ${f(a + cr)} ${f(yAt(a + cr, bt))}L${f(a)} ${f(yAt(a, bt) - cr)}L${f(a)} ${f(yAt(a, tp) + cr)}Z`;
+        if (o.bevel !== false && b - a > 4 && rh > 3.2) {
+          // 윗변·왼변의 빛, 아랫변·오른변의 그늘(돌 하나의 세 단계)
+          hi += `M${f(a + 0.35)} ${f(yAt(a, bt) - cr - 0.3)}L${f(a + 0.35)} ${f(yAt(a, tp) + cr)}L${f(a + cr + 0.4)} ${f(yAt(a + cr, tp) + 0.45)}Q${f(q1[0])} ${f(q1[1] + 0.45)} ${f(b - cr - 0.5)} ${f(yAt(b - cr, tp) + 0.45)}`;
+          lo += `M${f(b - 0.35)} ${f(yAt(b, tp) + cr + 0.4)}L${f(b - 0.35)} ${f(yAt(b, bt) - cr)}L${f(b - cr)} ${f(yAt(b - cr, bt) - 0.4)}Q${f(q2[0])} ${f(q2[1] - 0.4)} ${f(a + cr + 0.4)} ${f(yAt(a + cr, bt) - 0.4)}`;
+          // 작은 구멍·깨진 자국
+          if (b - a > 5.5 && rh > 3.8 && R() < (o.rough ? 0.2 : 0.12)) {
+            const px = lerp(a, b, 0.3 + R() * 0.4);
+            const py = lerp(yAt(px, tp), yAt(px, bt), 0.35 + R() * 0.3);
+            pits += `M${f(px - 0.6)} ${f(py)}a0.6 0.45 0 1 0 1.2 0a0.6 0.45 0 1 0 -1.2 0`;
+          }
+        }
       }
       y += rh;
       row += 1;
     }
+    let body = c.r(x1 - 3, y1 - 3, x2 - x1 + 6, y2 - y1 + bul + 6, o.mortar || hs(col, -0.5), 0, 0);
+    Object.keys(groups).forEach((fl) => { body += `<path d="${groups[fl]}" fill="${fl}" stroke="none"/>`; });
+    if (hi) body += `<path d="${hi}" fill="none" stroke="${LITC}" stroke-width="${c.sw(0.75)}" opacity="${o.hiA || 0.5}"/>`;
+    if (lo) body += `<path d="${lo}" fill="none" stroke="${hs(col, -0.62)}" stroke-width="${c.sw(0.7)}" opacity="0.55"/>`;
+    if (pits) body += `<path d="${pits}" fill="${hs(col, -0.55)}" stroke="${hs(col, 0.25)}" stroke-width="${c.sw(0.35)}" opacity="0.8"/>`;
     if (o.top || o.bot) body += c.r(x1 - 3, y1 - 3, x2 - x1 + 6, y2 - y1 + bul + 6, vshade(c, o.top || 0, o.bot || 0, o.k1 || 0.3, o.k2 || 0.7), 0, 0);
     if (o.over) body += o.over;
-    return clip(c, d, body) + (o.w === 0 ? '' : c.p(d, 'none', o.w || 3));
+    return clip(c, d, body) + (o.w === 0 ? '' : c.p(d, 'none', o.w || 3, o.ol ? ` stroke="${o.ol}"` : ''));
   }
 
-  /* 각목: 굵은 외곽선 + 위쪽 빛 + 결 */
+  /* 각목: 굵은 외곽선 + 위쪽 빛 + 결. o.inner: 벽 안쪽 들보(외곽선을 그 자리 색의 어두운 선으로) */
   function beam(c, a, b, w, col, o = {}) {
-    const h = c.h;
     const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
     const ux = (b[0] - a[0]) / L;
     const uy = (b[1] - a[1]) / L;
@@ -128,42 +201,58 @@
     const A = [a[0] - ux * e, a[1] - uy * e];
     const B = [b[0] + ux * e, b[1] + uy * e];
     const off = (p, k) => [p[0] + nx * k, p[1] + ny * k];
-    let s = lnc(c, `M${pp(A)}L${pp(B)}`, OL, w + 2.6) + lnc(c, `M${pp(a)}L${pp(b)}`, col, w);
-    s += lnc(c, `M${pp(off(a, w * 0.3))}L${pp(off(b, w * 0.3))}`, h.shade(col, 0.28), w * 0.26);
-    s += lnc(c, `M${pp(off(a, -w * 0.3))}L${pp(off(b, -w * 0.3))}`, h.shade(col, -0.3), w * 0.22);
-    if (o.grain !== false && w >= 2.6) s += lnc(c, `M${pp(off(a, -w * 0.05))}L${pp(off(b, -w * 0.05))}`, h.shade(col, -0.35), Math.max(0.7, w * 0.12), 'butt', ` stroke-dasharray="${c.sw(L * 0.22)} ${c.sw(L * 0.09)}" opacity="0.8"`);
+    let s = lnc(c, `M${pp(A)}L${pp(B)}`, o.inner ? inl(col, 0.7) : OL, w + (o.inner ? 1.6 : 2.6)) + lnc(c, `M${pp(a)}L${pp(b)}`, col, w);
+    s += lnc(c, `M${pp(off(a, w * 0.3))}L${pp(off(b, w * 0.3))}`, hs(col, 0.32), w * 0.26);
+    s += lnc(c, `M${pp(off(a, -w * 0.3))}L${pp(off(b, -w * 0.3))}`, hs(col, -0.34), w * 0.22);
+    if (o.grain !== false && w >= 2.6) {
+      s += lnc(c, `M${pp(off(a, -w * 0.05))}L${pp(off(b, -w * 0.05))}`, hs(col, -0.38), Math.max(0.7, w * 0.12), 'butt', ` stroke-dasharray="${c.sw(L * 0.22)} ${c.sw(L * 0.09)}" opacity="0.8"`);
+      // 옹이 하나(긴 들보)
+      if (L > 18) { const k = mix2(a, b, 0.62); s += c.e(k[0], k[1], w * 0.2, w * 0.14, hs(col, -0.45), 0, ' opacity="0.85"'); }
+    }
     return s;
   }
 
   /*
    * 널빤지: 실루엣 d 안을 널로 채움. box = [x1,y1,x2,y2], o.dir 'v'(세로 널) | 'h', o.pw 널 너비, o.nails 못
+   * 4차: 결·못을 한 경로로 묶고, 옹이와 갈라진 끝을 더함
    */
   function planks(c, d, box, col, o = {}) {
-    const h = c.h;
     const [x1, y1, x2, y2] = box;
     const R = rng(o.seed || 5);
     const pw = o.pw || 5;
     const vert = o.dir !== 'h';
-    let body = c.r(x1 - 2, y1 - 2, x2 - x1 + 4, y2 - y1 + 4, h.shade(col, -0.55), 0, 0);
+    let body = c.r(x1 - 2, y1 - 2, x2 - x1 + 4, y2 - y1 + 4, hs(col, -0.58), 0, 0);
     const from = vert ? x1 : y1;
     const to = vert ? x2 : y2;
+    let grain = '';
+    let nails = '';
+    let knots = '';
+    let hiL = '';
     for (let p = from; p < to; p += pw) {
-      const sh = (R() - 0.5) * 0.18 + (vert ? 0.12 - 0.3 * ((p - x1) / Math.max(1, x2 - x1)) : 0.05);
-      const fill = h.shade(col, sh);
+      const sh = (R() - 0.5) * 0.16 + (vert ? 0.12 - 0.3 * ((p - x1) / Math.max(1, x2 - x1)) : 0.05);
+      const fill = hs(col, Math.round(sh * 25) / 25);
       const g = 0.45;
       if (vert) {
         body += c.r(p + g, y1 - 2, pw - 2 * g, y2 - y1 + 4, fill, 0, 0);
-        body += c.ln(`M${f(p + pw * (0.3 + R() * 0.4))} ${f(y1 + R() * 3)}V${f(y2 - R() * 4)}`, h.shade(fill, -0.25), 0.7, 0.8);
-        if (o.nails) body += c.ci(p + pw / 2, y1 + 2.2, 0.55, h.shade(col, -0.6), 0) + c.ci(p + pw / 2, y2 - 2.2, 0.55, h.shade(col, -0.6), 0);
+        grain += `M${f(p + pw * (0.3 + R() * 0.4))} ${f(y1 + R() * 3)}V${f(y2 - R() * 4)}`;
+        if (pw > 2.6) hiL += `M${f(p + g + 0.35)} ${f(y1)}V${f(y2)}`;
+        if (o.nails) nails += `M${f(p + pw / 2)} ${f(y1 + 2.2)}h0.01M${f(p + pw / 2)} ${f(y2 - 2.2)}h0.01`;
+        if (pw > 3 && R() < 0.3) { const ky = lerp(y1, y2, 0.25 + R() * 0.5); const kx = p + pw * 0.5; knots += `M${f(kx - pw * 0.18)} ${f(ky)}a${f(pw * 0.18)} ${f(pw * 0.3)} 0 1 0 ${f(pw * 0.36)} 0a${f(pw * 0.18)} ${f(pw * 0.3)} 0 1 0 ${f(-pw * 0.36)} 0`; }
       } else {
         body += c.r(x1 - 2, p + g, x2 - x1 + 4, pw - 2 * g, fill, 0, 0);
-        body += c.ln(`M${f(x1 + R() * 4)} ${f(p + pw * (0.3 + R() * 0.4))}H${f(x2 - R() * 4)}`, h.shade(fill, -0.25), 0.7, 0.8);
-        if (o.nails) body += c.ci(x1 + 2.2, p + pw / 2, 0.55, h.shade(col, -0.6), 0) + c.ci(x2 - 2.2, p + pw / 2, 0.55, h.shade(col, -0.6), 0);
+        grain += `M${f(x1 + R() * 4)} ${f(p + pw * (0.3 + R() * 0.4))}H${f(x2 - R() * 4)}`;
+        if (pw > 2.6) hiL += `M${f(x1)} ${f(p + g + 0.35)}H${f(x2)}`;
+        if (o.nails) nails += `M${f(x1 + 2.2)} ${f(p + pw / 2)}h0.01M${f(x2 - 2.2)} ${f(p + pw / 2)}h0.01`;
+        if (pw > 3 && R() < 0.3) { const kx = lerp(x1, x2, 0.25 + R() * 0.5); const ky = p + pw * 0.5; knots += `M${f(kx - pw * 0.3)} ${f(ky)}a${f(pw * 0.3)} ${f(pw * 0.18)} 0 1 0 ${f(pw * 0.6)} 0a${f(pw * 0.3)} ${f(pw * 0.18)} 0 1 0 ${f(-pw * 0.6)} 0`; }
       }
     }
-    if (o.top || o.bot) body += c.r(x1 - 2, y1 - 2, x2 - x1 + 4, y2 - y1 + 4, vshade(c, o.top || 0, o.bot || 0), 0, 0);
+    body += `<path d="${grain}" fill="none" stroke="${hs(col, -0.4)}" stroke-width="${c.sw(0.7)}" opacity="0.7"/>`;
+    if (hiL) body += `<path d="${hiL}" fill="none" stroke="${LITC}" stroke-width="${c.sw(0.55)}" opacity="0.35"/>`;
+    if (knots) body += `<path d="${knots}" fill="${hs(col, -0.32)}" stroke="${hs(col, -0.55)}" stroke-width="${c.sw(0.5)}" opacity="0.85"/>`;
+    if (nails) body += `<path d="${nails}" fill="none" stroke="${hs(col, -0.65)}" stroke-width="${c.sw(1.2)}" stroke-linecap="round"/>`;
+    if (o.top || o.bot) body += c.r(x1 - 2, y1 - 2, x2 - x1 + 4, y2 - y1 + 4, vshade(c, o.top || 0, o.bot || 0, o.k1 || 0.3, o.k2 || 0.7), 0, 0);
     if (o.over) body += o.over;
-    return clip(c, d, body) + (o.w === 0 ? '' : c.p(d, 'none', o.w || 3));
+    return clip(c, d, body) + (o.w === 0 ? '' : c.p(d, 'none', o.w || 3, o.ol ? ` stroke="${o.ol}"` : ''));
   }
 
   /*
@@ -171,41 +260,43 @@
    * kind: 'tile'(기와) | 'thatch'(초가) | 'shingle'(널 지붕) | 'slate'(돌판)
    */
   function roofPlane(c, O, U, V, kind, col, o = {}) {
-    const h = c.h;
     const LU = Math.hypot(U[0], U[1]);
     const LV = Math.hypot(V[0], V[1]);
     const m = `matrix(${f3(U[0] / LU)} ${f3(U[1] / LU)} ${f3(V[0] / LV)} ${f3(V[1] / LV)} ${f(O[0])} ${f(O[1])})`;
     const R = rng(o.seed || 3);
     const lt = o.lit || 0;
     const rh = o.rh || (kind === 'thatch' ? 4 : 4.4);
-    let body = c.r(-1, -1, LU + 2, LV + 2, h.shade(col, lt - 0.35), 0, 0);
+    let body = c.r(-1, -1, LU + 2, LV + 2, hs(col, lt - 0.38), 0, 0);
+    let dark = '';
+    let light = '';
     let i = 0;
     for (let v = -rh * 0.4; v < LV + rh; v += rh, i++) {
-      const rowCol = h.shade(col, lt + (v / LV) * 0.12 + (R() - 0.5) * 0.06);
+      const rowCol = hs(col, Math.round((lt + (v / LV) * 0.12 + (R() - 0.5) * 0.06) * 25) / 25);
       if (kind === 'tile') {
         const tw = o.tw || 4.6;
         let dd = `M-2 ${f(v)}H${f(LU + 2)}V${f(v + rh)}`;
         for (let u = LU + 2 - ((i % 2) * tw) / 2; u > -tw; u -= tw) dd += `A${f(tw / 2)} ${f(rh * 0.45)} 0 0 1 ${f(u - tw)} ${f(v + rh)}`;
         body += c.p(`${dd}Z`, rowCol, 0);
-        body += c.ln(`M-2 ${f(v + 0.8)}H${f(LU + 2)}`, h.shade(rowCol, 0.25), 0.8, 0.7);
-        for (let u = LU + 2 - ((i % 2) * tw) / 2; u > -tw; u -= tw) body += c.ln(`M${f(u - tw / 2)} ${f(v + 1.2)}V${f(v + rh * 0.9)}`, h.shade(rowCol, -0.28), 0.8, 0.7);
+        light += `M-2 ${f(v + 0.8)}H${f(LU + 2)}`;
+        for (let u = LU + 2 - ((i % 2) * tw) / 2; u > -tw; u -= tw) dark += `M${f(u - tw / 2)} ${f(v + 1.2)}V${f(v + rh * 0.9)}`;
       } else if (kind === 'thatch') {
         body += c.r(-2, v, LU + 4, rh + 0.6, rowCol, 0, 0);
-        let s = '';
-        for (let u = -1; u < LU + 2; u += 1.6) { const l = rh * (0.6 + R() * 0.5); s += `M${f(u + R() * 0.8)} ${f(v + rh + 0.4 - l)}l${f((R() - 0.5) * 0.8)} ${f(l)}`; }
-        body += c.ln(s, h.shade(rowCol, -0.28), 0.7, 0.85);
-        body += c.ln(`M-2 ${f(v + rh + 0.2)}H${f(LU + 2)}`, h.shade(rowCol, -0.45), 0.9, 0.8);
+        for (let u = -1; u < LU + 2; u += 1.6) { const l = rh * (0.6 + R() * 0.5); dark += `M${f(u + R() * 0.8)} ${f(v + rh + 0.4 - l)}l${f((R() - 0.5) * 0.8)} ${f(l)}`; }
+        for (let u = 0.4; u < LU + 2; u += 3.1) light += `M${f(u + R())} ${f(v + 0.6)}l${f((R() - 0.5) * 0.6)} ${f(rh * 0.5)}`;
+        dark += `M-2 ${f(v + rh + 0.2)}H${f(LU + 2)}`;
       } else {
         // shingle · slate: 엇갈린 네모 조각
         const tw = o.tw || (kind === 'slate' ? 6 : 5);
         body += c.r(-2, v, LU + 4, rh, rowCol, 0, 0);
-        let s = '';
-        for (let u = -((i % 2) * tw) / 2 + (R() - 0.5); u < LU + 2; u += tw) s += `M${f(u)} ${f(v)}V${f(v + rh)}`;
-        body += c.ln(s, h.shade(rowCol, -0.35), 0.8, 0.85);
-        body += c.ln(`M-2 ${f(v + rh - 0.2)}H${f(LU + 2)}`, h.shade(rowCol, -0.45), 0.9, 0.85);
-        body += c.ln(`M-2 ${f(v + 0.7)}H${f(LU + 2)}`, h.shade(rowCol, 0.22), 0.7, 0.6);
+        for (let u = -((i % 2) * tw) / 2 + (R() - 0.5); u < LU + 2; u += tw) dark += `M${f(u)} ${f(v)}V${f(v + rh)}`;
+        dark += `M-2 ${f(v + rh - 0.2)}H${f(LU + 2)}`;
+        light += `M-2 ${f(v + 0.7)}H${f(LU + 2)}`;
       }
     }
+    body += `<path d="${dark}" fill="none" stroke="${hs(col, lt - 0.5)}" stroke-width="${c.sw(0.8)}" opacity="0.8"/>`;
+    if (light) body += `<path d="${light}" fill="none" stroke="${LITC}" stroke-width="${c.sw(0.7)}" opacity="0.32"/>`;
+    // 용마루 쪽은 밝고 처마 쪽 끝은 짙게(빛 + 처마 그늘)
+    body += c.r(-1, -1, LU + 2, LV + 2, vshade(c, 0, 0.3, 0.3, 0.75), 0, 0);
     if (o.over) body += o.over;
     const corners = [O, [O[0] + U[0], O[1] + U[1]], [O[0] + U[0] + V[0], O[1] + U[1] + V[1]], [O[0] + V[0], O[1] + V[1]]];
     const dl = `M0 0H${f(LU)}V${f(LV)}H0Z`;
@@ -215,31 +306,36 @@
 
   /* 창: 가운데 (x,y), 너비 w, 높이 ht, lit 0(어둠)~1(불빛), arch 아치 위, frame 틀 색 */
   function win(c, x, y, w, ht, lit, o = {}) {
-    const h = c.h;
     const fr = o.frame || '#5a4636';
     const top = y - ht / 2;
     const d = o.arch ? `M${f(x - w / 2)} ${f(y + ht / 2)}V${f(top + w / 2)}A${f(w / 2)} ${f(w / 2)} 0 0 1 ${f(x + w / 2)} ${f(top + w / 2)}V${f(y + ht / 2)}Z` : `M${f(x - w / 2)} ${f(top)}H${f(x + w / 2)}V${f(y + ht / 2)}H${f(x - w / 2)}Z`;
-    const gl = lit > 0 ? c.def(`win${lit}`, (id) => c.rgc(id, [[0, h.mix('#3a2e2a', '#fff2b8', lit)], [0.7, h.mix('#2a2226', '#ffc35a', lit)], [1, h.mix('#1e1820', '#d9822a', lit)]], 0.45, 0.6, 0.7)) : '#241c26';
+    const gl = lit > 0 ? c.def(`win${lit}`, (id) => c.rgc(id, [[0, H0.mix('#3a2e2a', '#fff2b8', lit)], [0.7, H0.mix('#2a2226', '#ffc35a', lit)], [1, H0.mix('#1e1820', '#d9822a', lit)]], 0.45, 0.6, 0.7)) : '#241c26';
     let s = '';
     if (lit > 0.5 && o.glow !== false) s += aura(c, x, y, w * 1.3, ht * 0.9, '#ffd77a', 0.35 * lit);
-    s += c.p(d, gl, 0) + c.ln(`M${f(x)} ${f(top + 0.5)}V${f(y + ht / 2)}M${f(x - w / 2)} ${f(y + ht * 0.05)}H${f(x + w / 2)}`, fr, Math.max(1, w * 0.13));
-    s += c.p(d, 'none', o.w || 2.2, ` stroke="${fr}"`) + c.p(d, 'none', 1.1);
+    s += c.p(d, gl, 0);
+    // 창 안쪽 위 그늘(벽 두께)
+    s += clip(c, d, c.r(x - w / 2, top - 1, w, Math.min(2.4, ht * 0.25) + (o.arch ? w / 2 : 0), '#1c1230', 0, 0, ' opacity="0.35"'));
+    s += c.ln(`M${f(x)} ${f(top + 0.5)}V${f(y + ht / 2)}M${f(x - w / 2)} ${f(y + ht * 0.05)}H${f(x + w / 2)}`, fr, Math.max(1, w * 0.13));
+    s += c.p(d, 'none', o.w || 2.2, ` stroke="${fr}"`) + c.p(d, 'none', 1, ist(fr, 0.8));
     // 창턱 + 그 아래 짙은 그늘
-    if (o.sill !== false) s += c.r(x - w / 2 - 1.4, y + ht / 2, w + 2.8, 1.8, c.vg(o.sillCol || '#d8cfbf', 0.2, -0.2), 0.4, 1.4) + c.r(x - w / 2 - 0.6, y + ht / 2 + 2.4, w + 1.2, 1.2, OL, 0, 0, ' opacity="0.25"');
+    if (o.sill !== false) s += c.r(x - w / 2 - 1.4, y + ht / 2, w + 2.8, 1.8, c.vg(o.sillCol || '#d8cfbf', 0.2, -0.2), 0.4, 1.2, ist(o.sillCol || '#d8cfbf')) + c.r(x - w / 2 - 0.6, y + ht / 2 + 2.2, w + 1.2, 1.2, '#1c1230', 0, 0, ' opacity="0.3"');
     return s;
   }
 
   /* 쇠 리벳 줄 */
-  const rivets = (c, pts, col = '#c9d0d8', r = 0.75) => pts.map((p) => c.ci(p[0], p[1], r, col, 0) + c.ci(p[0] + r * 0.25, p[1] + r * 0.3, r * 0.45, c.h.shade(col, -0.5), 0)).join('');
+  const rivets = (c, pts, col = '#c9d0d8', r = 0.75) => pts.map((p) => c.ci(p[0], p[1], r, col, 0) + c.ci(p[0] + r * 0.25, p[1] + r * 0.3, r * 0.45, hs(col, -0.5), 0)).join('');
 
-  /* 이끼 덩이 (윗면에 얹힘) */
+  /* 이끼 덩이 (윗면에 얹힘) — 안쪽 선은 짙은 초록 */
   function mossPatch(c, x, y, w, ht, seed = 1) {
     const R = rng(seed);
     let d = `M${f(x - w / 2)} ${f(y)}`;
     const n = 5;
     for (let i = 0; i <= n; i++) { const t = i / n; d += `Q${f(x - w / 2 + w * (t - 0.1))} ${f(y - ht * (0.6 + R() * 0.6))} ${f(x - w / 2 + w * t)} ${f(y - ht * (i === 0 || i === n ? 0 : 0.3 + R() * 0.3))}`; }
     d += `Q${f(x)} ${f(y + ht * 0.8)} ${f(x - w / 2)} ${f(y)}Z`;
-    return c.p(d, c.vg('#6fae3e', 0.3, -0.25), 1.6) + c.ci(x - w * 0.2, y - ht * 0.35, Math.max(0.6, ht * 0.18), '#a8d870', 0, ' opacity="0.8"');
+    let s = c.p(d, c.vg('#74b23e', 0.32, -0.3), 1.3, ' stroke="#2c4a1c"');
+    // 잎 끝 붓질(밝은 점)
+    s += c.ci(x - w * 0.2, y - ht * 0.35, Math.max(0.6, ht * 0.18), '#b8e07a', 0, ' opacity="0.85"') + c.ci(x + w * 0.15, y - ht * 0.45, Math.max(0.5, ht * 0.12), '#d4f0a0', 0, ' opacity="0.7"');
+    return s;
   }
 
 
@@ -249,66 +345,94 @@
    * Lv3 + 금속 테와 원소 보석, Lv4 2단 + 원소 띠. 돌 하나하나를 줄눈으로 쌓고, 맨 아랫줄은 땅에 닿아 어둡게.
    */
   function base(c, v, o = {}) {
-    const h = c.h;
     const E = c.E;
     const stone = o.stone || '#a7a29b';
     const seed = o.seed || 21;
     let s = '';
     if (v === 1) {
       const rs = o.rough || M.rough;
-      s += masonry(c, cylD(50, 104, 112, 44, 13), [6, 104, 94, 112], rs, { round: true, rough: true, rowH: 4, bw: 9, bulge: 13, seed, bot: 0.28, k2: 0.6 });
+      s += masonry(c, cylD(50, 104, 112, 44, 13), [6, 104, 94, 112], rs, { round: true, rough: true, rowH: 4, bw: 9, bulge: 13, seed, bot: 0.32, k2: 0.55 });
       const top = ellD(50, 104, 44, 13);
-      s += planks(c, top, [6, 91, 94, 117], o.top || M.plank, { pw: 8.8, seed: seed + 1, nails: true, bot: 0.12, top: 0.05 });
+      s += planks(c, top, [6, 91, 94, 117], o.top || M.plank, { pw: 8.8, seed: seed + 1, nails: true, bot: 0.14, top: 0.04, w: 3 });
+      // 널 마루 가장자리 빛(왼쪽 위)과 테두리 안쪽 그늘
+      s += c.ln('M9 101.5Q14 94.5 32 92.4', LITC, 1.1, 0.45);
       return s;
     }
     if (v === 2 || v === 3) {
-      s += masonry(c, cylD(50, 104, 112, 44, 13), [6, 104, 94, 112], stone, { round: true, rowH: 4, bw: 11, bulge: 13, seed, bot: 0.25, k2: 0.6 });
+      s += masonry(c, cylD(50, 104, 112, 44, 13), [6, 104, 94, 112], stone, { round: true, rowH: 4, bw: 11, bulge: 13, seed, bot: 0.3, k2: 0.55 });
       if (v === 3) {
         const tr = o.trim || M.gold;
         s += c.p(`M6 104A44 13 0 0 0 94 104V107.5A44 13 0 0 1 6 107.5Z`, c.cg(tr), 2);
-        s += rivets(c, [-60, -30, 0, 30, 60].map((dg) => [50 + 44 * Math.sin(dg * RAD), 105.8 + 13 * Math.cos(dg * RAD)]), h.shade(tr, 0.5), 0.8);
-        s += c.p(poly([[50, 115], [54, 119.5], [50, 124], [46, 119.5]]), c.vg(E.color, 0.4, -0.2), 2) + c.p(poly([[50, 115.8], [52.4, 119.5], [50, 119.5]]), '#fff', 0, ' opacity="0.6"');
+        s += c.ln('M8 105.6A44 13 0 0 0 40 116.6', LITC, 0.8, 0.6);
+        s += rivets(c, [-60, -30, 0, 30, 60].map((dg) => [50 + 44 * Math.sin(dg * RAD), 105.8 + 13 * Math.cos(dg * RAD)]), hs(tr, 0.5), 0.8);
+        s += c.p(poly([[50, 115], [54, 119.5], [50, 124], [46, 119.5]]), c.vg(E.color, 0.4, -0.25), 2) + c.p(poly([[50, 115.8], [52.4, 119.5], [50, 119.5]]), '#fff', 0, ' opacity="0.6"') + spec(c, 48.8, 117.6, 0.7);
       }
-      s += masonry(c, ellD(50, 104, 44, 13), [6, 91, 94, 117], h.shade(stone, 0.2), { rowH: 6.5, bw: 13, seed: seed + 2, gap: 0.45, bevel: false });
-      s += c.e(50, 104, 34, 9.5, 'none', 0, ` stroke="${h.shade(stone, -0.25)}" stroke-width="${c.sw(1.5)}"`);
+      s += masonry(c, ellD(50, 104, 44, 13), [6, 91, 94, 117], hs(stone, 0.2), { rowH: 6.5, bw: 13, seed: seed + 2, gap: 0.45, hiA: 0.35 });
+      s += c.e(50, 104, 34, 9.5, 'none', 0, ` stroke="${hs(stone, -0.28)}" stroke-width="${c.sw(1.3)}"`);
+      s += c.ln('M9 101.5Q14 94.5 32 92.4', LITC, 1.1, 0.5);
       return s;
     }
     const s2 = o.stone || stone;
-    const lo = h.shade(s2, -0.22);
-    s += masonry(c, cylD(50, 106, 112, 46, 14), [4, 106, 96, 112], lo, { round: true, rough: true, rowH: 3.2, bw: 12, bulge: 14, seed, bot: 0.32, k2: 0.45 });
-    s += masonry(c, ellD(50, 106, 46, 14), [4, 92, 96, 120], h.shade(lo, 0.12), { rowH: 7, bw: 14, seed: seed + 3, gap: 0.45, bevel: false });
+    const lo = hs(s2, -0.22);
+    s += masonry(c, cylD(50, 106, 112, 46, 14), [4, 106, 96, 112], lo, { round: true, rough: true, rowH: 3.2, bw: 12, bulge: 14, seed, bot: 0.36, k2: 0.42 });
+    s += masonry(c, ellD(50, 106, 46, 14), [4, 92, 96, 120], hs(lo, 0.12), { rowH: 7, bw: 14, seed: seed + 3, gap: 0.45, bevel: false });
     s += masonry(c, cylD(50, 98, 106, 39, 11.5), [11, 98, 89, 106], s2, { round: true, rowH: 4, bw: 10, bulge: 11.5, seed: seed + 4, bot: 0.3 });
+    // 위 단이 아래 단에 닿는 곳 접촉 그늘
+    s += c.p('M11 105.4A39 11.5 0 0 0 89 105.4L89 106.4A39 11.5 0 0 1 11 106.4Z', '#1c1230', 0, ' opacity="0.35"');
     s += c.p(`M11 101A39 11.5 0 0 0 89 101V104.5A39 11.5 0 0 1 11 104.5Z`, c.vg(o.trim || E.color, 0.3, -0.3), 2);
+    s += c.ln('M12.5 102.4A39 11.5 0 0 0 40 112', LITC, 0.8, 0.55);
     s += [-50, 0, 50].map((dg) => {
       const x = 50 + 39 * Math.sin(dg * RAD);
       const y = 102.8 + 11.5 * Math.cos(dg * RAD);
-      return c.p(poly([[x, y - 4], [x + 3, y], [x, y + 4], [x - 3, y]]), c.vg(E.light, 0.3, -0.1), 1.8);
+      return c.p(poly([[x, y - 4], [x + 3, y], [x, y + 4], [x - 3, y]]), c.vg(E.light, 0.3, -0.15), 1.8) + spec(c, x - 0.9, y - 1.4, 0.6);
     }).join('');
-    s += masonry(c, ellD(50, 98, 39, 11.5), [11, 86, 89, 110], h.shade(s2, 0.22), { rowH: 6, bw: 12, seed: seed + 5, gap: 0.45, bevel: false });
+    s += masonry(c, ellD(50, 98, 39, 11.5), [11, 86, 89, 110], hs(s2, 0.22), { rowH: 6, bw: 12, seed: seed + 5, gap: 0.45, hiA: 0.3 });
     s += c.e(50, 98, 30, 8.5, 'none', 0, ` stroke="${E.color}" stroke-width="${c.sw(2)}" opacity="0.7"`);
+    s += c.ln('M14 95.8Q19 89.6 36 87.8', LITC, 1, 0.45);
     return s;
   }
 
   /* ================= 사람 ================= */
   /** 장화(오른쪽을 향함) — 발바닥 (x,y) */
-  const boot = (c, p, k, col) => c.p(`M${f(p[0] - 2.4 * k)} ${f(p[1])}V${f(p[1] - 3.6 * k)}H${f(p[0] + 1.6 * k)}Q${f(p[0] + 4.8 * k)} ${f(p[1] - 3 * k)} ${f(p[0] + 4.8 * k)} ${f(p[1])}Z`, c.vg(col, 0.25, -0.2), 2.2);
+  const boot = (c, p, k, col) => c.p(`M${f(p[0] - 2.4 * k)} ${f(p[1])}V${f(p[1] - 3.6 * k)}H${f(p[0] + 1.6 * k)}Q${f(p[0] + 4.8 * k)} ${f(p[1] - 3 * k)} ${f(p[0] + 4.8 * k)} ${f(p[1])}Z`, c.vg(col, 0.3, -0.25), 2.2)
+    + c.ln(`M${f(p[0] - 1.8 * k)} ${f(p[1] - 2.9 * k)}H${f(p[0] + 1.4 * k)}`, hs(col, 0.4), 0.7 * k, 0.7);
+  /** 관(팔다리 한 마디): 본색 + 왼쪽 위 빛 줄 + 오른쪽 아래 그늘 줄 */
+  function tube(c, a, b, w, col) {
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    let nx = -(b[1] - a[1]) / L;
+    let ny = (b[0] - a[0]) / L;
+    if (nx + ny > 0) { nx = -nx; ny = -ny; }
+    const o = (p, k) => `${f(p[0] + nx * k)} ${f(p[1] + ny * k)}`;
+    return c.ln(`M${pp(a)}L${pp(b)}`, col, w) + c.ln(`M${o(a, w * 0.24)}L${o(b, w * 0.24)}`, hs(col, 0.3), w * 0.3) + c.ln(`M${o(a, -w * 0.28)}L${o(b, -w * 0.28)}`, hs(col, -0.32), w * 0.24);
+  }
   /** 두 마디 팔다리(관절이 이어짐) */
   function limb(c, a, j, b, w, cu, cl) {
-    return c.ln(`M${pp(a)}L${pp(j)}L${pp(b)}`, OL, w + 2.6) + c.ln(`M${pp(a)}L${pp(j)}`, cu, w) + c.ln(`M${pp(j)}L${pp(b)}`, cl || cu, w * 0.9);
+    return c.ln(`M${pp(a)}L${pp(j)}L${pp(b)}`, OL, w + 2.6) + tube(c, a, j, w, cu) + tube(c, j, b, w * 0.9, cl || cu) + c.ci(j[0], j[1], w * 0.45, cu, 0);
   }
   /** 쥔 손 */
-  const fist = (c, p, r, col) => c.ci(p[0], p[1], r, c.sg(col), 2.2) + c.ln(`M${f(p[0] - r * 0.2)} ${f(p[1] - r * 0.55)}L${f(p[0] + r * 0.45)} ${f(p[1] + r * 0.1)}`, c.h.shade(col, -0.35), 0.8, 0.8);
+  const fist = (c, p, r, col) => c.ci(p[0], p[1], r, c.sg(col), 2.2) + c.ln(`M${f(p[0] - r * 0.2)} ${f(p[1] - r * 0.55)}L${f(p[0] + r * 0.45)} ${f(p[1] + r * 0.1)}`, hs(col, -0.38), 0.8, 0.8);
+  /**
+   * 자세 키우기(§7.5 일꾼 15~25% 크게): 발 가운데를 기준으로 좌표를 s배. 반환 함수 S(p) 와 크기 k
+   */
+  function grow(feet, s) {
+    const ax = (feet[0][0] + feet[1][0]) / 2;
+    const ay = Math.max(feet[0][1], feet[1][1]);
+    const S = (p) => [ax + (p[0] - ax) * s, ay + (p[1] - ay) * s];
+    S.k = s;
+    S.a = [ax, ay];
+    return S;
+  }
 
   /*
    * 사람(오른쪽을 봄). g = {
    *   hip:[x,y], lean(도, + 앞으로 숙임), k(크기), feet:[뒤, 앞], hands:[뒤, 앞], bend:[뒤팔, 앞팔](+1 팔꿈치가 뒤·아래로),
-   *   skin, shirt, sleeve, pants, boot, belt, robe(긴 옷 색), apron, glove, hat(c, H, r, up, nx) → 문자열, face(c, H, r)
+   *   skin, shirt, sleeve, pants, boot, belt, robe(긴 옷 색), apron, glove, hat(c, H, r, up, nx) → 문자열, face(c, H, r),
+   *   cuff(소매 끝 색), sash(허리띠 천 색)
    * }
    * 반환: { back(뒷다리·뒷팔), body(앞다리·몸·머리), handB(뒷손), front(앞팔·앞손), H, r, neck, up, nx }
    * 그리는 순서: back → (몸 뒤 도구) → body → (손에 든 도구) → handB → front
    */
   function fig(c, g) {
-    const h = c.h;
     const k = g.k || 1;
     const lean = (g.lean || 0) * RAD;
     const up = [Math.sin(lean), -Math.cos(lean)];
@@ -334,11 +458,18 @@
     const pants = g.pants || '#5a4a3a';
     const bootC = g.boot || '#3e2e22';
     const leg = (hp, ft, col) => limb(c, hp, joint(hp, ft, LL, LL, -1), ft, 4.3 * k, col) + boot(c, ft, k, bootC);
-    const arm = (s0, hd, b, col) => limb(c, s0, joint(s0, hd, AL, AL, b), hd, 3.7 * k, col, g.bare ? sk : col);
-    let back = '';
+    const arm = (s0, hd, b, col) => {
+      const el = joint(s0, hd, AL, AL, b);
+      let a = limb(c, s0, el, hd, 3.7 * k, col, g.bare ? sk : col);
+      // 소매 끝 테(손목 쪽)
+      if (g.cuff) { const w0 = mix2(el, hd, 0.72); const w1 = mix2(el, hd, 0.86); a += c.ln(`M${pp(w0)}L${pp(w1)}`, g.cuff, 3.4 * k); }
+      return a;
+    };
+    // 발밑 접촉 그늘
+    let back = ao(c, fB[0] + 1, fB[1], 4 * k, 1.3 * k, 0.5) + ao(c, fF[0] + 1, fF[1], 4.2 * k, 1.3 * k, 0.5);
     let body = '';
-    if (!g.robe) back += leg(hB, fB, h.shade(pants, -0.22));
-    back += arm(sB, aB, bend[0], h.shade(sl, -0.2));
+    if (!g.robe) back += leg(hB, fB, hs(pants, -0.22));
+    back += arm(sB, aB, bend[0], hs(sl, -0.22));
     // 몸통(왼쪽 위 빛: 왼쪽 밝고 오른쪽 어두움)
     const tw = 4.7;
     const bw = 4.2;
@@ -347,25 +478,31 @@
       const yb = Math.max(fB[1], fF[1]) - 1.2 * k;
       const xl = Math.min(fB[0], fF[0]) - 3.4 * k;
       const xr = Math.max(fB[0], fF[0]) + 3.4 * k;
-      body += boot(c, fB, k, h.shade(bootC, -0.2)) + boot(c, fF, k, bootC);
+      body += boot(c, fB, k, hs(bootC, -0.2)) + boot(c, fF, k, bootC);
       const rd = `M${pp(at(neck, 0.4, -tw))}Q${f(xl - 1)} ${f(lerp(neck[1], yb, 0.55))} ${f(xl)} ${f(yb)}Q${f((xl + xr) / 2)} ${f(yb + 2.2 * k)} ${f(xr)} ${f(yb)}Q${f(xr + 0.5)} ${f(lerp(neck[1], yb, 0.5))} ${pp(at(neck, 0.4, tw))}Q${pp(at(neck, 2.8, 0))} ${pp(at(neck, 0.4, -tw))}Z`;
       body += c.p(rd, c.cg(g.robe), 2.6);
-      // 옷 주름(빛 반대쪽에 짙게)
-      body += c.ln(`M${f(lerp(xl, xr, 0.42))} ${f(lerp(neck[1], yb, 0.45))}L${f(lerp(xl, xr, 0.36))} ${f(yb)}M${f(lerp(xl, xr, 0.7))} ${f(lerp(neck[1], yb, 0.4))}L${f(lerp(xl, xr, 0.76))} ${f(yb + 0.8)}`, h.shade(g.robe, -0.32), 1.1, 0.8);
+      // 옷 주름 셋(빛 반대쪽에 짙게) + 왼쪽 주름의 빛
+      const fc = inl(g.robe, 0.45);
+      body += c.ln(`M${f(lerp(xl, xr, 0.42))} ${f(lerp(neck[1], yb, 0.45))}L${f(lerp(xl, xr, 0.36))} ${f(yb)}M${f(lerp(xl, xr, 0.7))} ${f(lerp(neck[1], yb, 0.4))}L${f(lerp(xl, xr, 0.76))} ${f(yb + 0.8)}M${f(lerp(xl, xr, 0.57))} ${f(lerp(neck[1], yb, 0.62))}L${f(lerp(xl, xr, 0.56))} ${f(yb + 1)}`, fc, 1, 0.85);
+      body += c.ln(`M${f(lerp(xl, xr, 0.3))} ${f(lerp(neck[1], yb, 0.5))}L${f(lerp(xl, xr, 0.24))} ${f(yb - 0.6)}`, hs(g.robe, 0.45), 0.9, 0.7);
       if (g.trim) body += c.ln(`M${f(xl + 0.8)} ${f(yb - 1)}Q${f((xl + xr) / 2)} ${f(yb + 1.2 * k)} ${f(xr - 0.8)} ${f(yb - 1)}`, g.trim, 1.6);
+      if (g.sash) body += c.ln(`M${pp(at(hip, 2.4, -bw - 0.4))}Q${pp(at(hip, 1.6, 0))} ${pp(at(hip, 2.2, bw + 0.6))}`, inl(g.sash, 0.5), 3.4 * k) + c.ln(`M${pp(at(hip, 2.4, -bw - 0.4))}Q${pp(at(hip, 1.6, 0))} ${pp(at(hip, 2.2, bw + 0.6))}`, g.sash, 2 * k);
     } else {
       body += leg(hF, fF, pants);
       body += c.p(tor, c.cg(shirt), 2.6);
-      body += c.ln(`M${pp(at(hip, 4.5, 0.8))}L${pp(at(hip, 0.6, 1.9))}`, h.shade(shirt, -0.3), 1, 0.7);
-      if (g.apron) body += c.p(`M${pp(at(neck, -3, -1.2))}L${pp(at(neck, -3, 3.6))}L${pp(at(hip, -4.5, 4.4))}L${pp(at(hip, -4.5, -1.8))}Z`, c.vg(g.apron, 0.15, -0.25), 1.8);
-      body += c.ln(`M${pp(at(hip, 1.4, -bw))}L${pp(at(hip, 1.4, bw))}`, OL, 3.2) + c.ln(`M${pp(at(hip, 1.4, -bw + 0.5))}L${pp(at(hip, 1.4, bw - 0.5))}`, g.belt || '#6a4428', 1.8);
-      body += c.r(at(hip, 1.4, 1.2)[0] - 1, at(hip, 1.4, 1.2)[1] - 1, 2, 2, M.gold, 0.3, 1);
+      const fc = inl(shirt, 0.45);
+      body += c.ln(`M${pp(at(hip, 4.5, 0.8))}L${pp(at(hip, 0.6, 1.9))}M${pp(at(neck, -2.4, 2.6))}Q${pp(at(neck, -4.5, 1.4))} ${pp(at(neck, -6, 2.4))}`, fc, 0.9, 0.8);
+      if (g.apron) body += c.p(`M${pp(at(neck, -3, -1.2))}L${pp(at(neck, -3, 3.6))}L${pp(at(hip, -4.5, 4.4))}L${pp(at(hip, -4.5, -1.8))}Z`, c.vg(g.apron, 0.18, -0.28), 1.6, ist(g.apron));
+      const belt = g.belt || '#6a4428';
+      body += c.ln(`M${pp(at(hip, 1.4, -bw))}L${pp(at(hip, 1.4, bw))}`, inl(shirt, 0.75), 3) + c.ln(`M${pp(at(hip, 1.4, -bw + 0.5))}L${pp(at(hip, 1.4, bw - 0.5))}`, belt, 1.8);
+      const bk = at(hip, 1.4, 1.2);
+      body += c.r(bk[0] - 1, bk[1] - 1, 2, 2, M.gold, 0.3, 0.8, ist(M.gold)) + spec(c, bk[0] - 0.4, bk[1] - 0.4, 0.4);
     }
     // 목 + 머리
-    body += c.ln(`M${pp(neck)}L${pp(at(neck, 2.2, 0.4))}`, OL, 4.4 * k) + c.ln(`M${pp(neck)}L${pp(at(neck, 2.2, 0.4))}`, h.shade(sk, -0.15), 2.4 * k);
-    body += c.ci(H[0], H[1], r, c.def(`skin${sk}`, (id) => c.rgc(id, [[0, h.shade(sk, 0.25)], [0.6, sk], [1, h.shade(sk, -0.25)]], 0.35, 0.3, 0.8)), 2.6);
+    body += c.ln(`M${pp(neck)}L${pp(at(neck, 2.2, 0.4))}`, OL, 4.4 * k) + c.ln(`M${pp(neck)}L${pp(at(neck, 2.2, 0.4))}`, hs(sk, -0.2), 2.4 * k);
+    body += c.ci(H[0], H[1], r, c.def(`skin${sk}`, (id) => c.rgc(id, [[0, hs(sk, 0.28)], [0.58, sk], [0.9, hs(sk, -0.3)], [1, hs(sk, -0.12)]], 0.35, 0.3, 0.8)), 2.6);
     if (g.face) body += g.face(c, H, r, up, nx);
-    else body += c.e(H[0] + r * 0.45, H[1] + r * 0.02, 0.85 * k, 1.25 * k, '#2a1a2e', 0) + c.ci(H[0] + r * 0.97, H[1] + r * 0.2, 0.9 * k, h.shade(sk, -0.12), 0);
+    else body += c.e(H[0] + r * 0.45, H[1] + r * 0.02, 0.85 * k, 1.25 * k, '#2a1a2e', 0) + c.ci(H[0] + r * 0.97, H[1] + r * 0.2, 0.9 * k, hs(sk, -0.15), 0);
     if (g.hat) body += g.hat(c, H, r, up, nx);
     const handB = fist(c, aB, 2.2 * k, gl);
     const front = arm(sF, aF, bend[1], sl) + fist(c, aF, 2.25 * k, gl);
@@ -413,16 +550,16 @@
     const obs = g.kind === 'obsidian';
     const leg = (hp, ft, cc) => limb(c, hp, joint(hp, ft, 4.6 * k, 4.6 * k, -1), ft, 5 * k, cc) + c.r(ft[0] - 3 * k, ft[1] - 2.8 * k, 6.8 * k, 2.8 * k, c.vg(cc, 0.25, -0.25), 1 * k, 2);
     const arm = (s0, hd, b, cc) => limb(c, s0, joint(s0, hd, 6.2 * k, 6 * k, b), hd, 4.4 * k, cc);
-    const back = arm(sB, aB, bend[0], h.shade(col, -0.28)) + leg(at(0.5, -3.4), fB, h.shade(col, -0.22));
+    const back = arm(sB, aB, bend[0], hs(col, -0.28)) + leg(at(0.5, -3.4), fB, hs(col, -0.22));
     let body = leg(at(0.5, 3.4), fF, col);
-    const bodyG = c.def(`gol${col}`, (id) => c.rgc(id, [[0, h.shade(col, obs ? 0.35 : 0.3)], [0.55, col], [1, h.shade(col, -0.45)]], 0.32, 0.28, 0.85));
+    const bodyG = c.def(`gol${col}`, (id) => c.rgc(id, [[0, hs(col, obs ? 0.35 : 0.3)], [0.55, col], [1, hs(col, -0.45)]], 0.32, 0.28, 0.85));
     if (obs) {
       body += c.p(poly([at(15, -5.5), at(15.5, 6.5), at(6, 8.5), at(-1, 4.5), at(-1, -4.5), at(7, -8)]), bodyG, 2.8);
       body += c.p(poly([at(15, -5.5), at(15.5, 6.5), at(9, 1)]), '#c9c0ff', 0, ' opacity="0.45"') + c.ln(`M${pp(at(9, 1))}L${pp(at(0, 2))}`, '#8f86c8', 1, 0.7);
       body += c.ln(`M${pp(at(14, -4.8))}L${pp(at(7.2, -7.2))}L${pp(at(-0.4, -4))}`, '#b8b0e8', 1.2, 0.8);
     } else {
       body += c.e(B[0], B[1], 8.4 * k * (g.kind === 'granite' ? 1.12 : 1), 9 * k, bodyG, 2.8);
-      body += c.ln(`M${pp(at(9, -3))}l${f(2.2 * k)} ${f(2 * k)}M${pp(at(3, 4))}l${f(-1.6 * k)} ${f(2 * k)}`, h.shade(col, -0.4), 1.1, 0.8);
+      body += c.ln(`M${pp(at(9, -3))}l${f(2.2 * k)} ${f(2 * k)}M${pp(at(3, 4))}l${f(-1.6 * k)} ${f(2 * k)}`, hs(col, -0.4), 1.1, 0.8);
       body += c.p(`M${pp(at(1.5, -7.4))}Q${pp(at(-2, 0))} ${pp(at(1.5, 7.4))}Q${pp(at(0.2, 0))} ${pp(at(1.5, -7.4))}Z`, c.vg('#6fae3e', 0.3, -0.25), 1.4);
       if (g.kind === 'granite') body += [[8, -3], [4, 2], [11, 3], [6, -6]].map(([a, b]) => c.ci(...at(a, b), 0.8 * k, '#6a5a54', 0, ' opacity="0.6"')).join('');
     }
@@ -435,7 +572,7 @@
     }
     if (g.helm) body += g.helm(c, H, k);
     body += aura(c, H[0] + 3 * k, H[1] + 0.5 * k, 4 * k, 3 * k, G.eye, 0.6) + c.e(H[0] + 1.6 * k, H[1] + 0.6 * k, 0.9 * k, 1.2 * k, G.eye, 0) + c.e(H[0] + 4.1 * k, H[1] + 0.5 * k, 0.8 * k, 1.1 * k, G.eye, 0);
-    const handB = c.ci(aB[0], aB[1], 2.8 * k, c.sg(h.shade(col, -0.12)), 2.2);
+    const handB = c.ci(aB[0], aB[1], 2.8 * k, c.sg(hs(col, -0.12)), 2.2);
     const front = arm(sF, aF, bend[1], col) + c.ci(aF[0], aF[1], 3 * k, c.sg(col), 2.2);
     return { back, body, handB, front, H, k };
   }
@@ -456,12 +593,12 @@
     const P = A2.map((p, i) => [x + lerp(A0[i][0], p[0], tt), t + lerp(A0[i][1], p[1], tt)]);
     const d = `M${pp(P[0])}C${pp(P[1])} ${pp(P[2])} ${pp(P[3])}L${pp(P[4])}L${pp(P[5])}C${pp(P[6])} ${pp(P[7])} ${pp(P[8])}Z`;
     let s = beam(c, [x, y], [x, t - 2], 2.2, M.woodD, { grain: false });
-    s += c.p(d, c.def(`ban${col}`, (id) => c.lgc(id, [[0, c.h.shade(col, 0.25)], [0.5, col], [1, c.h.shade(col, -0.3)]], 'd')), 2.2);
+    s += c.p(d, c.def(`ban${col}`, (id) => c.lgc(id, [[0, hs(col, 0.25)], [0.5, col], [1, hs(col, -0.3)]], 'd')), 2.2);
     // 깃발 무늬(산 모양 — 좌우 대칭)와 주름
     const m = mix2(P[0], P[5], 0.5);
     const cc = [lerp(m[0], P[3][0], 0.35), lerp(m[1], P[3][1], 0.35)];
     if (o.emblem !== false) s += c.p(`M${f(cc[0] - 2.6)} ${f(cc[1] + 2)}L${f(cc[0])} ${f(cc[1] - 2.4)}L${f(cc[0] + 2.6)} ${f(cc[1] + 2)}Z`, o.emblem || '#f4ead0', 1);
-    s += c.ln(`M${pp(mix2(P[1], P[7], 0.5))}L${pp(mix2(P[2], P[6], 0.5))}`, c.h.shade(col, -0.35), 0.9, 0.7);
+    s += c.ln(`M${pp(mix2(P[1], P[7], 0.5))}L${pp(mix2(P[2], P[6], 0.5))}`, hs(col, -0.35), 0.9, 0.7);
     s += c.ci(x, t - 3, 2.1, c.sg(M.gold), 1.8);
     return s;
   }
@@ -479,9 +616,9 @@
       let jd = '';
       for (let i = 1; i < 6; i++) { const a = 180 + i * 30; jd += `M${pp(pol([x, ys], r, a))}L${pp(pol([x, ys], R2, a))}`; }
       for (let yy = ys + 4.5; yy < yb - 1; yy += 5) jd += `M${f(x - R2)} ${f(yy)}H${f(x - r)}M${f(x + r)} ${f(yy)}H${f(x + R2)}`;
-      s += c.ln(jd, h.shade(st, -0.45), 1);
+      s += c.ln(jd, hs(st, -0.45), 1);
       // 이맛돌(쐐기돌)
-      s += c.p(poly([pol([x, ys], r - 0.5, -100), pol([x, ys], R2 + 1.2, -104), pol([x, ys], R2 + 1.2, -76), pol([x, ys], r - 0.5, -80)]), o.key || h.shade(st, 0.15), 1.6);
+      s += c.p(poly([pol([x, ys], r - 0.5, -100), pol([x, ys], R2 + 1.2, -104), pol([x, ys], R2 + 1.2, -76), pol([x, ys], r - 0.5, -80)]), o.key || hs(st, 0.15), 1.6);
     }
     const inner = open > 0 ? c.def('gateLit', (id) => c.rgc(id, [[0, '#ffcf7a'], [0.35, '#a8602a'], [0.75, '#3a2018'], [1, '#140c0c']], 0.5, 0.95, 0.9)) : c.def('gateIn', (id) => c.rgc(id, [[0, '#2a2018'], [0.7, '#140e10'], [1, '#0a0608']], 0.5, 0.8, 0.8));
     s += c.p(d, inner, 0);
@@ -498,7 +635,7 @@
     } else {
       const leafW = [w * 0.5, w * 0.3, w * 0.11][open];
       const band = (x0, x1) => c.ln(`M${f(x0)} ${f(ys + 1.5)}H${f(x1)}M${f(x0)} ${f(yb - 4.5)}H${f(x1)}`, M.iron, 1.5);
-      const leaf = (x0, x1, sd) => clip(c, d, planks(c, `M${f(x0)} ${f(yb - ht - 2)}H${f(x1)}V${f(yb)}H${f(x0)}Z`, [x0, yb - ht - 2, x1, yb], open === 0 ? wood : h.shade(wood, -0.25), { pw: open === 0 ? 3 : 2.2, seed: sd, w: open === 0 ? 0 : 1.6 }) + band(x0, x1) + (open === 0 ? '' : ''));
+      const leaf = (x0, x1, sd) => clip(c, d, planks(c, `M${f(x0)} ${f(yb - ht - 2)}H${f(x1)}V${f(yb)}H${f(x0)}Z`, [x0, yb - ht - 2, x1, yb], open === 0 ? wood : hs(wood, -0.25), { pw: open === 0 ? 3 : 2.2, seed: sd, w: open === 0 ? 0 : 1.6 }) + band(x0, x1) + (open === 0 ? '' : ''));
       s += leaf(x - r, x - r + leafW, 3) + leaf(x + r - leafW, x + r, 4);
       if (open === 0) s += c.ln(`M${f(x)} ${f(ys - r + 1)}V${f(yb)}`, OL, 1.1) + c.ci(x - 1.8, yb - ht * 0.42, 1.2, 'none', 0, ` stroke="${M.iron}" stroke-width="${c.sw(1)}"`) + c.ci(x + 1.8, yb - ht * 0.42, 1.2, 'none', 0, ` stroke="${M.iron}" stroke-width="${c.sw(1)}"`);
       if (open > 0) s += c.p(d, OL, 0, ' opacity="0.12"');
@@ -545,18 +682,18 @@
         } else {
           const L3 = L === 3;
           // 둥근 성탑: 다듬은 돌 벽 + 흉벽 + 뒤로 보이는 이끼 돔
-          o += masonry(c, 'M29 72A22 22 0 0 1 73 72Z', [29, 50, 73, 72], h.shade(st, -0.05), { rough: true, round: true, rowH: 5, bw: 7, bulge: 3, gap: 0.6, seed: 54 }) + mossPatch(c, 51, 56, 30, 8, 9);
+          o += masonry(c, 'M29 72A22 22 0 0 1 73 72Z', [29, 50, 73, 72], hs(st, -0.05), { rough: true, round: true, rowH: 5, bw: 7, bulge: 3, gap: 0.6, seed: 54 }) + mossPatch(c, 51, 56, 30, 8, 9);
           o += banner(c, 51, 54, 30, E.color, wave, L3 ? 18 : 15);
           o += masonry(c, cylD(50, 72, 104, 29, 8.7), [21, 72, 79, 104], st, { round: true, rowH: 5, bw: 8.5, bulge: 8.7, seed: 53, bot: 0.35, top: 0.35, k1: 0.18 });
           // 흉벽(앞쪽 반원을 따라 돌출 돌)
-          o += c.p(`M19 72A31 9.3 0 0 0 81 72V68A31 9.3 0 0 1 19 68Z`, c.vg(h.shade(st, 0.2), 0.2, -0.2), 2.4);
+          o += c.p(`M19 72A31 9.3 0 0 0 81 72V68A31 9.3 0 0 1 19 68Z`, c.vg(hs(st, 0.2), 0.2, -0.2), 2.4);
           [-70, -40, -12, 16, 44, 72].forEach((dg, i) => {
             const a = dg * RAD;
             const x = 50 + 31 * Math.sin(a);
             const y = 68 + 9.3 * Math.cos(a);
             const wd = 6.4 * Math.cos(a) + 1.2;
-            o += c.p(`M${f(x - wd / 2)} ${f(y)}V${f(y - 6)}H${f(x + wd / 2)}V${f(y)}Z`, c.vg(h.shade(st, 0.1 - 0.35 * ((Math.sin(a) + 1) / 2)), 0.25, -0.15), 2.2);
-            if (i === 2) o += c.ln(`M${f(x - wd / 2 + 0.8)} ${f(y - 3)}H${f(x + wd / 2 - 0.8)}`, h.shade(st, -0.4), 0.9);
+            o += c.p(`M${f(x - wd / 2)} ${f(y)}V${f(y - 6)}H${f(x + wd / 2)}V${f(y)}Z`, c.vg(hs(st, 0.1 - 0.35 * ((Math.sin(a) + 1) / 2)), 0.25, -0.15), 2.2);
+            if (i === 2) o += c.ln(`M${f(x - wd / 2 + 0.8)} ${f(y - 3)}H${f(x + wd / 2 - 0.8)}`, hs(st, -0.4), 0.9);
           });
           o += c.r(22, 74, 56, 2.4, OL, 0, 0, ' opacity="0.25"');
           o += slit(c, 31, 86, 8, 0.55) + slit(c, 69, 86, 8, 0.55);
@@ -567,7 +704,7 @@
               o += aura(c, x, y - 10, 6, 6, '#ffb347', 0.7) + RG.art._tw.flame(c, x, y - 6, 4.4, by(pose, 6, 7, 8));
             });
           }
-          o += gate(c, 50, 106, 18, 26, open, { stone: h.shade(st, 0.3), key: L3 ? E.color : null, wood: M.wood, inside: emerging(c, 50, 107, 0.72, 'stone') });
+          o += gate(c, 50, 106, 18, 26, open, { stone: hs(st, 0.3), key: L3 ? E.color : null, wood: M.wood, inside: emerging(c, 50, 107, 0.72, 'stone') });
           if (L3) o += crystal(c, 50, 76, 7, 10, E.color, 2) + c.ln('M44.5 93.5H55.5', M.gold, 1.6);
         }
         // 문지기 골렘: 앞손에 창, 뒷팔에 방패
@@ -592,18 +729,18 @@
         o += banner(c, 80, 24, 20, E.color, wave, 16);
         // 성벽
         o += masonry(c, 'M22 100V48H78V100Q50 106 22 100Z', [22, 48, 78, 106], gs, { rowH: 5, bw: 9, seed: 56, bot: 0.35, top: 0.3, k1: 0.15 });
-        o += masonry(c, 'M20 48V39H28V43H36V39H44V43H56V39H64V43H72V39H80V48Z', [20, 39, 80, 48], h.shade(gs, 0.1), { rowH: 4.5, bw: 8, seed: 57, w: 2.6 });
+        o += masonry(c, 'M20 48V39H28V43H36V39H44V43H56V39H64V43H72V39H80V48Z', [20, 39, 80, 48], hs(gs, 0.1), { rowH: 4.5, bw: 8, seed: 57, w: 2.6 });
         o += c.r(22, 48, 56, 2.2, OL, 0, 0, ' opacity="0.3"');
         [20, 80].forEach((x, i) => {
           o += masonry(c, cylD(x, 34, 100, 11, 3.3), [x - 11, 34, x + 11, 104], gs, { round: true, rowH: 5, bw: 6, bulge: 3.3, seed: 58 + i, bot: 0.35, top: 0.3, k1: 0.12 });
-          o += masonry(c, `M${x - 13} 36V24H${x - 7}V29H${x - 3}V24H${x + 3}V29H${x + 7}V24H${x + 13}V36Z`, [x - 13, 24, x + 13, 36], h.shade(gs, 0.12), { rowH: 4, bw: 6, seed: 60 + i, w: 2.6 });
+          o += masonry(c, `M${x - 13} 36V24H${x - 7}V29H${x - 3}V24H${x + 3}V29H${x + 7}V24H${x + 13}V36Z`, [x - 13, 24, x + 13, 36], hs(gs, 0.12), { rowH: 4, bw: 6, seed: 60 + i, w: 2.6 });
           o += c.p(`M${x - 13} 36A13 3.6 0 0 0 ${x + 13} 36V38A13 3.6 0 0 1 ${x - 13} 38Z`, OL, 0, ' opacity="0.3"');
           o += slit(c, x, 60, 8, 0.6) + slit(c, x, 80, 8, 0.6);
         });
         // 문장(이끼 방패)
         o += c.p('M50 52C56 54 61 54 63 53V63C63 71 57 76 50 79C43 76 37 71 37 63V53C39 54 44 54 50 52Z', c.vg('#6fae3e', 0.3, -0.25), 2.6);
         o += c.p('M42 70L48 60L51 65L54 62L58 70Z', c.vg(E.light, 0.2, -0.1), 1.6);
-        o += gate(c, 50, 100, 20, 22, open, { stone: h.shade(gs, 0.2), portcullis: true, inside: emerging(c, 50, 101, 0.72, 'granite') });
+        o += gate(c, 50, 100, 20, 22, open, { stone: hs(gs, 0.2), portcullis: true, inside: emerging(c, 50, 101, 0.72, 'granite') });
         // 문지기: 화강암 골렘. 앞손 방패, 뒷손 철퇴
         const gx = 24;
         const gy = 105;
@@ -682,8 +819,8 @@
       pads += `M${pp(p0)}L${pp(pol(p0, R * 0.3, a + 75))}`;
     }
     let s = c.ci(x, y, R, 'none', 0, ` stroke="${OL}" stroke-width="${c.sw(6.6)}"`) + c.ci(x, y, R, 'none', 0, ` stroke="${M.wood}" stroke-width="${c.sw(4)}"`);
-    s += c.ci(x, y, R - 1.1, 'none', 0, ` stroke="${h.shade(M.wood, -0.35)}" stroke-width="${c.sw(0.9)}"`);
-    s += c.ln(spokes, OL, 4.4) + c.ln(spokes, h.shade(M.wood, -0.1), 2.2);
+    s += c.ci(x, y, R - 1.1, 'none', 0, ` stroke="${hs(M.wood, -0.35)}" stroke-width="${c.sw(0.9)}"`);
+    s += c.ln(spokes, OL, 4.4) + c.ln(spokes, hs(M.wood, -0.1), 2.2);
     s += c.ln(pads, OL, 5.4) + c.ln(pads, M.plank, 3);
     s += c.ci(x, y, R * 0.24, c.sg(hub), 2.4) + c.ci(x, y, R * 0.09, OL, 0);
     if (o.wet) s += c.ln(`M${f(x - R * 0.7)} ${f(y + R * 0.8)}q-2 3 0 5M${f(x + R * 0.2)} ${f(y + R * 1.05)}q-1.5 2.5 0 4.5`, '#bfe8ff', 1.4, 0.8);
@@ -692,8 +829,8 @@
   /** 모루돌: 앞면 x1~x2, 앞 윗변 yt, 바닥 yb, 깊이 d */
   function anvilStone(c, x1, x2, yt, yb, d, col, seed) {
     const h = c.h;
-    let s = c.p(poly([[x1, yt], [x1 + d * 0.6, yt - d], [x2 + d * 0.6, yt - d], [x2, yt]]), c.vg(h.shade(col, 0.25), 0.15, -0.05), 2.6);
-    s += c.p(poly([[x2, yt], [x2 + d * 0.6, yt - d], [x2 + d * 0.6, yb - d], [x2, yb]]), c.vg(h.shade(col, -0.35), 0.1, -0.2), 2.6);
+    let s = c.p(poly([[x1, yt], [x1 + d * 0.6, yt - d], [x2 + d * 0.6, yt - d], [x2, yt]]), c.vg(hs(col, 0.25), 0.15, -0.05), 2.6);
+    s += c.p(poly([[x2, yt], [x2 + d * 0.6, yt - d], [x2 + d * 0.6, yb - d], [x2, yb]]), c.vg(hs(col, -0.35), 0.1, -0.2), 2.6);
     s += masonry(c, `M${x1} ${yt}H${x2}V${yb}H${x1}Z`, [x1, yt, x2, yb], col, { rowH: (yb - yt) / 2, bw: 8, seed, bot: 0.35 });
     return s;
   }
@@ -741,13 +878,13 @@
     s += c.ol(`M${pp(wc)}L${pp(camTip)}`, M.woodD, 3.4) + c.ci(camTip[0], camTip[1], 2, c.sg(M.iron), 1.6);
     // 모루돌(오른쪽)
     s += ao(c, 79, top - 1, 15, 5, 0.5);
-    s += anvilStone(c, 66, 88, top - 6, top + 3, 5, h.shade(st, -0.05), 81);
+    s += anvilStone(c, 66, 88, top - 6, top + 3, 5, hs(st, -0.05), 81);
     if (o.thorns) s += o.thorns('back');
     // 받침(뒤 기둥)
     const post = (x, front) => (L === 1
       ? beam(c, [x - 7, top + 1], [P[0], P[1] + 2], 3.4, front ? M.wood : M.woodD)
-      : masonry(c, `M${x - 5} ${top + 2}V${P[1] + 7}H${x + 5}V${top + 2}Z`, [x - 5, P[1] + 7, x + 5, top + 2], front ? st : h.shade(st, -0.2), { rowH: 4.4, bw: 10, seed: front ? 82 : 83, bot: 0.35, top: 0.2 })
-        + c.r(x - 6.2, P[1] + 4.4, 12.4, 3.4, c.vg(h.shade(st, 0.25), 0.2, -0.2), 0.6, 2.2));
+      : masonry(c, `M${x - 5} ${top + 2}V${P[1] + 7}H${x + 5}V${top + 2}Z`, [x - 5, P[1] + 7, x + 5, top + 2], front ? st : hs(st, -0.2), { rowH: 4.4, bw: 10, seed: front ? 82 : 83, bot: 0.35, top: 0.2 })
+        + c.r(x - 6.2, P[1] + 4.4, 12.4, 3.4, c.vg(hs(st, 0.25), 0.2, -0.2), 0.6, 2.2));
     if (L === 1) s += beam(c, [P[0] + 7, top + 1], [P[0], P[1] + 2], 3.4, M.woodD);
     else s += post(P[0] - 2, false);
     // 자루(공이대)
@@ -857,7 +994,7 @@
       let s = c.p(`M${f(x - r * 1.0)} ${f(y - r * 0.2)}Q${f(x - r * 1.12)} ${f(y + r * 0.6)} ${f(x - r * 0.55)} ${f(y + r * 0.86)}L${f(x - r * 0.25)} ${f(y + r * 0.1)}Z`, MINER.beard, 1.4);
       s += c.e(x + r * 0.42, y - r * 0.02, r * 0.16, r * 0.24, '#2a1a2e', 0);
       s += c.p(`M${f(x + r * 0.05)} ${f(y + r * 0.5)}Q${f(x + r * 0.25)} ${f(y + r * 1.2)} ${f(x + r * 0.66)} ${f(y + r * 1.05)}Q${f(x + r * 1.0)} ${f(y + r * 0.9)} ${f(x + r * 0.98)} ${f(y + r * 0.5)}Q${f(x + r * 0.7)} ${f(y + r * 0.68)} ${f(x + r * 0.05)} ${f(y + r * 0.5)}Z`, c.vg(MINER.beard, 0.2, -0.2), 1.4);
-      s += c.e(x + r * 0.98, y + r * 0.18, r * 0.2, r * 0.16, c.h.shade(MINER.skin, -0.12), 1);
+      s += c.e(x + r * 0.98, y + r * 0.18, r * 0.2, r * 0.16, hs(MINER.skin, -0.12), 1);
       if (loupe) s += c.ci(x + r * 0.42, y - r * 0.02, r * 0.34, 'none', 0, ` stroke="${M.gold}" stroke-width="${c.sw(1.3)}"`) + c.ci(x + r * 0.36, y - r * 0.1, r * 0.1, '#fff', 0);
       return s;
     };
@@ -869,10 +1006,10 @@
       const h = c.h;
       const dome = (col, hi) => c.p(`M${f(x - r * 1.08)} ${f(y - r * 0.05)}C${f(x - r * 1.1)} ${f(y - r * 1.25)} ${f(x + r * 0.9)} ${f(y - r * 1.4)} ${f(x + r * 1.0)} ${f(y - r * 0.3)}Q${f(x)} ${f(y - r * 0.55)} ${f(x - r * 1.08)} ${f(y - r * 0.05)}Z`, c.vg(col, hi, -0.25), 2.4);
       const brim = (col) => c.p(`M${f(x + r * 0.2)} ${f(y - r * 0.5)}Q${f(x + r * 1.2)} ${f(y - r * 0.55)} ${f(x + r * 1.55)} ${f(y - r * 0.2)}Q${f(x + r * 1.0)} ${f(y - r * 0.12)} ${f(x + r * 0.2)} ${f(y - r * 0.25)}Z`, col, 2);
-      if (tier === 1) return dome('#8a5a3a', 0.2) + brim(h.shade('#8a5a3a', -0.2)) + c.ln(`M${f(x - r * 0.9)} ${f(y - r * 0.32)}Q${f(x)} ${f(y - r * 0.6)} ${f(x + r * 0.9)} ${f(y - r * 0.4)}`, '#5a3a24', 1.2);
+      if (tier === 1) return dome('#8a5a3a', 0.2) + brim(hs('#8a5a3a', -0.2)) + c.ln(`M${f(x - r * 0.9)} ${f(y - r * 0.32)}Q${f(x)} ${f(y - r * 0.6)} ${f(x + r * 0.9)} ${f(y - r * 0.4)}`, '#5a3a24', 1.2);
       if (tier === 'B') return dome('#3f7a52', 0.25) + c.ln(`M${f(x - r * 1.0)} ${f(y - r * 0.2)}Q${f(x)} ${f(y - r * 0.55)} ${f(x + r * 0.98)} ${f(y - r * 0.38)}`, M.gold, 1.6) + c.ci(x - r * 0.2, y - r * 1.15, r * 0.22, M.gold, 1.2);
       const col = tier === 2 ? '#9a6a3a' : '#8e98a6';
-      let s = dome(col, 0.35) + brim(h.shade(col, -0.25));
+      let s = dome(col, 0.35) + brim(hs(col, -0.25));
       s += c.ln(`M${f(x - r * 0.95)} ${f(y - r * 0.25)}Q${f(x)} ${f(y - r * 0.6)} ${f(x + r * 0.95)} ${f(y - r * 0.38)}`, tier === 2 ? '#5a3a20' : M.gold, 1.5);
       if (tier === 2) {
         // 촛불 받침
@@ -892,7 +1029,7 @@
     const T2 = pol(E, 6.2, ang - 90);
     let s = c.ol(`M${pp(S)}L${pp(E)}`, M.wood, 2.4) + c.ln(`M${pp(toolEnd(gp, ang, 2))}L${pp(toolEnd(gp, ang, L - 3))}`, M.woodD, 0.8, 0.7);
     s += c.p(`M${pp(T1)}Q${pp(pol(E, 5.5, ang))} ${pp(T2)}Q${pp(pol(E, -1.2, ang))} ${pp(T1)}Z`, c.vg(head, 0.4, -0.2), 2.2);
-    s += c.ln(`M${pp(pol(T1, -1.8, ang + 90))}Q${pp(pol(E, 3.4, ang))} ${pp(pol(T2, -1.8, ang - 90))}`, c.h.shade(head, 0.45), 0.9, 0.9);
+    s += c.ln(`M${pp(pol(T1, -1.8, ang + 90))}Q${pp(pol(E, 3.4, ang))} ${pp(pol(T2, -1.8, ang - 90))}`, hs(head, 0.45), 0.9, 0.9);
     if (band) s += c.ol(`M${pp(toolEnd(gp, ang, L - 2.6))}L${pp(toolEnd(gp, ang, L - 0.8))}`, band, 2.6);
     return s;
   }
@@ -926,7 +1063,7 @@
     s += c.ln(`M${f(x - w * 0.28)} ${f(yb - 1)}V${f(top + ht * 0.3)}H${f(x + w * 0.28)}V${f(yb - 1)}`, '#4a3626', 2, 0.8);
     if (o.rails) s += c.ln(`M${f(x - w * 0.18)} ${f(yb)}L${f(x - w * 0.1)} ${f(yb - ht * 0.45)}M${f(x + w * 0.18)} ${f(yb)}L${f(x + w * 0.1)} ${f(yb - ht * 0.45)}`, '#8a93a0', 1.2, 0.7);
     s += beam(c, [x - w / 2 - 1.2, yb + 0.5], [x - w / 2 - 0.6, top + 1], 3.6, M.wood);
-    s += beam(c, [x + w / 2 + 1.2, yb + 0.5], [x + w / 2 + 0.6, top + 1], 3.6, h.shade(M.wood, -0.12));
+    s += beam(c, [x + w / 2 + 1.2, yb + 0.5], [x + w / 2 + 0.6, top + 1], 3.6, hs(M.wood, -0.12));
     s += beam(c, [x - w / 2 - 4, top - 0.5], [x + w / 2 + 4, top - 0.5], 4.2, M.wood);
     // 들보 아래 짙은 그늘
     s += c.r(x - w / 2 + 0.6, top + 1.7, w - 1.2, 2.2, OL, 0, 0, ' opacity="0.4"');
@@ -946,7 +1083,7 @@
     const wheel = (wx) => {
       let sp = '';
       for (let i = 0; i < 3; i++) { const a = spin + i * 60; sp += `M${pp(pol([wx, y], 3.2 * k, a))}L${pp(pol([wx, y], 3.2 * k, a + 180))}`; }
-      return c.ci(wx, y, 3.8 * k, c.sg(M.iron), 2) + c.ln(sp, h.shade(M.iron, 0.4), 0.9) + c.ci(wx, y, 1 * k, h.shade(M.iron, 0.3), 0.8);
+      return c.ci(wx, y, 3.8 * k, c.sg(M.iron), 2) + c.ln(sp, hs(M.iron, 0.4), 0.9) + c.ci(wx, y, 1 * k, hs(M.iron, 0.3), 0.8);
     };
     return s + wheel(x - 6 * k) + wheel(x + 6 * k);
   }
@@ -972,7 +1109,7 @@
     return s;
   }
   /** 금화 */
-  const coin = (c, x, y, r = 2.6) => c.e(x, y, r, r * 0.9, c.sg(M.gold), 1.6) + c.ln(`M${f(x - r * 0.3)} ${f(y - r * 0.4)}V${f(y + r * 0.4)}`, c.h.shade(M.gold, -0.4), 0.9);
+  const coin = (c, x, y, r = 2.6) => c.e(x, y, r, r * 0.9, c.sg(M.gold), 1.6) + c.ln(`M${f(x - r * 0.3)} ${f(y - r * 0.4)}V${f(y + r * 0.4)}`, hs(M.gold, -0.4), 0.9);
 
   T.crystal_mine = {
     muzzle: [[56, 96], [56, 96], [56, 96], [64, 46], [38, 88]],
@@ -995,7 +1132,7 @@
           o += tcrys(c, 64, 64, 14, 28, -6, E.color) + tcrys(c, 89, 74, 10, 18, 22, E.color) + tcrys(c, 53, 80, 8, 13, -28, E.color, 2.2);
           o += mcart(c, 86 + cx, 112, 0.62, E.color, spin);
         } else {
-          o += rockMound(c, 34, 96, 104, 46, h.shade(st, -0.1), 43);
+          o += rockMound(c, 34, 96, 104, 46, hs(st, -0.1), 43);
           o += mossPatch(c, 50, 62, 14, 4, 5) + mossPatch(c, 84, 64, 10, 3, 6);
           o += tcrys(c, 44, 58, 11, 20, -26, E.color) + tcrys(c, 90, 52, 12, 22, 22, E.color) + crystal(c, 60, L === 3 ? 40 : 44, L === 3 ? 18 : 16, L === 3 ? 34 : 30, E.color);
           if (L === 3) o += tcrys(c, 72, 46, 9, 16, 12, E.light, 2.2) + tcrys(c, 50, 46, 8, 14, -10, E.light, 2.2);
@@ -1044,7 +1181,7 @@
         o += c.ln(`M${bx - 6.8} ${f(bt + 2.5)}H${bx + 6.8}M${bx - 6.3} ${f(bucketY - 2.4)}H${bx + 6.3}`, M.iron, 1.5);
         if (bucketY > 84) o += c.p('M51.5 89A12.5 3.8 0 0 0 76.5 89V95H51.5Z', '#aaa48c', 0) + masonry(c, 'M47 89.5A17 5.5 0 0 0 81 89.5V95A17 5.5 0 0 1 47 95Z', [47, 89, 81, 95], '#9a947c', { round: true, rowH: 2.6, bw: 6, bulge: 5.5, seed: 61, w: 2.4 });
         // 권양탑 앞다리 + 가로대 + 도르래
-        o += beam(c, LL1[0], LL1[1], 3.6, M.wood) + beam(c, LL2[0], LL2[1], 3.6, h.shade(M.wood, -0.1));
+        o += beam(c, LL1[0], LL1[1], 3.6, M.wood) + beam(c, LL2[0], LL2[1], 3.6, hs(M.wood, -0.1));
         o += beam(c, [xAt(LL1, 70) - 2, 70], [xAt(LL2, 70) + 2, 70], 2.8, M.wood) + beam(c, [xAt(LL1, 46) - 2, 46], [xAt(LL2, 46) + 2, 46], 2.8, M.wood);
         o += beam(c, [50, 19], [74, 19], 3.4, M.wood);
         const sheave = (cx0, cy0, R) => {
@@ -1083,7 +1220,7 @@
       o += c.p(wall, 'none', 3);
       // 처마 아래 그늘 + 박공 널
       o += c.p('M36 68L63 47L90 68L90 71L63 50L36 71Z', OL, 0, ' opacity="0.3"');
-      o += beam(c, [31, 72], [63, 45], 3.4, M.wood) + beam(c, [95, 72], [63, 45], 3.4, h.shade(M.wood, -0.15));
+      o += beam(c, [31, 72], [63, 45], 3.4, M.wood) + beam(c, [95, 72], [63, 45], 3.4, hs(M.wood, -0.15));
       // 문(반쯤 열림, 안쪽 불빛) + 창
       o += c.p('M57 100V87Q63 81 69 87V100Z', c.def('shopIn', (id) => c.rgc(id, [[0, '#fff0b0'], [0.6, '#e09a3a'], [1, '#6a3a1a']], 0.6, 0.6, 0.7)), 2.4);
       o += planks(c, 'M57 100V87Q59.5 84 61.5 83.6V100Z', [57, 83, 62, 100], M.woodD, { pw: 2.4, seed: 2, w: 2 });
@@ -1093,7 +1230,7 @@
       o += coin(c, 82, 101) + coin(c, 86, 100) + coin(c, 84, 97.6);
       // 용마루의 세공 보석
       o += c.ol('M63 36V45', M.gold, 2.2) + c.p('M57 46L63 40L69 46Z', c.vg(M.gold, 0.35, -0.3), 1.8);
-      o += c.p('M49 26L55 18H71L77 26L63 40Z', c.vg(E.color, 0.45, -0.25), 3) + c.ln('M49 26H77M55 18L59 26L63 40L67 26L71 18', h.shade(E.color, -0.35), 1.5) + c.p('M55 18L59 26H51Z', '#fff', 0, ' opacity="0.6"');
+      o += c.p('M49 26L55 18H71L77 26L63 40Z', c.vg(E.color, 0.45, -0.25), 3) + c.ln('M49 26H77M55 18L59 26L63 40L67 26L71 18', hs(E.color, -0.35), 1.5) + c.p('M55 18L59 26H51Z', '#fff', 0, ' opacity="0.6"');
       if (pose === 'fire') o += spark(c, 72, 20, 7, '#fff', 1.2) + spark(c, 52, 30, 4, '#fff', 0);
       // 작업대(그루터기 + 쇠 받침)와 보석
       o += c.p('M30 102V93H44V102Q37 104 30 102Z', c.cg(M.wood), 2.4) + c.e(37, 93, 7, 2.2, c.vg('#c89a62', 0.2, -0.1), 2.2) + c.ln('M33 95V101M40 96V101', M.woodD, 0.9, 0.8);
@@ -1138,8 +1275,8 @@
     if (heat) s += aura(c, x, y, r * (1.4 + heat * 0.5), r * (1.3 + heat * 0.5), '#ffe48a', 0.45 + heat * 0.2);
     s += c.e(x, y, r, ry, 'none', 0, ` stroke="${OL}" stroke-width="${c.sw(r * 0.26 + 2.8)}"`);
     s += c.e(x, y, r, ry, lensFill(c, heat), 0, ` stroke="${frame}" stroke-width="${c.sw(r * 0.26)}"`);
-    s += c.e(x, y - ry * 0.04, r * 0.88, ry * 0.86, 'none', 0, ` stroke="${h.shade(frame, -0.35)}" stroke-width="${c.sw(0.9)}"`);
-    s += c.e(x, y, r, ry, 'none', 0, ` stroke="${h.shade(frame, 0.45)}" stroke-width="${c.sw(1)}" stroke-dasharray="${c.sw(r * 1.2)} ${c.sw(r * 5)}" stroke-dashoffset="${c.sw(r * 2.2)}"`);
+    s += c.e(x, y - ry * 0.04, r * 0.88, ry * 0.86, 'none', 0, ` stroke="${hs(frame, -0.35)}" stroke-width="${c.sw(0.9)}"`);
+    s += c.e(x, y, r, ry, 'none', 0, ` stroke="${hs(frame, 0.45)}" stroke-width="${c.sw(1)}" stroke-dasharray="${c.sw(r * 1.2)} ${c.sw(r * 5)}" stroke-dashoffset="${c.sw(r * 2.2)}"`);
     // 유리 반사(왼쪽 위)
     s += c.p(`M${f(x - r * 0.5)} ${f(y - ry * 0.35)}Q${f(x - r * 0.3)} ${f(y - ry * 0.68)} ${f(x + r * 0.05)} ${f(y - ry * 0.7)}`, 'none', 0, ` stroke="#fff" stroke-width="${c.sw(Math.max(1.4, r * 0.12))}" opacity="0.9"`);
     if (heat === 2) s += spark(c, x, y, r * 0.95, '#fff', 0) + c.ci(x, y, r * 0.3, '#fff', 0) + spark(c, x, y, r * 0.5, '#fff6c8', 0);
@@ -1158,7 +1295,7 @@
   /** U자 멍에: 받침 꼭대기 (x, yb)에서 렌즈 굴대 (x ± r, y)까지 */
   function yoke(c, x, yb, y, r, col, w = 3.4) {
     const d = `M${f(x - r)} ${f(y)}C${f(x - r - 1)} ${f(y + r * 0.9)} ${f(x - 4)} ${f(yb)} ${f(x)} ${f(yb)}C${f(x + 4)} ${f(yb)} ${f(x + r + 1)} ${f(y + r * 0.9)} ${f(x + r)} ${f(y)}`;
-    return c.ol(d, col, w) + c.ln(d, c.h.shade(col, 0.4), w * 0.3, 0.7) + c.ci(x - r, y, 2.4, c.sg(c.h.shade(col, 0.2)), 1.8) + c.ci(x + r, y, 2.4, c.sg(c.h.shade(col, -0.1)), 1.8);
+    return c.ol(d, col, w) + c.ln(d, hs(col, 0.4), w * 0.3, 0.7) + c.ci(x - r, y, 2.4, c.sg(hs(col, 0.2)), 1.8) + c.ci(x + r, y, 2.4, c.sg(hs(col, -0.1)), 1.8);
   }
 
   T.sun_lens = {
@@ -1193,9 +1330,9 @@
         // 다듬은 돌 기둥(위가 좁음) + 받침돌 + 회전판
         const pd = `M36 104L41 ${top + 4}H59L64 104Q50 108 36 104Z`;
         o += masonry(c, pd, [36, top + 4, 64, 108], st, { round: true, rowH: 5.5, bw: 7, bulge: 2.5, seed: 94, bot: 0.35, top: 0.3, k1: 0.15 });
-        o += c.p(`M33 104H67V100H33Z`, 'none', 0) + masonry(c, 'M33 106V100H67V106Q50 109 33 106Z', [33, 100, 67, 109], h.shade(st, 0.1), { rowH: 6, bw: 8, seed: 95, bot: 0.35 });
+        o += c.p(`M33 104H67V100H33Z`, 'none', 0) + masonry(c, 'M33 106V100H67V106Q50 109 33 106Z', [33, 100, 67, 109], hs(st, 0.1), { rowH: 6, bw: 8, seed: 95, bot: 0.35 });
         if (L3) o += c.p(`M40.2 ${top + 14}H59.8L60.6 ${top + 18}H39.4Z`, c.cg(M.gold), 1.8) + c.p(`M38.6 ${top + 26}H61.4L62.2 ${top + 30}H37.8Z`, c.cg(M.gold), 1.8);
-        o += c.e(50, top + 3, 11, 3.4, c.cg(L3 ? M.gold : M.bronze), 2.4) + c.p(`M39 ${top + 3}V${top}A11 3.4 0 0 0 61 ${top}V${top + 3}Z`, c.cg(h.shade(L3 ? M.gold : M.bronze, -0.1)), 2) + c.e(50, top, 11, 3.4, c.vg(h.shade(L3 ? M.gold : M.bronze, 0.3), 0.2, -0.1), 2);
+        o += c.e(50, top + 3, 11, 3.4, c.cg(L3 ? M.gold : M.bronze), 2.4) + c.p(`M39 ${top + 3}V${top}A11 3.4 0 0 0 61 ${top}V${top + 3}Z`, c.cg(hs(L3 ? M.gold : M.bronze, -0.1)), 2) + c.e(50, top, 11, 3.4, c.vg(hs(L3 ? M.gold : M.bronze, 0.3), 0.2, -0.1), 2);
         o += sunRays(c, 50, ly, lr, heat);
         o += yoke(c, 50, top, ly, lr + 1.5, L3 ? M.gold : M.bronze, L3 ? 4 : 3.6);
         o += lensDisk(c, 50, ly, lr, open, L3 ? M.gold : M.bronze, heat);
@@ -1317,7 +1454,7 @@
   function altarStone(c, x1, x2, yt, yb, col, seed) {
     const h = c.h;
     let s = masonry(c, `M${x1} ${yt}H${x2}V${yb}H${x1}Z`, [x1, yt, x2, yb], col, { rowH: (yb - yt) / 3, bw: 7, seed, bot: 0.35, top: 0.3, k1: 0.25 });
-    s += c.p(`M${x1 - 2} ${yt}L${x1 + 2} ${yt - 5}H${x2 - 2}L${x2 + 2} ${yt}Z`, c.vg(h.shade(col, 0.25), 0.2, 0), 2.6);
+    s += c.p(`M${x1 - 2} ${yt}L${x1 + 2} ${yt - 5}H${x2 - 2}L${x2 + 2} ${yt}Z`, c.vg(hs(col, 0.25), 0.2, 0), 2.6);
     s += c.p(`M${(x1 + x2) / 2 - 4} ${(yt + yb) / 2}L${(x1 + x2) / 2} ${(yt + yb) / 2 - 4}L${(x1 + x2) / 2 + 4} ${(yt + yb) / 2}L${(x1 + x2) / 2} ${(yt + yb) / 2 + 4}Z`, c.E.color, 1.4);
     return s;
   }
@@ -1334,14 +1471,14 @@
         let o = base(c, 1, { seed: 101 });
         o += lightPulse(c, 52, 104, 40, 11.5, pose, E.color);
         o += ao(c, 58, 104, 22, 6, 0.5);
-        o += planks(c, 'M42 104V66H75V104Z', [42, 66, 75, 104], h.shade(M.woodD, -0.1), { pw: 4.2, seed: 11, top: 0.55, bot: 0.3, k1: 0.35, w: 2.4 });
-        o += beam(c, [41, 106], [42, 66], 3.4, M.woodD) + beam(c, [76, 106], [75, 66], 3.4, h.shade(M.wood, -0.1));
+        o += planks(c, 'M42 104V66H75V104Z', [42, 66, 75, 104], hs(M.woodD, -0.1), { pw: 4.2, seed: 11, top: 0.55, bot: 0.3, k1: 0.35, w: 2.4 });
+        o += beam(c, [41, 106], [42, 66], 3.4, M.woodD) + beam(c, [76, 106], [75, 66], 3.4, hs(M.wood, -0.1));
         o += altarStone(c, 47, 69, 86, 106, st, 102);
         o += altarLamp(c, 58, 82, 1, heat);
         o += beam(c, [36, 68], [80, 68], 3, M.wood);
         o += c.ol('M48 68V73M68 68V73', M.rope, 1.2) + c.ci(48, 75.5, 2.6, c.sg(E.color), 1.6) + c.ci(68, 75.5, 2.6, c.sg(E.color), 1.6);
         o += roofPlane(c, [58, 50], [0, -8], [-25, 17], 'shingle', '#8a6a4a', { lit: 0.08, seed: 6 }) + roofPlane(c, [58, 50], [0, -8], [25, 17], 'shingle', '#8a6a4a', { lit: -0.18, seed: 7 });
-        o += beam(c, [31, 68], [58, 49], 2.8, M.wood) + beam(c, [85, 68], [58, 49], 2.8, h.shade(M.wood, -0.15));
+        o += beam(c, [31, 68], [58, 49], 2.8, M.wood) + beam(c, [85, 68], [58, 49], 2.8, hs(M.wood, -0.15));
         o += c.ci(58, 47, 2.4, c.sg(M.gold), 1.6);
         o += priest(c, pose, 27, 93, 1).all;
         return o;
@@ -1354,18 +1491,18 @@
         if (L3) o += aura(c, 62, 70, 30, 26, E.color, 0.35 + heat * 0.15);
         o += ao(c, 63, 104, 26, 7, 0.5);
         const pillar = (x, sd) => masonry(c, `M${x - 4.5} 106V58H${x + 4.5}V106Z`, [x - 4.5, 58, x + 4.5, 106], st, { rowH: 6, bw: 9, seed: sd, bot: 0.35, top: 0.3, k1: 0.15, round: true })
-          + c.r(x - 6, 104, 12, 4, c.vg(h.shade(st, 0.1), 0.2, -0.2), 0.6, 2.2) + c.r(x - 6, 54.5, 12, 4, c.vg(L3 ? M.gold : h.shade(st, 0.2), 0.3, -0.2), 0.6, 2.2);
-        o += masonry(c, 'M44 104V54H82V104Z', [44, 54, 82, 104], h.shade(st, -0.28), { rowH: 5, bw: 8, seed: 118, top: 0.6, bot: 0.3, k1: 0.4, w: 2.4, bevel: false });
+          + c.r(x - 6, 104, 12, 4, c.vg(hs(st, 0.1), 0.2, -0.2), 0.6, 2.2) + c.r(x - 6, 54.5, 12, 4, c.vg(L3 ? M.gold : hs(st, 0.2), 0.3, -0.2), 0.6, 2.2);
+        o += masonry(c, 'M44 104V54H82V104Z', [44, 54, 82, 104], hs(st, -0.28), { rowH: 5, bw: 8, seed: 118, top: 0.6, bot: 0.3, k1: 0.4, w: 2.4, bevel: false });
         o += pillar(42, 104);
         o += altarStone(c, 52, 74, 88, 106, st, 105);
         o += altarLamp(c, 63, 84, L3 ? 1.15 : 1.05, heat);
         o += pillar(84, 106);
         // 박공 지붕(기와) + 박공벽
         o += roofPlane(c, [63, 34], [0, -10], [-31, 20], 'tile', L3 ? '#c9a450' : '#a87a5a', { lit: 0.1, seed: 8 }) + roofPlane(c, [63, 34], [0, -10], [31, 20], 'tile', L3 ? '#c9a450' : '#a87a5a', { lit: -0.18, seed: 9 });
-        o += masonry(c, 'M37 54L63 37L89 54Z', [37, 37, 89, 54], h.shade(st, 0.05), { rowH: 4.5, bw: 7, seed: 107, top: 0, bot: 0.3, w: 2.6 });
+        o += masonry(c, 'M37 54L63 37L89 54Z', [37, 37, 89, 54], hs(st, 0.05), { rowH: 4.5, bw: 7, seed: 107, top: 0, bot: 0.3, w: 2.6 });
         o += c.r(37, 54, 52, 2.4, OL, 0, 0, ' opacity="0.3"');
         o += c.ci(63, 47, 3.6, L3 ? c.sg('#fff3b0') : c.sg(M.gold), 1.8) + (L3 ? aura(c, 63, 47, 7, 7, E.color, 0.8) : '');
-        o += beam(c, [32, 56], [63, 34], 3.2, L3 ? M.gold : '#d8b46a', { grain: false }) + beam(c, [94, 56], [63, 34], 3.2, h.shade(L3 ? M.gold : '#d8b46a', -0.15), { grain: false });
+        o += beam(c, [32, 56], [63, 34], 3.2, L3 ? M.gold : '#d8b46a', { grain: false }) + beam(c, [94, 56], [63, 34], 3.2, hs(L3 ? M.gold : '#d8b46a', -0.15), { grain: false });
         if (L3) o += aura(c, 63, 26, 10, 10, E.color, 0.8) + spark(c, 63, 26, 7, '#ffe48a', 1.4);
         o += priest(c, pose, 24, 93, L3 ? 3 : 2).all;
         return o;
@@ -1415,12 +1552,12 @@
       const water = c.def('wat', (id) => c.lgc(id, [[0, '#d6fbff'], [1, '#6cc8d8']]));
       o += masonry(c, cylD(57, 86, 99, 30, 9), [27, 86, 87, 108], STONE.light, { round: true, rowH: 4.4, bw: 8, bulge: 9, seed: 116, bot: 0.35 });
       o += c.p('M27 89A30 9 0 0 0 87 89V92A30 9 0 0 1 27 92Z', c.vg(M.gold, 0.35, -0.25), 1.8);
-      o += c.e(57, 86, 30, 9, c.vg(h.shade(STONE.light, 0.2), 0.2, -0.1), 2.6) + c.e(57, 86, 25, 7, water, 2) + c.e(57, 86, 16, 4.6, 'none', 0, ` stroke="#fff" stroke-width="${c.sw(1.4)}" opacity="0.8"`);
+      o += c.e(57, 86, 30, 9, c.vg(hs(STONE.light, 0.2), 0.2, -0.1), 2.6) + c.e(57, 86, 25, 7, water, 2) + c.e(57, 86, 16, 4.6, 'none', 0, ` stroke="#fff" stroke-width="${c.sw(1.4)}" opacity="0.8"`);
       o += masonry(c, 'M53 86V60H61V86Z', [53, 60, 61, 86], STONE.light, { rowH: 5, bw: 8, seed: 117, round: true, w: 2.6 });
       const jet = by(pose, 1, 1.25, 1.7);
       const arc = (sx2) => `M${f(57 + sx2 * 5)} 60Q${f(57 + sx2 * 14 * jet)} ${f(60 - 8 * jet)} ${f(57 + sx2 * 20)} 84`;
       o += c.ln(arc(-1) + arc(1), '#ffffff', 4.4, 0.7) + c.ln(arc(-1) + arc(1), '#8ad8e6', 2);
-      o += c.e(57, 58, 10, 3, c.vg(h.shade(STONE.light, 0.2), 0.2, -0.1), 2.2) + c.e(57, 58, 7.5, 2.1, water, 1.4);
+      o += c.e(57, 58, 10, 3, c.vg(hs(STONE.light, 0.2), 0.2, -0.1), 2.2) + c.e(57, 58, 7.5, 2.1, water, 1.4);
       o += c.r(54.5, 42, 5, 16, c.cg(STONE.light), 1, 2.2);
       const oy = by(pose, 36, 33, 30);
       o += aura(c, 57, oy, 10 + heat * 4, 10 + heat * 4, E.color, 0.7) + orb(c, 57, oy, 7.5 + heat, E.color, 2.4) + spark(c, 57, oy, 4.5 + heat * 2, '#fff', 0);
@@ -1447,10 +1584,10 @@
   function obeliskB(c, x, yt, yb, wt, wb, col, seed, o = {}) {
     const h = c.h;
     const sd = wb * 0.26;
-    let s = masonry(c, poly([[x + wb / 2, yb], [x + wb / 2 + sd, yb - 3], [x + wt / 2 + sd * 0.7, yt - 2], [x + wt / 2, yt]]), [x + wt / 2, yt - 3, x + wb / 2 + sd, yb], h.shade(col, -0.3), { rowH: 5, bw: 20, seed: seed + 1, bot: 0.3, bevel: false, w: 2.8 });
+    let s = masonry(c, poly([[x + wb / 2, yb], [x + wb / 2 + sd, yb - 3], [x + wt / 2 + sd * 0.7, yt - 2], [x + wt / 2, yt]]), [x + wt / 2, yt - 3, x + wb / 2 + sd, yb], hs(col, -0.3), { rowH: 5, bw: 20, seed: seed + 1, bot: 0.3, bevel: false, w: 2.8 });
     s += masonry(c, poly([[x - wb / 2, yb], [x - wt / 2, yt], [x + wt / 2, yt], [x + wb / 2, yb]]), [x - wb / 2, yt, x + wb / 2, yb], col, { rowH: 5, bw: wb * 0.55, seed, bot: 0.35, top: 0.05, lit: 0.05, w: 2.8 });
     if (o.cap !== false) {
-      s += c.p(poly([[x + wt / 2, yt], [x + wt / 2 + sd * 0.7, yt - 2], [x + sd * 0.2, yt - wt * 1.1]]), h.shade(M.gold, -0.25), 2.4);
+      s += c.p(poly([[x + wt / 2, yt], [x + wt / 2 + sd * 0.7, yt - 2], [x + sd * 0.2, yt - wt * 1.1]]), hs(M.gold, -0.25), 2.4);
       s += c.p(poly([[x - wt / 2, yt], [x + sd * 0.2, yt - wt * 1.1], [x + wt / 2, yt]]), c.vg(M.gold, 0.4, -0.2), 2.4);
     }
     return s;
@@ -1515,12 +1652,12 @@
         o += ao(c, 50, 104, 18, 5.5, 0.5);
         if (L3) {
           // 날개돌(앞으로 벌어지는 돌 지느러미)
-          const wing = (sgn) => masonry(c, sgn < 0 ? 'M40 70Q24 62 20 44Q30 54 40 56Z' : 'M64 70Q80 62 84 44Q74 54 64 56Z', sgn < 0 ? [20, 44, 40, 70] : [64, 44, 84, 70], sgn < 0 ? ws : h.shade(ws, -0.2), { rowH: 4.5, bw: 6, seed: 125 + sgn, w: 2.6 });
+          const wing = (sgn) => masonry(c, sgn < 0 ? 'M40 70Q24 62 20 44Q30 54 40 56Z' : 'M64 70Q80 62 84 44Q74 54 64 56Z', sgn < 0 ? [20, 44, 40, 70] : [64, 44, 84, 70], sgn < 0 ? ws : hs(ws, -0.2), { rowH: 4.5, bw: 6, seed: 125 + sgn, w: 2.6 });
           const flap = by(pose, 0, -6, 4);
           o += rotG(wing(-1), -flap, [40, 63]) + rotG(wing(1), flap, [64, 63]);
           o += c.ln('M22 47Q28 54 38 58M82 47Q76 54 66 58', M.gold, 1.8);
         }
-        o += masonry(c, 'M36 106V100H64V106Q50 109 36 106Z', [36, 100, 64, 109], h.shade(STONE.light, -0.05), { rowH: 4.5, bw: 8, seed: 127, bot: 0.3 });
+        o += masonry(c, 'M36 106V100H64V106Q50 109 36 106Z', [36, 100, 64, 109], hs(STONE.light, -0.05), { rowH: 4.5, bw: 8, seed: 127, bot: 0.3 });
         o += obeliskB(c, 50, L3 ? 52 : 58, 101, 13, L3 ? 23 : 21, ws, 128);
         o += c.p(`M${L3 ? 41.6 : 42} ${L3 ? 77 : 79}H${L3 ? 58.4 : 58}V${L3 ? 80 : 82}H${L3 ? 41.6 : 42}Z`, c.vg(M.gold, 0.35, -0.3), 1.6) + c.p('M39.8 93H60.2V96H39.8Z', c.vg(M.gold, 0.35, -0.3), 1.6);
         o += glyph(c, 50, L3 ? 68 : 70, 0.9, 1, lit) + glyph(c, 50, 88, 0.9, 2, lit);
@@ -1735,7 +1872,7 @@
   function stoneFinger(c, x, y, L, w, ang, col, nail) {
     const h = c.h;
     let s = c.p(`M${f(x - w)} ${f(y)}C${f(x - w * 1.15)} ${f(y - L * 0.45)} ${f(x - w * 0.7)} ${f(y - L * 0.92)} ${f(x)} ${f(y - L)}C${f(x + w * 0.55)} ${f(y - L * 0.9)} ${f(x + w * 0.95)} ${f(y - L * 0.45)} ${f(x + w)} ${f(y)}Z`, c.cg(col), 2.4);
-    s += c.ln(`M${f(x - w * 0.6)} ${f(y - L * 0.45)}q${f(w * 0.6)} ${f(1)} ${f(w * 1.2)} 0`, h.shade(col, -0.4), 1, 0.8);
+    s += c.ln(`M${f(x - w * 0.6)} ${f(y - L * 0.45)}q${f(w * 0.6)} ${f(1)} ${f(w * 1.2)} 0`, hs(col, -0.4), 1, 0.8);
     if (nail) s += c.p(`M${f(x - w * 0.35)} ${f(y - L * 0.86)}L${f(x)} ${f(y - L - 2.4)}L${f(x + w * 0.35)} ${f(y - L * 0.86)}Z`, nail, 1.2);
     return rotG(s, ang, [x, y]);
   }
@@ -1744,10 +1881,10 @@
     const h = c.h;
     const F = [[-15, -1, 30, 5.5, -24], [-6, -3, 33, 4.8, -7], [6, -3, 33, 4.8, 7], [15, -1, 30, 5.5, 24]];
     let back = '';
-    F.forEach(([dx, dy, L, w, a]) => { const sg = Math.sign(dx); back += stoneFinger(c, x + dx * k, y + dy * k, L * k * (Math.abs(dx) > 10 ? 1 : 1.06), w * k, a - sg * curl, Math.abs(dx) > 10 ? col : h.shade(col, -0.15), nail); });
+    F.forEach(([dx, dy, L, w, a]) => { const sg = Math.sign(dx); back += stoneFinger(c, x + dx * k, y + dy * k, L * k * (Math.abs(dx) > 10 ? 1 : 1.06), w * k, a - sg * curl, Math.abs(dx) > 10 ? col : hs(col, -0.15), nail); });
     const P = (a, b) => `${f(x + a * k)} ${f(y + b * k)}`;
     let front = c.p(`M${P(-20, -2)}Q${P(-20, 14)} ${P(0, 15)}Q${P(20, 14)} ${P(20, -2)}Q${P(0, 6)} ${P(-20, -2)}Z`, c.cg(col), 3);
-    front += c.ln(`M${P(-11, 3.6)}Q${P(-11.5, 7)} ${P(-10, 10)}M${P(0, 6)}V${P(0, 12.5).split(' ')[1]}M${P(11, 3.6)}Q${P(11.5, 7)} ${P(10, 10)}`, h.shade(col, -0.38), 1.3) + c.ln(`M${P(-17, 2)}Q${P(-10, 8)} ${P(0, 8.5)}`, h.shade(col, 0.3), 1, 0.7);
+    front += c.ln(`M${P(-11, 3.6)}Q${P(-11.5, 7)} ${P(-10, 10)}M${P(0, 6)}V${P(0, 12.5).split(' ')[1]}M${P(11, 3.6)}Q${P(11.5, 7)} ${P(10, 10)}`, hs(col, -0.38), 1.3) + c.ln(`M${P(-17, 2)}Q${P(-10, 8)} ${P(0, 8.5)}`, hs(col, 0.3), 1, 0.7);
     return { back, front };
   }
   /** 던진 순간: 빈 손 위 소용돌이 고리 + 위로 솟는 꼬리 */
@@ -1817,9 +1954,9 @@
       o += voidPedestal(c, 76, 99, 10, 16, col, 156, [[82, 11], [93, 13.5]]);
       const out = by(pose, 0, -4, 7);
       const tips = [[22 - out, 36 - out * 0.5], [50, 18 - out * 0.4], [78 + out, 36 - out * 0.5]];
-      const fin = (x0, y0, t) => c.ol(`M${f(x0)} ${f(y0)}Q${f((x0 + t[0]) / 2 + (t[0] < 50 ? -3 : t[0] > 50 ? 3 : 0))} ${f((y0 + t[1]) / 2)} ${f(t[0])} ${f(t[1] + 8)}`, h.shade(col, 0.05), 7);
+      const fin = (x0, y0, t) => c.ol(`M${f(x0)} ${f(y0)}Q${f((x0 + t[0]) / 2 + (t[0] < 50 ? -3 : t[0] > 50 ? 3 : 0))} ${f((y0 + t[1]) / 2)} ${f(t[0])} ${f(t[1] + 8)}`, hs(col, 0.05), 7);
       o += fin(42, 72, tips[0]) + fin(58, 72, tips[2]) + fin(50, 70, tips[1]);
-      o += c.p('M34 80Q34 66 50 64Q66 66 66 80Q50 88 34 80Z', c.cg(col), 3) + c.ln('M43 70Q42 75 43 80M50 68V82M57 70Q58 75 57 80', h.shade(col, -0.38), 1.3);
+      o += c.p('M34 80Q34 66 50 64Q66 66 66 80Q50 88 34 80Z', c.cg(col), 3) + c.ln('M43 70Q42 75 43 80M50 68V82M57 70Q58 75 57 80', hs(col, -0.38), 1.3);
       const rb = by(pose, 10, 12.5, 10);
       if (pose !== 'fire') {
         o += voidBallB(c, tips[0][0], tips[0][1], rb, 0) + voidBallB(c, tips[2][0], tips[2][1], rb, 0) + voidBallB(c, tips[1][0], tips[1][1], rb + 1, 0);
@@ -1887,7 +2024,7 @@
     let s = roofPlane(c, [cx, ya], [8, -8], [w, yb - ya], 'thatch', roof, { lit: -0.15, seed });
     const d = `M${f(cx - w)} ${f(yb)}L${f(cx)} ${f(ya)}L${f(cx + w)} ${f(yb)}Q${f(cx)} ${f(yb + 5)} ${f(cx - w)} ${f(yb)}Z`;
     s += planks(c, d, [cx - w, ya, cx + w, yb + 5], wall, { pw: 4.4, seed: seed + 1, top: 0.35, bot: 0.35, k1: 0.25 });
-    s += beam(c, [cx - w - 4, yb + 2], [cx, ya - 4], 4, edge) + beam(c, [cx + w + 4, yb + 2], [cx, ya - 4], 4, h.shade(edge, -0.15));
+    s += beam(c, [cx - w - 4, yb + 2], [cx, ya - 4], 4, edge) + beam(c, [cx + w + 4, yb + 2], [cx, ya - 4], 4, hs(edge, -0.15));
     // 처마 끝 X자 + 뼈 장식
     s += c.ol(`M${f(cx - 4)} ${f(ya - 9)}L${f(cx)} ${f(ya - 4)}L${f(cx + 4)} ${f(ya - 9)}`, edge, 2.4);
     return s;
@@ -1948,7 +2085,7 @@
         if (L3) o += aura(c, 44, 70, 34, 30, E.color, 0.35);
         o += runeCircleB(c, 20, 108, 8, 0.85, flash);
         o += ao(c, 44, 104, 28, 7, 0.55);
-        o += masonry(c, cylD(44, 93, 104, 28, 8.4), [16, 93, 72, 112], h.shade(STONE.dark, 0.1), { round: true, rowH: 3.8, bw: 7, bulge: 8.4, seed: 164, mortar: '#17101e', bot: 0.35 });
+        o += masonry(c, cylD(44, 93, 104, 28, 8.4), [16, 93, 72, 112], hs(STONE.dark, 0.1), { round: true, rowH: 3.8, bw: 7, bulge: 8.4, seed: 164, mortar: '#17101e', bot: 0.35 });
         o += aHutB(c, 44, 46, 96, 26, '#6a5560', '#4a3d58', L3 ? '#a89cc0' : M.woodD, 165);
         o += darkDoorB(c, 44, 97, 14, 22, true);
         o += c.ol('M44 42V38', M.iron, 1.4) + aura(c, 44, 34, 6, 6, E.color, 0.8) + c.ci(44, 34, 3.4, c.sg(E.color), 1.8);
@@ -1968,7 +2105,7 @@
         const sag = by(pose, 14, 8, 4);
         const chainB = (x1, y1, x2, y2, s2) => { const d = `M${x1} ${y1}Q${f((x1 + x2) / 2)} ${f((y1 + y2) / 2 + s2)} ${x2} ${y2}`; return c.ln(d, OL, 5.6) + `<path d="${d}" fill="none" stroke="${M.ironL}" stroke-width="${c.sw(2.8)}" stroke-dasharray="${c.sw(3.6)} ${c.sw(2)}"/>`; };
         o += chainB(36, 14, 8, 94, sag) + chainB(44, 30, 18, 98, sag * 0.5);
-        o += masonry(c, cylD(42, 88, 99, 28, 8.4), [14, 88, 70, 107], h.shade(STONE.dark, 0.1), { round: true, rowH: 3.8, bw: 7, bulge: 8.4, seed: 168, mortar: '#17101e', bot: 0.35 });
+        o += masonry(c, cylD(42, 88, 99, 28, 8.4), [14, 88, 70, 107], hs(STONE.dark, 0.1), { round: true, rowH: 3.8, bw: 7, bulge: 8.4, seed: 168, mortar: '#17101e', bot: 0.35 });
         o += aHutB(c, 42, 50, 92, 26, '#6a5560', '#4a3d58', '#a89cc0', 169);
         o += darkDoorB(c, 42, 93, 14, 22, true);
         o += runeCircleB(c, 18, 104, 8, 0.85, flash) + runeCircleB(c, 64, 108, 7, 0.85, flash);
@@ -1987,7 +2124,7 @@
       o += ao(c, 42, 99, 30, 7, 0.55);
       const bl = (s) => c.p(s > 0 ? 'M42 56L72 10C82 18 84 30 80 40C76 30 72 26 68 26L46 60Z' : 'M42 56L12 10C2 18 0 30 4 40C8 30 12 26 16 26L38 60Z', c.vg(M.silver, 0.4, -0.2), 2.6);
       o += bl(1) + bl(-1) + c.ln('M72 12C80 20 82 30 80 38M12 12C4 20 2 30 4 38', E.color, 2);
-      o += masonry(c, cylD(42, 88, 99, 28, 8.4), [14, 88, 70, 107], h.shade(STONE.dark, 0.1), { round: true, rowH: 3.8, bw: 7, bulge: 8.4, seed: 171, mortar: '#17101e', bot: 0.35 });
+      o += masonry(c, cylD(42, 88, 99, 28, 8.4), [14, 88, 70, 107], hs(STONE.dark, 0.1), { round: true, rowH: 3.8, bw: 7, bulge: 8.4, seed: 171, mortar: '#17101e', bot: 0.35 });
       o += aHutB(c, 42, 48, 92, 28, '#6a5560', '#3a2e48', '#a89cc0', 172);
       o += c.p('M32 64L28 56L36 60ZM52 64L56 56L48 60Z', c.vg(M.silver), 1.6);
       o += darkDoorB(c, 42, 93, 14, 22, true);
@@ -1997,4 +2134,10 @@
       return o;
     },
   };
+
+  /* 4차: 이 파일의 탑은 색을 튼 명암(enhance)으로 그림 */
+  ['stone_barracks', 'quake_hammer', 'crystal_mine', 'sun_lens', 'sanctuary', 'radiance_spire', 'hex_spire', 'void_orb', 'shadow_snare'].forEach((id) => {
+    const d0 = T[id].draw;
+    T[id].draw = (c, v, pose) => d0(enhance(c), v, pose);
+  });
 })();

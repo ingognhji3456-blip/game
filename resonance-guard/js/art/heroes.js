@@ -63,6 +63,8 @@
       raw: (key, make) => add(key, make),
       /** 경로 모양 그대로 자르는 clipPath id */
       clip: (d) => add(`clip${d}`, (id) => `<clipPath id="${id}"><path d="${d}"/></clipPath>`).slice(5, -1),
+      /** 옮기고 돌린 경로로 자르는 clipPath id (몸통 좌표 → 세상 좌표) */
+      clipT: (d, tr) => add(`clipT${d}${tr}`, (id) => `<clipPath id="${id}"><path d="${d}" transform="${tr}"/></clipPath>`).slice(5, -1),
     };
   }
 
@@ -164,8 +166,9 @@
    * 마디 여러 개를 한 덩어리로 (관절에 선이 끊기지 않게):
    * 외곽선을 모두 먼저 → 그늘색 면 → 왼쪽 위로 비킨 밝은 면(오른쪽 아래에 그늘이 남음)
    * segs: [{a, b, ra, rb, col}]
+   * inner: clipPath id — 이 안(몸통 위)에서는 윤곽을 OLC 대신 제 색의 어두운 변형으로 (§7.1 안쪽 선)
    */
-  function limb(segs, owid = 1.8) {
+  function limb(segs, owid = 1.8, inner = null) {
     let o = '';
     let f = '';
     let l = '';
@@ -191,7 +194,8 @@
         r += T(`M${pt(add(q0, nx * r0, ny * r0))}L${pt(add(q1, nx * r1, ny * r1))}`, RIMC(s.col), k > 4 ? 1.2 : 0.85, op(0.6));
       }
     }
-    return o + f + l + r;
+    const t = inner ? `<g clip-path="url(#${inner})">${segs.map((s) => `<path d="${cap(s.a, s.b, s.ra, s.rb)}" fill="${IL(s.col, 0.55)}" stroke="${IL(s.col, 0.55)}" stroke-width="${owid * 2}"/>`).join('')}</g>` : '';
+    return o + t + f + l + r;
   }
   /** 그늘용: 마디 모양을 오른쪽 아래로 비켜 반투명 검정 */
   const castSegs = (segs, dx = 1.8, dy = 2.2, a = 0.2) => `<g opacity="${a}">${segs.map((s) => `<path d="${cap(add(s.a, dx, dy), add(s.b, dx, dy), s.ra + 0.6, s.rb + 0.6)}" fill="${OLC}"/>`).join('')}</g>`;
@@ -306,7 +310,7 @@
     const fa = angTo(E, H);
     const Wr = pol(H, -2.3, fa);
     const segs = [{ a: S, b: E, ra: o.rs || 3, rb: o.re || 2.6, col: o.sleeve }, { a: E, b: Wr, ra: o.re || 2.6, rb: o.rw || 2.2, col: o.fore || o.sleeve }];
-    let s = limb(segs);
+    let s = limb(segs, 1.8, o.inner);
     if (o.roll) s += G(P('M-1.8 -3.6H1.8V3.6H-1.8Z', o.roll, 2) + T('M0 -2.6V2.6', sh(o.roll, -0.3), 1.2), at(pol(E, -1.2, angTo(S, E)), angTo(S, E)));
     if (o.cuff) s += G(P('M-1.5 -3.1H1.5V3.1H-1.5Z', o.cuff, 1.8), at(pol(Wr, -0.6, fa), fa));
     return { s, E, H, Wr, fa, segs };
@@ -396,6 +400,9 @@
 
   /** 사람 몸통(셔츠) 기본 모양 — 몸통 좌표(엉덩이 중심 50,65) */
   const BODY = 'M44.4 45.6C40.8 47.8 40 55 41.2 62L41.4 67L59.2 67L59.4 62C60.2 56 60 50 57.2 46.4C53.6 44 48 43.8 44.4 45.6Z';
+  /** 몸통+골반 (가까운 팔 윤곽을 안쪽 선으로 바꿀 자리) */
+  const BODY_IN = `${'M44.4 45.6C40.8 47.8 40 55 41.2 62L41.4 67L59.2 67L59.4 62C60.2 56 60 50 57.2 46.4C53.6 44 48 43.8 44.4 45.6Z'}M41.2 63.4L59.6 63.2L60.2 69.4Q53 72 50 71.6Q45 71.2 40.6 69.6Z`;
+  const innerOf = (c, R, d = BODY_IN) => c.clipT(d, `${R.tf} ${R.up}`);
   /** 몸통 그늘(오른쪽·아래) */
   const BODY_SHD = SHD('M55.6 45.6C60.8 50 61.2 58 59.8 67L53.6 67C56.6 60 57.4 52 55.6 45.6Z', 0.2) + SHD('M40 60.5C47 62 54 62 61 60.5V68H40Z', 0.12);
 
@@ -461,7 +468,7 @@
     const hb = V(hm[0], hm[1]);
     const u = pol(V(0, 0), 1, hm[2]);
     const onHaft = (s) => add(hb, u.x * s, u.y * s);
-    const near = arm(R.sn, onHaft(Pz.gn), { sleeve: K.shirt, fore: K.skin, roll: sh(K.shirt, 0.15), cuff: K.wrap, rs: 3.2 });
+    const near = arm(R.sn, onHaft(Pz.gn), { sleeve: K.shirt, fore: K.skin, roll: sh(K.shirt, 0.15), cuff: K.wrap, rs: 3.2, inner: innerOf(c, R) });
     const farT = Pz.gf != null ? onHaft(Pz.gf) : V(Pz.hf[0], Pz.hf[1]);
     const far = arm(R.sf, farT, { sleeve: sh(K.shirt, -0.18), fore: sh(K.skin, -0.12), roll: sh(K.shirt, -0.05), cuff: sh(K.wrap, -0.15), bend: Pz.fb || 1, rs: 3.2 });
     const legO = { pant: K.pant, boot: K.boot, lace: '#b88a5a', knee: sh(K.pant, 0.18) };
@@ -619,7 +626,7 @@
     const sa = Pz.st[2];
     const onStaff = (g) => pol(sb, g, sa);
     const sleeve = { sleeve: S.robe, fore: S.robe, cuff: S.gold, rs: 3.2, re: 2.8, rw: 2.6 };
-    const near = arm(R.sn, onStaff(Pz.gn), sleeve);
+    const near = arm(R.sn, onStaff(Pz.gn), Object.assign({ inner: innerOf(c, R) }, sleeve));
     const far = arm(R.sf, Pz.gf != null ? onStaff(Pz.gf) : V(Pz.hf[0], Pz.hf[1]), Object.assign({}, sleeve, { sleeve: sh(S.robe, -0.12), fore: sh(S.robe, -0.12), cuff: sh(S.gold, -0.15) }));
     const fN = foot(Pz.fn);
     const fF = foot(Pz.ff);
@@ -788,7 +795,7 @@
     const sl = { sleeve: S.coat, cuff: S.fur, rs: 3.3, re: 2.9, rw: 2.6 };
     const far = arm(R.sf, grip, Object.assign({}, sl, { sleeve: sh(S.coat, -0.18), cuff: S.furD }));
     const nearT = bw[4] ? B.nockPt : V(Pz.hn[0], Pz.hn[1]);
-    const near = arm(R.sn, nearT, Object.assign({}, sl, Pz.nE ? { E: Pz.nE } : {}));
+    const near = arm(R.sn, nearT, Object.assign({ inner: innerOf(c, R) }, sl, Pz.nE ? { E: Pz.nE } : {}));
     const legO = { pant: S.pant, boot: S.boot, rim: S.fur };
     const legN = leg(c, R.hn, foot(Pz.fn), legO);
     const legF = leg(c, R.hf, foot(Pz.ff), Object.assign({}, legO, { pant: sh(S.pant, -0.2), boot: sh(S.boot, -0.15), rim: S.furD }));
@@ -956,7 +963,7 @@
     const glow = Pz.glow || 0;
     const Rod = zapRod(c, rp, ra, glow);
     const sl = { sleeve: Z.jacket, cuff: Z.gold, rs: 3.2 };
-    const near = arm(R.sn, rp, sl);
+    const near = arm(R.sn, rp, Object.assign({ inner: innerOf(c, R) }, sl));
     const farT = Pz.gf != null ? pol(rp, Pz.gf, ra) : V(Pz.hf[0], Pz.hf[1]);
     const far = arm(R.sf, farT, Object.assign({}, sl, { sleeve: sh(Z.jacket, -0.2), cuff: sh(Z.gold, -0.2) }));
     const legO = { pant: Z.pant, boot: Z.boot, rim: Z.leather, lace: Z.gold };
@@ -1225,7 +1232,7 @@
     const Pz = YARO[pose] || YARO.idle0;
     const R = rig(HUMAN, Pz);
     const sl = { sleeve: '#4c4556', cuff: Y.wrap, rs: 3, re: 2.5, rw: 2.1 };
-    const near = arm(R.sn, Pz.hn, sl);
+    const near = arm(R.sn, Pz.hn, Object.assign({ inner: innerOf(c, R) }, sl));
     const far = arm(R.sf, Pz.hf, Object.assign({}, sl, { sleeve: sh('#4c4556', -0.2), cuff: sh(Y.wrap, -0.2) }));
     const legO = { pant: Y.pant, boot: Y.boot, rim: Y.wrap, rh: 3.3, rk: 2.7, ra: 2.3, fold: true };
     const legN = leg(c, R.hn, foot(Pz.fn), legO);
