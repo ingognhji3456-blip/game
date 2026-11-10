@@ -12,7 +12,7 @@
  * - 같은 탑은 단계가 올라도 같은 인물·장치(광부, 사제, 망치 틀, 눈, 돌손, 그림자 사냥꾼).
  */
 (() => {
-  const { OL, f, M, STONE, poly, crystal, orb, aura, spark, cyl, frus, ring, band, vseam, flag, cone, plat, house, shard } = RG.art._tw;
+  const { OL, f, M, STONE, poly, crystal, orb, aura, spark, shard } = RG.art._tw;
   const T = RG.art._tw.T;
 
   /* ================= 기본 계산 ================= */
@@ -47,8 +47,6 @@
   const lnc = (c, d, col, w, cap = 'butt', ex = '') => `<path d="${d}" fill="none" stroke="${col}" stroke-width="${c.sw(w)}" stroke-linecap="${cap}"${ex}/>`;
   /** 위·아래 그늘 덧칠(돌출부 아래 형태 그림자, 땅에 닿는 접지 그늘) */
   const vshade = (c, a1, a2, k1 = 0.3, k2 = 0.7) => c.def(`vs${a1}_${a2}_${k1}_${k2}`, (id) => c.lgc(id, [[0, OL, a1], [k1, OL, 0], [k2, OL, 0], [1, OL, a2]]));
-  /** 가로 명암 덧칠(왼쪽 밝음 → 오른쪽 어두움) */
-  const hshade = (c, a1 = 0.18, a2 = 0.32) => c.def(`hs${a1}_${a2}`, (id) => c.lgc(id, [[0, '#ffffff', a1], [0.4, '#ffffff', 0], [0.6, OL, 0], [1, OL, a2]], 'h'));
   /** 땅에 닿는 곳 접지 그늘(바닥 그림자가 아니라 맞닿은 틈의 어둠) */
   const ao = (c, x, y, rx, ry, a = 0.45) => c.e(x, y, rx, ry, c.ag(OL, a), 0);
   /** 원기둥 옆면 실루엣 */
@@ -244,8 +242,6 @@
     return c.p(d, c.vg('#6fae3e', 0.3, -0.25), 1.6) + c.ci(x - w * 0.2, y - ht * 0.35, Math.max(0.6, ht * 0.18), '#a8d870', 0, ' opacity="0.8"');
   }
 
-  /* 금 간 자국 */
-  const crack = (c, d, col) => c.ln(d, col || OL, 1.2, 0.7);
 
   /* ================= 받침(기초) ================= */
   /*
@@ -1926,6 +1922,8 @@
       fx = c.ln(`M${f(P.hF[0] - 2)} ${f(P.hF[1] + 8)}Q${f(P.hF[0] + 4)} ${f(P.hF[1] - 6)} ${f(t[0] - 4)} ${f(t[1] - 2)}`, '#fff', 1.4, 0.6) + c.ln(`M${f(P.hF[0] - 6)} ${f(P.hF[1] + 4)}Q${f(P.hF[0])} ${f(P.hF[1] - 10)} ${f(t[0] - 6)} ${f(t[1] - 6)}`, c.E.light, 1.2, 0.5) + trapFn(t[0], t[1], 25);
     }
     const glow = aura(c, x + 1, y - 6, 16, 20, c.E.color, 0.35);
+    // 감아 올린 덫은 머리 뒤(몸 뒤), 나머지는 손 앞
+    if (pose === 'aim') return glow + cape + F.back + held + F.body + spare + F.handB + F.front + fx;
     return glow + cape + F.back + F.body + spare + F.handB + held + F.front + fx;
   }
 

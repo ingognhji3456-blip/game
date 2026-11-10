@@ -2013,7 +2013,7 @@
   }
 
   T.gale_cannon = {
-    muzzle: [[73, 69], [77, 64], [77, 64], [50, 10], [50, 22]],
+    muzzle: [[72, 70], [74, 65], [74, 65], [50, 10], [50, 27]],
     draw(c, v, pose = 'idle') {
       const h = c.h;
       const E = c.E;
@@ -2048,11 +2048,11 @@
         const bw = bellowsBox(c, 46, L1 ? 79 : 75, 15, open);
         o += c.ol(`M${mx} ${my}L${f(bw.top[0] + 3)} ${f(bw.top[1])}`, M.ironL, 1.4);
         o += bw.s;
-        const g = hornGun(c, 47 + rec, L1 ? 76 : 71, L1 ? 26 : 30, L1 ? 6 : 7, -14, L3 ? M.gold : M.bronze);
+        const g = hornGun(c, 47 + rec, L1 ? 76 : 71, L1 ? 25 : 27, L1 ? 6 : 7, -14, L3 ? M.gold : M.bronze);
         o += g.s;
         o += c.ci(47 + rec, L1 ? 76 : 71, 3.4, c.sg(M.ironL), 2);
         if (pose === 'aim') o += intake(c, g.mouth[0] + 2, g.mouth[1], g.dir, L1 ? 0.8 : 0.9);
-        if (pose === 'fire') o += gustBurst(c, g.mouth[0] + 1, g.mouth[1], g.dir, L1 ? 0.78 : 0.8);
+        if (pose === 'fire') o += gustBurst(c, g.mouth[0] + 1, g.mouth[1], g.dir, L1 ? 0.74 : 0.76);
 
         return o;
       }
@@ -2098,12 +2098,12 @@
       o += band(c, 50, 84, 88, 24.6, 7.4, c.vg(M.gold, 0.35, -0.25));
       o += c.p('M34 76Q34 58 50 56Q66 58 66 76Q50 82 34 76Z', c.vg(M.iron, 0.35, -0.25), 3) + c.ln('M38 66Q50 62 62 66', '#ffffff', 1.5, 0.5);
       const by = pose === 'fire' ? 3 : 0;
-      o += cyl(c, 43, 24 + by, 64, 6, 2, c.cg(M.bronze), null) + cyl(c, 57, 24 + by, 64, 6, 2, c.cg(M.bronze), null);
-      o += c.e(43, 24 + by, 6.4, 2.4, h.shade(M.bronze, -0.5), 2.4) + c.e(57, 24 + by, 6.4, 2.4, h.shade(M.bronze, -0.5), 2.4);
-      o += c.r(36, 36 + by, 28, 6, c.vg(M.gold, 0.35, -0.3), 2, 2.4) + c.r(36, 50, 28, 6, c.vg(M.gold, 0.35, -0.3), 2, 2.4);
+      o += cyl(c, 43, 29 + by, 64, 6, 2, c.cg(M.bronze), null) + cyl(c, 57, 29 + by, 64, 6, 2, c.cg(M.bronze), null);
+      o += c.e(43, 29 + by, 6.4, 2.4, h.shade(M.bronze, -0.5), 2.4) + c.e(57, 29 + by, 6.4, 2.4, h.shade(M.bronze, -0.5), 2.4);
+      o += c.r(36, 39 + by, 28, 6, c.vg(M.gold, 0.35, -0.3), 2, 2.4) + c.r(36, 50, 28, 6, c.vg(M.gold, 0.35, -0.3), 2, 2.4);
       o += c.ci(50, 68, 5, c.sg(pose === 'idle' ? E.color : '#ffffff'), 2.2);
-      if (pose === 'aim') o += intake(c, 43, 22, -90, 0.6) + intake(c, 57, 22, -90, 0.6);
-      if (pose === 'fire') o += gustBurst(c, 43, 26, -98, 0.62) + gustBurst(c, 57, 26, -82, 0.62);
+      if (pose === 'aim') o += intake(c, 43, 27, -90, 0.6) + intake(c, 57, 27, -90, 0.6);
+      if (pose === 'fire') o += gustBurst(c, 43, 31, -98, 0.58) + gustBurst(c, 57, 31, -82, 0.58);
       return o;
     },
   };

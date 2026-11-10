@@ -57,11 +57,11 @@
       forest: '#cbd8e7', forestD: '#b2c3d8', rubble: '#b5c3d3', litter: '#9fb3c9',
       open: '#cfe4f2', openL: '#e3f0f9', openD: '#a7c7de', openMark: '#4f7ca3',
       plot: '#aebccd', plotL: '#c9d5e2', plotD: '#7d8ea6',
-      slab: '#8ea1b9', slabL: '#bccbdd', slabD: '#6b7e98', slabSide: '#4b5b75', slabLine: '#5b6d8b', moss: '#ffffff', mossL: '#ffffff',
+      slab: '#9cadc4', slabL: '#c9d6e5', slabD: '#7789a4', slabSide: '#4b5b76', slabLine: '#566887', moss: '#ffffff', mossL: '#ffffff',
       road: '#b9aa98', roadL: '#d8cdbf', roadD: '#a19181', roadEdge: '#6e6056', roadAO: '#7f97b3',
       shoreWet: '#a2b6cc', shore: '#f3f8fd', foam: '#ffffff', waterL: '#5ea6d6', water: '#3a80b8', waterD: '#245a90', waterDeep: '#173f6c',
       ...LAVA, crust: '#323744',
-      cliffTop: '#a9bbd0', cliffTopL: '#d9e4ef', cliffTopD: '#7b8faa', cliffFace: '#6f84a2', cliffFaceD: '#4a5b77', cliffLine: '#3c4b64',
+      cliffTop: '#8d9fb8', cliffTopL: '#d9e4ef', cliffTopD: '#6a7d98', cliffFace: '#5d7192', cliffFaceD: '#3d4d6a', cliffLine: '#2f3c55',
       stone: '#8ea1b8', stoneL: '#c9d7e6', stoneD: '#56677e', accent: '#ffffff',
       plaza: '#dce5ef', plazaD: '#8d9fb6', wood: '#7d5a44', woodD: '#4c3427',
       leaf: '#2e6a5c', leafL: '#4f927a', leafD: '#1b463d',
@@ -74,11 +74,11 @@
       forest: '#874729', forestD: '#6f3820', rubble: '#a7684a', litter: '#c98b55',
       open: '#e7c083', openL: '#f1d29c', openD: '#c99b5e', openMark: '#7a4524',
       plot: '#8f4f30', plotL: '#a8623e', plotD: '#5e2c16',
-      slab: '#cd8a5c', slabL: '#ecb084', slabD: '#a4643c', slabSide: '#6a361b', slabLine: '#7d4426', moss: '#ebcb92', mossL: '#f6dfb0',
+      slab: '#d49a6c', slabL: '#f0c094', slabD: '#aa6f45', slabSide: '#6a361b', slabLine: '#82482a', moss: '#ebcb92', mossL: '#f6dfb0',
       road: '#f1ddae', roadL: '#fcf0d2', roadD: '#dcc08c', roadEdge: '#9a6236', roadAO: '#4e220f',
       shoreWet: '#6e3a22', shore: '#d8b682', foam: '#ecfff7', waterL: '#5cc0b8', water: '#36a6a2', waterD: '#1d6a72', waterDeep: '#144e58',
       ...LAVA, crust: '#3a1f1a',
-      cliffTop: '#c4774a', cliffTopL: '#e9a272', cliffTopD: '#8a4426', cliffFace: '#87401f', cliffFaceD: '#562310', cliffLine: '#3e170a', strata: '#c8784a',
+      cliffTop: '#a24e2c', cliffTopL: '#cf7446', cliffTopD: '#6e2d15', cliffFace: '#6c2911', cliffFaceD: '#431505', cliffLine: '#2e0e03', strata: '#b8643c',
       stone: '#bb673c', stoneL: '#e8986a', stoneD: '#7a381e', accent: '#f3b77a',
       plaza: '#ecd4a4', plazaD: '#a8743f', wood: '#8a6040', woodD: '#553620',
       leaf: '#5e9a48', leafL: '#8fc86c', leafD: '#3a682e',
@@ -105,10 +105,10 @@
     },
     5: { // 깨진 대종 — 회보라·금
       ground: '#4a4361', groundL: '#5d5577', groundD: '#38324b', tuft: '#2b2640', tuftL: '#8a80a6',
-      forest: '#3d3752', forestD: '#2f2a41', rubble: '#5f5878', litter: '#7a7096',
-      open: '#aaa1be', openL: '#bdb5cf', openD: '#8a819f', openMark: '#3f3658',
+      forest: '#3d3752', forestD: '#2f2a41', rubble: '#867e9f', litter: '#7a7096',
+      open: '#958cab', openL: '#a69ebc', openD: '#7a7193', openMark: '#2f2846',
       plot: '#5d5679', plotL: '#726a90', plotD: '#3a3452',
-      slab: '#b6aecd', slabL: '#d8d2e8', slabD: '#8f87aa', slabSide: '#4b4466', slabLine: '#6a6288', moss: '#e8bd4c', mossL: '#f6dc84',
+      slab: '#c7c0dc', slabL: '#e6e1f2', slabD: '#9c94b8', slabSide: '#4b4466', slabLine: '#6f6790', moss: '#e8bd4c', mossL: '#f6dc84',
       road: '#d5b56e', roadL: '#edd89e', roadD: '#b9994f', roadEdge: '#6a522c', roadAO: '#1d182b',
       shoreWet: '#3a3450', shore: '#7c7492', foam: '#e8e2ff', waterL: '#6a69a8', water: '#4e4d88', waterD: '#363568', waterDeep: '#25244c',
       ...LAVA, crust: '#2a2234',
@@ -696,7 +696,7 @@
     }
     const bridgeAt = (c, r) => (inb(c, r) ? bridges.get(r * cols + c) : undefined);
 
-    /* ---- 이어진 바위·기둥(3칸 이상) = 돋운 절벽/성벽 ---- */
+    /* ---- 이어진 바위·기둥(5칸 이상, 또는 맵 가장자리에 붙은 3칸 이상) = 돋운 절벽/성벽 ---- */
     const cliffSet = new Uint8Array(cols * rows);
     {
       const isR = (c, r) => { const k = kAt(c, r); return k === K.ROCK || k === K.PILLAR; };
@@ -718,7 +718,19 @@
               stack.push([nc, nr]);
             }
           }
-          if (group.length >= 3) group.forEach((i) => { cliffSet[i] = 1; });
+          const edge = group.some((i) => { const gc = i % cols; const gr = (i / cols) | 0; return gc === 0 || gr === 0 || gc === cols - 1 || gr === rows - 1; });
+          if (group.length >= 5 || (edge && group.length >= 3)) group.forEach((i) => { cliffSet[i] = 1; });
+        }
+      }
+    }
+    // 절벽에 둘러싸인 나무 칸(걷거나 지을 칸과 닿지 않음)은 절벽 위 나무로
+    for (let pass = 0; pass < 2; pass++) {
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (kAt(c, r) !== K.TREE || cliffSet[r * cols + c]) continue;
+          const nb = N4.map(([dc, dr]) => [c + dc, r + dr]).filter(([nc, nr]) => inb(nc, nr));
+          const touchPlay = nb.some(([nc, nr]) => { const k = kAt(nc, nr); return isRoad(k) || k === K.OPEN || k === K.BUILD; });
+          if (!touchPlay && nb.some(([nc, nr]) => cliffSet[nr * cols + nc])) cliffSet[r * cols + c] = 1;
         }
       }
     }
@@ -748,9 +760,11 @@
      * ===================================================== */
     const waterSet = setOf((k, c, r) => k === K.WATER || (bridgeAt(c, r) && !bridgeAt(c, r).lava));
     const lavaSet = setOf((k, c, r) => k === K.LAVA || (bridgeAt(c, r) && bridgeAt(c, r).lava));
-    const openSet = setOf((k) => k === K.OPEN);
+    const openSet = setOf((k, c, r) => k === K.OPEN || ((k === K.ROCK || k === K.PILLAR || k === K.TREE || k === K.LAVA || k === K.WATER) && !inCliff(c, r) &&
+      N4.filter(([dc, dr]) => kAt(c + dc, r + dr) === K.OPEN).length >= 2));
     const buildSet = setOf((k) => k === K.BUILD);
     const treeSet = setOf((k) => k === K.TREE);
+    const onOpen = (c, r) => !!(openSet && openSet[r * cols + c]);
     const rubbleSet = setOf((k, c, r) => (k === K.ROCK || k === K.PILLAR) && !inCliff(c, r));
     const anyCliff = cliffSet.some((v) => v);
     if (waterSet) F.water = sdField(waterSet, 13, 8, 70, 401, 2.4);
@@ -884,8 +898,8 @@
     }
     if (F.rubble) {
       const rub = ST.coral ? '#d8c99c' : P.rubble;
-      body.push(fillP(contour(F.rubble, 2), rub, 0.3));
-      body.push(fillP(contour(F.rubble, 12), rub, 0.5));
+      if (!ST.coral) body.push(fillP(contour(F.rubble, 2), rub, 0.3));
+      body.push(fillP(contour(F.rubble, 12), rub, ST.coral ? 0.25 : 0.5));
       const bk = Buckets();
       for (const [c, r] of cellsWhere((k, cc, rr) => (k === K.ROCK || k === K.PILLAR) && !inCliff(cc, rr))) {
         for (let i = 0; i < 6; i++) {
@@ -1061,7 +1075,7 @@
         if (A[k] < 3) { CR[k] = -1; continue; }
         const x = G.x0 + (k % G.nx) * GS;
         const y = G.y0 + Math.floor(k / G.nx) * GS;
-        CR[k] = fbm(x / 30, y / 30, 1211, 2) - 0.6 + Math.max(0, 20 - A[k]) / 42;
+        CR[k] = fbm(x / 30, y / 30, 1211, 2) - 0.63 + Math.max(0, 18 - A[k]) / 55;
       }
       const dC = pathD(G.loops(CR, 0), 0.3);
       if (dC) {
@@ -1413,8 +1427,9 @@
       bk.add(strokeA(region === 1 ? '#4a7a28' : P.tuft, 2.3, 0.9), tuftD(x, y + 2, s));
       bk.add(strokeA(region === 1 ? '#9fcb5a' : P.tuftL, 1.6, 0.8), tuftHiD(x, y + 2, s));
     } else if (region === 2) {
-      bk.add(fillA('#ffffff'), ell(x, y, 6 + v * 5, 3 + v * 1.5));
-      bk.add(fillA('#c3d4e6', 0.8), `M${f(x - 5)} ${f(y + 2.5)}q5 2 10 0`);
+      if (v > 0.55) return;
+      bk.add(fillA('#ffffff'), ell(x, y, 5 + v * 6, 2.6 + v * 1.5));
+      bk.add(fillA('#c3d4e6', 0.8), `M${f(x - 4)} ${f(y + 2.2)}q4 1.6 8 0`);
     } else if (region === 3) {
       if (v < 0.5) bk.add(strokeA('#c79254', 2, 0.9), tuftD(x, y + 2, 0.7));
       else pebble(bk, PAL[3], x, y, 2.4);
@@ -1497,10 +1512,9 @@
     t += `<g clip-path="${inClip}"><path d="${base}" ${EO} fill="${P.slab}" transform="translate(-2.5 ${-HT - 2.5})"/></g>`;
     // 큰 얼룩(돌 색 변화 / 눈·모래 덮임)
     if (region === 2) {
-      const sn = pathD(G.loops(CM, 0.6), 0.4);
-      t += `<path d="${sn}" ${EO} fill="#b4c6da" transform="translate(1.5 ${-HT + 2})"/><path d="${sn}" ${EO} fill="#ffffff" fill-opacity="0.95" transform="${up}"/>`;
+      t += `<path d="${pathD(G.loops(CM, 0.64), 0.4)}" ${EO} fill="${P.slabL}" fill-opacity="0.4" transform="${up}"/>`;
     } else if (region === 3) {
-      t += `<path d="${pathD(G.loops(CM, 0.62), 0.4)}" ${EO} fill="${P.moss}" fill-opacity="0.75" transform="${up}"/>`;
+      t += `<path d="${pathD(G.loops(CM, 0.7), 0.4)}" ${EO} fill="${P.moss}" fill-opacity="0.7" transform="${up}"/>`;
     } else {
       t += `<path d="${pathD(G.loops(CM, 0.62), 0.4)}" ${EO} fill="${P.slabL}" fill-opacity="0.35" transform="${up}"/>`;
     }
@@ -1529,6 +1543,11 @@
         jt.add(strokeA(jointCol, region === 5 ? 2.2 : 2.6, 0.8), `M${x0 - 2} ${f(jy)}L${x0 + 102} ${f(jy + j(4, 2))}`);
         jt.add(strokeA(P.slabL, 1.5, 0.6), `M${x0 + 2} ${f(jy + 2)}L${x0 + 98} ${f(jy + 2 + j(4, 2))}`);
       }
+      // 판석 테두리 빛(이웃 판석과 맞닿은 변): 위·왼쪽 밝게, 아래·오른쪽 어둡게 → 판석 한 장 = 한 칸
+      if (isB(c - 1, r)) det.add(strokeA(P.slabL, 2.2, 0.7), `M${x0 + 3.5} ${y0 + 6}V${y0 + 94}`);
+      if (isB(c, r - 1)) det.add(strokeA(P.slabL, 2.2, 0.7), `M${x0 + 6} ${y0 + 3.5}H${x0 + 94}`);
+      if (isB(c + 1, r)) det.add(strokeA(P.slabD, 2.2, 0.55), `M${x0 + 96.5} ${y0 + 6}V${y0 + 94}`);
+      if (isB(c, r + 1)) det.add(strokeA(P.slabD, 2.2, 0.55), `M${x0 + 6} ${y0 + 96.5}H${x0 + 94}`);
       if (region === 5) {
         // 금빛 상감: 판석 안쪽 테
         det.add(strokeA(P.slabLine, 2, 0.4), `M${x0 + 14} ${y0 + 14}h72v72h-72Z`);
@@ -1537,14 +1556,14 @@
       // 판석 안의 이음매(한 장 / 둘 / 셋)
       const kind = rnd(c, r, 20);
       const seam = (ax, ay, bx, by) => {
-        det.add(strokeA(P.slabL, 1.4, 0.5), `M${f(ax + 1.3)} ${f(ay + 1.3)}L${f(bx + 1.3)} ${f(by + 1.3)}`);
-        det.add(strokeA(P.slabLine, 2, 0.6), `M${f(ax)} ${f(ay)}L${f(bx)} ${f(by)}`);
+        det.add(strokeA(P.slabL, 1.2, 0.45), `M${f(ax + 1.2)} ${f(ay + 1.2)}L${f(bx + 1.2)} ${f(by + 1.2)}`);
+        det.add(strokeA(P.slabLine, 1.6, 0.42), `M${f(ax)} ${f(ay)}L${f(bx)} ${f(by)}`);
       };
       const sx = x0 + 34 + rnd(c, r, 21) * 32;
       const sy = y0 + 34 + rnd(c, r, 22) * 32;
-      if (kind > 0.45 && kind < 0.7) seam(sx, y0 + 3, sx + j(23, 8), y0 + 97);
-      else if (kind >= 0.7 && kind < 0.85) seam(x0 + 3, sy, x0 + 97, sy + j(24, 8));
-      else if (kind >= 0.85) { seam(sx, y0 + 3, sx + j(23, 6), y0 + 97); seam(rnd(c, r, 25) < 0.5 ? x0 + 3 : sx, sy, rnd(c, r, 25) < 0.5 ? sx : x0 + 97, sy + j(24, 6)); }
+      if (kind > 0.6 && kind < 0.76) seam(sx, y0 + 8, sx + j(23, 8), y0 + 92);
+      else if (kind >= 0.76 && kind < 0.88) seam(x0 + 3, sy, x0 + 97, sy + j(24, 8));
+      else if (kind >= 0.88) { seam(sx, y0 + 8, sx + j(23, 6), y0 + 97); seam(rnd(c, r, 25) < 0.5 ? x0 + 3 : sx, sy, rnd(c, r, 25) < 0.5 ? sx : x0 + 97, sy + j(24, 6)); }
       // 금
       if (rnd(c, r, 30) < 0.45) {
         let px = x0 + 15 + rnd(c, r, 31) * 70;
@@ -1736,7 +1755,7 @@
     t += `<g clip-path="${inClip}"><path d="${base}" ${EO} fill="${P.cliffTop}" transform="translate(-3 ${-HC - 3})"/></g>`;
     // 윗면 얼룩 (밝은/어두운 바위, 눈 덮인 곳)
     if (region === 2) {
-      const sn = pathD(G.loops(CM, 0.44), 0.4);
+      const sn = pathD(G.loops(CM, 0.33), 0.4);
       t += `<path d="${sn}" ${EO} fill="#a7bad1" transform="translate(2 3)"/><path d="${sn}" ${EO} fill="#ffffff"/>`;
       t += `<path d="${pathD(G.loops(CM, 0.6), 0.4)}" ${EO} fill="#e4edf6" fill-opacity="0.8"/>`;
     } else {

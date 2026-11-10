@@ -333,7 +333,7 @@
       + E(1.2, 6.3, 2.3, 1.3, '#ff7a7a', 0, op(0.42)) + E(10, 5.8, 1.5, 1.1, '#ff7a7a', 0, op(0.35));
   }
   /** 목 */
-  const neckS = (c, skin) => P('M-3.6 7L3.4 7L3.8 15.5L-3.6 15.5Z', sh(skin, -0.12), 2.4) + SHD('M-3.6 7L3.4 7L3.6 10.5Q0 12 -3.6 10Z', 0.25);
+  const neckS = (c, skin) => P('M-3.4 7L3.2 7L3.6 15.5L-3.4 15.5Z', sh(skin, -0.1), 1.8) + SHD('M-3.4 7L3.2 7L3.4 10.5Q0 12 -3.4 10Z', 0.22);
 
   /* =========================================================
    * 전투용 작은 그림 — 영웅
@@ -355,8 +355,8 @@
 
   /* ---------- 카라: 대장장이 딸 · 큰 망치 · 붉은 높은 말총머리 ---------- */
   const KARA_C = {
-    skin: '#efb98f', hair: '#e2452f', tie: '#ffb03a', shirt: '#ff8a3d', apron: '#8d5532', strap: '#6e3f24',
-    belt: '#4a2c1e', brass: '#e8c07a', pant: '#5c3b2e', boot: '#3b2a24', wrap: '#eadcc0', iris: '#d9692a', brow: '#8a2a1e',
+    skin: '#efb98f', hair: '#e2452f', tie: '#ffb03a', shirt: '#ff8a3d', apron: '#a0643a', strap: '#7a4628',
+    belt: '#4a2c1e', brass: '#e8c07a', pant: '#4e3a36', boot: '#3b2a24', wrap: '#eadcc0', iris: '#d9692a', brow: '#8a2a1e',
     steel: '#62667a', wood: '#a8703c', grip: '#5a3424',
   };
   const HAMMER_LEN = 40;
@@ -394,9 +394,9 @@
     walk2: { b: [0, 0.8], lean: 5, hd: 2, fn: [41.5, null, 24], ff: [57.5, null, -14], carry: [-142, 14], gn: 4, hf: [44, 67], tail: -6, eye: 'open', mo: 'grin', ap: -2 },
     walk3: { b: [0, -0.9], lean: 4, fn: [45.5, 80.5, 18], ff: [51, null, 0], carry: [-139, 14], gn: 4, hf: [55, 69.5], tail: 5, eye: 'open', mo: 'grin', ap: 0 },
     // 조준: 몸을 뒤로 젖히고 두 손으로 망치를 머리 위로 곧추 들어 올림 (먼 손이 자루 끝, 가까운 손이 그 위)
-    aim: { b: [-1.5, 1], lean: -7, hd: -4, fn: [40, null, 6], ff: [60, null, -4], hm: [62, 47.5, -100], gn: 9, gf: 2.5, tail: 12, eye: 'focus', mo: 'grit', bk: 'angry', hot: 1, ap: -1 },
+    aim: { b: [-1.5, 1.4], lean: -7, hd: -4, fn: [40.4, null, 6], ff: [59, null, -4], hm: [62, 47.5, -100], gn: 9, gf: 2.5, tail: 12, eye: 'focus', mo: 'grit', bk: 'angry', hot: 1, ap: -1 },
     // 공격: 앞으로 내디디며 망치를 땅에 내려찍음 → 불꽃
-    attack: { b: [3, 2.2], lean: 13, hd: 8, fn: [39, null, 30], ff: [64, null, 0], hm: [47.6, 61, 28], gn: 12, gf: 5.5, tail: -18, eye: 'focus', mo: 'shout', bk: 'angry', hot: 2, ap: 4 },
+    attack: { b: [3, 2.2], lean: 13, hd: 8, fn: [39, null, 30], ff: [64, null, 0], hm: [45, 61.4, 29], gn: 13.5, gf: 7, tail: -18, eye: 'focus', mo: 'shout', bk: 'angry', hot: 2, ap: 4 },
     // 기술 불꽃 내려찍기: 뛰어올라 공중에서 불붙은 망치를 앞으로 내리꽂는 순간 (아직 땅에 닿기 전)
     cast: { b: [2, -10], lean: 18, hd: 10, fn: [35, 71, 40], ff: [51, 73, 34], hm: [57, 48, 38], gn: 9.5, gf: 3, tail: -24, eye: 'focus', mo: 'shout', bk: 'angry', hot: 2, ap: -4 },
   };
@@ -477,11 +477,14 @@
     let mid = '';
     let front = '';
     if (pose === 'attack') {
-      back += P(arcBand(55, 54, 44, 32, -112, 22), '#fff4dc', 0, op(0.28)) + P(arcBand(55, 54, 43, 38, -100, 18), '#ffffff', 0, op(0.55));
-      mid += P('M70 90C68 84 72 81 75 84C75 78 80 76 82 81L92 81C94 76 99 78 98 84C100 84 100 88 99 90Z', c.g('#ff8a3d', 0.4), 2.4)
-        + P('M74 90C74 87 77 86 78 88C79 84 83 84 84 87L91 87C93 84 96 85 96 88V90Z', '#ffd23a', 0)
-      front += C(72, 76, 1.8, '#ffd23a', 0) + C(98, 72, 1.6, '#ffb03a', 0) + C(94, 64, 1.3, '#fff2a8', 0) + C(78, 70, 1.2, '#fff2a8', 0)
-        + T('M68 88l-6 -3M99 86l2 -4', '#ffe6a0', 1.6);
+      // 망치 머리 아래 땅에서 불꽃이 튐 (망치 위치를 따라감)
+      const hh = add(hb, u.x * HAMMER_LEN, u.y * HAMMER_LEN);
+      const gx = hh.x - 4;
+      back += P(arcBand(55, 54, 44, 30, -112, 22), '#ffd8a0', 0, op(0.16)) + P(arcBand(55, 54, 43, 37, -100, 18), '#fff4dc', 0, op(0.32));
+      mid += P(`M${gx - 14} 90C${gx - 16} 84 ${gx - 12} 81 ${gx - 9} 84C${gx - 9} 78 ${gx - 4} 76 ${gx - 2} 81L${gx + 6} 81C${gx + 8} 76 ${gx + 13} 78 ${gx + 12} 84C${gx + 14} 84 ${gx + 14} 88 ${gx + 13} 90Z`, c.g('#ff8a3d', 0.4), 2.4)
+        + P(`M${gx - 10} 90C${gx - 10} 87 ${gx - 7} 86 ${gx - 6} 88C${gx - 5} 84 ${gx - 1} 84 ${gx} 87L${gx + 5} 87C${gx + 7} 84 ${gx + 10} 85 ${gx + 10} 88V90Z`, '#ffd23a', 0);
+      front += C(gx - 12, 76, 1.8, '#ffd23a', 0) + C(gx + 13, 72, 1.6, '#ffb03a', 0) + C(gx + 9, 64, 1.3, '#fff2a8', 0) + C(gx - 6, 70, 1.2, '#fff2a8', 0)
+        + T(`M${gx - 16} 88l-6 -3M${gx + 14} 86l2 -4`, '#ffe6a0', 1.6);
     }
     if (pose === 'aim') {
       back += C(hb.x + u.x * HAMMER_LEN, hb.y + u.y * HAMMER_LEN, 14, c.halo('#ffb03a', 0.45), 0);
@@ -557,7 +560,7 @@
     // 조준: 두 손으로 지팡이를 높이 들어 등불에 빛을 모음
     aim: { b: [-1, 0.6], lean: -5, hd: -8, fn: [43, null, 0], ff: [58, null, -4], st: [54, 68, -68], gn: 23, gf: 33, sw: 6, lsw: -10, eye: 'focus', mo: 'line', bk: 'angry', glow: 1 },
     // 공격: 지팡이를 앞으로 내질러 등불에서 빛 구슬이 날아감
-    attack: { b: [3, 1], lean: 9, hd: 4, fn: [41, null, 18], ff: [62, null, 0], st: [24, 74, -22], gn: 38, gf: 48, sw: -8, lsw: 24, eye: 'open', mo: 'open', bk: 'angry', glow: 2, hem: 3 },
+    attack: { b: [3, 1], lean: 9, hd: 4, fn: [41, null, 18], ff: [62, null, 0], st: [19.6, 74.6, -22], gn: 42, gf: 52, sw: -8, lsw: 24, eye: 'open', mo: 'open', bk: 'angry', glow: 2, hem: 3 },
     // 기술 새벽의 기도: 한쪽 무릎을 꿇고 두 손으로 지팡이를 세워 눈을 감고 기도 → 등불에서 새벽빛
     cast: { b: [0, 11], lean: 5, hd: 14, fn: [44, 86.6, 30], ff: [62, null, 0], st: [64.5, 89.5, -90], gn: 25, gf: 20, sw: 0, lsw: 0, eye: 'closed', mo: 'smile', bk: 'sad', glow: 2, kneel: true },
   };
@@ -1044,7 +1047,7 @@
     // 조준: 가까운 바위 주먹을 어깨 뒤로 크게 젖힘, 먼 팔은 앞으로 막음
     aim: { b: [-2, 0.8], lean: -9, hd: -4, fn: [39, null, 4], ff: [59, null, -4], hn: [19.6, 47.6], hf: [78, 55], eye: 'focus', mo: 'grit', bk: 'angry', glow: 1 },
     // 공격: 앞으로 내디디며 가까운 주먹을 쭉 내지름 → 충격 고리
-    attack: { b: [6, 1], lean: 14, hd: 6, sno: [9, 0], fn: [40, null, 18], ff: [63, null, 0], hn: [82.6, 52], hf: [62, 70], eye: 'focus', mo: 'grit', bk: 'angry', glow: 1 },
+    attack: { b: [6, 1], lean: 14, hd: 6, sno: [7, 1], fn: [40, null, 18], ff: [63, null, 0], hn: [79.6, 53], hf: [62, 70], headFront: true, eye: 'focus', mo: 'grit', bk: 'angry', glow: 1 },
     // 기술 대지의 벽: 몸을 낮추고 두 주먹으로 땅을 짚음 → 앞에 바위 기둥이 솟음
     cast: { b: [2, 11], lean: 24, hd: 12, sno: [4, 0], fn: [37, null, 18], ff: [60, null, 0], hn: [60.4, 80.6], hf: [73, 80.4], eye: 'open', mo: 'line', bk: 'angry', glow: 2 },
   };
@@ -1107,7 +1110,7 @@
     if (pose === 'attack') {
       const fp = near.H;
       back += C(fp.x + 8, fp.y, 14, c.halo('#fff4dc', 0.6), 0);
-      front += T(`M${num(fp.x + 9)} ${num(fp.y - 10)}Q${num(fp.x + 16)} ${num(fp.y)} ${num(fp.x + 9)} ${num(fp.y + 10)}M${num(fp.x + 14)} ${num(fp.y - 14)}Q${num(fp.x + 23)} ${num(fp.y)} ${num(fp.x + 14)} ${num(fp.y + 14)}`, '#fff4dc', 2.4, op(0.85))
+      front += T(`M${num(fp.x + 9)} ${num(fp.y - 9)}Q${num(fp.x + 15)} ${num(fp.y)} ${num(fp.x + 9)} ${num(fp.y + 9)}M${num(fp.x + 13)} ${num(fp.y - 12)}Q${num(fp.x + 20)} ${num(fp.y)} ${num(fp.x + 13)} ${num(fp.y + 12)}`, '#fff4dc', 2.4, op(0.85))
         + T('M30 48h-8M28 56h-10M31 64h-7', '#e6dcc8', 1.8, op(0.7))
         + P(`M${num(fp.x + 12)} ${num(fp.y - 4)}l3 -2 1 3zM${num(fp.x + 13)} ${num(fp.y + 5)}l3 1 -2 2z`, c.g('#c8c2b4'), 1.4);
     }
@@ -1116,7 +1119,7 @@
       const spike = (x, w, ht, col) => P(`M${x - w} 90L${x - w * 0.7} ${90 - ht * 0.7}L${x - w * 0.2} ${90 - ht}L${x + w * 0.5} ${90 - ht * 0.8}L${x + w} 90Z`, c.g(col, 0.3), 2.6)
         + T(`M${x - w * 0.2} ${90 - ht + 2}L${x - w * 0.3} ${90 - ht * 0.4}`, sh(col, 0.35), 1.3, op(0.8))
         + SHD(`M${x + w * 0.1} ${90 - ht * 0.9}L${x + w * 0.5} ${90 - ht * 0.8}L${x + w} 90H${x + w * 0.2}Z`, 0.22);
-      front += spike(86, 6, 22, st) + spike(95, 5, 14, sh(st, -0.1)) + spike(80, 4, 11, sh(st, 0.06))
+      front += spike(84, 6, 22, st) + spike(92.4, 4.6, 14, sh(st, -0.1)) + spike(77.6, 4, 11, sh(st, 0.06))
         + P('M80 70l2-3 2 2zM92 66l2-2 1 3z', '#7fbf4a', 1.2)
         + C(58, 88, 5, '#e6dcc8', 0, op(0.6)) + C(70, 89, 5.5, '#e6dcc8', 0, op(0.55)) + C(52, 86, 3.4, '#e6dcc8', 0, op(0.5))
         + T('M60 89l6 -2 4 1M72 89l4 -3', '#5a4a3a', 1.6)
@@ -1132,9 +1135,10 @@
       + shoulder(sF, 10.6, sh(st, -0.12))
       + legF + legN
       + G(G(torso, R.up), R.tf)
-      + G(headAll, R.tf)
+      + (Pz.headFront ? '' : G(headAll, R.tf))
       + near.s + rockFist(c, near.H, near.fa, st, 1.08)
       + shoulder(sN, 11.4, sh(st, -0.04)) + flower(sN.x - 3, sN.y - 8.6)
+      + (Pz.headFront ? G(headAll, R.tf) : '')
       + front;
   }
 
@@ -1165,7 +1169,7 @@
     // 조준: 몸을 낮게 웅크리고 두 단검을 거꾸로 쥠 (칼날이 팔 아래로), 가까운 팔을 뒤로 높이
     aim: { b: [-2, 5.4], lean: 13, hd: -3, fn: [39, null, 8], ff: [60, null, -4], hn: [38.6, 47.4, 112], hf: [62.4, 63, 168], sc: 3, eye: 'focus', mo: 'line', bk: 'angry' },
     // 공격: 앞으로 파고들며 가까운 단검을 크게 그어 벰
-    attack: { b: [5, 3], lean: 20, hd: 6, fn: [38, null, 26], ff: [65, null, 0], hn: [76.4, 52.4, -40], hf: [49, 67, 150], sc: 4, glint: true, eye: 'focus', mo: 'shout', bk: 'angry' },
+    attack: { b: [5, 3], lean: 20, hd: 6, fn: [38, null, 26], ff: [65, null, 0], hn: [75.4, 60.4, 18], hf: [49, 67, 150], sc: 4, glint: true, eye: 'focus', mo: 'shout', bk: 'angry' },
     // 기술 그림자 습격: 그림자 틈에서 튀어나와 단검을 찌름 (뒤쪽은 아직 그림자 속)
     cast: { b: [7, 2.4], lean: 24, hd: 8, fn: [40, 82.6, 34], ff: [67, null, 0], hn: [80.6, 57.4, -6], hf: [50, 62, 160], sc: 5, glint: true, eye: 'focus', mo: 'smirk', bk: 'angry', rift: true },
   };
@@ -1199,7 +1203,7 @@
 
     // 머리 (머리 좌표): 얼굴 → 앞머리 → 후드(뒤 꼭지 뾰족) → 목도리
     const hood = P('M3 -14C10.6 -13.4 14.2 -7.6 13.8 -2C11.6 -6.4 7.6 -8.8 2.6 -8.6C-2.4 -8.4 -5.4 -5 -5.8 0.4C-6 4 -5 7.6 -3 10.4L-7.4 13C-12.4 10 -14.4 4 -14 -2.6C-13.6 -9.4 -7.6 -14.6 3 -14Z', c.g(Y.hood, 0.25), 2.6)
-      + P('M-11.4 -7C-15.4 -4 -17.4 2 -16.4 9C-14.6 6.4 -13.4 4.4 -12.6 1.6Z', c.g(sh(Y.hood, -0.12), 0.25), 2.2)
+      + P(`M-11.6 -8.4C-15.4 -9 -19 -7.4 ${num(-22 - sc * 0.4)} ${num(-4.4 + sc * 0.3)}C-18.4 -3.4 -15.4 -2.2 -13.2 0Z`, c.g(sh(Y.hood, -0.12), 0.25), 2.2)
       + T('M-7.4 -11.4Q0 -15 7.6 -12', sh(Y.hood, 0.4), 1.4, op(0.85))
       + T('M-9.6 -4C-10.6 2 -9.6 7 -6.4 11', Y.hoodD, 1.4)
       + SHD('M2.6 -8.6C7.6 -8.8 11.6 -6.4 13.8 -2L13.6 -0.6C11 -4.6 7 -6.6 2.6 -6.6C-1.6 -6.4 -4.6 -3.6 -5 0.6L-5.8 0.4C-5.4 -5 -2.4 -8.4 2.6 -8.6Z', 0.35);
@@ -1230,7 +1234,7 @@
     void wisp;
     if (pose === 'aim') front += P(h().starPath(near.H.x + 2, near.H.y + 14, 2.4, 0.8, 4, 0), '#fff', 0);
     if (pose === 'attack') {
-      back += P(arcBand(52, 60, 30, 23, -78, 20), '#f2b8ea', 0, op(0.55)) + P(arcBand(52, 60, 29.4, 26, -70, 16), '#fff', 0, op(0.7));
+      back += P(arcBand(54, 58, 30, 22, -80, 26), '#f2b8ea', 0, op(0.5)) + P(arcBand(54, 58, 29.4, 25.4, -72, 22), '#fff', 0, op(0.65));
       front += T('M82 38l4-3M86 52h5M82 66l4 3', '#f2b8ea', 1.6, op(0.85));
     }
     if (pose === 'cast') {
