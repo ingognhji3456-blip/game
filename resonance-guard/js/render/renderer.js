@@ -522,6 +522,14 @@ RG.render = (() => {
   function poseSprite(key, fallback, make, w, h) {
     return RG.art.sprites.ensure(key, make, w, h) ? key : fallback;
   }
+  // 적 그림 이름은 매 프레임 수백 번 쓰이므로 만들어 둔 문자열을 다시 씀 (쓰레기 수거 부담 줄이기)
+  const WALK = ['walk0', 'walk1', 'walk2', 'walk3'];
+  const ekeyCache = new Map();
+  function ekey(type, frame) {
+    let m = ekeyCache.get(type);
+    if (!m) { m = {}; ekeyCache.set(type, m); }
+    return m[frame] || (m[frame] = RG.art.sprites.enemyKey(type, frame));
+  }
   /** 탑: 쏜 직후 0.14초 fire, 다음 발사 직전 aim(시위 당김·힘 모음), 그 밖 idle. 지원·광산·병영은 일하는 모습 반복 */
   function towerPose(t) {
     if (t.building || t.disabled) return 'idle';
@@ -540,11 +548,11 @@ RG.render = (() => {
   function enemyFrame(e, moving) {
     if (e.attackAnim > 0.08 || e.castAnim > 0.1) return 'attack';
     if (e.aiming) return 'aim';
-    if (e.flying) return `walk${Math.floor(time * 8 + e.id * 0.7) % 4}`; // 날갯짓은 늘 함
+    if (e.flying) return WALK[Math.floor(time * 8 + e.id * 0.7) % 4]; // 날갯짓은 늘 함
     if (!moving) return 'walk0';
     // walkT는 걸어온 거리(칸). 보폭은 몸 크기에 비례 → 작은 적은 종종걸음
     const stride = 0.45 + e.size * 0.55;
-    return `walk${Math.floor((e.walkT / stride) * 4) % 4}`;
+    return WALK[Math.floor((e.walkT / stride) * 4) % 4];
   }
   /** 영웅: 기술 cast, 공격 attack, 곧 공격 aim, 걷기 4장, 서 있을 땐 숨쉬기 2장 */
   function heroPose(h, moving) {
@@ -720,7 +728,8 @@ RG.render = (() => {
     const hurt = st.time - e.lastHurt < 0.08;
     const flip = e.dir < 0;
     const big = ed.size >= 1.4 ? 288 : 168;
-    const key = poseSprite(RG.art.sprites.enemyKey(e.type, frame), RG.art.sprites.enemyKey(e.type, 'walk0'), () => RG.art.enemy(e.type, frame), big, big);
+    const k0 = ekey(e.type, frame);
+    const key = RG.art.sprites.get(k0) ? k0 : poseSprite(k0, ekey(e.type, 'walk0'), () => RG.art.enemy(e.type, frame), big, big);
     if (!manyEnemies || ed.boss || ed.size >= 1.4) castShadow(key, cx + dx, groundY, size, size, 0.5, 0.9, flip, (e.flying ? 0.16 : 0.32) * alphaS, lift);
     const motion = rot || sxk !== 1 || syk !== 1 || dx;
     if (motion) { ctx.save(); ctx.translate(cx + dx, cy); ctx.rotate(rot); ctx.scale(sxk, syk); ctx.translate(-cx, -cy); }
@@ -1033,10 +1042,28 @@ RG.render = (() => {
     let alive = 0;
     for (const e of st.enemies) if (!e.dead) alive++;
     manyEnemies = alive > 60;
-    for (const e of st.enemies) {
-      if (e.burrowed) continue;
-      const p = enemyScreen(e, alpha);
-      shadow(p.x, p.y, e.size * 0.32, e.size * 0.11, e.flying ? 0.18 : 0.3);
+    if (manyEnemies) {
+      // 적이 아주 많을 때: 발밑 그늘을 한 경로로 모아 한 번에 칠함 (땅·비행 두 번)
+      for (const fly of [false, true]) {
+        ctx.beginPath();
+        for (const e of st.enemies) {
+          if (e.burrowed || !!e.flying !== fly) continue;
+          const p = enemyScreen(e, alpha);
+          const ex = X(p.x) + T * 0.03;
+          const ey = Y(p.y) + T * 0.01;
+          const rx = Math.max(2, e.size * 0.32 * T);
+          ctx.moveTo(ex + rx, ey);
+          ctx.ellipse(ex, ey, rx, Math.max(1, e.size * 0.11 * T), 0, 0, Math.PI * 2);
+        }
+        ctx.fillStyle = fly ? 'rgba(12,7,20,0.22)' : 'rgba(12,7,20,0.36)';
+        ctx.fill();
+      }
+    } else {
+      for (const e of st.enemies) {
+        if (e.burrowed) continue;
+        const p = enemyScreen(e, alpha);
+        shadow(p.x, p.y, e.size * 0.32, e.size * 0.11, e.flying ? 0.18 : 0.3);
+      }
     }
     for (const u of st.units) if (!u.dead && u.kind !== 'drone') shadow(lerp(u.px, u.x, alpha), lerp(u.py, u.y, alpha), u.kind === 'wall' ? 0.45 : 0.22, 0.08, 0.3);
 

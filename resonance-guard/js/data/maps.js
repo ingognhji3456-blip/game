@@ -979,7 +979,7 @@ RG.data.maps = [
       'grey_legionnaire*15/1 ; echo_shade*6/1.2@8',
     ],
     task: { type: 'links', n: 20, text: '공명 연결 20개 동시에' },
-    challenge: { type: 'noAdjacent', text: '탑끼리 이웃 금지(공명 없음)' },
+    challenge: { type: 'lives', value: 5, text: '불꽃 5개로 시작' },
     newEnemies: ['silent_drake', 'resonance_eater'],
     tips: ['dampen'],
   },
