@@ -35,6 +35,7 @@ RG.render = (() => {
     corpses = [];
     projStart.clear();
     shadeFor = '';
+    ambientFor = '';
     bg = null;
     bgFor = '';
     resize();
@@ -211,6 +212,21 @@ RG.render = (() => {
     try {
       for (const t of st.towers) shadow(t.x, t.r + 0.8, 0.36, 0.12, 0.28);
       for (const t of st.towers) castShadow(A.towerKey(t.type, t.level, t.branch, 'idle'), X(t.x), Y(t.r + 0.82), T, T * 1.3, 0.5, 112 / 130, false, t.building ? 0.2 : 0.42);
+      // 빛 고르기: 왼쪽 위(빛이 오는 쪽)는 따뜻하게 살짝 밝게, 오른쪽 아래는 푸른 보랏빛으로 살짝 어둡게, 가장자리는 어둡게.
+      // 매 프레임이 아니라 이 층에 한 번 구워 둠 (그리기 비용 없음)
+      const W2 = m.cols * T;
+      const H2 = m.rows * T;
+      const lgr = c2.createLinearGradient(0, 0, W2, H2);
+      lgr.addColorStop(0, 'rgba(255,232,180,0.08)');
+      lgr.addColorStop(0.45, 'rgba(255,232,180,0)');
+      lgr.addColorStop(1, 'rgba(38,22,72,0.10)');
+      c2.fillStyle = lgr;
+      c2.fillRect(0, 0, W2, H2);
+      const vg = c2.createRadialGradient(W2 / 2, H2 / 2, Math.min(W2, H2) * 0.38, W2 / 2, H2 / 2, Math.hypot(W2, H2) * 0.55);
+      vg.addColorStop(0, 'rgba(12,7,22,0)');
+      vg.addColorStop(1, 'rgba(12,7,22,0.24)');
+      c2.fillStyle = vg;
+      c2.fillRect(0, 0, W2, H2);
     } finally {
       ctx = keep.ctx; ox = keep.ox; oy = keep.oy;
     }
@@ -1007,6 +1023,118 @@ RG.render = (() => {
     }
   }
 
+  /* ---------------- 지역 분위기 입자 ---------------- */
+  /*
+   * 1 솔빛 들판: 반딧불·꽃가루  2 서리 고개: 눈송이  3 붉은 협곡: 위로 오르는 불티
+   * 4 폭풍 해안: 비스듬한 빗줄기·물보라  5 깨진 대종: 위로 떠오르는 보랏빛 티끌
+   * 그림 전용(규칙과 무관), 칸 단위 좌표. 적이 아주 많으면 절반만 그림.
+   */
+  let ambient = [];
+  let ambientFor = '';
+  const AMB = {
+    1: { n: 0.16, col: '#fff1a8', glow: true },
+    2: { n: 0.30, col: '#ffffff' },
+    3: { n: 0.18, col: '#ffb060', glow: true },
+    4: { n: 0.26, col: '#d8f1ff' },
+    5: { n: 0.16, col: '#dcb2ff', glow: true },
+  };
+  let ambSeed = 1;
+  const arand = () => { ambSeed = (ambSeed * 16807) % 2147483647; return ambSeed / 2147483647; };
+  function spawnAmbient(p, region, m, anywhere) {
+    p.x = arand() * m.cols;
+    p.y = anywhere ? arand() * m.rows : (region === 3 || region === 5 ? m.rows + 0.3 : -0.3);
+    p.ph = arand() * Math.PI * 2;
+    p.s = 0.6 + arand() * 0.8;
+    p.life = 0;
+    p.max = 3 + arand() * 5;
+    if (region === 1) { p.vx = 0; p.vy = 0; }
+    else if (region === 2) { p.vx = 0.15 + arand() * 0.2; p.vy = 0.45 + arand() * 0.45; }
+    else if (region === 3) { p.vx = (arand() - 0.5) * 0.2; p.vy = -(0.35 + arand() * 0.5); }
+    else if (region === 4) { p.vx = -1.6 - arand() * 0.6; p.vy = 4.2 + arand() * 1.5; if (!anywhere) p.x = arand() * (m.cols + 3); }
+    else { p.vx = (arand() - 0.5) * 0.1; p.vy = -(0.12 + arand() * 0.2); }
+  }
+  function updateAmbient(dt) {
+    const m = game.map;
+    const region = m.def.region || 1;
+    const key = `${m.id}`;
+    if (ambientFor !== key) {
+      ambientFor = key;
+      ambSeed = 7 + m.cols * 31 + m.rows;
+      const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const n = Math.round(m.cols * m.rows * (AMB[region] || AMB[1]).n * (reduce ? 0.4 : 1));
+      ambient = [];
+      for (let i = 0; i < n; i++) { const p = {}; spawnAmbient(p, region, m, true); p.life = arand() * p.max; ambient.push(p); }
+    }
+    const k = Math.min(dt, 0.1);
+    for (const p of ambient) {
+      p.life += k;
+      p.ph += k * (region === 1 ? 1.3 : 2.2);
+      if (region === 1) { p.x += Math.cos(p.ph * 0.7) * 0.25 * k; p.y += Math.sin(p.ph) * 0.18 * k; }
+      else if (region === 2) { p.x += (p.vx + Math.sin(p.ph) * 0.12) * k; p.y += p.vy * k; }
+      else if (region === 3) { p.x += (p.vx + Math.sin(p.ph * 1.7) * 0.08) * k; p.y += p.vy * k; }
+      else if (region === 4) { p.x += p.vx * k; p.y += p.vy * k; }
+      else { p.x += (p.vx + Math.sin(p.ph) * 0.05) * k; p.y += p.vy * k; }
+      const out = p.y > m.rows + 0.5 || p.y < -0.6 || p.x < -0.6 || p.x > m.cols + 0.6;
+      if (out || (region !== 2 && region !== 4 && p.life > p.max)) spawnAmbient(p, region, m, region === 1 || region === 5);
+    }
+  }
+  function drawAmbient() {
+    const m = game.map;
+    const region = m.def.region || 1;
+    const A = AMB[region] || AMB[1];
+    const step = manyEnemies ? 2 : 1;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(X(0), Y(0), m.cols * T, m.rows * T);
+    ctx.clip();
+    if (region === 4) {
+      // 빗줄기: 짧은 사선 한 번에
+      ctx.strokeStyle = 'rgba(216,241,255,0.32)';
+      ctx.lineWidth = Math.max(1, T * 0.025);
+      ctx.beginPath();
+      for (let i = 0; i < ambient.length; i += step) {
+        const p = ambient[i];
+        const x = X(p.x);
+        const y = Y(p.y);
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + p.vx * T * 0.07, y + p.vy * T * 0.07);
+      }
+      ctx.stroke();
+    } else if (region === 2) {
+      // 눈 위에서도 보이게 푸른 테두리를 먼저, 그 위에 흰 눈송이
+      ctx.fillStyle = 'rgba(96,124,168,0.35)';
+      for (let i = 0; i < ambient.length; i += step) {
+        const p = ambient[i];
+        const r = Math.max(1, T * 0.035 * p.s) + 2;
+        ctx.fillRect(X(p.x) - r / 2, Y(p.y) - r / 2, r, r);
+      }
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      for (let i = 0; i < ambient.length; i += step) {
+        const p = ambient[i];
+        const r = Math.max(1, T * 0.035 * p.s);
+        ctx.fillRect(X(p.x) - r / 2, Y(p.y) - r / 2, r, r);
+      }
+    } else {
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < ambient.length; i += step) {
+        const p = ambient[i];
+        const fade = Math.min(1, p.life / 0.8, Math.max(0, (p.max - p.life) / 0.8));
+        const tw = region === 1 ? 0.35 + 0.65 * Math.max(0, Math.sin(p.ph * 2.3)) : 0.6 + 0.4 * Math.sin(p.ph * 3);
+        const a = fade * tw;
+        if (a <= 0.02) continue;
+        const x = X(p.x);
+        const y = Y(p.y);
+        const r = Math.max(1, T * 0.03 * p.s);
+        ctx.globalAlpha = a * 0.22;
+        ctx.fillStyle = A.col;
+        ctx.beginPath(); ctx.arc(x, y, r * 3.2, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = a * 0.9;
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
   /* ---------------- 한 프레임 ---------------- */
   function frame(alpha, dt) {
     if (!game || !ctx) return;
@@ -1097,6 +1225,8 @@ RG.render = (() => {
     }
     drawProjectiles(alpha);
     RG.fx.draw(ctx, X, Y, T);
+    updateAmbient(dt);
+    drawAmbient();
     drawAlerts();
     RG.fx.drawTexts(ctx, X, Y, T);
     ctx.restore();
