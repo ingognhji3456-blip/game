@@ -2027,7 +2027,7 @@
    * → 팔을 앞으로 뿌려 덫을 던짐(fire: 덫이 손을 떠나 날아감, 바닥 문양이 번쩍).
    * 4A 속박의 사슬: 높은 사슬 기둥, 사슬 달린 덫. 4B 그림자 칼날: 지붕의 낫 날, 톱니 칼날 덫.
    * ================================================================ */
-  const HUNTER = { skin: '#6a5280', shirt: '#4a3a5e', pants: '#3a2c4a', boot: '#221828' };
+  const HUNTER = { skin: '#8a70a6', shirt: '#9a7ec8', pants: '#5a4878', boot: '#2a1e34' }; // 오두막(어두운 나무)과 구별되게 밝은 보랏빛 옷
   const hunterFace = (c, H, r) => aura(c, H[0] + r * 0.55, H[1] + r * 0.1, r * 0.9, r * 0.6, c.E.color, 0.7) + c.e(H[0] + r * 0.3, H[1] + r * 0.1, r * 0.16, r * 0.24, c.E.light, 0) + c.e(H[0] + r * 0.78, H[1] + r * 0.08, r * 0.14, r * 0.22, c.E.light, 0);
   /** 두건: tier 1 천 두건, 2 + 가죽 끈, 3 + 가면 뿔, A·B 망토 깃 */
   function hood(tier) {
@@ -2097,9 +2097,9 @@
   }
   function hunter(c, pose, x, y, tier, trapFn) {
     const P = hunterPose(pose, x, y);
-    const F = fig(c, { ...HUNTER, sleeve: '#43345a', belt: '#8a6a4a', hip: P.hip, lean: P.lean, feet: P.feet, hands: [P.hB, P.hF], bend: P.bend, face: hunterFace, hat: hood(tier) });
+    const F = fig(c, { ...HUNTER, sleeve: '#7e66b0', belt: '#c89a5a', hip: P.hip, lean: P.lean, feet: P.feet, hands: [P.hB, P.hF], bend: P.bend, face: hunterFace, hat: hood(tier) });
     // 망토(등 뒤로 늘어짐)
-    const cape = c.p(`M${pp(F.sh[0])}Q${f(x - 10)} ${f(y + 2)} ${f(x - 8 + by(pose, 0, -3, -6))} ${f(y + 12)}L${f(x - 1)} ${f(y + 10)}Q${f(x - 2)} ${f(y)} ${pp(F.neck)}Z`, c.vg('#3a2c4e', 0.2, -0.25), 2.2) + c.ln(`M${pp(F.sh[0])}Q${f(x - 10)} ${f(y + 2)} ${f(x - 8 + by(pose, 0, -3, -6))} ${f(y + 12)}`, '#8a78b0', 1, 0.8);
+    const cape = c.p(`M${pp(F.sh[0])}Q${f(x - 10)} ${f(y + 2)} ${f(x - 8 + by(pose, 0, -3, -6))} ${f(y + 12)}L${f(x - 1)} ${f(y + 10)}Q${f(x - 2)} ${f(y)} ${pp(F.neck)}Z`, c.vg('#5e4a86', 0.2, -0.25), 2.2) + c.ln(`M${pp(F.sh[0])}Q${f(x - 10)} ${f(y + 2)} ${f(x - 8 + by(pose, 0, -3, -6))} ${f(y + 12)}`, '#e09af0', 1.3, 0.9);
     // 허리에 찬 여분 덫(2단계부터)
     const spare = '';
     let held = '';
