@@ -12,7 +12,7 @@
  *  - 빛은 늘 왼쪽 위. 처마·난간 아래와 땅에 닿는 곳은 짙게. 땅 그림자는 그리지 않음(렌더러 몫).
  * ========================================================= */
 (() => {
-  const { f, M, STONE, poly, cyl, frus, ring, band, vseam, flame, crystal, orb, aura, spark, bolt, flag, plat, shard } = RG.art._tw;
+  const { f, M, STONE, poly, cyl, frus, ring, band, vseam, flame, crystal, orb, aura, spark, bolt, flag, plat, shard, fine, rn: rnS, roundPoly, toneAt, masonryCyl, flagTop, gem, metalBand } = RG.art._tw;
   const T = RG.art._tw.T;
   const OLC = RG.art._tw.OL;
 
@@ -2233,4 +2233,9 @@
     },
   };
 
+  /* 9종 모두 섬세한 명암(세 단계 + 색을 튼 그늘 + 반사광)으로 그림 — docs/design/animation.md §7.2 */
+  ['ember_archer', 'flame_mortar', 'forge', 'frost_crystal', 'ice_ballista', 'winter_bell', 'lightning_rod', 'gale_cannon', 'dynamo'].forEach((id) => {
+    const d0 = T[id].draw;
+    T[id].draw = (c, v, pose) => d0(fine(c), v, pose);
+  });
 })();

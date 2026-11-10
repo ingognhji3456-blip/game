@@ -9,12 +9,129 @@
  *   빛은 왼쪽 위. 몸통의 형태 그림자·팔이 드리운 그늘은 그리고, 바닥 그림자는 그리지 않음(렌더러 몫).
  * ========================================================= */
 (() => {
-  const { H, OL, sh, EMBER, ICE, VOLT, BELL, GOLD, BRONZE, make, g } = RG.art._en;
+  const { H, OL, EMBER, ICE, VOLT, BELL, GOLD, BRONZE, g } = RG.art._en;
   const D = RG.art._en.D;
   const MOTION = RG.art._en.MOTION || (RG.art._en.MOTION = {});
+  const n = H.n;
+
+  /* =========================================================
+   * 4차 다듬기(animation.md §7) — 이 파일 전용 그리기 문맥 mk()
+   *  · 선(§7.1): 그림 전체를 두 번 그림. ① 실루엣 판: 모든 단단한 도형을 윤곽색(OL)으로 굵게 칠해
+   *    바깥 윤곽만 남김 ② 색 판: 도형마다 "그 자리 색의 어두운 변형"으로 가는 안쪽 선(외곽의 60%).
+   *    → 바깥은 진한 윤곽, 안쪽 이음매·주름은 색이 비친 가는 선(스티커 느낌이 사라짐).
+   *    실루엣 판에서 빠지는 것: 외곽선 없는 도형(stroke="none"), 반투명(opacity), 빛 번짐(filter),
+   *    선만 있는 도형(fill="none"), class="x".
+   *  · 명암(§7.2): 몸통 그라데이션은 밝은 면(따뜻한 햇빛 섞음) → 바탕 → 그늘(색을 틀어 푸른/붉은 보라 쪽)
+   *    → 가장자리 반사광(보랏빛 폐허가 비친 빛) 네 단계. 빛은 늘 왼쪽 위.
+   * ========================================================= */
+  const SUN = '#fff4dc';      // 왼쪽 위 햇빛
+  const AMB = '#b4a2ee';      // 보랏빛 폐허에서 되비치는 반사광
+  const SH_COOL = '#1e1646';  // 차가운 색의 그늘(푸른 보라)
+  const SH_WARM = '#4a1634';  // 따뜻한 색의 그늘(붉은 보라)
+  const BASE = {};            // 그라데이션 id → 바탕색 (안쪽 선 색·명암 계산용)
+  const hexOf = (col) => {
+    if (!col || col === 'none') return null;
+    if (col[0] === '#') return col;
+    const m = /^url\(#([^)]+)\)$/.exec(col);
+    return m ? BASE[m[1]] || null : null;
+  };
+  const isWarm = (hex) => { const [r, , b] = H.hexToRgb(hex); return r - b > 22; };
+  /** 색을 틀어 어둡게(따뜻한 색은 붉은 보라, 차가운 색은 푸른 보라 쪽) */
+  const dk = (col, t) => { const h = hexOf(col) || '#8a849c'; return H.mix(h, isWarm(h) ? SH_WARM : SH_COOL, Math.min(1, t)); };
+  /** 햇빛을 섞어 밝게 */
+  const lt = (col, t) => H.mix(hexOf(col) || '#8a849c', SUN, Math.min(1, t));
+  /** shade 대신: −는 색을 튼 그늘, +는 햇빛 */
+  const sh = (col, amt) => (amt >= 0 ? lt(col, amt) : dk(col, -amt * 1.05));
+  /** 안쪽 선 색: 그 자리 색의 어두운 변형 */
+  const lineC = (col) => H.mix(dk(col, 0.62), OL, 0.2);
+  /** 반사광 색: 그늘에 보랏빛 폐허 빛이 비침 */
+  const rimC = (col, t = 0.5) => H.mix(dk(col, 0.2), AMB, t);
+  const LINE_DEF = '#3e3352';
+
+  function mk(ow = 2.5) {
+    const defs = [];
+    const kid = H.uid('k');
+    let softId = null;
+    let glowId = null;
+    const reg = (id, col) => { BASE[id] = hexOf(col) || col; return `url(#${id})`; };
+    /** 안쪽 선: x에 stroke=가 있으면 그대로, 선만 있는 도형은 윤곽색, 나머지는 채움색의 어두운 변형 */
+    const sk = (fill, x = '') => {
+      if (/(^|\s)stroke="/.test(x)) return x;
+      if (fill === 'none') return ` stroke="${OL}"${x}`;
+      const h = hexOf(fill);
+      return ` stroke="${h ? lineC(h) : LINE_DEF}"${x}`;
+    };
+    const c = {
+      ow,
+      body(b, hi = 0.4, lo = -0.36, cx = 0.34, cy = 0.28, r = 0.9) {
+        const id = H.uid('e');
+        const S = dk(b, -lo * 1.12);
+        defs.push(H.rg(id, [[0, lt(b, hi * 0.95)], [0.46, b], [0.8, S], [1, H.mix(S, AMB, 0.34)]], cx, cy, r));
+        return reg(id, b);
+      },
+      lin(stops, dir = 'v') {
+        const id = H.uid('e');
+        defs.push(H.lg(id, stops, dir));
+        return reg(id, stops[Math.floor((stops.length - 1) / 2)][1]);
+      },
+      tri(b, dir = 'v') {
+        const id = H.uid('e');
+        defs.push(H.lg(id, [[0, lt(b, 0.35)], [0.55, b], [1, dk(b, 0.42)]], dir));
+        return reg(id, b);
+      },
+      rad(stops, cx = 0.5, cy = 0.5, r = 0.5) {
+        const id = H.uid('e');
+        defs.push(H.rg(id, stops, cx, cy, r));
+        return reg(id, stops[Math.floor((stops.length - 1) / 2)][1]);
+      },
+      soft() {
+        if (!softId) { softId = H.uid('ef'); defs.push(H.blur(softId, 2.2)); }
+        return `filter="url(#${softId})"`;
+      },
+      glow() {
+        if (!glowId) { glowId = H.uid('eg'); defs.push(H.glow(glowId, 1.6)); }
+        return `filter="url(#${glowId})"`;
+      },
+      P: (d, fill, x = '') => `<path d="${d}" fill="${fill}"${sk(fill, x)}/>`,
+      Pn: (d, fill, op) => `<path d="${d}" fill="${fill}" stroke="none"${op != null ? ` opacity="${op}"` : ''}/>`,
+      E: (cx, cy, rx, ry, fill, x = '') => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${fill}"${sk(fill, x)}/>`,
+      En: (cx, cy, rx, ry, fill, op) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${fill}" stroke="none"${op != null ? ` opacity="${op}"` : ''}/>`,
+      L: (d, col = OL, w = 2, x = '') => `<path d="${d}" fill="none" stroke="${col}" stroke-width="${w}"${x}/>`,
+      limb(d, w, col) {
+        return `<path d="${d}" fill="none" stroke="${OL}" stroke-width="${w + 2 * ow * 0.75}"/><path d="${d}" fill="none" stroke="${col}" stroke-width="${w}"/>`;
+      },
+      eye(x, y, r, ring = true) {
+        return `<circle cx="${x}" cy="${y}" r="${n(r * 2.1)}" fill="#f2f8ff" opacity=".55" stroke="none" ${c.soft()}/>` +
+          `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff"${ring ? ` stroke="${OL}" stroke-width="${n(Math.max(1.4, ow * 0.6))}"` : ' stroke="none"'}/>`;
+      },
+      spark(x, y, r, col) {
+        return `<circle cx="${x}" cy="${y}" r="${n(r * 2.2)}" fill="${col}" opacity=".55" stroke="none" ${c.soft()}/>` +
+          `<circle cx="${x}" cy="${y}" r="${r}" fill="${lt(col, 0.55)}" stroke="none"/>`;
+      },
+      mist(pts, col = '#ebe8f4', op = 0.75) {
+        return `<g fill="${col}" stroke="none" opacity="${op}">${pts.map(([x, y, r]) => `<circle cx="${n(x)}" cy="${n(y)}" r="${n(r)}"/>`).join('')}</g>`;
+      },
+      cloud(pts, fill, op) {
+        const cs = pts.map(([x, y, r]) => `<circle cx="${n(x)}" cy="${n(y)}" r="${n(r)}"/>`).join('');
+        return `<g${op != null ? ` opacity="${op}"` : ''}><g fill="${OL}" stroke="${OL}" stroke-width="${ow * 1.6}">${cs}</g><g fill="${fill}" stroke="none">${cs}</g></g>`;
+      },
+      shine(cx, cy, rx, ry, op = 0.45, rot = -25) {
+        return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="#fff" stroke="none" opacity="${op}" transform="rotate(${rot} ${cx} ${cy})"/>`;
+      },
+      out(body) {
+        const ws = n(ow * 1.42);
+        const css = `<style>.${kid} *{fill:${OL}!important;stroke:${OL}!important;stroke-width:${ws}px!important}` +
+          `.${kid} [stroke="none"],.${kid} [opacity],.${kid} [filter],.${kid} [fill="none"],.${kid} .x{display:none}</style>`;
+        return H.svg('0 0 100 100', defs.join(''),
+          `${css}<g class="${kid}" stroke-linejoin="round" stroke-linecap="round">${body}</g>` +
+          `<g stroke="${LINE_DEF}" stroke-width="${n(ow * 0.6)}" stroke-linejoin="round" stroke-linecap="round">${body}</g>`);
+      },
+    };
+    return c;
+  }
+  const make = mk;
 
   /* ---------- 좌표 도우미 ---------- */
-  const n = H.n;
   const RAD = Math.PI / 180;
   const pt = (p) => `${n(p[0])} ${n(p[1])}`;
   /** 점 p에서 각도 a(도, 0=오른쪽, 90=아래)로 l만큼 */
@@ -163,6 +280,18 @@
   const fin = (c, s, k = 1) => c.out(k === 1 ? s : g(s, `translate(50 90) scale(${k}) translate(-50 -90)`));
   /** 납작하게 눕힌 물건(땅에 놓인 방패 등): 중심 p, 각도 a, 세로 눌림 sy */
   const flat = (body, p, a, sy) => `<g transform="translate(${pt(p)}) scale(1 ${sy})"><g transform="rotate(${n(a)})">${body}</g></g>`;
+
+  /* ---------- 4차 다듬기 세부 도우미 (§7.2·§7.3) ---------- */
+  /** 반짝점(금속·보석·눈·물기): 외곽선 없는 흰 점 */
+  const spec = (x, y, r = 0.8, op = 0.95) => `<circle cx="${n(x)}" cy="${n(y)}" r="${n(r)}" fill="#ffffff" stroke="none" opacity="${op}"/>`;
+  /** 반사광 띠: 그늘 쪽 가장자리에 보랏빛 폐허 빛이 비친 가는 밝은 선 */
+  const rimL = (c, d, col, w = 1.2, op = 0.85) => c.L(d, rimC(col), w, ` opacity="${op}"`);
+  /** 접촉 그늘(맞닿는 곳의 작고 진한 그늘) */
+  const ao = (c, d, op = 0.3) => c.Pn(d, SHADE, op);
+  /** 안쪽 가는 선(이음매·주름): 그 자리 색의 어두운 변형 */
+  const inl = (c, d, col, w = 1.1, x = '') => c.L(d, lineC(col), w, x);
+  /** 빛 번짐 원(색 빛) */
+  const bloom = (c, x, y, r, col, op = 0.4) => `<circle cx="${n(x)}" cy="${n(y)}" r="${n(r)}" fill="${col}" opacity="${n(op)}" stroke="none" ${c.soft()}/>`;
 
   /* ==== BEGIN grey_legionnaire ==== */
   /* =========================================================

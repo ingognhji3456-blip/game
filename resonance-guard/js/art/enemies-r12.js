@@ -11,13 +11,19 @@
  *   땅에 떨어지는 그림자는 그리지 않음(렌더러 몫). 몸 아래쪽 형태 그림자·발끝 접지 그늘만 그림.
  * ========================================================= */
 (() => {
-  const { H, OL, sh, GREY, GREY_L, MISTC, GREEN, ICE, ICE_L, make, g } = RG.art._en;
+  const { H, OL, sh, hs, ink, GREY, GREY_L, MISTC, GREEN, ICE, ICE_L, make: make0, g } = RG.art._en;
   const D = RG.art._en.D;
   const MOTION = RG.art._en.MOTION || (RG.art._en.MOTION = {});
 
   /* =========================================================
    * 짜임 도우미 (이 파일 전용)
    * ========================================================= */
+  /* 4차(섬세하게, animation.md §7): 모든 적을 섬세 모드로 — 바깥 윤곽만 진하게, 안쪽 선은 그 자리 색의 어두운 변형,
+   * 그늘은 색을 틀어(푸른 보라·붉은 보라), 그늘 쪽 가장자리에 지역 바탕이 비친 반사광. */
+  const RIM1 = '#d4ec9c';   // 1지역: 풀밭이 비친 연두 반사광
+  const RIM2 = '#c4ecff';   // 2지역: 눈·얼음이 비친 하늘색 반사광
+  const SHADE = '#1e1a4c';  // 형태 그림자(차가운 푸른 보라)
+  const make = (ow = 3, rim = RIM1, opt = {}) => { const c = make0(ow, { fine: true, ...opt }); c.rimC = rim; return c; };
   const n = H.n;
   const RAD = Math.PI / 180;
   const pt = (p) => `${n(p[0])} ${n(p[1])}`;
@@ -76,7 +82,7 @@
   /** 빛 방향을 지키는 몸통 그라데이션 */
   const lit = (c, base, f, hi = 0.42, lo = -0.42, r = 0.9) => { const [x, y] = litC(f); return c.body(base, hi, lo, x, y, r); };
   /** 팔다리용: 위는 밝고 발끝은 접지 그늘로 어두움 */
-  const legG = (c, base, hi = 0.18, lo = -0.42) => c.lin([[0, sh(base, hi)], [0.55, base], [1, sh(base, lo)]]);
+  const legG = (c, base, hi = 0.18, lo = -0.42) => c.lin([[0, hs(base, hi)], [0.55, base], [1, hs(base, lo)]]);
 
   /** 원 경로(시계 방향, cap()과 같은 감김) */
   const circ = (p, r) => `M${n(p[0] - r)} ${n(p[1])}A${n(r)} ${n(r)} 0 1 0 ${n(p[0] + r)} ${n(p[1])}A${n(r)} ${n(r)} 0 1 0 ${n(p[0] - r)} ${n(p[1])}Z`;
@@ -138,28 +144,58 @@
   }
   const paths = (ds) => ds.map((d) => `<path d="${d}"/>`).join('');
   /** 여러 조각을 이음매 없는 한 덩어리로: 외곽선을 모두 먼저, 면은 그 위에 */
-  const blob = (c, ds, fill) => `<g fill="${OL}" stroke-width="${n(c.ow * 2)}">${paths(ds)}</g><g fill="${fill}" stroke="none">${paths(ds)}</g>`;
+  const seamW = (c) => n(c.fine ? c.ow * 0.58 : c.ow * 2);
+  const blob = (c, ds, fill) => `<g fill="${OL}" stroke-width="${seamW(c)}">${paths(ds)}</g><g fill="${fill}" stroke="none">${paths(ds)}</g>`;
   /** 서로 다른 좌표계의 덩어리들을 이음매 없이: items = [[감싸개(f.g 등), d, 면], ...] — 외곽선 먼저 모두, 면은 위에 */
-  const fuse = (c, items) => items.map(([w, d]) => w(`<path d="${d}" fill="${OL}" stroke-width="${n(c.ow * 2)}"/>`)).join('') +
+  const fuse = (c, items) => items.map(([w, d]) => w(`<path d="${d}" fill="${OL}" stroke-width="${seamW(c)}"/>`)).join('') +
     items.map(([w, d, fill]) => w(`<path d="${d}" fill="${fill}" stroke="none"/>`)).join('');
   /** 두 마디 팔다리 조각: 뿌리 a(r0) → 관절 j(r1) → 끝 e(r2) */
   const seg2 = (a, j, e, r0, r1, r2) => [cap(a, r0, j, r1), cap(j, r1, e, r2)];
 
+  /** 그늘 쪽(오른쪽 아래)을 향하는 선형 그라데이션 방향을 몸 좌표계 f 안에서 (objectBoundingBox) */
+  function shadowDir(f) {
+    const r = -(f ? f.rot : 0) * RAD;
+    let vx = 0.55 * Math.cos(r) - 0.83 * Math.sin(r);
+    let vy = 0.55 * Math.sin(r) + 0.83 * Math.cos(r);
+    if (f && f.sx < 0) vx = -vx;
+    if (f && f.sy < 0) vy = -vy;
+    return [n(0.5 - vx * 0.5), n(0.5 - vy * 0.5), n(0.5 + vx * 0.5), n(0.5 + vy * 0.5)];
+  }
   /**
-   * 형태 그림자: 몸 모양 d(몸 좌표계 f) 안쪽에만, 세계 좌표로 오른쪽 아래 그늘과 왼쪽 위 반사광.
-   * box: 세계 좌표 [가운데x, 가운데y, 반폭, 반높이]
+   * 형태 그림자(§7.2): 몸 모양 d(몸 좌표계 f) 안쪽에만 — 오른쪽 아래 색을 튼 그늘, 왼쪽 위 따뜻한 밝은 면,
+   * 그늘 쪽 가장자리의 반사광(지역 바탕색), 맞닿는 곳의 접촉 그늘(o.ao: 세계 좌표 [x, y, rx, ry, 진하기]).
+   * box: 세계 좌표 [가운데x, 가운데y, 반폭, 반높이]. o.rim: 반사광 색(false면 없음), o.rw: 반사광 폭, o.sh: 그늘 색
    */
-  function form(c, d, f, box, dark = 0.3, light = 0.22) {
+  function form(c, d, f, box, dark = 0.3, light = 0.22, o = {}) {
     const id = H.uid('ec');
     const [x, y, w, h] = box;
-    return `<clipPath id="${id}"><path d="${d}"${f ? ` transform="${f.t}"` : ''}/></clipPath>` +
+    const shC = o.sh || SHADE;
+    const rimC = o.rim === false ? null : (o.rim || c.rimC);
+    let s = `<clipPath id="${id}"><path d="${d}"${f ? ` transform="${f.t}"` : ''}/></clipPath>` +
       `<g clip-path="url(#${id})" stroke="none">` +
-      `<ellipse cx="${n(x + w * 0.35)}" cy="${n(y + h * 0.95)}" rx="${n(w * 1.05)}" ry="${n(h * 0.62)}" fill="${OL}" opacity="${dark}" ${c.soft()}/>` +
-      (light ? `<ellipse cx="${n(x - w * 0.35)}" cy="${n(y - h * 0.55)}" rx="${n(w * 0.55)}" ry="${n(h * 0.35)}" fill="#fff" opacity="${light}" ${c.soft()}/>` : '') +
-      '</g>';
+      `<ellipse cx="${n(x + w * 0.35)}" cy="${n(y + h * 0.95)}" rx="${n(w * 1.05)}" ry="${n(h * 0.62)}" fill="${shC}" opacity="${n(dark * 1.25)}" ${c.soft()}/>` +
+      (light ? `<ellipse cx="${n(x - w * 0.35)}" cy="${n(y - h * 0.55)}" rx="${n(w * 0.55)}" ry="${n(h * 0.35)}" fill="#fff8e8" opacity="${light}" ${c.soft()}/>` : '');
+    if (o.ao) s += o.ao.map(([ax, ay, rx, ry, op]) => `<ellipse cx="${n(ax)}" cy="${n(ay)}" rx="${n(rx)}" ry="${n(ry)}" fill="${shC}" opacity="${op != null ? op : 0.5}" ${c.soft()}/>`).join('');
+    if (rimC) {
+      const gid = H.uid('er');
+      const [x1, y1, x2, y2] = shadowDir(f);
+      s += `<linearGradient id="${gid}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"><stop offset="0" stop-color="${rimC}" stop-opacity="0"/><stop offset=".58" stop-color="${rimC}" stop-opacity="0"/><stop offset="1" stop-color="${rimC}" stop-opacity="${o.rimOp != null ? o.rimOp : 0.85}"/></linearGradient>` +
+        `<path d="${d}"${f ? ` transform="${f.t}"` : ''} fill="none" stroke="url(#${gid})" stroke-width="${n((o.rw || 1.5) * 2)}"/>`;
+    }
+    return `${s}</g>`;
   }
+  /** 털·깃 결: 몸 좌표의 점들 [x, y, 각도(도), 길이]에 짧은 붓질(끝이 가늘어지는 삼각). col 색, w 밑동 굵기 */
+  const strokes = (c, list, col, w = 1.3, op = 1) => `<path d="${list.map(([x, y, a, l]) => {
+    const t = [x + Math.cos(a * RAD) * l, y + Math.sin(a * RAD) * l];
+    const nx = Math.cos((a + 90) * RAD) * w * 0.5;
+    const ny = Math.sin((a + 90) * RAD) * w * 0.5;
+    return `M${n(x + nx)} ${n(y + ny)}Q${n((x + t[0]) / 2 + nx * 0.6)} ${n((y + t[1]) / 2 + ny * 0.6)} ${n(t[0])} ${n(t[1])}Q${n((x + t[0]) / 2 - nx * 0.6)} ${n((y + t[1]) / 2 - ny * 0.6)} ${n(x - nx)} ${n(y - ny)}Z`;
+  }).join('')}" fill="${col}" stroke="none"${op !== 1 ? ` opacity="${op}"` : ''}/>`;
+  /** 반짝점(금속·물기·보석): 작은 흰 점 + 십자 빛 */
+  const glint = (c, x, y, r = 1.2, op = 0.95) => `<circle cx="${n(x)}" cy="${n(y)}" r="${n(r)}" fill="#fff" stroke="none" opacity="${op}"/>` +
+    `<path d="M${n(x - r * 2.4)} ${n(y)}H${n(x + r * 2.4)}M${n(x)} ${n(y - r * 2.4)}V${n(y + r * 2.4)}" stroke="#fff" stroke-width="${n(r * 0.5)}" opacity="${n(op * 0.7)}"/>`;
   /** 빛나는 눈이 꺼져 가는 모습(죽음): 감긴 눈 */
-  const deadEye = (c, x, y, r) => c.L(`M${n(x - r)} ${n(y)}Q${n(x)} ${n(y + r * 0.9)} ${n(x + r)} ${n(y)}`, OL, 1.8);
+  const deadEye = (c, x, y, r) => c.L(`M${n(x - r)} ${n(y)}Q${n(x)} ${n(y + r * 0.9)} ${n(x + r)} ${n(y)}`, '#241a34', 1.8);
   /** 맞는 순간 번쩍(작은 별) */
   function hitStar(c, x, y, r, col = '#ffffff') {
     let d = '';
@@ -179,7 +215,7 @@
     return `<path d="M${p(a0, r)}A${r} ${r} 0 ${big} ${sw} ${p(a1, r)}Q${p(m, r - w * 1.4)} ${p(a0, r)}Z" fill="${col}" opacity="${op}" stroke="none"/>`;
   }
   /** 쥔 주먹(장갑·건틀릿): 손 p, 아래팔 방향 a(도). 자루 위에 그려서 손가락이 감싼 모양 */
-  function fist(c, p, a, r, fill, knuckle = OL) {
+  function fist(c, p, a, r, fill, knuckle = '#2a1e34') {
     const k1 = pol(p, r * 0.55, a + 70);
     const k2 = pol(p, r * 0.55, a - 70);
     return c.E(p[0], p[1], n(r * 1.12), n(r), fill, ` transform="rotate(${n(a)} ${n(p[0])} ${n(p[1])})"`) +
@@ -199,7 +235,7 @@
   /* ---------- 01 안개 쥐: 종종 뛰는 네발(대각선 짝) · 앞니로 물어뜯기 · 죽으면 뒤집혀 발랑 ---------- */
   MOTION.mist_rat = { gait: 'scuttle', bob: 0.03, tilt: 2, sway: 0, squash: 0.04, deathFx: 'mist', deathTime: 0.6 };
   D.mist_rat = (fr) => {
-    const c = make(3.2);
+    const c = make(3.2, { fine: true });
     const G = 90 - c.ow / 2;
     const fur = GREY;
     const furD = sh(GREY, -0.32);

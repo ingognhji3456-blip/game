@@ -685,6 +685,79 @@
     const maskF = (a, m, lo, neg = false) => { const o = new Float32Array(G.N); for (let k = 0; k < G.N; k++) o[k] = m[k] < lo ? (neg ? 9 : -9) : a[k]; return o; };
     /** 부호 거리장 (흐림 + 잡음) */
     const sdField = (set, blurSig, amp, sc, k, amp2, sc2) => addNoise(G.blur(sdTiles(G, set, cols, rows), blurSig), amp, sc, k, amp2, sc2 || sc / 5);
+    /** 칸 집합의 이어진 덩어리들 (4방향): [{ cells, n, c0, c1, r0, r1, edge }] */
+    const comps = (pred) => {
+      const seen = new Uint8Array(cols * rows);
+      const out = [];
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (seen[r * cols + c] || !pred(c, r)) continue;
+          const cells = [];
+          const st = [[c, r]];
+          seen[r * cols + c] = 1;
+          while (st.length) {
+            const [cc, rr] = st.pop();
+            cells.push([cc, rr]);
+            for (const [dc, dr] of N4) {
+              const nc = cc + dc;
+              const nr = rr + dr;
+              if (!inb(nc, nr) || seen[nr * cols + nc] || !pred(nc, nr)) continue;
+              seen[nr * cols + nc] = 1;
+              st.push([nc, nr]);
+            }
+          }
+          let c0 = 1e9; let c1 = -1; let r0 = 1e9; let r1 = -1;
+          for (const [cc, rr] of cells) { if (cc < c0) c0 = cc; if (cc > c1) c1 = cc; if (rr < r0) r0 = rr; if (rr > r1) r1 = rr; }
+          out.push({ cells, n: cells.length, c0, c1, r0, r1, edge: c0 === 0 || r0 === 0 || c1 === cols - 1 || r1 === rows - 1 });
+        }
+      }
+      return out;
+    };
+    /** 둥근 웅덩이 장(4차): 칸 덩어리의 테두리 상자에 들어맞는 초타원(네모와 원 사이) + 둘레를 따라 출렁이는 반지름.
+     *  값 = 테두리까지의 대략 거리(안 +). 맵 가장자리에 붙은 덩어리는 바깥으로 늘여서(물줄기가 맵 밖으로 이어지게).
+     *  a[k] = max(a[k], 값)으로 덮어씀. 상자 둘레 90 안쪽만 계산 */
+    const blobInto = (a, cp, grow, pw, wob, seed) => {
+      let x0 = cp.c0 * 100; let x1 = (cp.c1 + 1) * 100; let y0 = cp.r0 * 100; let y1 = (cp.r1 + 1) * 100;
+      if (cp.c0 === 0) x0 -= 160;
+      if (cp.c1 === cols - 1) x1 += 160;
+      if (cp.r0 === 0) y0 -= 160;
+      if (cp.r1 === rows - 1) y1 += 160;
+      const cx = (x0 + x1) / 2;
+      const cy = (y0 + y1) / 2;
+      const A = (x1 - x0) / 2 + grow;
+      const B = (y1 - y0) / 2 + grow;
+      const mAB = Math.min(A, B);
+      const i0 = Math.max(0, Math.floor((x0 - 90 - G.x0) / GS));
+      const i1 = Math.min(G.nx - 1, Math.ceil((x1 + 90 - G.x0) / GS));
+      const j0 = Math.max(0, Math.floor((y0 - 90 - G.y0) / GS));
+      const j1 = Math.min(G.ny - 1, Math.ceil((y1 + 90 - G.y0) / GS));
+      const ph = rnd(cp.c0, cp.r0, seed) * 6.283;
+      for (let j = j0; j <= j1; j++) {
+        const y = G.y0 + j * GS;
+        for (let i = i0; i <= i1; i++) {
+          const x = G.x0 + i * GS;
+          const dx = x - cx;
+          const dy = y - cy;
+          const u = Math.abs(dx) / A + 1e-6;
+          const v = Math.abs(dy) / B + 1e-6;
+          const up = Math.pow(u, pw);
+          const vp = Math.pow(v, pw);
+          const rho = Math.pow(up + vp, 1 / pw);
+          // 둘레 잡음(각도의 함수 → 한 바퀴 돌면 이어짐): 큰 굽이 + 작은 굽이
+          const th = Math.atan2(dy / B, dx / A) + ph;
+          const ct = Math.cos(th);
+          const st = Math.sin(th);
+          const nz = (vn(ct * 1.3 + 7, st * 1.3 + 7, seed) * 2 - 1) + 0.45 * (vn(ct * 3.1 + 19, st * 3.1 + 19, seed + 1) * 2 - 1);
+          const rr = rho / (1 + wob * nz);
+          const gx = Math.pow(rho, 1 - pw) * (up / u) / A;
+          const gy = Math.pow(rho, 1 - pw) * (vp / v) / B;
+          const g = Math.max(Math.sqrt(gx * gx + gy * gy), 1 / mAB);
+          const val0 = (1 - rr) / g;
+          const k = j * G.nx + i;
+          if (val0 > a[k]) a[k] = val0;
+        }
+      }
+    };
 
     /* ---- 다리 찾기: 길 칸의 양옆(또는 위아래)이 물/용암 ---- */
     const liquid = (k) => k === K.WATER || k === K.LAVA;

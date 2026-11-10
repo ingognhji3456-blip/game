@@ -19,7 +19,22 @@
   const OLC = '#1c1426';
   const h = () => RG.art._h;
   const num = (v) => Math.round(v * 10) / 10;
-  const sh = (c, a) => h().shade(c, a);
+  /*
+   * 색 밝기 조절 (animation.md §7.2): 그늘은 검게가 아니라 색을 틀어서 —
+   * 따뜻한 색은 붉은 보라 쪽, 차가운 색은 푸른 보라 쪽으로 어둡게. 밝은 쪽은 따뜻한 흰빛.
+   */
+  const SH_WARM = '#3d1238';
+  const SH_COOL = '#131b4e';
+  const LIT = '#fff7e6';
+  const shadeTo = (c) => {
+    const [r, , b] = h().hexToRgb(c);
+    return h().mix(SH_COOL, SH_WARM, Math.max(0, Math.min(1, 0.5 + (r - b) / 170)));
+  };
+  const sh = (c, a) => (a >= 0 ? h().mix(c, LIT, a) : h().mix(c, shadeTo(c), Math.min(1, -a * 1.12)));
+  /** 안쪽 선 색: 그 자리 색의 어두운 변형 (바깥 윤곽만 OLC) */
+  const IL = (c, a = 0.5) => sh(c, -a);
+  /** 반사광 색: 그늘 쪽 가장자리에 비치는 주변 빛(살짝 푸른 하늘빛) */
+  const RIMC = (c) => h().mix(sh(c, 0.25), '#d4e4ff', 0.45);
 
   /* ---------- 작업대: SVG 하나의 defs + 색별 그라데이션 캐시 ---------- */
   function pad() {
@@ -67,8 +82,17 @@
   const FUR = (d, c, w = 4.5, gap = 4, o = 2.6) => `<path d="${d}" fill="none" stroke-width="${w + o}" stroke-dasharray="0.1 ${gap}"/><path d="${d}" fill="none" stroke="${c}" stroke-width="${w}" stroke-dasharray="0.1 ${gap}"/>`;
   /** 잘라 그리기 */
   const CL = (id, body) => `<g clip-path="url(#${id})">${body}</g>`;
-  /** 그늘(검은 반투명) */
-  const SHD = (d, a = 0.22) => `<path d="${d}" fill="${OLC}" opacity="${a}"/>`;
+  /** 그늘(보랏빛 반투명) */
+  const SHD = (d, a = 0.22) => `<path d="${d}" fill="#2a1446" opacity="${a}"/>`;
+  /** 안쪽 부품: 선이 OLC가 아니라 제 색의 어두운 변형 (animation.md §7.1) */
+  const PI = (d, f, base, w = 1.5, ex = '') => `<path d="${d}" fill="${f}" stroke="${IL(base)}" stroke-width="${w}"${ex}/>`;
+  const CI = (x, y, r, f, base, w = 1.2, ex = '') => `<circle cx="${num(x)}" cy="${num(y)}" r="${r}" fill="${f}" stroke="${IL(base)}" stroke-width="${w}"${ex}/>`;
+  /** 바깥 윤곽 다시 긋기: 안쪽 부품을 덮은 뒤 실루엣만 OLC로 또렷하게 */
+  const OUT = (d, w = 2.8, tr = '') => `<path d="${d}" fill="none" stroke-width="${w}"${tr ? ` transform="${tr}"` : ''}/>`;
+  /** 반짝점(금속·보석·눈) */
+  const SPEC = (x, y, r = 0.8, a = 0.95) => `<circle cx="${num(x)}" cy="${num(y)}" r="${r}" fill="#fff" opacity="${a}"/>`;
+  /** 바늘땀(점선) */
+  const STITCH = (d, c, w = 0.8, dash = '1.2 1.1') => T(d, c, w, ` stroke-dasharray="${dash}" opacity="0.85"`);
 
   const wrap = (vb, c, body) => h().svg(vb, c.defs.join(''),
     `<g stroke="${OLC}" stroke-width="0" stroke-linejoin="round" stroke-linecap="round">${body}</g>`);
@@ -141,20 +165,33 @@
    * 외곽선을 모두 먼저 → 그늘색 면 → 왼쪽 위로 비킨 밝은 면(오른쪽 아래에 그늘이 남음)
    * segs: [{a, b, ra, rb, col}]
    */
-  function limb(segs, owid = 2.5) {
+  function limb(segs, owid = 1.8) {
     let o = '';
     let f = '';
     let l = '';
+    let r = '';
     for (const s of segs) {
       const d = cap(s.a, s.b, s.ra, s.rb);
       o += `<path d="${d}" fill="${OLC}" stroke-width="${owid * 2}"/>`;
-      f += `<path d="${d}" fill="${s.dark || sh(s.col, -0.3)}"/>`;
+      f += `<path d="${d}" fill="${s.dark || sh(s.col, -0.32)}"/>`;
       const k = Math.min(s.ra, s.rb);
       const ins = Math.min(1.2, k * 0.42);
       l += `<path d="${cap(add(s.a, -ins * 0.62, -ins * 0.72), add(s.b, -ins * 0.62, -ins * 0.72), s.ra - ins, s.rb - ins)}" fill="${s.col}"/>`;
-      if (k > 2.4 && !s.flat) l += T(`M${pt(add(lerp(s.a, s.b, 0.12), -k * 0.45, -k * 0.55))}L${pt(add(lerp(s.a, s.b, 0.78), -k * 0.45, -k * 0.55))}`, sh(s.col, 0.35), 1.3, op(0.7));
+      if (k > 2.4 && !s.flat) l += T(`M${pt(add(lerp(s.a, s.b, 0.12), -k * 0.45, -k * 0.55))}L${pt(add(lerp(s.a, s.b, 0.78), -k * 0.45, -k * 0.55))}`, sh(s.col, 0.38), 1.3, op(0.7));
+      // 반사광: 그늘 쪽(오른쪽 아래) 가장자리의 얇은 밝은 띠
+      if (k > 1.9 && !s.noRim) {
+        const Ln = dist(s.a, s.b) || 0.01;
+        let nx = -(s.b.y - s.a.y) / Ln;
+        let ny = (s.b.x - s.a.x) / Ln;
+        if (nx + ny < 0) { nx = -nx; ny = -ny; }
+        const q0 = lerp(s.a, s.b, 0.18);
+        const q1 = lerp(s.a, s.b, 0.82);
+        const r0 = s.ra + (s.rb - s.ra) * 0.18 - 0.7;
+        const r1 = s.ra + (s.rb - s.ra) * 0.82 - 0.7;
+        r += T(`M${pt(add(q0, nx * r0, ny * r0))}L${pt(add(q1, nx * r1, ny * r1))}`, RIMC(s.col), k > 4 ? 1.2 : 0.85, op(0.6));
+      }
     }
-    return o + f + l;
+    return o + f + l + r;
   }
   /** 그늘용: 마디 모양을 오른쪽 아래로 비켜 반투명 검정 */
   const castSegs = (segs, dx = 1.8, dy = 2.2, a = 0.2) => `<g opacity="${a}">${segs.map((s) => `<path d="${cap(add(s.a, dx, dy), add(s.b, dx, dy), s.ra + 0.6, s.rb + 0.6)}" fill="${OLC}"/>`).join('')}</g>`;
@@ -202,13 +239,18 @@
     const rim = o.rim || sh(col, 0.28);
     const sole = o.sole || sh(col, -0.5);
     const lace = o.lace;
-    return G(P('M-3.6 -5.6L3.3 -5.6L3.7 -1.6C6.8 -1.4 9.3 -0.2 9.4 2.2L9.4 3.5L-3.9 3.5L-4.1 -0.6Z', c.gl(col, a, 0.28), 2.6)
+    const BT = 'M-3.6 -5.6L3.3 -5.6L3.7 -1.6C6.8 -1.4 9.3 -0.2 9.4 2.2L9.4 3.5L-3.9 3.5L-4.1 -0.6Z';
+    return G(P(BT, c.gl(col, a, 0.28), 2.6)
       + P('M-3.9 2L9.4 2L9.4 3.5L-3.9 3.5Z', sole, 0)
-      + T('M-3.6 1.9H9.1', OLC, 1.3)
-      + T('M4.3 -0.5Q7.4 -0.2 8.2 1.4', sh(col, 0.35), 1.3, op(0.8))
+      + T('M-3.6 1.9H9.1', IL(col, 0.62), 1)
+      // 발등 가죽 덧댐 + 반짝임, 뒤꿈치 반사광
+      + T('M3.6 -1.2Q6.6 -0.9 8.4 1.2', IL(col, 0.4), 0.9)
+      + T('M4.3 -0.5Q7.4 -0.2 8.2 1.4', sh(col, 0.42), 1.1, op(0.85)) + SPEC(6.4, -0.2, 0.55, 0.7)
+      + T('M-3.3 -3.6V1.2', RIMC(col), 0.8, op(0.45))
       + P('M-4.3 -7.2H3.9L3.7 -4.4H-4.1Z', c.gl(rim, a, 0.2), 2.2)
+      + T('M-3.6 -5.8H3.3', sh(rim, 0.4), 0.7, op(0.7))
       + (lace ? T('M2.4 -4L4 -3.2M2.6 -2.2L4.2 -1.4', lace, 1.2, op(0.8)) : '')
-      + T('M-1.2 -1V1.4', sh(col, -0.35), 1.3, op(0.7)), at(A, a, o.bs || 0.9));
+      + T('M-1.2 -1V1.4', IL(col, 0.35), 1.1, op(0.7)), at(A, a, o.bs || 0.9));
   }
 
   /* ---------- 몸 뼈대 ---------- */
@@ -323,17 +365,21 @@
     }
   }
   /** 귀(머리카락 위에 다시 그릴 때) */
-  const ear = (c, skin) => E(-6.6, 2.6, 2.5, 3.3, c.g(skin, 0.12), 1.5) + T('M-7.2 1.2Q-5.6 2.2 -6.8 4.2', sh(skin, -0.3), 1.2);
-  /** 얼굴 바탕: 머리 모양 + 귀 + 볼 + 오른쪽 아래 그늘 */
+  const ear = (c, skin) => E(-6.6, 2.6, 2.5, 3.3, c.g(skin, 0.12), 1.5) + T('M-7.2 1.2Q-5.6 2.2 -6.8 4.2', IL(skin, 0.38), 1) + E(-6.9, 3.4, 0.9, 1.3, '#ff8a7a', 0, op(0.35));
+  /** 얼굴 바탕: 머리 모양 + 귀 + 볼 + 오른쪽 아래 그늘(색을 튼) + 턱 반사광 */
   function faceBase(c, skin, o = {}) {
     const id = c.clip(HEAD);
+    const blush = c.halo('#ff6a7a', 0.55);
     return P(HEAD, c.r(skin, 0.25), 2.8)
-      + CL(id, SHD('M4 13C9 10 12.5 5 12 -2C14 4 14 12 4 13Z', 0.16) + SHD('M-12 3C-9 10 -2 13.5 4 13L-2 16L-13 9Z', 0.12))
+      + CL(id, P('M4 13C9 10 12.5 5 12 -2C14 4 14 12 4 13Z', sh(skin, -0.28), 0, op(0.55)) + SHD('M-12 3C-9 10 -2 13.5 4 13L-2 16L-13 9Z', 0.12)
+        + T('M10.6 2.4C10.3 6.4 8 9.6 4 10.9', RIMC(skin), 1, op(0.55))
+        + E(-1.5, -5.5, 5, 3.2, '#fff7e6', 0, op(0.18)))
       + (o.noEar ? '' : ear(c, skin))
-      + E(1.2, 6.3, 2.3, 1.3, '#ff7a7a', 0, op(0.42)) + E(10, 5.8, 1.5, 1.1, '#ff7a7a', 0, op(0.35));
+      + E(1.2, 6.4, 3, 1.9, blush, 0) + E(10, 5.9, 2.1, 1.6, blush, 0, op(0.85))
+      + SPEC(8.4, 4.6, 0.45, 0.5);
   }
-  /** 목 */
-  const neckS = (c, skin) => P('M-3.4 7L3.2 7L3.6 15.5L-3.4 15.5Z', sh(skin, -0.1), 1.8) + SHD('M-3.4 7L3.2 7L3.4 10.5Q0 12 -3.4 10Z', 0.22);
+  /** 목: 턱 밑 접촉 그늘 */
+  const neckS = (c, skin) => P('M-3.4 7L3.2 7L3.6 15.5L-3.4 15.5Z', sh(skin, -0.12), 1.8) + SHD('M-3.4 7L3.2 7L3.4 11Q0 12.6 -3.4 10.4Z', 0.3);
 
   /* =========================================================
    * 전투용 작은 그림 — 영웅
@@ -378,7 +424,7 @@
       + T('M-3.6 -6.4V6.4', sh(K.steel, 0.5), 1.4, op(0.8)) + T('M3.6 -6.4V6.4', sh(K.steel, -0.45), 1.4, op(0.7))
       + P('M0 -2.6L2 0L0 2.6L-2 0Z', hot ? '#ffe27a' : '#ff9a4a', 1.4)
       + (hot ? C(0, 9.5, hot > 1 ? 9 : 6, c.halo('#ffd23a', 0.9), 0) + C(0, -9.5, hot > 1 ? 9 : 5, c.halo('#ffb03a', 0.7), 0) : '');
-    return limb([{ a: A(-1), b: A(HAMMER_LEN - 6), ra: 1.8, rb: 2.1, col: K.wood }], 2.3)
+    return limb([{ a: A(-1), b: A(HAMMER_LEN - 6), ra: 1.8, rb: 2.1, col: K.wood }], 1.8)
       + G(P('M0 -2.7H12V2.7H0Z', c.gl(K.grip, a, 0.25), 2) + T('M2 -2.7L3.6 2.7M5 -2.7L6.6 2.7M8 -2.7L9.6 2.7', sh(K.grip, -0.45), 1.2), at(A(1), a))
       + C(A(-1.6).x, A(-1.6).y, 2.5, c.r(K.steel, 0.4), 2.2)
       + G(hd, at(head, a));
@@ -541,7 +587,7 @@
     const top = pol(base, STAFF_LEN, a);
     const hook = pol(pol(top, 3.5, a), 6.4, a + 90);
     const bend = pol(pol(top, 5.4, a), 2.2, a + 90);
-    return limb([{ a: base, b: top, ra: 1.7, rb: 2, col: S.wood }], 2.3)
+    return limb([{ a: base, b: top, ra: 1.7, rb: 2, col: S.wood }], 1.8)
       + L(`M${pt(top)}Q${pt(bend)} ${pt(hook)}`, S.gold, 2.2, 2.4)
       + G(P('M-1 -2.8H3V2.8H-1Z', c.gl(S.gold, a, 0.3), 1.6), at(pol(top, -1, a), a))
       + G(P('M-0.6 -2.6H5.4V2.6H-0.6Z', c.gl(S.gold, a, 0.3), 1.6) + T('M1.4 -2.6V2.6M3.4 -2.6V2.6', sh(S.gold, -0.4), 1.2), at(pol(base, STAFF_LEN * 0.5 - 3, a), a))

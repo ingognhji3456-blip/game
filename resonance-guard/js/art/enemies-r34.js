@@ -48,8 +48,10 @@
     for (let i = 0; i < pts.length - 1; i++) d += cap(pts[i], pts[i + 1], ws[i], ws[i + 1]);
     return d;
   }
-  /** 여러 도형을 외곽선 하나로 합쳐 칠함 (관절 이음매에 선이 생기지 않음) */
+  /** 여러 도형을 외곽선 하나로 합쳐 칠함 (관절 이음매에 선이 생기지 않음)
+   *  섬세 모드(c.fine): 바깥 실루엣은 공용 필터가 진하게 그리므로, 여기서는 반투명 안쪽 선만 가늘게 두름 */
   function solid(c, d, fill, extra = '') {
+    if (c.fine) return `<path d="${d}" fill="none" stroke-width="${n(c.ow * 0.82)}"${extra}/><path d="${d}" fill="${fill}" stroke="none"${extra}/>`;
     return `<path d="${d}" fill="${OL}" stroke="${OL}" stroke-width="${n(c.ow * 2)}"${extra}/><path d="${d}" fill="${fill}" stroke="none"${extra}/>`;
   }
   /** 관절로 이어진 팔다리 한 짝 */
@@ -160,6 +162,105 @@
   /** 모래·먼지 알갱이: [[x,y,r]...] */
   const grains = (c, pts, col) => pts.map(([x, y, r]) => c.En(x, y, r, r * 0.8, col)).join('');
 
+  /* ---------- 4차 다듬기 도우미 (docs/design/animation.md §7) ----------
+   * 바깥 윤곽은 공용 섬세 모드(make(ow, { fine: true }))의 실루엣 필터가 진하게, 안쪽 선은 그 자리 색의 어두운 변형으로.
+   * 면마다 세 단계(밝은 면·바탕·색 튼 그늘) + 그늘 쪽 반사광 + 반짝점 + 접촉 그늘. 빛은 늘 왼쪽 위.
+   */
+  const FINE = { fine: true };
+  const R3_RIM = '#ffb27a'; // 3지역 반사광: 달아오른 붉은 바위·용암빛
+  const R4_RIM = '#8fe6da'; // 4지역 반사광: 바닷물 빛
+  function hsl(hex) {
+    const [r, gg, b] = H.hexToRgb(hex).map((v) => v / 255);
+    const mx = Math.max(r, gg, b);
+    const mn = Math.min(r, gg, b);
+    const l = (mx + mn) / 2;
+    if (mx === mn) return [0, 0, l];
+    const d = mx - mn;
+    const s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+    const h = mx === r ? (gg - b) / d + (gg < b ? 6 : 0) : mx === gg ? (b - r) / d + 2 : (r - gg) / d + 4;
+    return [h * 60, s, l];
+  }
+  function fromHsl(h, s, l) {
+    const hh = (((h % 360) + 360) % 360) / 360;
+    if (s <= 0) return H.rgbToHex(l * 255, l * 255, l * 255);
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    const f = (t0) => { const t = (t0 + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 0.5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
+    return H.rgbToHex(f(hh + 1 / 3) * 255, f(hh) * 255, f(hh - 1 / 3) * 255);
+  }
+  const turn = (h, to, max) => { const d = ((to - h + 540) % 360) - 180; return h + Math.sign(d) * Math.min(Math.abs(d), max); };
+  const coolOf = (h, s, cool) => (cool != null ? cool : !(s < 0.07 || h < 80 || h >= 290));
+  /** 그늘색: 색상을 틀어 어둡게 — 따뜻한 색·회색은 붉은 보라, 차가운 색은 푸른 보라 쪽(cool로 정할 수 있음) */
+  function dk(col, amt = 0.35, cool) {
+    const [h, s, l] = hsl(col);
+    const cc = coolOf(h, s, cool);
+    return fromHsl(turn(h, cc ? 250 : 335, 62 * amt), Math.min(1, s + (1 - s) * 0.32 * amt), l * (1 - amt));
+  }
+  /** 밝은 면: 따뜻한 색은 누런 빛, 차가운 색은 맑은 청록 빛 쪽으로 밝게 */
+  function lt(col, amt = 0.3, cool) {
+    const [h, s, l] = hsl(col);
+    const cc = coolOf(h, s, cool);
+    return fromHsl(turn(h, cc ? 188 : 50, 40 * amt), Math.min(1, s * (1 - 0.18 * amt) + 0.04 * amt), l + (1 - l) * amt);
+  }
+  /** 덩어리 칠(방사형): 밝은 면 → 바탕 → 색 튼 그늘 → 가장 짙은 가장자리 */
+  const G3 = (c, base, o = {}) => c.rad([[0, lt(base, o.hi != null ? o.hi : 0.36, o.cool)], [0.4, base], [0.78, dk(base, o.lo != null ? o.lo : 0.3, o.cool)],
+    [1, dk(base, (o.lo != null ? o.lo : 0.3) + 0.14, o.cool)]], o.cx != null ? o.cx : 0.32, o.cy != null ? o.cy : 0.26, o.r != null ? o.r : 0.86);
+  /** 팔다리·관 칠(선형, 기본 위→아래) */
+  const GL = (c, base, o = {}) => c.lin([[0, lt(base, o.hi != null ? o.hi : 0.18, o.cool)], [0.45, base], [1, dk(base, o.lo != null ? o.lo : 0.34, o.cool)]], o.dir || 'v');
+  /** 안쪽 선: 그 자리 색의 어두운 변형(굵기 = 바깥 윤곽의 50~65%) */
+  const inl = (c, d, base, w = 1.7, amt = 0.5, x = '') => c.L(d, dk(base, amt), w, x);
+  /** 반사광: 그늘 쪽(오른쪽 아래) 가장자리 안쪽의 밝은 띠. d 닫힌 경로, a 그 좌표계의 회전(도) — 화면 기준 오른쪽 아래를 유지 */
+  function rimL(c, d, col, o = {}) {
+    const id = H.uid('er');
+    const k = o.k != null ? o.k : 1.7;
+    const off = rot([-k, -k], [0, 0], -(o.a || 0));
+    return `<clipPath id="${id}"><path d="${d}"/></clipPath><g clip-path="url(#${id})" stroke-linejoin="round"><path d="${d}" fill="none" stroke="${col}" stroke-width="${n(o.w || 2.6)}" opacity="${o.op != null ? o.op : 0.6}" transform="translate(${n(off[0])} ${n(off[1])})"/></g>`;
+  }
+  /** 형태 그늘: 오른쪽 아래 쪽 넓은 그늘을 색 튼 반투명 덩어리로(빛 반대편 면) */
+  function shadeL(c, d, col, o = {}) {
+    const id = H.uid('er');
+    const k = o.k != null ? o.k : 5;
+    const off = rot([-k, -k], [0, 0], -(o.a || 0));
+    return `<clipPath id="${id}"><path d="${d}"/></clipPath><g clip-path="url(#${id})"><path d="${d}" fill="${col}" stroke="none" opacity="${o.op != null ? o.op : 0.4}" fill-rule="evenodd" transform="translate(${n(off[0])} ${n(off[1])})"/></g>`;
+  }
+  /** 접촉 그늘(맞닿는 곳의 작고 진한 그늘, 가장자리가 부드러움) */
+  function ao(c, x, y, rx, ry, op = 0.55, col = '#2a1232') {
+    c._ao = c._ao || {};
+    const key = col + op;
+    if (!c._ao[key]) c._ao[key] = c.rad([[0, col, op], [0.55, col, op * 0.6], [1, col, 0]]);
+    return `<ellipse cx="${n(x)}" cy="${n(y)}" rx="${n(rx)}" ry="${n(ry)}" fill="${c._ao[key]}" stroke="none"/>`;
+  }
+  /** 빛 덩어리(흐림 필터 없이 방사형으로): 빛나는 것이 둘레에 비추는 색 빛 */
+  function glowR(c, x, y, rx, ry, col, op = 0.5) {
+    c._gl = c._gl || {};
+    const key = col + op;
+    if (!c._gl[key]) c._gl[key] = c.rad([[0, col, op], [0.5, col, op * 0.45], [1, col, 0]]);
+    return `<ellipse cx="${n(x)}" cy="${n(y)}" rx="${n(rx)}" ry="${n(ry)}" fill="${c._gl[key]}" stroke="none"/>`;
+  }
+  /** 반짝점(금속·보석·눈·물기) */
+  const spec = (c, x, y, r = 1.2, op = 0.95) => c.En(n(x), n(y), n(r), n(r * 0.78), '#ffffff', op);
+  /** 섬세 모드용 굵은 선(팔·끈·가지): 반투명 안쪽 선만 가늘게 두름 */
+  const limbF = (c, d, w, col, x = '') => `<path d="${d}" fill="none" stroke-width="${n(w + c.ow * 0.9)}"${x}/><path d="${d}" fill="none" stroke="${col}" stroke-width="${w}"${x}/>`;
+  /** 돌 구멍·흠: 짙은 구멍 + 오른쪽 아래 밝은 턱 */
+  const pits = (c, pts, base) => pts.map(([x, y, r]) => c.En(n(x), n(y), n(r), n(r * 0.75), dk(base, 0.55)) + c.En(n(x + r * 0.45), n(y + r * 0.5), n(r * 0.7), n(r * 0.32), lt(base, 0.32), 0.75)).join('');
+  /** 비늘 호: 곡선 sp 위 t0~t1 구간, 줄마다 offs(몸 가운데에서 바깥 쪽 비율), 크기 r */
+  function scaleArcs(sp, hw, t0, t1, cnt, offs, r, stag = true) {
+    let d = '';
+    offs.forEach((o, row) => {
+      for (let i = 0; i < cnt; i++) {
+        const t = t0 + (t1 - t0) * ((i + (stag && row % 2 ? 0.5 : 0)) / cnt);
+        if (t > t1) continue;
+        const { p, a } = at(sp, t);
+        const q = pol(p, hw(t) * o, a - 90);
+        const rr = r * (0.6 + 0.4 * Math.min(1, hw(t) / 6));
+        const p1 = pol(q, rr, a - 90);
+        const p2 = pol(q, rr, a + 90);
+        d += `M${P2(p1)}Q${P2(pol(q, rr * 1.2, a + 180))} ${P2(p2)}`;
+      }
+    });
+    return d;
+  }
+
   /* =========================================================
    * 3지역 · 붉은 협곡
    * ========================================================= */
@@ -168,7 +269,7 @@
    *     죽음: 맞고 머리를 젖힘 → 납작 엎어지며 불씨가 꺼짐 → 잿빛 껍데기가 재로 부서짐 --- */
   RG.art._en.MOTION.cinder_lizard = { gait: 'scuttle', bob: 0.015, tilt: 2, sway: 0.025, deathFx: 'ash', deathTime: 0.7 };
   D.cinder_lizard = (fr) => {
-    const c = make(3);
+    const c = make(3, { fine: true });
     const cool = fr === 'die1' ? 0.5 : fr === 'die2' ? 1 : 0; // 식어 가는 정도
     const red = H.mix('#b0564a', '#6a6270', cool);
     const redD = sh(red, -0.3);
@@ -277,7 +378,7 @@
    *     죽음: 맞고 몸을 뒤로 젖힘 → 모래 위에 축 늘어짐 → 모래 속으로 가라앉음 --- */
   RG.art._en.MOTION.sand_burrower = { gait: 'slither', bob: 0.02, tilt: 2, sway: 0.03, deathFx: 'crumble', deathTime: 0.8 };
   D.sand_burrower = (fr) => {
-    const c = make(3);
+    const c = make(3, { fine: true });
     const dull = fr === 'die1' || fr === 'die2' ? 0.3 : 0;
     const shell = H.mix('#bf9f76', '#8d8478', dull);
     const shellD = sh(shell, -0.32);
@@ -395,7 +496,7 @@
    *     죽음: 금이 하얗게 달아오르며 휘청 → 무릎 꿇고 금에서 용암이 쏟아짐 → 식어 굳은 바위 더미 --- */
   RG.art._en.MOTION.magma_brute = { gait: 'stomp', bob: 0.035, tilt: 3, sway: 0.01, deathFx: 'crumble', deathTime: 1.0 };
   D.magma_brute = (fr) => {
-    const c = make(3);
+    const c = make(3, { fine: true });
     const rock = '#5d5462';
     const cool = fr === 'die2' ? 1 : 0;
     const lava = fr === 'die0' ? '#fff0c0' : EMBER_L;
@@ -489,7 +590,7 @@
    *     죽음: 맞고 깃털이 흩날림 → 날개가 꺾여 곤두박질 → 땅에 날개를 펼친 채 쓰러짐(불꽃 깃이 식음) --- */
   RG.art._en.MOTION.thermal_vulture = { gait: 'fly', bob: 0.04, tilt: 4, hover: 0.5, deathFx: 'feathers', deathTime: 0.8 };
   D.thermal_vulture = (fr) => {
-    const c = make(3);
+    const c = make(3, { fine: true });
     const dead = fr === 'die2';
     const body = '#6a5a58';
     const skin = '#cfb4ae';
@@ -611,7 +712,7 @@
    *     죽음: 칼을 놓치며 휘청 → 무릎 꿇고 고꾸라짐 → 몸은 안개로 흩어지고 두건과 옷가지·칼만 남음 --- */
   RG.art._en.MOTION.dune_raider = { gait: 'walk', bob: 0.05, tilt: 3, deathFx: 'mist', deathTime: 0.9 };
   D.dune_raider = (fr) => {
-    const c = make(3);
+    const c = make(3, { fine: true });
     const cloth = '#d2ae78';
     const clothD = sh(cloth, -0.25);
     const skin = '#8f8b9e';
@@ -707,7 +808,7 @@
    *     죽음: 머리를 맞고 젖혀짐 → 벌렁 나자빠짐 → 큰대자로 누운 채 주머니의 돌이 쏟아짐 --- */
   RG.art._en.MOTION.canyon_slinger = { gait: 'trot', bob: 0.06, tilt: 4, deathFx: 'crumble', deathTime: 0.7 };
   D.canyon_slinger = (fr) => {
-    const c = make(3);
+    const c = make(3, { fine: true });
     const cloth = '#c9a272';
     const clothD = sh(cloth, -0.28);
     const skin = '#8f8b9e';
@@ -807,7 +908,7 @@
    *     죽음: 껍질에 금이 가며 번쩍 → 유리 조각으로 산산이 깨짐 → 날카로운 흑요석 조각 더미와 오그라든 다리 --- */
   RG.art._en.MOTION.obsidian_beetle = { gait: 'crawl', bob: 0.012, tilt: 1.5, sway: 0.01, deathFx: 'shatter', deathTime: 0.8 };
   D.obsidian_beetle = (fr) => {
-    const c = make(3);
+    const c = make(3, { fine: true });
     const obs = '#2e2838';
     const legC = '#4a4058';
     const legD = '#221c2c';
@@ -889,7 +990,7 @@
    *     죽음: 맞고 옆으로 꺾이며 쪼그라듦 → 가늘게 꺼져 가며 연기 → 불씨 몇 개와 연기 한 줄 --- */
   RG.art._en.MOTION.flame_spirit = { gait: 'float', bob: 0.05, squash: 0.08, hover: 0.4, deathFx: 'ash', deathTime: 0.7 };
   D.flame_spirit = (fr) => {
-    const c = make(3);
+    const c = make(3, { fine: true });
     // 불꽃 윤곽: 바닥 중심 (cx, by), 반폭 w, 키 h, 기울기 lean, 혀 위상 ph
     const flame = (cx, by, w, h, lean, ph, sc = 1) => {
       const tip = (k, hh, ww) => [cx + lean * hh / h + Math.sin(ph + k * 2.1) * 3 * sc + ww, by - hh];
@@ -959,7 +1060,7 @@
    *     죽음: 금이 하얗게 달아올라 몸부림 → 쿵 하고 옆으로 쓰러지며 용암이 쏟아짐 → 식어 굳은 돌 마디와 김 --- */
   RG.art._en.MOTION.pyre_worm = { gait: 'slither', bob: 0.02, tilt: 1.5, sway: 0.015, deathFx: 'crumble', deathTime: 1.2 };
   D.pyre_worm = (fr) => {
-    const c = make(3);
+    const c = make(3, { fine: true });
     const rock = '#4e4552';
     const lava = EMBER;
     const T = {
@@ -1067,7 +1168,7 @@
    *     죽음: 등껍질이 금 가며 다리가 허우적 → 발랑 뒤집힘 → 뒤집힌 채 다리를 오므리고 굳음 --- */
   RG.art._en.MOTION.rock_crab = { gait: 'scuttle', bob: 0.015, tilt: 2.5, sway: 0.02, deathFx: 'crumble', deathTime: 0.8 };
   D.rock_crab = (fr) => {
-    const c = make(3);
+    const c = make(3, { fine: true });
     const shell = '#80808f';
     const shellD = sh(shell, -0.35);
     const barn = (x, y, r) => c.P(`M${x - r} ${y + r * 0.5}L${x - r * 0.5} ${y - r * 0.7}L${x + r * 0.5} ${y - r * 0.7}L${x + r} ${y + r * 0.5}Z`, c.lin([[0, '#efebe2'], [1, '#a8a296']])) + c.En(x, y - r * 0.6, r * 0.42, r * 0.24, '#3a3444');
@@ -1145,7 +1246,7 @@
    *     죽음: 맞고 종이 찌그러지며 합선 → 펑 터지며 불꽃이 사방으로 → 축 늘어진 막만 남아 지직거림 --- */
   RG.art._en.MOTION.volt_jelly = { gait: 'float', bob: 0.06, squash: 0.1, hover: 0.5, deathFx: 'sparks', deathTime: 0.7 };
   D.volt_jelly = (fr) => {
-    const c = make(3);
+    const c = make(3, { fine: true });
     const bolt = (pts, w = 1.8) => `<path d="${zig(pts)}" fill="none" stroke="${VOLT}" stroke-width="${w * 2.4}" opacity=".6" ${c.soft()}/>` + c.L(zig(pts), '#fff3a0', w);
     const bellFill = (bright) => c.rad([[0, '#ffffff', 0.95], [0.35, bright ? '#e4dcff' : '#c4b8ff', 0.88], [1, '#5b4bc0', 0.86]], 0.38, 0.3, 0.8);
     // 종: 중심 x, 위 y, 반폭 w, 높이 h, 찌그러짐 dent
@@ -1226,7 +1327,7 @@
    *     죽음: 맞고 찌그러지며 물방울이 튐 → 철썩 터져 물보라 → 땅에 웅덩이와 잔물결 --- */
   RG.art._en.MOTION.spray_sprite = { gait: 'fly', bob: 0.05, tilt: 6, squash: 0.06, hover: 0.42, deathFx: 'splash', deathTime: 0.6 };
   D.spray_sprite = (fr) => {
-    const c = make(3.2);
+    const c = make(3.2, { fine: true });
     const water = (b) => c.rad([[0, '#ffffff', 0.95], [0.35, b ? '#c8f6fa' : '#9eeaf0', 0.92], [1, '#2a98b0', 0.92]], 0.4, 0.3, 0.8);
     const finF = c.lin([[0, '#e8fbff', 0.92], [1, SEA, 0.8]]);
     const drop = (x, y, r, a = 0) => g(c.P(`M0-${r * 1.6}C${r * 0.6}-${r * 0.6} ${r} 0 ${r} ${r * 0.3}C${r} ${r} ${r * 0.5} ${r * 1.2} 0 ${r * 1.2}C-${r * 0.5} ${r * 1.2}-${r} ${r}-${r} ${r * 0.3}C-${r} 0-${r * 0.6}-${r * 0.6} 0-${r * 1.6}Z`, water(false), ' stroke-width="1.5"') + c.En(-r * 0.3, 0, r * 0.25, r * 0.4, '#ffffff', 0.7), `translate(${x} ${y}) rotate(${a})`);
@@ -1283,7 +1384,7 @@
    *     죽음: 맞고 해골이 젖혀짐 → 뼈가 풀리며 바닷물로 무너져 내림 → 바닷물 웅덩이에 모자·뼈·해초·칼만 --- */
   RG.art._en.MOTION.drowned_corsair = { gait: 'walk', bob: 0.04, tilt: 5, sway: 0.01, deathFx: 'splash', deathTime: 0.9 };
   D.drowned_corsair = (fr) => {
-    const c = make(3);
+    const c = make(3, { fine: true });
     const bone = '#ddd7c6';
     const boneD = sh(bone, -0.3);
     const coat = '#3f5a62';
@@ -1379,7 +1480,7 @@
    *     죽음: 맞고 망토가 펄럭이며 휘청 → 몸이 아래부터 안개로 풀려 사라짐 → 땅에 꽂힌 작살과 모자, 안개 자락 --- */
   RG.art._en.MOTION.mist_mariner = { gait: 'walk', bob: 0.035, tilt: 2, sway: 0.02, deathFx: 'mist', deathTime: 1.0 };
   D.mist_mariner = (fr) => {
-    const c = make(3);
+    const c = make(3, { fine: true });
     const cloakA = '#b9c4cc';
     const cloakB = '#6b7f8c';
     const cloak = c.lin([[0, cloakA, 0.95], [0.6, '#8496a2', 0.9], [1, cloakB, 0.7]]);
@@ -1462,7 +1563,7 @@
    *     죽음: 맞고 고둥을 떨어뜨리며 휘청 → 무릎 꿇고 지팡이가 쓰러짐 → 엎어진 겉옷에서 물이 흘러나옴, 고둥만 굴러감 --- */
   RG.art._en.MOTION.tide_caller = { gait: 'walk', bob: 0.03, tilt: 3, sway: 0.015, deathFx: 'splash', deathTime: 0.9 };
   D.tide_caller = (fr) => {
-    const c = make(3);
+    const c = make(3, { fine: true });
     const robe = '#4f6a8a';
     const robeD = sh(robe, -0.32);
     const scale = '#8ea2b0';
@@ -1562,7 +1663,7 @@
    *     죽음: 산호 가지가 부러지며 휘청 → 몸이 덩어리째 갈라져 무너짐 → 돌·산호·조개 더미와 작은 물웅덩이 --- */
   RG.art._en.MOTION.coral_colossus = { gait: 'stomp', bob: 0.025, tilt: 2, sway: 0.012, deathFx: 'crumble', deathTime: 1.1 };
   D.coral_colossus = (fr) => {
-    const c = make(3);
+    const c = make(3, { fine: true });
     const stone = '#7c8e93';
     const stoneD = sh(stone, -0.3);
     const coral = '#df8f84';
@@ -1652,7 +1753,7 @@
    *     죽음: 맞고 몸이 번개 모양으로 꺾여 경련 → 배를 드러내며 축 늘어짐 → 빛이 꺼진 잿빛 몸과 마지막 불꽃 --- */
   RG.art._en.MOTION.volt_eel = { gait: 'slither', bob: 0.01, sway: 0.04, deathFx: 'sparks', deathTime: 0.8 };
   D.volt_eel = (fr) => {
-    const c = make(3);
+    const c = make(3, { fine: true });
     const dull = fr === 'die2' ? 1 : fr === 'die1' ? 0.5 : 0;
     const body = H.mix('#45506a', '#6a6672', dull);
     const belly = H.mix('#9aa6c4', '#8a8690', dull);
@@ -1715,7 +1816,7 @@
    *     attack: 입에서 벼락 줄기를 내리꽂음(벼락 능력 자세) · 죽음: 맞고 몸을 웅크리며 번개가 튐 → 구름이 흩어지며 머리부터 가라앉음 → 땅에 내려앉아 빛이 꺼짐 --- */
   RG.art._en.MOTION.tempest_whale = { gait: 'swim', bob: 0.05, tilt: 2, hover: 0.6, deathFx: 'mist', deathTime: 1.2 };
   D.tempest_whale = (fr) => {
-    const c = make(3);
+    const c = make(3, { fine: true });
     const dull = fr === 'die2' ? 1 : fr === 'die1' ? 0.5 : 0;
     const skin = H.mix('#4e5878', '#5e5c6a', dull * 0.6);
     const belly = H.mix('#a2aac4', '#8a8894', dull);

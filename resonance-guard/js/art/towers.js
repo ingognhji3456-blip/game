@@ -36,6 +36,23 @@
     hex_spire: 'dark', void_orb: 'dark', shadow_snare: 'dark',
   };
 
+  /* ---------------- 섬세한 명암 (docs/design/animation.md §7) ----------------
+   * 그늘은 검게가 아니라 색을 틀어서(따뜻한 색 → 붉은 보라, 차가운 색 → 푸른 보라),
+   * 밝은 면은 왼쪽 위 따뜻한 빛, 그늘 쪽 끝에는 하늘빛 반사광.
+   */
+  const LIT = '#fff3d8';
+  const RIM = '#b8c6ea';
+  function shadeTo(h, col) {
+    const [r, , b] = h.hexToRgb(col);
+    return r - b > 24 ? '#3c1a3e' : b - r > 24 ? '#1c2250' : '#2a1d48';
+  }
+  /** 색을 튼 어두운 색(a 0~1) */
+  const dk = (h, col, a) => h.mix(col, shadeTo(h, col), a);
+  /** 따뜻한 밝은 색(a 0~1) */
+  const lt = (h, col, a) => h.mix(col, LIT, a);
+  /** 안쪽 선 색: 그 자리 색의 어두운 변형 */
+  const inkOf = (h, col, a = 0.58) => dk(h, col, a);
+
   /* ---------------- 그리기 문맥 ---------------- */
   function Ctx(s, element) {
     const h = RG.art._h;
@@ -76,6 +93,28 @@
     c.ln = (d, col = OL, w = 2, op) => `<path d="${d}" fill="none" stroke="${col}" stroke-width="${sw(w)}"${op != null ? ` opacity="${op}"` : ''}/>`;
     /* 외곽선 있는 굵은 선(장대·밧줄·활) */
     c.ol = (d, col, w = 3) => c.ln(d, OL, w + 2.6) + c.ln(d, col, w);
+    /* 색 계산(틀어진 그늘·따뜻한 빛·안쪽 선 색) */
+    c.dk = (col, a) => dk(h, col, a);
+    c.lt = (col, a) => lt(h, col, a);
+    c.inkc = (col, a) => inkOf(h, col, a);
+    /* 안쪽 선: c.p(d, fill, 1.8, c.ink(바탕색)) — 진한 윤곽색 대신 그 자리 색의 어두운 변형 */
+    c.ink = (col, a) => ` stroke="${inkOf(h, col, a)}"`;
+    return c;
+  }
+  /**
+   * 섬세한 명암으로 바꾼 문맥(같은 c를 고쳐 돌려줌): cg·vg·sg 가 세 단계 + 색을 튼 그늘 + 반사광이 됩니다.
+   * 그룹 파일이 draw 시작에서 fine(c) 를 부르면 그 탑만 바뀝니다(다른 그룹은 그대로).
+   */
+  function fine(c) {
+    if (c.fine) return c;
+    const { h, def, lgc, rgc } = c;
+    const D = (col, a) => dk(h, col, a);
+    const L = (col, a) => lt(h, col, a);
+    const rim = (col) => h.mix(D(col, 0.42), RIM, 0.34);
+    c.cg = (col) => def(`C${col}`, (id) => lgc(id, [[0, L(col, 0.1)], [0.2, L(col, 0.34)], [0.48, col], [0.78, D(col, 0.4)], [0.92, D(col, 0.5)], [1, rim(col)]], 'h'));
+    c.vg = (col, a = 0.3, b = -0.25) => def(`V${col}${a}${b}`, (id) => lgc(id, [[0, a >= 0 ? L(col, a) : D(col, -a)], [0.5, a >= 0 && b < 0 ? col : h.mix(a >= 0 ? L(col, a) : D(col, -a), b >= 0 ? L(col, b) : D(col, -b), 0.5)], [1, b >= 0 ? L(col, b) : D(col, Math.min(0.9, -b * 1.2))]]));
+    c.sg = (col) => def(`S${col}`, (id) => rgc(id, [[0, L(col, 0.72)], [0.42, col], [0.8, D(col, 0.46)], [1, rim(col)]], 0.36, 0.3, 0.78));
+    c.fine = true;
     return c;
   }
 
@@ -173,54 +212,242 @@
   }
 
   /* ---------------- 받침 ---------------- */
+  /* 고정 난수(같은 자리는 늘 같은 돌) */
+  const rn = (i) => { const x = Math.sin(i * 91.7 + 47.3) * 43758.5453; return x - Math.floor(x); };
+  /* 원기둥 옆면 밝기: u 0(왼쪽 끝) ~ 1(오른쪽 끝) — fine 의 cg 와 같은 단계 */
+  function toneAt(h, col, u) {
+    const S = [[0, lt(h, col, 0.1)], [0.2, lt(h, col, 0.32)], [0.48, col], [0.78, dk(h, col, 0.38)], [0.93, dk(h, col, 0.48)], [1, h.mix(dk(h, col, 0.4), RIM, 0.32)]];
+    for (let i = 1; i < S.length; i++) if (u <= S[i][0]) return h.mix(S[i - 1][1], S[i][1], (u - S[i - 1][0]) / (S[i][0] - S[i - 1][0]));
+    return S[S.length - 1][1];
+  }
+  /* 모서리를 둥글린 다각형 경로 */
+  function roundPoly(pts, r) {
+    const n = pts.length;
+    let d = '';
+    for (let i = 0; i < n; i++) {
+      const p = pts[i];
+      const a = pts[(i + n - 1) % n];
+      const b = pts[(i + 1) % n];
+      const la = Math.hypot(a[0] - p[0], a[1] - p[1]) || 1;
+      const lb = Math.hypot(b[0] - p[0], b[1] - p[1]) || 1;
+      const ra = Math.min(r, la * 0.45);
+      const rb = Math.min(r, lb * 0.45);
+      const p1 = [p[0] + ((a[0] - p[0]) * ra) / la, p[1] + ((a[1] - p[1]) * ra) / la];
+      const p2 = [p[0] + ((b[0] - p[0]) * rb) / lb, p[1] + ((b[1] - p[1]) * rb) / lb];
+      d += `${i ? 'L' : 'M'}${f(p1[0])} ${f(p1[1])}Q${f(p[0])} ${f(p[1])} ${f(p2[0])} ${f(p2[1])}`;
+    }
+    return `${d}Z`;
+  }
+  /* 돌 색 흔들림: 푸른·누런·보랏빛·밝게·어둡게 */
+  const TINTS = ['#9aa8c8', '#c8b07a', '#a08ab0', '#ffffff', '#3a2a40'];
+  const tintStone = (h, col, q) => (q < 0.5 ? col : h.mix(col, TINTS[Math.floor((q - 0.5) * 10) % 5], q > 0.9 ? 0.1 : 0.16));
+  /**
+   * 원기둥 옆면 돌쌓기 — 가운데 cx, 위 yt ~ 아래 yb, 반지름 rx·ry, 돌 색 col.
+   * o: rows 줄 수, bw 돌 너비, rough 막돌(크기·모서리 들쭉날쭉), seed, moss 이끼, noOutline
+   * 돌마다 자리에 따른 밝기(왼쪽 위 빛·오른쪽 그늘·끝 반사광) + 색 흔들림 + 윗모서리 빛·아랫모서리 그늘 + 이 빠짐.
+   * 줄눈은 그 돌 색의 어두운 변형(진한 윤곽색 아님). 맨 아래는 땅에 닿아 가장 어둡게.
+   */
+  function masonryCyl(c, cx, yt, yb, rx, ry, col, o = {}) {
+    const h = c.h;
+    const rows = o.rows || 2;
+    const seed = o.seed || 1;
+    const g = o.gap != null ? o.gap : 0.5;
+    const rough = !!o.rough;
+    const sideD = `M${f(cx - rx)} ${f(yt)}V${f(yb)}A${f(rx)} ${f(ry)} 0 0 0 ${f(cx + rx)} ${f(yb)}V${f(yt)}Z`;
+    let s = c.p(sideD, o.mortar || dk(h, col, 0.55), 0);
+    const P = (a, y) => [cx + rx * Math.sin(a), y + ry * Math.cos(a)];
+    const dy = (yb - yt) / rows;
+    let hi = '';
+    let lo = '';
+    const H2 = Math.PI / 2 - 0.015;
+    for (let i = 0; i < rows; i++) {
+      const y1 = yt + i * dy;
+      const y2 = y1 + dy;
+      const bw = (o.bw || 12) / rx;
+      let a = -H2 - rn(seed * 3 + i * 7) * bw * 0.8 - (i % 2 ? bw * 0.5 : 0);
+      let j = 0;
+      while (a < H2) {
+        const q = rn(seed * 17 + i * 31 + j * 5);
+        const w = bw * (rough ? 0.6 + q * 0.75 : 0.8 + q * 0.4);
+        const a1 = Math.max(a, -H2);
+        const a2 = Math.min(a + w, H2);
+        a += w;
+        j += 1;
+        if (a2 - a1 < 0.06) continue;
+        const ia1 = g / (rx * Math.max(0.22, Math.cos(a1)));
+        const ia2 = g / (rx * Math.max(0.22, Math.cos(a2)));
+        const b1 = a1 + (a1 > -H2 + 0.01 ? ia1 : 0);
+        const b2 = a2 - (a2 < H2 - 0.01 ? ia2 : 0);
+        if (b2 - b1 < 0.03) continue;
+        const m = (b1 + b2) / 2;
+        const jt = rough ? (rn(seed + i * 13 + j) - 0.5) * 0.9 : 0;
+        const jb = rough ? (rn(seed + i * 19 + j * 3) - 0.5) * 0.9 : 0;
+        const top = i === 0 ? 0 : g;
+        const bot = i === rows - 1 ? 0 : g;
+        const pts = [P(b1, y1 + top + jt), P(m, y1 + top), P(b2, y1 + top - jt * 0.5), P(b2, y2 - bot + jb * 0.4), P(m, y2 - bot), P(b1, y2 - bot - jb)];
+        const u = (1 + Math.sin(m)) / 2;
+        const fill = tintStone(h, toneAt(h, col, u), rn(seed * 7 + i * 11 + j * 13));
+        s += c.p(roundPoly(pts, rough ? 1.5 : 0.7), fill, 0);
+        if (u < 0.78) hi += `M${f(pts[0][0] + 0.4)} ${f(pts[0][1] + 0.5)}L${f(pts[1][0])} ${f(pts[1][1] + 0.5)}L${f(pts[2][0] - 0.4)} ${f(pts[2][1] + 0.5)}`;
+        lo += `M${f(pts[5][0] + 0.6)} ${f(pts[5][1] - 0.4)}L${f(pts[4][0])} ${f(pts[4][1] - 0.4)}L${f(pts[3][0] - 0.4)} ${f(pts[3][1] - 0.4)}`;
+        if (q > 0.82 && b2 - b1 > 0.16) { const pc = P(m + (b2 - b1) * 0.18, (y1 + y2) / 2); s += c.e(pc[0], pc[1], 0.9, 0.55, dk(h, fill, 0.45), 0); }
+      }
+    }
+    if (hi) s += c.ln(hi, lt(h, col, 0.5), 1.1, 0.75);
+    if (lo) s += c.ln(lo, dk(h, col, 0.5), 1.1, 0.6);
+    /* 이끼(왼쪽 아래) */
+    if (o.moss) {
+      const m1 = P(-1.05, yb - 0.4);
+      const m2 = P(-0.62, yb - 0.2);
+      const mm = P(-0.85, yb - dy * 0.9);
+      s += c.p(`M${f(m1[0])} ${f(m1[1])}Q${f(mm[0] - 2)} ${f(mm[1])} ${f(mm[0])} ${f(mm[1] + 1)}Q${f(mm[0] + 3)} ${f(mm[1] - 1.5)} ${f(m2[0])} ${f(m2[1])}Z`, '#6f9a4a', 1.4, c.ink('#6f9a4a'));
+      s += c.ci(mm[0] - 0.6, mm[1] + 1.6, 0.8, '#a8d070', 0);
+    }
+    /* 땅에 닿는 곳(가장 어둡게) */
+    s += c.p(`M${f(cx - rx)} ${f(yb - 2.4)}A${f(rx)} ${f(ry)} 0 0 0 ${f(cx + rx)} ${f(yb - 2.4)}V${f(yb)}A${f(rx)} ${f(ry)} 0 0 1 ${f(cx - rx)} ${f(yb)}Z`, OL, 0, ' opacity="0.32"');
+    if (!o.noOutline) s += c.p(`M${f(cx - rx)} ${f(yt)}V${f(yb)}A${f(rx)} ${f(ry)} 0 0 0 ${f(cx + rx)} ${f(yb)}V${f(yt)}`, 'none', 3);
+    return s;
+  }
+  /**
+   * 윗면 판석(타원 안에 돌 고리) — 가운데 (cx,cy), 반지름 rx·ry. 빛은 왼쪽 위.
+   */
+  function flagTop(c, cx, cy, rx, ry, col, o = {}) {
+    const h = c.h;
+    const seed = o.seed || 5;
+    const base = lt(h, col, 0.16);
+    let s = c.e(cx, cy, rx, ry, o.mortar || dk(h, col, 0.42), o.w == null ? 3 : o.w);
+    const g = 0.55;
+    const Q = (u, v) => [cx + u * rx, cy + v * ry];
+    const rings = [[0, 0.34, 1], [0.34, 0.68, 6], [0.68, 0.99, 11]];
+    let hi = '';
+    rings.forEach(([r1, r2, n], ri) => {
+      for (let k = 0; k < n; k++) {
+        const q = rn(seed * 5 + ri * 17 + k * 3);
+        let pts;
+        if (n === 1) {
+          pts = [];
+          for (let t = 0; t < 8; t++) { const a = (t / 8) * Math.PI * 2; pts.push(Q(Math.cos(a) * (r2 - 0.05), Math.sin(a) * (r2 - 0.05))); }
+        } else {
+          const off = ri * 0.37 + rn(seed + ri) * 0.4;
+          const a1 = off + (k / n) * Math.PI * 2;
+          const a2 = off + ((k + 1) / n) * Math.PI * 2;
+          const ia = g / (rx * ((r1 + r2) / 2));
+          const ri1 = r1 + g / rx;
+          const ri2 = r2 - (ri === 2 ? 0.02 : g / rx);
+          pts = [];
+          [0, 0.5, 1].forEach((t) => { const a = a1 + ia + (a2 - a1 - 2 * ia) * t; pts.push(Q(Math.cos(a) * ri2, Math.sin(a) * ri2)); });
+          [1, 0.5, 0].forEach((t) => { const a = a1 + ia + (a2 - a1 - 2 * ia) * t; pts.push(Q(Math.cos(a) * ri1, Math.sin(a) * ri1)); });
+        }
+        const cxs = pts.reduce((a, p) => a + p[0], 0) / pts.length;
+        const cys = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+        const u = (cxs - cx) / rx;
+        const v = (cys - cy) / ry;
+        const tone = u + v < -0.3 ? lt(h, base, 0.12) : u + v > 0.6 ? dk(h, base, 0.1) : base;
+        s += c.p(roundPoly(pts, 0.9), tintStone(h, tone, q), 0);
+        if (n > 1 && v < 0.2) hi += `M${f(pts[3][0])} ${f(pts[3][1] + 0.5)}L${f(pts[4][0])} ${f(pts[4][1] + 0.5)}L${f(pts[5][0])} ${f(pts[5][1] + 0.5)}`;
+      }
+    });
+    if (hi) s += c.ln(hi, lt(h, col, 0.55), 1, 0.6);
+    return s;
+  }
+  /**
+   * 윗면 널마루(타원 안 세로 널) — 나뭇결·옹이·못·널 틈.
+   */
+  function plankTop(c, cx, cy, rx, ry, col, o = {}) {
+    const h = c.h;
+    const n = o.n || 6;
+    const clip = c.def(`ptc${cx}_${cy}_${rx}_${ry}`, (id) => `<clipPath id="${id}"><ellipse cx="${f(cx)}" cy="${f(cy)}" rx="${f(rx)}" ry="${f(ry)}"/></clipPath>`);
+    let s = c.e(cx, cy, rx, ry, dk(h, col, 0.5), 3);
+    let inner = '';
+    const bw = (2 * rx) / n;
+    let grain = '';
+    let gaps = '';
+    let nails = '';
+    for (let i = 0; i < n; i++) {
+      const x1 = cx - rx + i * bw;
+      const u = (i + 0.5) / n;
+      const q = rn(i * 7 + (o.seed || 3));
+      const tone = h.mix(u < 0.35 ? lt(h, col, 0.2) : u > 0.75 ? dk(h, col, 0.22) : col, q > 0.5 ? '#c89058' : '#8a5a3a', 0.12);
+      inner += c.r(x1 + 0.35, cy - ry - 1, bw - 0.7, 2 * ry + 2, tone, 0, 0);
+      const gx = x1 + bw * (0.3 + q * 0.3);
+      grain += `M${f(gx)} ${f(cy - ry)}Q${f(gx + 1.2)} ${f(cy - ry * 0.2)} ${f(gx - 0.4)} ${f(cy + ry * 0.4)}Q${f(gx - 1)} ${f(cy + ry * 0.8)} ${f(gx + 0.3)} ${f(cy + ry)}`;
+      if (q > 0.55) inner += c.e(x1 + bw * 0.65, cy - ry * 0.25 + q * 4, 1.1, 0.7, dk(h, col, 0.4), 0) + c.e(x1 + bw * 0.65, cy - ry * 0.25 + q * 4, 2, 1.3, 'none', 0, ` stroke="${dk(h, col, 0.3)}" stroke-width="${c.sw(0.9)}"`);
+      if (i > 0) gaps += `M${f(x1)} ${f(cy - ry)}V${f(cy + ry)}`;
+      /* 가로 장선 위 못 */
+      const hy = ry * Math.sqrt(Math.max(0, 1 - ((x1 + bw / 2 - cx) / rx) ** 2));
+      nails += c.ci(x1 + bw / 2, cy - hy * 0.55, 0.65, '#4a4450', 0) + c.ci(x1 + bw / 2, cy + hy * 0.55, 0.65, '#4a4450', 0);
+    }
+    inner += c.ln(grain, dk(h, col, 0.32), 0.9, 0.7) + c.ln(gaps, dk(h, col, 0.55), 1.3) + nails;
+    /* 장선 줄(못 자리) */
+    s += `<g clip-path="${clip}">${inner}${c.e(cx - rx * 0.3, cy - ry * 0.35, rx * 0.6, ry * 0.45, LIT, 0, ' opacity="0.12"')}</g>`;
+    return s;
+  }
+  /** 보석(마름모, 면마다 밝기 + 반짝점) */
+  function gem(c, x, y, rw, rh, col, glow) {
+    const h = c.h;
+    let s = glow ? c.e(x, y, rw * 2.6, rh * 2, c.ag(col, 0.6), 0) : '';
+    s += c.p(poly([[x, y - rh], [x + rw, y], [x, y + rh], [x - rw, y]]), dk(h, col, 0.2), 1.8);
+    s += c.p(poly([[x, y - rh], [x - rw, y], [x, y]]), lt(h, col, 0.45), 0);
+    s += c.p(poly([[x, y - rh], [x + rw, y], [x, y]]), col, 0);
+    s += c.p(poly([[x - rw, y], [x, y + rh], [x, y]]), h.mix(col, dk(h, col, 0.3), 0.5), 0);
+    s += c.ci(x - rw * 0.35, y - rh * 0.35, Math.max(0.6, rw * 0.22), '#ffffff', 0, ' opacity="0.9"');
+    return s;
+  }
+  /** 금속 띠(원기둥을 도는) + 리벳 + 반짝 띠 */
+  function metalBand(c, cx, y1, y2, rx, ry, col, o = {}) {
+    const h = c.h;
+    let s = band(c, cx, y1, y2, rx, ry, c.cg(col), 2);
+    s += c.ln(ring(cx, y1 + 0.9, rx * 0.98, ry * 0.98), lt(h, col, 0.6), 0.9, 0.8);
+    if (o.rivets !== false) {
+      [-62, -32, 0, 32, 62].forEach((dg) => {
+        const a = (dg * Math.PI) / 180;
+        const x = cx + rx * Math.sin(a);
+        const y = (y1 + y2) / 2 + ry * Math.cos(a);
+        s += c.ci(x, y, 0.85, dg < 20 ? lt(h, col, 0.55) : dk(h, col, 0.25), 0);
+      });
+    }
+    return s;
+  }
   /*
-   * Lv1: 거친 돌 + 나무 마루. Lv2: 다듬은 돌. Lv3: 돌 + 금속 테 + 원소 보석.
-   * Lv4: 2단, 원소 색 띠와 빛나는 보석.
+   * 받침 — Lv1: 막돌 + 널 마루. Lv2: 다듬은 돌 + 판석. Lv3: + 금속 테(리벳)와 원소 보석.
+   * Lv4: 2단(아래 막돌, 위 다듬은 돌), 원소 띠와 빛나는 보석.
+   * 모양(높이·타원)은 예전과 같음 — 위에 놓이는 탑 그림이 그대로 맞음.
    */
   function plat(c, v, o = {}) {
-    const h = c.h;
     const E = c.E;
+    const h = c.h;
     const stone = o.stone || '#a7a29b';
     let out = '';
     if (v === 1) {
       const rs = o.rough || M.rough;
-      out += cyl(c, 50, 104, 112, 44, 13, c.cg(rs), null);
-      const dk = h.shade(rs, -0.4);
-      out += c.ln(ring(50, 108, 44, 13) + [-62, -22, 18, 56].map((d) => vseam(50, 104, 108, 44, 13, d)).join('') +
-        [-44, -4, 36, 72].map((d) => vseam(50, 108, 112, 44, 13, d)).join(''), dk, 1.6);
-      out += c.e(50, 104, 44, 13, c.vg(o.top || M.plank, 0.2, -0.15));
-      const pk = h.shade(o.top || M.plank, -0.3);
-      out += c.ln([-26, -9, 9, 26].map((dx) => { const hy = 13 * Math.sqrt(1 - (dx / 44) ** 2); return `M${f(50 + dx)} ${f(104 - hy + 1)}V${f(104 + hy - 1)}`; }).join(''), pk, 1.4);
+      out += masonryCyl(c, 50, 104, 112, 44, 13, rs, { rows: 2, bw: 11, rough: true, seed: 3, moss: true });
+      out += plankTop(c, 50, 104, 44, 13, o.top || M.plank);
       return out;
     }
     if (v === 2 || v === 3) {
-      out += cyl(c, 50, 104, 112, 44, 13, c.cg(stone), null);
-      const dk = h.shade(stone, -0.38);
-      out += c.ln(ring(50, 108, 44, 13) + [-60, -30, 0, 30, 60].map((d) => vseam(50, 104, 108, 44, 13, d)).join('') +
-        [-75, -45, -15, 15, 45, 75].map((d) => vseam(50, 108, 112, 44, 13, d)).join(''), dk, 1.5);
+      out += masonryCyl(c, 50, 104, 112, 44, 13, stone, { rows: 2, bw: 13, seed: v === 3 ? 9 : 7 });
       if (v === 3) {
-        out += band(c, 50, 104, 107.5, 44, 13, c.vg(o.trim || M.gold, 0.35, -0.25));
-        out += c.p(poly([[50, 115], [54, 119.5], [50, 124], [46, 119.5]]), c.vg(E.color, 0.4, -0.2), 2);
+        out += metalBand(c, 50, 104, 107.4, 44, 13, o.trim || M.gold);
+        out += gem(c, 50, 119.6, 3.6, 4.4, E.color, true);
       }
-      out += c.e(50, 104, 44, 13, c.vg(h.shade(stone, 0.22), 0.25, -0.05));
-      out += c.e(50, 104, 34, 9.5, 'none', 0, ` stroke="${h.shade(stone, -0.2)}" stroke-width="${c.sw(1.5)}"`);
+      out += flagTop(c, 50, 104, 44, 13, stone, { seed: v === 3 ? 13 : 11 });
+      out += c.e(50, 104, 34.5, 9.8, 'none', 0, ` stroke="${lt(h, stone, 0.4)}" stroke-width="${c.sw(1)}" opacity="0.6"`);
       return out;
     }
     /* Lv4 */
     const s2 = o.stone || stone;
-    const lo = h.shade(s2, -0.25);
-    out += cyl(c, 50, 106, 112, 46, 14, c.cg(lo), c.vg(h.shade(lo, 0.15), 0.2, 0));
-    out += c.ln([-70, -35, 0, 35, 70].map((d) => vseam(50, 106, 112, 46, 14, d)).join(''), h.shade(lo, -0.4), 1.5);
-    out += cyl(c, 50, 98, 106, 39, 11.5, c.cg(s2), null);
-    out += band(c, 50, 101, 104.5, 39, 11.5, c.vg(o.trim || E.color, 0.3, -0.3));
+    const lo = dk(h, s2, 0.22);
+    out += masonryCyl(c, 50, 106, 112, 46, 14, lo, { rows: 1, bw: 12, rough: true, seed: 21 });
+    out += flagTop(c, 50, 106, 46, 14, lo, { seed: 23 });
+    out += masonryCyl(c, 50, 98, 106, 39, 11.5, s2, { rows: 2, bw: 11, seed: 25 });
+    const tr = o.trim || E.color;
+    out += band(c, 50, 101, 104.5, 39, 11.5, c.cg(tr), 2) + c.ln(ring(50, 101.8, 38.4, 11.3), lt(h, tr, 0.55), 0.9, 0.8);
     out += [-50, 0, 50].map((d) => {
       const a = (d * Math.PI) / 180;
-      const x = 50 + 39 * Math.sin(a);
-      const y = 102.8 + 11.5 * Math.cos(a);
-      return c.p(poly([[x, y - 4], [x + 3, y], [x, y + 4], [x - 3, y]]), c.vg(E.light, 0.3, -0.1), 1.8);
+      return gem(c, 50 + 39 * Math.sin(a), 102.8 + 11.5 * Math.cos(a), 3, 4, E.light, d === 0);
     }).join('');
-    out += c.e(50, 98, 39, 11.5, c.vg(h.shade(s2, 0.25), 0.25, -0.05));
-    out += c.e(50, 98, 30, 8.5, 'none', 0, ` stroke="${E.color}" stroke-width="${c.sw(2)}" opacity="0.7"`);
+    out += flagTop(c, 50, 98, 39, 11.5, s2, { seed: 27 });
+    out += c.e(50, 98, 30, 8.5, 'none', 0, ` stroke="${E.color}" stroke-width="${c.sw(1.8)}" opacity="0.65"`);
     return out;
   }
 
@@ -248,5 +475,5 @@
   }
 
   /* 그룹 파일(towers-*.js)이 쓰는 공용 도구와 탑 목록 */
-  RG.art._tw = { OL, SC, VKEYS, f, M, STONE, ELEM, Ctx, poly, cyl, frus, ring, band, vseam, flame, crystal, orb, aura, spark, bolt, flag, cone, person, bow, plat, house, shard, T: {} };
+  RG.art._tw = { OL, SC, VKEYS, f, M, STONE, ELEM, Ctx, fine, poly, cyl, frus, ring, band, vseam, flame, crystal, orb, aura, spark, bolt, flag, cone, person, bow, plat, house, shard, rn, roundPoly, toneAt, masonryCyl, flagTop, plankTop, gem, metalBand, T: {} };
 })();
