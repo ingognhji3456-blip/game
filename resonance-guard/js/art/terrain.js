@@ -1233,30 +1233,32 @@
           const corals = TR.filter((t) => t.coral);
           const v = rnd(c, r, 91);
           const pick = (arr, kk) => arr[Math.floor(rnd(c, r, kk) * arr.length) % arr.length];
-          const fit = (sym, by, want) => Math.min(want, (by - y0 + roomUp) / sym.top);
+          const lift = inCliff(c, r) ? HC : 0; // 절벽 위 나무는 절벽 높이만큼 올림
+          const fit = (sym, by, want) => Math.min(want, (by + lift - y0 + roomUp) / sym.top);
+          const plc = (sym, x, by, sc, fl) => place(sym, x, by - lift, sc, fl);
           const flip = rnd(c, r, 92) < 0.5;
           if (region === 4 && corals.length && nearWater(c, r) >= 2) {
             const sym = corals[0];
             const by = y0 + 82;
-            place(sym, x0 + 50 + (rnd(c, r, 93) - 0.5) * 16, by, fit(sym, by, 1.05), flip);
+            plc(sym, x0 + 50 + (rnd(c, r, 93) - 0.5) * 16, by, fit(sym, by, 1.05), flip);
           } else if (v < 0.58) {
             const sym = pick(trees, 94);
             const by = y0 + 86 + (rnd(c, r, 95) - 0.5) * 6;
             const dense = N4.every(([dc, dr]) => isObst(kAt(c + dc, r + dr)));
-            place(sym, x0 + 50 + (rnd(c, r, 96) - 0.5) * 14, by, fit(sym, by, (dense ? 1.04 : 0.94) + rnd(c, r, 97) * 0.2), flip);
+            plc(sym, x0 + 50 + (rnd(c, r, 96) - 0.5) * 14, by, fit(sym, by, (dense ? 1.04 : 0.94) + rnd(c, r, 97) * 0.2), flip);
           } else if (v < 0.86) {
             const a = pick(trees, 98);
             const b = pick(trees, 99);
             const by1 = y0 + 56;
             const by2 = y0 + 90;
-            place(a, x0 + 30 + rnd(c, r, 100) * 8, by1, fit(a, by1, 0.74), flip);
-            place(b, x0 + 66 + rnd(c, r, 101) * 6, by2, fit(b, by2, 0.8), !flip);
+            plc(a, x0 + 30 + rnd(c, r, 100) * 8, by1, fit(a, by1, 0.74), flip);
+            plc(b, x0 + 66 + rnd(c, r, 101) * 6, by2, fit(b, by2, 0.8), !flip);
           } else {
             const a = pick(trees, 102);
             const bsh = bushes.length ? bushes[0] : a;
             const by1 = y0 + 74;
-            place(a, x0 + 38, by1, fit(a, by1, 0.8), flip);
-            place(bsh, x0 + 68, y0 + 92, 0.68, !flip);
+            plc(a, x0 + 38, by1, fit(a, by1, 0.8), flip);
+            plc(bsh, x0 + 68, y0 + 92, 0.68, !flip);
           }
         } else if ((k === K.ROCK || k === K.PILLAR) && inCliff(c, r)) {
           // 절벽 윗면의 돌덩이 / 무너진 기둥 그루터기
