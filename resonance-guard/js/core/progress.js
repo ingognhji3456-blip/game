@@ -10,11 +10,11 @@ RG.progress = (() => {
   function blank() {
     return { v: 1, maps: {}, skills: [], seen: { enemies: [], story: [], tips: [] }, endless: {}, lastMap: '1-1', lastHero: 'kara', gacha: blankGacha() };
   }
-  /** 뽑기 상태: 가진 탑과 강화 단계, 공명석, 새 탑 확정권, 천장 */
+  /** 뽑기 상태: 가진 탑과 강화 단계, 공명석, 천장 */
   function blankGacha() {
     const owned = {};
     for (const t of RG.gacha.BASIC) owned[t] = 0;
-    return { owned, crystals: RG.gacha.START_CRYSTALS, tickets: 0, pity: 0, pulls: 0 };
+    return { owned, crystals: RG.gacha.START_CRYSTALS, pity: 0, pulls: 0 };
   }
 
   let profile = null;
@@ -30,6 +30,12 @@ RG.progress = (() => {
       profile.gacha = g;
       if (p) RG.save.set(RG.save.KEYS.progress, profile);
     }
+    if (profile.gacha.tickets) {
+      // 잠깐 있었던 "새 탑 확정권"은 없앰(스테이지는 뽑기에 탑을 넣기만 함) — 남은 장수는 공명석으로 바꿔 줌
+      profile.gacha.crystals += profile.gacha.tickets * RG.gacha.TICKET_TO_CRYSTALS;
+      delete profile.gacha.tickets;
+      RG.save.set(RG.save.KEYS.progress, profile);
+    } else if ('tickets' in profile.gacha) delete profile.gacha.tickets;
     return profile;
   }
   function get() { return profile || load(); }
@@ -69,8 +75,16 @@ RG.progress = (() => {
   const towerRank = (t) => (ownsTower(t) ? gachaState().owned[t] : -1);
   /** 판에 넘길 강화 단계 묶음 (명령 재현이 같도록 판 시작 때 복사해 둠) */
   function towerRanks() { return Object.assign({}, gachaState().owned); }
+  /**
+   * 지금 뽑기에 들어 있는 탑: 기본 탑 + 스테이지가 열린 탑(그 탑이 처음 나오는 맵이 열렸으면).
+   * 스테이지가 열려도 탑을 주지는 않고 뽑기에 넣기만 함.
+   */
+  function gachaPool() {
+    return D().towerOrder.filter((t) => RG.gacha.BASIC.includes(t) || (D().towers[t].unlock && mapUnlocked(D().towers[t].unlock)));
+  }
+  const inPool = (t) => gachaPool().includes(t);
   function pullGacha(kind, rng) {
-    const res = RG.gacha.pull(gachaState(), kind, rng);
+    const res = RG.gacha.pull(gachaState(), kind, rng, gachaPool());
     if (res.ok) { gachaState().pulls = (gachaState().pulls || 0) + res.results.length; save(); }
     return res;
   }
@@ -129,6 +143,7 @@ RG.progress = (() => {
     const before = mapStars(mapId);
     const beforeTowers = new Set(towersFor(nextMapId(mapId) || mapId));
     const beforeEndless = p.endless[mapId] || 0;
+    const beforePool = new Set(gachaPool());
     const beforeHeroes = new Set(heroesFor(nextMapId(mapId) || mapId));
     const wasBranches = branchesUnlocked();
     const wasCleared = !!rec.cleared;
@@ -157,10 +172,10 @@ RG.progress = (() => {
     const next = nextMapId(mapId);
     // 공명석·새 탑 확정권
     const firstClear = st.result === 'win' && !wasCleared && mode === 'normal';
-    const nextDef = next && D().maps.find((m) => m.id === next);
-    const reward = RG.gacha.rewardFor({ result: st.result, mode, firstClear, newStars: after - before, endlessGain: mode === 'endless' ? (p.endless[mapId] || 0) - beforeEndless : 0, nextNewTowers: nextDef ? nextDef.newTowers : [] });
+    const reward = RG.gacha.rewardFor({ result: st.result, mode, firstClear, newStars: after - before, endlessGain: mode === 'endless' ? (p.endless[mapId] || 0) - beforeEndless : 0 });
+    // 스테이지가 열리며 뽑기에 새로 들어온 탑 (주는 것은 아님)
+    reward.pooled = gachaPool().filter((t) => !beforePool.has(t));
     p.gacha.crystals += reward.crystals;
-    p.gacha.tickets += reward.tickets;
     save();
     const unlocks = { towers: [], heroes: [], maps: [], branches: false };
     if (st.result === 'win' && mode === 'normal' && !wasCleared) {
@@ -202,7 +217,7 @@ RG.progress = (() => {
 
   return {
     load, get, save, reset, hasSave, mapIndex, mapRec, mapUnlocked, towersFor, heroesFor, branchesUnlocked,
-    gachaState, ownedTowers, ownsTower, towerRank, towerRanks, pullGacha,
+    gachaState, ownedTowers, ownsTower, towerRank, towerRanks, gachaPool, inPool, pullGacha,
     mapStars, starsTotal, starsSpent, starsFree, canLearn, learn, resetSkills, record, nextMapId, markSeen, seen, frontier, skillCost,
   };
 })();

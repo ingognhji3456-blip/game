@@ -620,6 +620,23 @@ button { font-family: var(--font); color: inherit; }
   .rar-badge { font-size: 0.6rem; padding: 0 4px; }
   .gc-rbtns .btn { min-height: 42px; }
 }
+/* 뽑기: 잠긴 탑·뽑기에 든 탑, 결과 화면의 새로 들어온 탑 */
+.gc-card.locked { opacity: 0.55; filter: grayscale(0.6); }
+.gc-card.locked .gc-img { filter: brightness(0) drop-shadow(0 0 1px #6a5a8a); opacity: 0.4; }
+.gc-card.missing .gc-img { filter: brightness(0) drop-shadow(0 0 2px #e8d0ff); opacity: 0.75; }
+.gc-card.missing { border-style: dashed; }
+.gc-q { display: inline-flex; align-items: center; gap: 2px; }
+.gc-q .icon { width: 12px; height: 12px; }
+.gc-q.in { color: #e8d0ff; font-weight: 800; }
+.gc-rates .off { opacity: 0.45; }
+.gc-pool { margin: 0 0 4px; }
+.rw-pool { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 6px; padding-top: 6px; border-top: 1px solid #ffffff1a; }
+.rw-pool-t { width: 100%; font-weight: 800; color: #e8d0ff; font-size: 0.85rem; }
+.rw-pool-tower { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 2px; border-radius: 10px; background: #0005; border: 1px solid #ffffff22; font-size: 0.82rem; }
+.rw-pool-tower.rar-rare { border-color: #5fb4ff; } .rw-pool-tower.rar-epic { border-color: #ffc44a; }
+.rw-pool-tower small { color: var(--dim); }
+.rw-pool-tower .tower-img { width: 30px; height: 36px; flex: none; object-fit: contain; }
+.rw-pool-tower b { white-space: nowrap; }
 
 </style>
   <style>/* css/game.css */
@@ -6258,16 +6275,18 @@ RG.save = (() => {
 
 /* =========================================================
  * 탑 뽑기 — 탑은 뽑기로만 얻고, 같은 탑이 또 나오면 그 탑이 강화됩니다.
- * 설계: DESIGN.md §11.5 (2026-11-10 추가)
+ * 설계: DESIGN.md §11.5 (2026-11-10 추가·개정)
  *
  *  - 기본 탑 3종(불씨 궁수탑·바위 병영·서리 결정탑)은 처음부터 가지고 있음
- *  - 공명석으로 뽑기: 1회 100, 10회 900 (10회는 희귀 이상 하나 확정)
- *  - 등급: 일반 60% · 희귀 30% · 영웅 10%, 30회 안에 영웅 확정(천장)
+ *  - 스테이지가 열리면 그 스테이지의 새 탑이 **뽑기에 들어갈 뿐**(확정으로 주지 않음)
+ *  - 공명석으로 뽑기: 1회 100, 10회 900 (10회는 희귀 이상 하나 확정 — 뽑기에 희귀가 있을 때)
+ *  - 등급: 일반 60% · 희귀 30% · 영웅 10%. 뽑기에 아직 없는 등급의 몫은 있는 등급에 비율대로 나눔
+ *  - 천장: 뽑기에 영웅 탑이 들어온 뒤 30회 안에 영웅 확정
  *  - 중복: 그 탑 강화 +1 (최대 +5). +5에서 또 나오면 공명석 30을 돌려받음
- *  - 강화 효과: 단계마다 공격력(지원 탑은 지원 효과, 광산은 수입) +6%
- *  - 새 탑 확정권: 새 탑이 나오던 맵에 닿으면 1장 — 아직 없는 탑 중에서만 뽑음
+ *  - 강화 효과: 단계마다 공격력(지원 탑은 지원 효과, 병영은 병사, 광산은 수입) +6%
  *
  * 순수 함수(무작위는 rng를 받아 씀) — 시험에서 결과를 정할 수 있게.
+ * pool = 지금 뽑기에 들어 있는 탑 목록 (진행도가 정해서 넘김)
  * ========================================================= */
 RG.gacha = (() => {
   const D = () => RG.data;
@@ -6278,6 +6297,7 @@ RG.gacha = (() => {
     winter_bell: 'rare', quake_hammer: 'rare', lightning_rod: 'rare', forge: 'rare', ice_ballista: 'rare', gale_cannon: 'rare',
     shadow_snare: 'epic', sun_lens: 'epic', hex_spire: 'epic', radiance_spire: 'epic', void_orb: 'epic', dynamo: 'epic',
   };
+  const ORDER = ['common', 'rare', 'epic'];
   const RARITIES = {
     common: { name: '일반', rate: 0.6, color: '#c9c3d8' },
     rare: { name: '희귀', rate: 0.3, color: '#5fb4ff' },
@@ -6291,64 +6311,72 @@ RG.gacha = (() => {
   const START_CRYSTALS = 100;
   /** 판 결과로 얻는 공명석 */
   const REWARD = { firstClear: 100, perStar: 30, win: 15, lose: 5, endlessWave: 4 };
+  /** (예전 판의) 새 탑 확정권 한 장을 공명석으로 바꿀 때 */
+  const TICKET_TO_CRYSTALS = COST.one;
 
   const rarityOf = (t) => RARITY[t] || 'common';
+  const allTowers = () => D().towerOrder.filter((t) => D().towers[t]);
+  const poolOf = (pool) => (pool && pool.length ? pool : allTowers());
 
-  /** 등급 하나 고르기 (pity: 천장까지 남은 수가 0이면 영웅, floor: 최소 등급) */
-  function rollRarity(rng, floor) {
-    let r = rng();
-    const order = ['epic', 'rare', 'common'];
+  /** 이 뽑기에서 실제 등급 확률: 뽑기에 없는 등급의 몫을 있는 등급에 비율대로 나눔 */
+  function ratesFor(pool) {
+    const p = poolOf(pool);
+    const have = ORDER.filter((r) => p.some((t) => rarityOf(t) === r));
+    const sum = have.reduce((s, r) => s + RARITIES[r].rate, 0) || 1;
+    const out = { common: 0, rare: 0, epic: 0 };
+    for (const r of have) out[r] = RARITIES[r].rate / sum;
+    return out;
+  }
+
+  /** 등급 하나 고르기 (floor: 최소 등급 — 뽑기에 그 등급 이상이 있을 때만) */
+  function rollRarity(rng, floor, pool) {
+    const rates = ratesFor(pool);
+    const r = rng();
     let pick = 'common';
     let acc = 0;
-    for (const k of order) { acc += RARITIES[k].rate; if (r < acc) { pick = k; break; } }
-    if (floor === 'rare' && pick === 'common') pick = 'rare';
-    if (floor === 'epic') pick = 'epic';
+    for (const k of ['epic', 'rare', 'common']) {
+      if (!rates[k]) continue;
+      acc += rates[k];
+      if (r < acc) { pick = k; break; }
+      pick = k;
+    }
+    if (floor === 'epic' && rates.epic) return 'epic';
+    if (floor === 'rare' && pick === 'common' && (rates.rare || rates.epic)) return rates.rare ? 'rare' : 'epic';
     return pick;
   }
 
-  /** 등급 안에서 탑 하나 (onlyNew: 가진 것 제외, 그 등급에 없으면 다른 등급으로) */
-  function rollTower(rng, rarity, owned, onlyNew) {
-    const all = D().towerOrder.filter((t) => D().towers[t]);
-    const ok = (t) => !onlyNew || !(t in owned);
-    let pool = all.filter((t) => rarityOf(t) === rarity && ok(t));
-    if (!pool.length) {
-      // 그 등급에 남은 새 탑이 없으면: 가까운 등급부터
-      const near = { epic: ['rare', 'common'], rare: ['common', 'epic'], common: ['rare', 'epic'] }[rarity];
-      for (const k of near) { pool = all.filter((t) => rarityOf(t) === k && ok(t)); if (pool.length) break; }
-    }
-    if (!pool.length) return null;
-    return pool[Math.floor(rng() * pool.length) % pool.length];
+  /** 등급 안에서 탑 하나 (뽑기에 든 탑 중 고르게) */
+  function rollTower(rng, rarity, pool) {
+    const list = poolOf(pool).filter((t) => rarityOf(t) === rarity);
+    if (!list.length) return null;
+    return list[Math.floor(rng() * list.length) % list.length];
   }
 
   /**
-   * 뽑기 실행. state = { owned: {type: rank}, crystals, tickets, pity }
-   * kind: 'one' | 'ten' | 'ticket'.  반환: { ok, reason, results: [{ type, rarity, isNew, rank, refund }] }
-   * state를 바꿉니다(호출한 쪽이 저장).
+   * 뽑기 실행. state = { owned: {type: rank}, crystals, pity }
+   * kind: 'one' | 'ten'.  pool: 지금 뽑기에 든 탑.
+   * 반환: { ok, reason, results: [{ type, rarity, isNew, rank, refund }] } — state를 바꿉니다(호출한 쪽이 저장).
    */
-  function pull(state, kind, rng = Math.random) {
+  function pull(state, kind, rng = Math.random, pool = null) {
+    const cost = COST[kind];
+    if (!cost) return { ok: false, reason: '알 수 없는 뽑기' };
+    if ((state.crystals || 0) < cost) return { ok: false, reason: `공명석이 부족합니다 (${cost} 필요)` };
+    state.crystals -= cost;
     const n = kind === 'ten' ? 10 : 1;
-    if (kind === 'ticket') {
-      if ((state.tickets || 0) <= 0) return { ok: false, reason: '새 탑 확정권이 없습니다' };
-      if (D().towerOrder.every((t) => t in state.owned)) return { ok: false, reason: '이미 모든 탑을 가지고 있습니다' };
-    } else {
-      const cost = COST[kind];
-      if ((state.crystals || 0) < cost) return { ok: false, reason: `공명석이 부족합니다 (${cost} 필요)` };
-      state.crystals -= cost;
-    }
-    if (kind === 'ticket') state.tickets -= 1;
+    const rates = ratesFor(pool);
     const results = [];
     let gotRare = false;
     for (let i = 0; i < n; i++) {
-      state.pity = (state.pity || 0) + 1;
+      // 천장은 뽑기에 영웅 탑이 있을 때만 셈
+      if (rates.epic) state.pity = (state.pity || 0) + 1;
       let floor = null;
-      if (state.pity >= PITY) floor = 'epic';
+      if (rates.epic && state.pity >= PITY) floor = 'epic';
       else if (kind === 'ten' && i === n - 1 && !gotRare) floor = 'rare';
-      const rarity = rollRarity(rng, floor);
-      const type = rollTower(rng, rarity, state.owned, kind === 'ticket');
+      const rarity = rollRarity(rng, floor, pool);
+      const type = rollTower(rng, rarity, pool);
       if (!type) continue;
-      const realRarity = rarityOf(type);
-      if (realRarity === 'epic') state.pity = 0;
-      if (realRarity !== 'common') gotRare = true;
+      if (rarity === 'epic') state.pity = 0;
+      if (rarity !== 'common') gotRare = true;
       results.push(grant(state, type));
     }
     return { ok: true, results };
@@ -6366,8 +6394,8 @@ RG.gacha = (() => {
   /** 강화 단계에 따른 배율 (1 + 단계 × 6%) */
   const rankMult = (rank) => 1 + Math.max(0, Math.min(MAX_RANK, rank || 0)) * RANK_PCT;
 
-  /** 판 결과로 얻는 공명석과 확정권 계산 (기록 전 상태 기준) */
-  function rewardFor({ result, mode, firstClear, newStars, endlessGain, nextNewTowers }) {
+  /** 판 결과로 얻는 공명석 계산 (기록 전 상태 기준) */
+  function rewardFor({ result, mode, firstClear, newStars, endlessGain }) {
     let crystals = 0;
     const lines = [];
     if (mode === 'endless') {
@@ -6375,11 +6403,10 @@ RG.gacha = (() => {
     } else if (result === 'win') { crystals += REWARD.win; lines.push(['승리', REWARD.win]); } else { crystals += REWARD.lose; lines.push(['참가', REWARD.lose]); }
     if (firstClear) { crystals += REWARD.firstClear; lines.push(['첫 클리어', REWARD.firstClear]); }
     if (newStars > 0) { crystals += newStars * REWARD.perStar; lines.push([`새 별 ★${newStars}`, newStars * REWARD.perStar]); }
-    const tickets = firstClear ? (nextNewTowers || []).filter((t) => !BASIC.includes(t)).length : 0;
-    return { crystals, tickets, lines };
+    return { crystals, lines };
   }
 
-  return { BASIC, RARITY, RARITIES, COST, MAX_RANK, RANK_PCT, REFUND, PITY, START_CRYSTALS, REWARD, rarityOf, rollRarity, rollTower, pull, grant, rankMult, rewardFor };
+  return { BASIC, RARITY, RARITIES, ORDER, COST, MAX_RANK, RANK_PCT, REFUND, PITY, START_CRYSTALS, REWARD, TICKET_TO_CRYSTALS, rarityOf, ratesFor, rollRarity, rollTower, pull, grant, rankMult, rewardFor };
 })();
 
 </script>
@@ -6396,11 +6423,11 @@ RG.progress = (() => {
   function blank() {
     return { v: 1, maps: {}, skills: [], seen: { enemies: [], story: [], tips: [] }, endless: {}, lastMap: '1-1', lastHero: 'kara', gacha: blankGacha() };
   }
-  /** 뽑기 상태: 가진 탑과 강화 단계, 공명석, 새 탑 확정권, 천장 */
+  /** 뽑기 상태: 가진 탑과 강화 단계, 공명석, 천장 */
   function blankGacha() {
     const owned = {};
     for (const t of RG.gacha.BASIC) owned[t] = 0;
-    return { owned, crystals: RG.gacha.START_CRYSTALS, tickets: 0, pity: 0, pulls: 0 };
+    return { owned, crystals: RG.gacha.START_CRYSTALS, pity: 0, pulls: 0 };
   }
 
   let profile = null;
@@ -6416,6 +6443,12 @@ RG.progress = (() => {
       profile.gacha = g;
       if (p) RG.save.set(RG.save.KEYS.progress, profile);
     }
+    if (profile.gacha.tickets) {
+      // 잠깐 있었던 "새 탑 확정권"은 없앰(스테이지는 뽑기에 탑을 넣기만 함) — 남은 장수는 공명석으로 바꿔 줌
+      profile.gacha.crystals += profile.gacha.tickets * RG.gacha.TICKET_TO_CRYSTALS;
+      delete profile.gacha.tickets;
+      RG.save.set(RG.save.KEYS.progress, profile);
+    } else if ('tickets' in profile.gacha) delete profile.gacha.tickets;
     return profile;
   }
   function get() { return profile || load(); }
@@ -6455,8 +6488,16 @@ RG.progress = (() => {
   const towerRank = (t) => (ownsTower(t) ? gachaState().owned[t] : -1);
   /** 판에 넘길 강화 단계 묶음 (명령 재현이 같도록 판 시작 때 복사해 둠) */
   function towerRanks() { return Object.assign({}, gachaState().owned); }
+  /**
+   * 지금 뽑기에 들어 있는 탑: 기본 탑 + 스테이지가 열린 탑(그 탑이 처음 나오는 맵이 열렸으면).
+   * 스테이지가 열려도 탑을 주지는 않고 뽑기에 넣기만 함.
+   */
+  function gachaPool() {
+    return D().towerOrder.filter((t) => RG.gacha.BASIC.includes(t) || (D().towers[t].unlock && mapUnlocked(D().towers[t].unlock)));
+  }
+  const inPool = (t) => gachaPool().includes(t);
   function pullGacha(kind, rng) {
-    const res = RG.gacha.pull(gachaState(), kind, rng);
+    const res = RG.gacha.pull(gachaState(), kind, rng, gachaPool());
     if (res.ok) { gachaState().pulls = (gachaState().pulls || 0) + res.results.length; save(); }
     return res;
   }
@@ -6515,6 +6556,7 @@ RG.progress = (() => {
     const before = mapStars(mapId);
     const beforeTowers = new Set(towersFor(nextMapId(mapId) || mapId));
     const beforeEndless = p.endless[mapId] || 0;
+    const beforePool = new Set(gachaPool());
     const beforeHeroes = new Set(heroesFor(nextMapId(mapId) || mapId));
     const wasBranches = branchesUnlocked();
     const wasCleared = !!rec.cleared;
@@ -6543,10 +6585,10 @@ RG.progress = (() => {
     const next = nextMapId(mapId);
     // 공명석·새 탑 확정권
     const firstClear = st.result === 'win' && !wasCleared && mode === 'normal';
-    const nextDef = next && D().maps.find((m) => m.id === next);
-    const reward = RG.gacha.rewardFor({ result: st.result, mode, firstClear, newStars: after - before, endlessGain: mode === 'endless' ? (p.endless[mapId] || 0) - beforeEndless : 0, nextNewTowers: nextDef ? nextDef.newTowers : [] });
+    const reward = RG.gacha.rewardFor({ result: st.result, mode, firstClear, newStars: after - before, endlessGain: mode === 'endless' ? (p.endless[mapId] || 0) - beforeEndless : 0 });
+    // 스테이지가 열리며 뽑기에 새로 들어온 탑 (주는 것은 아님)
+    reward.pooled = gachaPool().filter((t) => !beforePool.has(t));
     p.gacha.crystals += reward.crystals;
-    p.gacha.tickets += reward.tickets;
     save();
     const unlocks = { towers: [], heroes: [], maps: [], branches: false };
     if (st.result === 'win' && mode === 'normal' && !wasCleared) {
@@ -6588,7 +6630,7 @@ RG.progress = (() => {
 
   return {
     load, get, save, reset, hasSave, mapIndex, mapRec, mapUnlocked, towersFor, heroesFor, branchesUnlocked,
-    gachaState, ownedTowers, ownsTower, towerRank, towerRanks, pullGacha,
+    gachaState, ownedTowers, ownsTower, towerRank, towerRanks, gachaPool, inPool, pullGacha,
     mapStars, starsTotal, starsSpent, starsFree, canLearn, learn, resetSkills, record, nextMapId, markSeen, seen, frontier, skillCost,
   };
 })();
@@ -23364,14 +23406,6 @@ RG.art.icon = (() => {
         + P('M32 26L20 54L32 62L44 54Z', '#5a2aa8', ' stroke-width="2"')
         + C(26, 16, 2.4, '#ffffff', ' stroke="none"') + hl('M22 22L28 40', 2.6, 0.55);
     },
-    /** 새 탑 확정권: 금빛 표 + 탑 그림 */
-    ticket() {
-      return P('M6 18H58V28A5 5 0 0 0 58 38V48H6V38A5 5 0 0 0 6 28Z', grad(K.goldL, K.gold))
-        + P('M18 22V44', 'none', ' stroke-dasharray="3 3" stroke-width="2"')
-        + P('M34 42V27L38 23L42 27V42ZM31 42H45', '#7a4a14', ' stroke-width="2.4"')
-        + P('M27 30L28.5 33.5L32 34L29.4 36.4L30 40L27 38.2L24 40L24.6 36.4L22 34L25.5 33.5Z', '#fff6c8', ' stroke-width="1.6"')
-        + hl('M10 22H54', 2.4, 0.6);
-    },
     crown() {
       const g = grad(K.goldL, K.gold);
       return P('M8 18L20 33L32 10L44 33L56 18L51 54H13Z', g)
@@ -27476,8 +27510,8 @@ RG.render = (() => {
     return role === 'support' ? `지원 효과 +${pct}%` : role === 'economy' ? `수입 +${pct}%` : role === 'barracks' ? `병사 체력·공격력 +${pct}%` : `공격력 +${pct}%`;
   }
   RG.ui.rankText = rankText;
-  /** 지금 뽑기를 할 수 있나 (공명석 100 이상 또는 확정권) */
-  const canPull = () => { const g = RG.progress.gachaState(); return g.crystals >= RG.gacha.COST.one || g.tickets > 0; };
+  /** 지금 뽑기를 할 수 있나 (공명석 100 이상) */
+  const canPull = () => RG.progress.gachaState().crystals >= RG.gacha.COST.one;
   RG.ui.canPull = canPull;
 
   /* =====================================================
@@ -27612,7 +27646,7 @@ RG.render = (() => {
         el('h2', { text: '월드 지도' }),
         el('div', { class: 'top-stars' }, [UI.icon('star'), el('b', { text: String(P().starsTotal()) }), el('small', { text: ' / 150' })]),
         el('div', { class: 'top-actions' }, [
-          el('button', { class: `btn small btn-gacha ${canPull() ? 'ready' : ''}`, onclick: () => UI.show('gacha', { back: { screen: 'world' } }) }, [UI.icon('crystal', 'tiny'), `뽑기 ${P().gachaState().crystals}${P().gachaState().tickets ? ` · 확정권 ${P().gachaState().tickets}` : ''}`]),
+          el('button', { class: `btn small btn-gacha ${canPull() ? 'ready' : ''}`, onclick: () => UI.show('gacha', { back: { screen: 'world' } }) }, [UI.icon('crystal', 'tiny'), `뽑기 ${P().gachaState().crystals}`]),
           el('button', { class: 'btn small', onclick: () => UI.show('tree', {}) }, [UI.icon('tree', 'tiny'), `기술 나무${P().starsFree() > 0 ? ` (${P().starsFree()})` : ''}`]),
           el('button', { class: 'btn small', onclick: () => UI.show('heroes', {}) }, [UI.icon('hero', 'tiny'), '수호대']),
           el('button', { class: 'btn small', onclick: () => UI.show('codex', {}) }, [UI.icon('book', 'tiny'), '도감']),
@@ -27860,12 +27894,16 @@ RG.render = (() => {
       if (win && data.mode === 'challenge') box.appendChild(el('p', { class: 'good', text: '도전 클리어! ★+1' }));
       if (data.rec.newStars > 0) box.appendChild(el('p', { class: 'good', text: `새로 얻은 별 ★${data.rec.newStars} — 기술 나무에서 쓸 수 있습니다` }));
       // 해금
-      // 공명석·새 탑 확정권 (탑은 뽑기로 얻음)
+      // 공명석 + 뽑기에 새로 들어온 탑 (탑은 뽑기로만 얻음 — 스테이지가 열리면 뽑기에 들어올 뿐)
       const rw = data.rec.reward;
-      if (rw && (rw.crystals || rw.tickets)) {
+      if (rw && (rw.crystals || (rw.pooled && rw.pooled.length))) {
         const rb = el('div', { class: 'reward-box' }, [
-          el('div', { class: 'rw-total' }, [UI.icon('crystal', 'small'), el('b', { text: `+${rw.crystals}` }), el('span', { text: '공명석' }), rw.tickets ? el('span', { class: 'rw-ticket' }, [UI.icon('ticket', 'small'), `새 탑 확정권 +${rw.tickets}`]) : null]),
+          el('div', { class: 'rw-total' }, [UI.icon('crystal', 'small'), el('b', { text: `+${rw.crystals}` }), el('span', { text: '공명석' })]),
           el('div', { class: 'rw-lines dim', text: rw.lines.map(([k, v]) => `${k} +${v}`).join(' · ') }),
+          rw.pooled && rw.pooled.length ? el('div', { class: 'rw-pool' }, [
+            el('span', { class: 'rw-pool-t', text: '뽑기에 새 탑이 들어왔습니다' }),
+            ...rw.pooled.map((t) => el('span', { class: `rw-pool-tower rar-${RG.gacha.rarityOf(t)}` }, [UI.towerImg(t, 1, null, 'mini'), el('b', { text: D().towers[t].name }), el('small', { text: RG.gacha.RARITIES[RG.gacha.rarityOf(t)].name })])),
+          ]) : null,
         ]);
         box.appendChild(rb);
       }
@@ -28205,6 +28243,7 @@ RG.render = (() => {
 /* =========================================================
  * 탑 뽑기 화면 — 공명석으로 탑을 뽑고, 중복은 강화. 규칙: js/core/gacha.js
  * 왼쪽: 울림 제단(뽑기 버튼·확률·천장) / 오른쪽: 내 탑 모음(등급별, 강화 단계)
+ * 탑은 세 상태: 가짐 · 뽑기에 들어 있음(아직 없음) · 잠김(그 탑이 처음 나오는 스테이지가 열리면 뽑기에 들어옴)
  * 뽑으면 카드가 뒤집히며 하나씩 드러남(누르면 바로, "모두 열기"로 한꺼번에)
  * ========================================================= */
 (() => {
@@ -28247,7 +28286,6 @@ RG.render = (() => {
         el('h2', { text: '탑 뽑기' }),
         el('div', { class: 'gc-wallet' }, [
           el('span', { class: 'gc-coin', title: '공명석 — 맵을 클리어하고 별을 얻으면 모입니다' }, [UI.icon('crystal'), el('b', { text: g.crystals.toLocaleString() })]),
-          el('span', { class: `gc-coin ticket ${g.tickets ? 'has' : ''}`, title: '새 탑 확정권 — 아직 없는 탑만 나옵니다' }, [UI.icon('ticket'), el('b', { text: String(g.tickets) })]),
         ]),
       ]);
 
@@ -28260,8 +28298,11 @@ RG.render = (() => {
         reveal(sec, res.results, () => UI.show('gacha', { keepBack: true }));
       };
       const pullBtn = (kind, label, sub, enabled, cls = '') => el('button', { class: `btn gc-pull ${cls}`, disabled: !enabled, onclick: () => doPull(kind) }, [el('b', { text: label }), el('span', { class: 'gc-cost' }, sub)]);
-      const allOwned = D().towerOrder.every((t) => P().ownsTower(t));
+      const pool = P().gachaPool();
+      const rates = G().ratesFor(pool);
       const toEpic = Math.max(1, G().PITY - (g.pity || 0));
+      const firstEpic = D().towerOrder.filter((t) => G().rarityOf(t) === 'epic').map((t) => D().towers[t].unlock).sort((a, b) => P().mapIndex(a) - P().mapIndex(b))[0];
+      const nextLocked = D().towerOrder.filter((t) => !pool.includes(t)).map((t) => D().towers[t].unlock).sort((a, b) => P().mapIndex(a) - P().mapIndex(b))[0];
       const altar = el('div', { class: 'gc-altar' }, [
         el('div', { class: 'gc-shrine', 'aria-hidden': 'true' }, [
           el('div', { class: 'gc-rays' }),
@@ -28271,14 +28312,14 @@ RG.render = (() => {
         ]),
         el('div', { class: 'gc-buttons' }, [
           pullBtn('one', '1회 뽑기', [UI.icon('crystal', 'tiny'), String(C.one)], g.crystals >= C.one),
-          pullBtn('ten', '10회 뽑기', [UI.icon('crystal', 'tiny'), String(C.ten), el('small', { text: ' 희귀 이상 1개 확정' })], g.crystals >= C.ten, 'gc-ten'),
-          g.tickets > 0 && !allOwned ? pullBtn('ticket', '새 탑 확정권 사용', [UI.icon('ticket', 'tiny'), `${g.tickets}장 — 아직 없는 탑만`], true, 'gc-ticket') : null,
+          pullBtn('ten', '10회 뽑기', [UI.icon('crystal', 'tiny'), String(C.ten), el('small', { text: rates.rare || rates.epic ? ' 희귀 이상 1개 확정' : '' })], g.crystals >= C.ten, 'gc-ten'),
         ]),
         el('div', { class: 'gc-rules' }, [
-          el('div', { class: 'gc-rates' }, ['common', 'rare', 'epic'].map((r) => el('span', {}, [rarityBadge(r), ` ${Math.round(G().RARITIES[r].rate * 100)}%`]))),
-          el('p', {}, [`영웅 등급 확정까지 `, el('b', { text: `${toEpic}회` })]),
+          el('p', { class: 'gc-pool' }, ['뽑기에 든 탑 ', el('b', { text: `${pool.length}종` }), ` / ${D().towerOrder.length}`, nextLocked ? el('span', { class: 'dim', text: ` · 다음 탑은 ${nextLocked} 스테이지가 열리면 들어옴` }) : null]),
+          el('div', { class: 'gc-rates' }, ['common', 'rare', 'epic'].map((r) => el('span', { class: rates[r] ? '' : 'off' }, [rarityBadge(r), ` ${rates[r] ? `${Math.round(rates[r] * 1000) / 10}%` : '아직 없음'}`]))),
+          rates.epic ? el('p', {}, [`영웅 등급 확정까지 `, el('b', { text: `${toEpic}회` })]) : el('p', { class: 'dim', text: `영웅 등급 탑은 ${firstEpic} 스테이지가 열리면 뽑기에 들어옵니다.` }),
           el('p', { class: 'dim', text: `같은 탑이 또 나오면 그 탑이 강화됩니다(최대 +${G().MAX_RANK}, 단계마다 +${Math.round(G().RANK_PCT * 100)}%). +${G().MAX_RANK}에서 또 나오면 공명석 ${G().REFUND}을 돌려받습니다.` }),
-          el('p', { class: 'dim', text: `공명석은 맵 첫 클리어 ${G().REWARD.firstClear}, 새 별마다 ${G().REWARD.perStar}, 승리 ${G().REWARD.win}로 모입니다. 새 탑이 나오던 맵에 닿으면 새 탑 확정권을 받습니다.` }),
+          el('p', { class: 'dim', text: `공명석은 맵 첫 클리어 ${G().REWARD.firstClear}, 새 별마다 ${G().REWARD.perStar}, 승리 ${G().REWARD.win}로 모입니다. 스테이지가 열리면 그 스테이지의 새 탑이 뽑기에 들어옵니다(바로 주지는 않습니다).` }),
         ]),
       ]);
 
@@ -28291,18 +28332,21 @@ RG.render = (() => {
         const grid = el('div', { class: 'gc-grid' });
         for (const t of list) {
           const has = P().ownsTower(t);
+          const open = pool.includes(t);
           const rank = P().towerRank(t);
           const td = D().towers[t];
-          const card = el('div', { class: `gc-card rar-${r} el-${td.element} ${has ? 'owned' : 'missing'}`, tabindex: '0', 'aria-label': `${td.name} ${has ? `강화 +${rank}` : '아직 없음'}` }, [
+          const state = has ? 'owned' : open ? 'missing' : 'locked';
+          const card = el('div', { class: `gc-card rar-${r} el-${td.element} ${state}`, tabindex: '0', 'aria-label': `${has || open ? td.name : '잠긴 탑'} ${has ? `강화 +${rank}` : open ? '뽑기에서 나올 수 있음' : `${td.unlock} 스테이지가 열리면 뽑기에 들어옴`}` }, [
             UI.towerImg(t, has ? Math.min(3, 1 + Math.floor(rank / 2)) : 1, null, 'gc-img'),
-            el('span', { class: 'gc-name', text: has ? td.name : '???' }),
-            has ? pips(rank) : el('span', { class: 'gc-q', text: '아직 없음' }),
+            el('span', { class: 'gc-name', text: has || open ? td.name : '???' }),
+            has ? pips(rank) : open ? el('span', { class: 'gc-q in', text: '뽑기에 있음' }) : el('span', { class: 'gc-q' }, [UI.icon('lock', 'tiny'), ` ${td.unlock}`]),
             has && rank > 0 ? el('em', { class: 'gc-rank', text: `+${rank}` }) : null,
           ]);
-          UI.tooltipFor(card, () => `<b>${td.name}</b> <span style="color:${G().RARITIES[r].color}">${G().RARITIES[r].name}</span><br>${td.desc}<br>${has ? (rank > 0 ? `<span class="good">강화 +${rank}: ${UI.rankText(t, rank)}</span>` : '강화 +0') : '<span class="dim">뽑기에서 얻을 수 있습니다</span>'}`);
+          UI.tooltipFor(card, () => (has || open ? `<b>${td.name}</b> <span style="color:${G().RARITIES[r].color}">${G().RARITIES[r].name}</span><br>${td.desc}<br>` : `<b>잠긴 탑</b> <span style="color:${G().RARITIES[r].color}">${G().RARITIES[r].name}</span><br>`)
+            + (has ? (rank > 0 ? `<span class="good">강화 +${rank}: ${UI.rankText(t, rank)}</span>` : '강화 +0') : open ? '<span class="dim">뽑기에서 나올 수 있습니다</span>' : `<span class="dim">${td.unlock} 스테이지가 열리면 뽑기에 들어옵니다</span>`));
           grid.appendChild(card);
         }
-        coll.appendChild(el('div', { class: 'gc-sec' }, [el('div', { class: 'gc-sec-title' }, [rarityBadge(r), el('span', { class: 'dim', text: ` ${list.filter((t) => P().ownsTower(t)).length}/${list.length}` })]), grid]));
+        coll.appendChild(el('div', { class: 'gc-sec' }, [el('div', { class: 'gc-sec-title' }, [rarityBadge(r), el('span', { class: 'dim', text: ` 가짐 ${list.filter((t) => P().ownsTower(t)).length} · 뽑기에 ${list.filter((t) => pool.includes(t)).length} / ${list.length}` })]), grid]));
       }
 
       sec.append(head, el('div', { class: 'gc-body' }, [altar, coll]));

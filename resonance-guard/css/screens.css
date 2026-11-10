@@ -453,3 +453,20 @@
   .rar-badge { font-size: 0.6rem; padding: 0 4px; }
   .gc-rbtns .btn { min-height: 42px; }
 }
+/* 뽑기: 잠긴 탑·뽑기에 든 탑, 결과 화면의 새로 들어온 탑 */
+.gc-card.locked { opacity: 0.55; filter: grayscale(0.6); }
+.gc-card.locked .gc-img { filter: brightness(0) drop-shadow(0 0 1px #6a5a8a); opacity: 0.4; }
+.gc-card.missing .gc-img { filter: brightness(0) drop-shadow(0 0 2px #e8d0ff); opacity: 0.75; }
+.gc-card.missing { border-style: dashed; }
+.gc-q { display: inline-flex; align-items: center; gap: 2px; }
+.gc-q .icon { width: 12px; height: 12px; }
+.gc-q.in { color: #e8d0ff; font-weight: 800; }
+.gc-rates .off { opacity: 0.45; }
+.gc-pool { margin: 0 0 4px; }
+.rw-pool { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 6px; padding-top: 6px; border-top: 1px solid #ffffff1a; }
+.rw-pool-t { width: 100%; font-weight: 800; color: #e8d0ff; font-size: 0.85rem; }
+.rw-pool-tower { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 2px; border-radius: 10px; background: #0005; border: 1px solid #ffffff22; font-size: 0.82rem; }
+.rw-pool-tower.rar-rare { border-color: #5fb4ff; } .rw-pool-tower.rar-epic { border-color: #ffc44a; }
+.rw-pool-tower small { color: var(--dim); }
+.rw-pool-tower .tower-img { width: 30px; height: 36px; flex: none; object-fit: contain; }
+.rw-pool-tower b { white-space: nowrap; }

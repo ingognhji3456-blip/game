@@ -15,8 +15,8 @@
     return role === 'support' ? `지원 효과 +${pct}%` : role === 'economy' ? `수입 +${pct}%` : role === 'barracks' ? `병사 체력·공격력 +${pct}%` : `공격력 +${pct}%`;
   }
   RG.ui.rankText = rankText;
-  /** 지금 뽑기를 할 수 있나 (공명석 100 이상 또는 확정권) */
-  const canPull = () => { const g = RG.progress.gachaState(); return g.crystals >= RG.gacha.COST.one || g.tickets > 0; };
+  /** 지금 뽑기를 할 수 있나 (공명석 100 이상) */
+  const canPull = () => RG.progress.gachaState().crystals >= RG.gacha.COST.one;
   RG.ui.canPull = canPull;
 
   /* =====================================================
@@ -151,7 +151,7 @@
         el('h2', { text: '월드 지도' }),
         el('div', { class: 'top-stars' }, [UI.icon('star'), el('b', { text: String(P().starsTotal()) }), el('small', { text: ' / 150' })]),
         el('div', { class: 'top-actions' }, [
-          el('button', { class: `btn small btn-gacha ${canPull() ? 'ready' : ''}`, onclick: () => UI.show('gacha', { back: { screen: 'world' } }) }, [UI.icon('crystal', 'tiny'), `뽑기 ${P().gachaState().crystals}${P().gachaState().tickets ? ` · 확정권 ${P().gachaState().tickets}` : ''}`]),
+          el('button', { class: `btn small btn-gacha ${canPull() ? 'ready' : ''}`, onclick: () => UI.show('gacha', { back: { screen: 'world' } }) }, [UI.icon('crystal', 'tiny'), `뽑기 ${P().gachaState().crystals}`]),
           el('button', { class: 'btn small', onclick: () => UI.show('tree', {}) }, [UI.icon('tree', 'tiny'), `기술 나무${P().starsFree() > 0 ? ` (${P().starsFree()})` : ''}`]),
           el('button', { class: 'btn small', onclick: () => UI.show('heroes', {}) }, [UI.icon('hero', 'tiny'), '수호대']),
           el('button', { class: 'btn small', onclick: () => UI.show('codex', {}) }, [UI.icon('book', 'tiny'), '도감']),
@@ -399,12 +399,16 @@
       if (win && data.mode === 'challenge') box.appendChild(el('p', { class: 'good', text: '도전 클리어! ★+1' }));
       if (data.rec.newStars > 0) box.appendChild(el('p', { class: 'good', text: `새로 얻은 별 ★${data.rec.newStars} — 기술 나무에서 쓸 수 있습니다` }));
       // 해금
-      // 공명석·새 탑 확정권 (탑은 뽑기로 얻음)
+      // 공명석 + 뽑기에 새로 들어온 탑 (탑은 뽑기로만 얻음 — 스테이지가 열리면 뽑기에 들어올 뿐)
       const rw = data.rec.reward;
-      if (rw && (rw.crystals || rw.tickets)) {
+      if (rw && (rw.crystals || (rw.pooled && rw.pooled.length))) {
         const rb = el('div', { class: 'reward-box' }, [
-          el('div', { class: 'rw-total' }, [UI.icon('crystal', 'small'), el('b', { text: `+${rw.crystals}` }), el('span', { text: '공명석' }), rw.tickets ? el('span', { class: 'rw-ticket' }, [UI.icon('ticket', 'small'), `새 탑 확정권 +${rw.tickets}`]) : null]),
+          el('div', { class: 'rw-total' }, [UI.icon('crystal', 'small'), el('b', { text: `+${rw.crystals}` }), el('span', { text: '공명석' })]),
           el('div', { class: 'rw-lines dim', text: rw.lines.map(([k, v]) => `${k} +${v}`).join(' · ') }),
+          rw.pooled && rw.pooled.length ? el('div', { class: 'rw-pool' }, [
+            el('span', { class: 'rw-pool-t', text: '뽑기에 새 탑이 들어왔습니다' }),
+            ...rw.pooled.map((t) => el('span', { class: `rw-pool-tower rar-${RG.gacha.rarityOf(t)}` }, [UI.towerImg(t, 1, null, 'mini'), el('b', { text: D().towers[t].name }), el('small', { text: RG.gacha.RARITIES[RG.gacha.rarityOf(t)].name })])),
+          ]) : null,
         ]);
         box.appendChild(rb);
       }
