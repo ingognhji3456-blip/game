@@ -92,7 +92,11 @@ RG.fx = (() => {
           bolt(e.points, colorOf(e.element), e.small ? 0.12 : 0.18, e.small ? 0.04 : 0.07);
           break;
         case 'fire':
-          if (e.kind === 'ballista') line(e.x, e.y - 0.4, e.tx, e.ty, '#c8f2ff', 0.16, 0.09);
+          if (e.kind === 'ballista') {
+            const tw = game && game.state.towers.find((q) => q.id === e.towerId);
+            const mz = tw && RG.render && RG.render.muzzleOf ? RG.render.muzzleOf(tw) : null;
+            line(mz ? mz.x : e.x, mz ? mz.y : e.y - 0.4, e.tx, e.ty, '#c8f2ff', 0.16, 0.09);
+          }
           break;
         case 'leak':
           if (game) {

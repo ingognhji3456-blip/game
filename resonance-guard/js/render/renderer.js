@@ -29,6 +29,7 @@ RG.render = (() => {
     ctx = canvas.getContext('2d');
     game = g;
     corpses = [];
+    projStart.clear();
     bg = null;
     bgFor = '';
     resize();
@@ -820,12 +821,45 @@ RG.render = (() => {
   }
 
   /* ---------------- 투사체·광선 ---------------- */
+  /*
+   * 쏘는 곳: 그림의 활 끝·포구·수정 끝(RG.art.TOWER_MUZZLE, 기준점에서 칸 단위).
+   * 규칙(시뮬레이션)은 탑 가운데에서 쏘므로, 그림에서만 처음 잠깐 쏘는 곳에서 나오게 보정하고 곧 규칙 위치로 합칩니다.
+   */
+  const projStart = new Map(); // 투사체 id → { ox, oy, born }
+  function muzzleOf(t) {
+    const m = RG.art.TOWER_MUZZLE && RG.art.TOWER_MUZZLE[t.type];
+    if (!m) return null;
+    const o = m[t.level >= 4 ? (t.branch === 'B' ? 4 : 3) : Math.max(0, (t.level || 1) - 1)] || m[0];
+    return { x: t.x + o[0], y: t.r + 0.82 + o[1] };
+  }
+  function muzzleOffset(p, st) {
+    const tw = p.src && p.src.tower;
+    if (!tw) return null;
+    let o = projStart.get(p.id);
+    if (!o) {
+      const mz = muzzleOf(tw);
+      if (!mz) return null;
+      const y0 = tw.y - (p.kind === 'shell' || p.kind === 'orb' ? 0.4 : 0.35);
+      o = { ox: mz.x - tw.x, oy: mz.y - y0, born: st.time };
+      projStart.set(p.id, o);
+    }
+    const k = p.kind === 'shell' ? Math.min(1, p.t / Math.max(0.05, p.flight * 0.45)) : Math.min(1, Math.max(0, st.time - o.born) / 0.22);
+    const w = 1 - k * k * (3 - 2 * k);
+    return w > 0 ? { x: o.ox * w, y: o.oy * w } : null;
+  }
+
   function drawProjectiles(alpha) {
     const st = game.state;
     ctx.save();
+    if (projStart.size > st.projectiles.length * 2 + 64) {
+      const live = new Set(st.projectiles.map((q) => q.id));
+      for (const id of projStart.keys()) if (!live.has(id)) projStart.delete(id);
+    }
     for (const p of st.projectiles) {
-      const x = lerp(p.px, p.x, alpha);
-      const y = lerp(p.py, p.y, alpha);
+      let x = lerp(p.px, p.x, alpha);
+      let y = lerp(p.py, p.y, alpha);
+      const mo = muzzleOffset(p, st);
+      if (mo) { x += mo.x; y += mo.y; }
       const col = RG.fx.colorOf(p.element);
       const sx = X(x);
       const sy = Y(y);
@@ -883,9 +917,13 @@ RG.render = (() => {
     ctx.lineCap = 'round';
     for (const b of st.beams) {
       const k = (b.mult - 1) / Math.max(0.01, b.max - 1);
+      const bt = st.towers.find((q) => q.id === b.towerId);
+      const mz = bt && muzzleOf(bt);
+      const bx = mz ? mz.x : b.x1;
+      const by = mz ? mz.y : b.y1;
       ctx.strokeStyle = 'rgba(255,214,110,0.55)';
       ctx.lineWidth = Math.max(2, T * (0.06 + 0.14 * k));
-      ctx.beginPath(); ctx.moveTo(X(b.x1), Y(b.y1)); ctx.lineTo(X(b.x2), Y(b.y2) - T * 0.3); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(X(bx), Y(by)); ctx.lineTo(X(b.x2), Y(b.y2) - T * 0.3); ctx.stroke();
       ctx.strokeStyle = '#fffbe8';
       ctx.lineWidth = Math.max(1, T * (0.02 + 0.05 * k));
       ctx.stroke();
@@ -989,5 +1027,5 @@ RG.render = (() => {
     ctx.restore();
   }
 
-  return { attach, detach, resize, frame, onEvents, setShadows: (on) => { shadowsOn = !!on; }, screenToWorld, worldToScreen, overlay, tileSize, get T() { return T; } };
+  return { attach, detach, resize, frame, onEvents, muzzleOf, setShadows: (on) => { shadowsOn = !!on; }, screenToWorld, worldToScreen, overlay, tileSize, get T() { return T; } };
 })();
