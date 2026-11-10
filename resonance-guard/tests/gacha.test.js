@@ -184,3 +184,16 @@ test('강화 단계가 전투에 반영: 공격 탑 공격력, 지원 탑 지원
   const m5 = calcOf(mk({ crystal_mine: 5 }), 'crystal_mine', 5, 2);
   assert.strictEqual(m5.income, Math.round(m0.income * 1.3), '광산 수입 +30%');
 });
+
+test('강화 단계가 있어도 이어하기(명령 재현)가 같은 결과', () => {
+  const { RG } = fresh();
+  const opts = { mapId: '1-2', seed: 7, heroId: 'kara', towers: ['ember_archer', 'frost_crystal', 'stone_barracks'], towerRanks: { ember_archer: 3, frost_crystal: 5, stone_barracks: 1 } };
+  const g = RG.sim.create(opts); // 골드는 손대지 않음(재현에는 명령만 들어가므로)
+  const cmds = [[10, { type: 'build', tower: 'ember_archer', c: 5, r: 2 }], [40, { type: 'build', tower: 'frost_crystal', c: 6, r: 2 }], [70, { type: 'callWave' }], [400, { type: 'build', tower: 'stone_barracks', c: 7, r: 4 }]];
+  for (let i = 0; i < 1200; i++) { for (const [at, c] of cmds) if (at === i) g.cmd(c); g.step(); }
+  const ref = RG.sim.replay(opts, g.log, g.state.tick);
+  assert.strictEqual(ref.hash(), g.hash());
+  // 강화가 다르면 결과도 달라짐 (강화가 실제로 판에 들어갔는지)
+  const other = RG.sim.replay(Object.assign({}, opts, { towerRanks: {} }), g.log, g.state.tick);
+  assert.notStrictEqual(other.hash(), g.hash());
+});

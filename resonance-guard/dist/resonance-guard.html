@@ -638,6 +638,129 @@ button { font-family: var(--font); color: inherit; }
 .rw-pool-tower .tower-img { width: 30px; height: 36px; flex: none; object-fit: contain; }
 .rw-pool-tower b { white-space: nowrap; }
 
+/* =========================================================
+ * 월드 지도 — 지역 고르기: 다섯 지역 패널이 나란히, 고른 지역이 크게 펼쳐짐
+ * ========================================================= */
+.rg-board { position: relative; flex: 1; min-height: 0; display: flex; padding: 10px calc(12px + var(--safe-r)) calc(12px + var(--safe-b)) calc(12px + var(--safe-l)); }
+.rg-select { flex: 1; min-width: 0; display: flex; gap: 10px; }
+.rg-panel {
+  --rc: #8a7ab0; position: relative; flex: 1 1 0; min-width: 62px; border-radius: 20px; overflow: hidden; cursor: pointer; outline: none;
+  box-shadow: 0 0 0 2px #1a0e06, 0 0 0 4px color-mix(in srgb, var(--rc) 70%, #3a2208), 0 14px 30px #000b;
+  transition: flex-grow 0.55s cubic-bezier(.2,.9,.25,1), box-shadow 0.3s, transform 0.25s;
+}
+.rg-panel.theme-meadow { --rc: #7ac04e; } .rg-panel.theme-frost { --rc: #9cc8f0; } .rg-panel.theme-canyon { --rc: #f08a4a; } .rg-panel.theme-coast { --rc: #4ab8b0; } .rg-panel.theme-bell { --rc: #b08af0; }
+.rg-panel.on { flex-grow: 6; cursor: default; box-shadow: 0 0 0 2px #1a0e06, 0 0 0 5px #e9c47a, 0 0 0 7px #3a2208, 0 0 36px color-mix(in srgb, var(--rc) 55%, transparent), 0 18px 40px #000c; }
+.rg-panel:not(.on):hover { transform: translateY(-4px); box-shadow: 0 0 0 2px #1a0e06, 0 0 0 4px var(--rc), 0 0 22px color-mix(in srgb, var(--rc) 60%, transparent), 0 16px 30px #000b; }
+.rg-panel:focus-visible { box-shadow: 0 0 0 2px #1a0e06, 0 0 0 5px #fff2c4, 0 16px 30px #000b; }
+.rg-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 55%; transform: scale(1.18); filter: saturate(0.85) brightness(0.72); transition: transform 0.9s cubic-bezier(.2,.9,.25,1), filter 0.5s; pointer-events: none; }
+.rg-panel.on .rg-art { transform: scale(1.02); filter: saturate(1.08) brightness(0.95); }
+.rg-shade { position: absolute; inset: 0; pointer-events: none; background:
+  linear-gradient(180deg, #0c0818d0 0%, #0c081800 34%, #0c081800 52%, #0c0818e8 100%),
+  linear-gradient(90deg, color-mix(in srgb, var(--rc) 30%, transparent), transparent 60%); }
+.rg-panel:not(.on) .rg-shade { background: linear-gradient(180deg, #0c0818b0, #0c081860 40%, #0c0818e0), linear-gradient(0deg, color-mix(in srgb, var(--rc) 45%, transparent), transparent 70%); }
+.rg-fog { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.4s; background: radial-gradient(ellipse at 30% 30%, #b8b0c8aa, transparent 55%), radial-gradient(ellipse at 70% 70%, #8a8098cc, transparent 60%), #3a3448a0; }
+.rg-panel.locked .rg-fog { opacity: 1; }
+.rg-panel.locked .rg-art { filter: grayscale(0.9) brightness(0.5); }
+/* 접힌 모양 */
+.rg-spine { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 14px 4px; transition: opacity 0.3s; }
+.rg-panel.on .rg-spine { opacity: 0; pointer-events: none; }
+.rg-num { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; font-weight: 900; color: #3a1e06; background: radial-gradient(circle at 35% 30%, #fff6d0, #e9b048); box-shadow: 0 0 0 2px #2a1406, 0 2px 6px #000a; flex: none; }
+.rg-vname { writing-mode: vertical-rl; text-orientation: upright; letter-spacing: 0.12em; font-size: clamp(0.95rem, 2.2vh, 1.25rem); font-weight: 900; color: #fff4dc; text-shadow: 0 2px 4px #000, 0 0 12px color-mix(in srgb, var(--rc) 60%, transparent); }
+.rg-vstar { display: inline-flex; align-items: center; gap: 2px; font-weight: 900; font-size: 0.85rem; color: var(--gold2); text-shadow: 0 1px 2px #000; }
+.rg-vlock { width: 26px; height: 26px; }
+/* 펼친 모양 */
+.rg-body { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; padding: clamp(14px, 3vh, 26px) clamp(16px, 2.6vw, 30px); opacity: 0; transform: translateY(10px); transition: opacity 0.35s 0.15s, transform 0.45s 0.15s; pointer-events: none; min-width: 420px; }
+.rg-panel.on .rg-body { opacity: 1; transform: none; pointer-events: auto; }
+.rg-kicker { display: inline-block; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; color: #3a1e06; background: linear-gradient(#fff2c4, #e9b048); padding: 1px 10px; border-radius: 999px; box-shadow: 0 2px 6px #0008; }
+.rg-name { margin: 6px 0 2px; font-size: clamp(1.8rem, 5vh, 3rem); font-weight: 900; line-height: 1.05; background: linear-gradient(180deg, #fffdf0, #ffe6a6 45%, #f2b54e); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 2px 0 #3a1e06) drop-shadow(0 4px 10px #000c); }
+.rg-desc { margin: 0; max-width: 520px; color: #f4ecdc; font-weight: 600; text-shadow: 0 1px 3px #000; font-size: clamp(0.8rem, 1.8vh, 1rem); }
+.rg-dots { display: flex; gap: 8px; flex-wrap: wrap; }
+.rg-dot { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; width: clamp(40px, 6.4vh, 56px); height: clamp(40px, 6.4vh, 56px); border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff6d0, #e9a03a 45%, #7a4214); box-shadow: 0 0 0 2px #2a1406, 0 4px 10px #000a; }
+.rg-dot b { font-weight: 900; color: #fff6d6; text-shadow: 0 2px 0 #1a0e2a; font-size: 1.05rem; line-height: 1; }
+.rg-dot i { font-style: normal; font-size: 0.5rem; color: #fff2a8; letter-spacing: -1px; text-shadow: 0 1px 1px #000; }
+.rg-dot::before { content: ''; position: absolute; inset: 14%; border-radius: 50%; background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--rc) 80%, #fff), color-mix(in srgb, var(--rc) 60%, #000) 75%); z-index: -1; }
+.rg-dot { isolation: isolate; }
+.rg-dot.lock { filter: grayscale(0.9) brightness(0.5); }
+.rg-dot.boss { box-shadow: 0 0 0 2px #2a0606, 0 0 0 5px #c8303088, 0 4px 10px #000a; }
+.rg-dot.front { animation: medal-bob 1.6s ease-in-out infinite; box-shadow: 0 0 0 2px #2a1406, 0 0 0 4px #fff2b8, 0 0 18px #ffe7a0; }
+.rg-lockmsg { display: inline-flex; align-items: center; gap: 4px; margin: 0; padding: 6px 12px; border-radius: 10px; background: #000a; color: #e8dcc6; font-weight: 700; align-self: flex-start; }
+.rg-foot { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+.rg-stats { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 6px; color: #fff1d6; font-weight: 700; text-shadow: 0 1px 2px #000; }
+.rg-stats .icon { width: 16px; height: 16px; vertical-align: -2px; }
+.rg-bar { height: 10px; border-radius: 999px; background: #0009; box-shadow: inset 0 0 0 1px #ffffff22; overflow: hidden; max-width: 320px; }
+.rg-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #f6cf78, #fff2c4); box-shadow: 0 0 10px #ffd27a; }
+.rg-boss { display: flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border-radius: 14px; background: #000a; border: 1px solid #c8303066; }
+.rg-boss-img { width: clamp(48px, 8vh, 72px); height: clamp(48px, 8vh, 72px); object-fit: contain; filter: drop-shadow(0 3px 4px #000); }
+.rg-panel.locked .rg-boss-img { filter: brightness(0) drop-shadow(0 0 2px #c83030); }
+.rg-boss.down .rg-boss-img { filter: grayscale(0.6) drop-shadow(0 3px 4px #000); }
+.rg-boss span { display: flex; flex-direction: column; }
+.rg-boss small { color: #ff9a8a; font-weight: 800; font-size: 0.7rem; }
+.rg-boss b { color: #fff1d6; }
+.rg-go { min-height: 50px; min-width: 150px; font-size: 1.08rem; font-weight: 900; }
+.rg-go.disabled { filter: grayscale(1) brightness(0.6); cursor: not-allowed; }
+.rg-panel.front:not(.on)::after { content: ''; position: absolute; left: 50%; bottom: 10px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: #fff2b8; box-shadow: 0 0 10px #ffe7a0; animation: medal-ring 1.6s ease-out infinite; }
+
+/* 한 지역 보기: 위쪽 탭 대신 지역 이름표 + 이전·다음 */
+.wm-nav { display: flex; align-items: center; gap: 8px; padding: 8px calc(12px + var(--safe-r)) 4px calc(12px + var(--safe-l)); flex: none; }
+.wm-all { display: inline-flex; align-items: center; gap: 4px; min-height: 42px; }
+.wm-step { min-width: 42px; min-height: 42px; font-size: 0.9rem; }
+.wm-step:disabled { opacity: 0.35; cursor: default; }
+.wm-title { --rc: #8a7ab0; display: inline-flex; align-items: center; gap: 8px; padding: 4px 14px 4px 5px; min-height: 42px; border-radius: 999px; background: linear-gradient(90deg, color-mix(in srgb, var(--rc) 45%, #2a2040), #1c1530); border: 2px solid color-mix(in srgb, var(--rc) 70%, #000); box-shadow: 0 3px 0 #0008; }
+.wm-title.theme-meadow { --rc: #7ac04e; } .wm-title.theme-frost { --rc: #9cc8f0; } .wm-title.theme-canyon { --rc: #f08a4a; } .wm-title.theme-coast { --rc: #4ab8b0; } .wm-title.theme-bell { --rc: #b08af0; }
+.wm-title b { font-size: 1.05rem; text-shadow: 0 1px 2px #000; }
+.wm-stars { display: inline-flex; align-items: center; gap: 2px; color: var(--gold2); font-weight: 800; font-size: 0.85rem; }
+
+/* 휴대폰 가로(키 작음): 글자·점 작게 */
+@media (max-height: 460px) {
+  .rg-board { padding-top: 6px; }
+  .rg-select { gap: 6px; }
+  .rg-panel { border-radius: 14px; min-width: 50px; }
+  .rg-body { min-width: 360px; gap: 4px; padding: 10px 14px; }
+  .rg-name { font-size: 1.6rem; margin: 2px 0 0; }
+  .rg-desc { font-size: 0.74rem; }
+  .rg-dots { gap: 5px; }
+  .rg-dot { width: 34px; height: 34px; }
+  .rg-dot b { font-size: 0.85rem; }
+  .rg-boss-img { width: 40px; height: 40px; }
+  .rg-go { min-height: 42px; min-width: 120px; font-size: 0.95rem; }
+  .rg-num { width: 24px; height: 24px; font-size: 0.8rem; }
+  .rg-vname { font-size: 0.9rem; }
+  .wm-nav { padding-top: 4px; padding-bottom: 2px; }
+}
+/* 세로 화면: 패널을 위아래로 쌓고 펼침 */
+@media (max-width: 560px) and (min-height: 461px) {
+  .rg-select { flex-direction: column; }
+  .rg-panel { min-width: 0; min-height: 56px; }
+  .rg-spine { flex-direction: row; padding: 4px 14px; }
+  .rg-vname { writing-mode: horizontal-tb; letter-spacing: 0.04em; }
+  .rg-body { min-width: 0; }
+  .rg-foot { gap: 8px; }
+  .wm-all span, .wm-title .wm-stars { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .rg-panel, .rg-art, .rg-body, .rg-dot.front { transition: none !important; animation: none !important; } }
+.rg-dots { align-self: flex-start; padding: 7px 10px; border-radius: 999px; background: #0c0818b0; box-shadow: inset 0 0 0 1px #ffffff1c, 0 6px 16px #0008; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+@media (max-width: 560px) and (min-height: 461px) {
+  .rg-body { padding: 12px 14px; gap: 6px; }
+  .rg-name { font-size: 1.9rem; }
+  .rg-desc { font-size: 0.78rem; }
+  .rg-dots { gap: 4px; padding: 5px 7px; border-radius: 16px; }
+  .rg-dot { width: 36px; height: 36px; }
+  .rg-dot b { font-size: 0.85rem; }
+  .rg-boss { padding: 2px 8px 2px 2px; }
+  .rg-boss-img { width: 40px; height: 40px; }
+  .rg-foot { align-items: center; }
+  .rg-stats { min-width: 100%; }
+  .rg-go { flex: 1; min-height: 44px; min-width: 0; }
+}
+/* 들어가기: 고른 패널이 가득 펼쳐지고 나머지는 접혀 사라짐 */
+.rg-select { transition: gap 0.4s; }
+.rg-select.entering { gap: 0; }
+.rg-select.entering .rg-panel:not(.zooming) { flex-grow: 0.0001; min-width: 0; opacity: 0; box-shadow: none; transition: flex-grow 0.42s cubic-bezier(.5,0,.75,0), opacity 0.3s, min-width 0.42s; }
+.rg-panel.zooming { flex-grow: 60; border-radius: 18px; transition: flex-grow 0.45s cubic-bezier(.2,.9,.25,1), border-radius 0.45s; }
+.rg-panel.zooming .rg-body { opacity: 0; transition: opacity 0.18s; }
+.rg-panel.zooming .rg-art { transform: scale(1); filter: saturate(1.1) brightness(1.05); }
+.rg-panel.zooming .rg-shade { opacity: 0; transition: opacity 0.4s; }
+
 </style>
   <style>/* css/game.css */
 /* =========================================================
@@ -27535,7 +27658,7 @@ RG.render = (() => {
       if (run && D().maps.concat(D().endless).some((m) => m.id === run.mapId)) {
         menu.appendChild(el('button', { class: 'btn btn-primary btn-big', onclick: go(() => UI.show('game', { resume: run })) }, [`이어하기 — ${run.mapId} 웨이브 ${run.wave}`]));
       }
-      menu.appendChild(el('button', { class: `btn btn-big ${run ? '' : 'btn-primary'}`, onclick: go(() => UI.show('world', {})) }, [has ? '월드 지도' : '시작하기']));
+      menu.appendChild(el('button', { class: `btn btn-big ${run ? '' : 'btn-primary'}`, onclick: go(() => UI.show('world', has ? { view: 'regions' } : {})) }, [has ? '월드 지도' : '시작하기']));
       menu.appendChild(el('div', { class: 'title-row' }, [
         el('button', { class: `btn btn-gacha ${canPull() ? 'ready' : ''}`, onclick: go(() => UI.show('gacha', { back: { screen: 'title' } })) }, [UI.icon('crystal', 'tiny'), '탑 뽑기']),
         el('button', { class: 'btn', onclick: go(() => UI.show('heroes', {})) }, ['수호대']),
@@ -27633,16 +27756,118 @@ RG.render = (() => {
    * ===================================================== */
   let worldRegion = null;
   let worldFitBound = false;
+  let worldView = 'stages';     // 'regions' = 지역 고르기(펼침 패널), 'stages' = 한 지역의 그림 지도
+  let regionPick = null;        // 지역 고르기에서 펼쳐진 지역
+  const regionArt = {};         // 지역 그림 SVG (한 번만 만듦)
+  const artOf = (r) => regionArt[r] || (regionArt[r] = RG.art.regionMap ? RG.art.regionMap(r) : RG.art.regionBanner(r));
+  /** 지역 요약: 열림, 별, 클리어 수, 보스, 다음 맵 */
+  function regionInfo(r) {
+    const maps = D().maps.filter((m) => m.region === r);
+    const open = maps.length > 0 && P().mapUnlocked(maps[0].id);
+    const stars = maps.reduce((s, m) => s + P().mapStars(m.id), 0);
+    const cleared = maps.filter((m) => P().mapRec(m.id).cleared).length;
+    const bossMap = maps.find((m) => m.boss);
+    const boss = Object.keys(D().enemies).find((k) => D().enemies[k].boss && D().enemies[k].region === r && (!bossMap || (bossMap.waves || []).join(' ').includes(k))) || Object.keys(D().enemies).find((k) => D().enemies[k].boss && D().enemies[k].region === r);
+    return { maps, open, stars, maxStars: maps.length * 5, cleared, boss, bossDown: !!(bossMap && P().mapRec(bossMap.id).cleared), front: maps.some((m) => m.id === P().frontier()) };
+  }
+
+  /* 지역 고르기: 다섯 지역이 나란히 선 패널. 고른 지역이 크게 펼쳐지며 그림·진행·보스가 보이고, 한 번 더 누르면 들어감 */
+  function regionSelect(sec, head) {
+    const front = D().maps.find((m) => m.id === P().frontier());
+    if (!regionPick) regionPick = worldRegion || (front ? front.region : 1);
+    const wrap = el('div', { class: 'rg-select', role: 'listbox', 'aria-label': '지역 고르기' });
+    const panels = [];
+    let entering = false;
+    const enter = (r) => {
+      const info = regionInfo(r);
+      if (!info.open) { UI.toast(info.maps.length ? '앞 지역을 먼저 지켜 내야 합니다' : '아직 갈 수 없는 지역입니다', 'warn'); UI.sfx('error'); return; }
+      if (entering) return;
+      entering = true;
+      worldRegion = r; worldView = 'stages';
+      UI.sfx('click');
+      // 고른 패널이 화면 가득 펼쳐지며 그 지역 그림 지도로 들어감(다른 패널은 접혀 사라짐)
+      const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduce) { UI.show('world', {}); return; }
+      wrap.classList.add('entering');
+      panels[r - 1].classList.add('zooming');
+      setTimeout(() => { if (document.body.dataset.screen === 'world') UI.show('world', {}); }, 460);
+    };
+    const pick = (r, focus) => {
+      if (regionPick === r) return;
+      regionPick = r;
+      UI.sfx('hover');
+      panels.forEach((pn) => { const on = +pn.dataset.r === r; pn.classList.toggle('on', on); pn.setAttribute('aria-selected', on ? 'true' : 'false'); });
+      if (focus) panels[r - 1].focus();
+    };
+    for (const reg of D().regions) {
+      const info = regionInfo(reg.id);
+      const on = reg.id === regionPick;
+      const dots = el('div', { class: 'rg-dots' }, info.maps.map((m) => {
+        const rec = P().mapRec(m.id);
+        const st = P().mapUnlocked(m.id) ? (rec.cleared ? 'clear' : 'open') : 'lock';
+        return el('span', { class: `rg-dot ${st} ${m.id === P().frontier() ? 'front' : ''} ${m.boss ? 'boss' : ''}`, title: `${m.id} ${m.name}` }, [el('b', { text: m.id.split('-')[1] }), rec.cleared ? el('i', { text: '★'.repeat(rec.stars || 0) }) : null]);
+      }));
+      const pct = info.maxStars ? Math.round((info.stars / info.maxStars) * 100) : 0;
+      const pn = el('div', {
+        class: `rg-panel theme-${reg.theme} ${on ? 'on' : ''} ${info.open ? '' : 'locked'} ${info.front ? 'front' : ''}`,
+        role: 'option', tabindex: '0', 'aria-selected': on ? 'true' : 'false', 'aria-label': `${reg.id}. ${reg.name}${info.open ? ` 별 ${info.stars}/${info.maxStars}` : ' 잠김'}`,
+        dataset: { r: String(reg.id) },
+      }, [
+        UI.svgImg(artOf(reg.id), 'rg-art', ''),
+        el('div', { class: 'rg-shade' }),
+        el('div', { class: 'rg-fog' }),
+        // 접힌 모양: 세로 이름
+        el('div', { class: 'rg-spine' }, [
+          el('span', { class: 'rg-num', text: String(reg.id) }),
+          el('b', { class: 'rg-vname', text: reg.name }),
+          info.open ? el('span', { class: 'rg-vstar' }, [UI.icon('star', 'tiny'), String(info.stars)]) : UI.icon('lock', 'rg-vlock'),
+        ]),
+        // 펼친 모양
+        el('div', { class: 'rg-body' }, [
+          el('div', { class: 'rg-top' }, [
+            el('span', { class: 'rg-kicker', text: `제${reg.id}지역${info.front ? ' · 지금 지키는 곳' : info.cleared === info.maps.length && info.maps.length ? ' · 모두 지켜 냄' : ''}` }),
+            el('h3', { class: 'rg-name', text: reg.name }),
+            el('p', { class: 'rg-desc', text: reg.desc }),
+          ]),
+          info.open ? dots : el('p', { class: 'rg-lockmsg' }, [UI.icon('lock', 'tiny'), ' 앞 지역의 보스를 쓰러뜨리면 열립니다']),
+          el('div', { class: 'rg-foot' }, [
+            el('div', { class: 'rg-stats' }, [
+              el('div', { class: 'rg-bar' }, [el('i', { style: `width:${pct}%` })]),
+              el('span', {}, [UI.icon('star', 'tiny'), el('b', { text: `${info.stars}` }), ` / ${info.maxStars}`, el('span', { class: 'dim', text: ` · 클리어 ${info.cleared}/${info.maps.length}` })]),
+            ]),
+            info.boss ? el('div', { class: `rg-boss ${info.bossDown ? 'down' : ''}` }, [UI.enemyImg(info.boss, 'rg-boss-img'), el('span', {}, [el('small', { text: info.bossDown ? '쓰러뜨린 보스' : '지역 보스' }), el('b', { text: info.open ? D().enemies[info.boss].name : '???' })])]) : null,
+            el('button', { class: `btn btn-primary rg-go ${info.open ? '' : 'disabled'}`, tabindex: '-1', onclick: (e) => { e.stopPropagation(); enter(reg.id); } }, [info.open ? '들어가기 ▶' : '잠김']),
+          ]),
+        ]),
+      ]);
+      // 누르는 순간(포커스로 펼쳐지기 전)에 이미 펼쳐져 있었는지 기억 — 접힌 패널은 첫 누름에 펼치기만
+      pn.addEventListener('pointerdown', () => { pn._wasOn = regionPick === reg.id; });
+      pn.addEventListener('click', () => { const was = pn._wasOn != null ? pn._wasOn : regionPick === reg.id; pn._wasOn = null; if (was) enter(reg.id); else pick(reg.id); });
+      pn.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { pick(Math.min(5, reg.id + 1), true); e.preventDefault(); }
+        else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { pick(Math.max(1, reg.id - 1), true); e.preventDefault(); }
+        else if (e.key === 'Enter' || e.key === ' ') { if (regionPick === reg.id) enter(reg.id); else pick(reg.id); e.preventDefault(); }
+      });
+      pn.addEventListener('focus', () => pick(reg.id));
+      panels.push(pn);
+      wrap.appendChild(pn);
+    }
+    sec.append(head, el('div', { class: 'rg-board' }, [wrap]));
+    requestAnimationFrame(() => { if (UI.keyboardUser && UI.keyboardUser()) panels[regionPick - 1].focus(); });
+  }
+
   UI.register('world', {
     enter(sec, data) {
       UI.music('worldmap');
       sec.innerHTML = '';
       const front = P().frontier();
       const frontMap = D().maps.find((m) => m.id === front);
-      if (data.region) worldRegion = data.region;
+      if (data.region) { worldRegion = data.region; worldView = 'stages'; }
+      if (data.view) worldView = data.view;
       if (!worldRegion) worldRegion = frontMap ? frontMap.region : 1;
+      if (worldView === 'regions' && !data.keepPick) regionPick = null;
       const head = el('header', { class: 'top-bar' }, [
-        el('button', { class: 'icon-btn', title: '타이틀', onclick: () => UI.show('title', {}) }, [UI.icon('back')]),
+        el('button', { class: 'icon-btn', title: worldView === 'regions' ? '타이틀' : '지역 고르기', 'aria-label': worldView === 'regions' ? '타이틀' : '지역 고르기', onclick: () => (worldView === 'regions' ? UI.show('title', {}) : UI.show('world', { view: 'regions' })) }, [UI.icon('back')]),
         el('h2', { text: '월드 지도' }),
         el('div', { class: 'top-stars' }, [UI.icon('star'), el('b', { text: String(P().starsTotal()) }), el('small', { text: ' / 150' })]),
         el('div', { class: 'top-actions' }, [
@@ -27653,16 +27878,17 @@ RG.render = (() => {
           el('button', { class: 'icon-btn', title: '설정', onclick: openSettings }, [UI.icon('settings')]),
         ]),
       ]);
-      const tabs = el('nav', { class: 'region-tabs' });
-      for (const reg of D().regions) {
-        const maps = D().maps.filter((m) => m.region === reg.id);
-        const open = maps.length && P().mapUnlocked(maps[0].id);
-        const got = maps.reduce((s, m) => s + P().mapStars(m.id), 0);
-        tabs.appendChild(el('button', {
-          class: `region-tab ${reg.id === worldRegion ? 'on' : ''} ${open ? '' : 'locked'}`,
-          onclick: () => { if (!open) { UI.toast(maps.length ? '앞 지역을 먼저 지켜 내야 합니다' : '아직 갈 수 없는 지역입니다', 'warn'); return; } worldRegion = reg.id; UI.sfx('click'); UI.show('world', {}); },
-        }, [el('b', { text: `${reg.id}. ${reg.name}` }), el('small', { text: maps.length ? `★ ${got}/${maps.length * 5}` : '잠김' })]));
-      }
+      if (worldView === 'regions') { regionSelect(sec, head); return; }
+      // 한 지역 보기: 위쪽 탭 대신 "지역 고르기"로 돌아가는 단추 + 이전·다음 지역
+      const go = (r) => { const info = regionInfo(r); if (!info.open) { UI.toast('앞 지역을 먼저 지켜 내야 합니다', 'warn'); return; } worldRegion = r; UI.sfx('click'); UI.show('world', {}); };
+      const cur = regionInfo(worldRegion);
+      const curReg = D().regions.find((r) => r.id === worldRegion);
+      const tabs = el('nav', { class: 'wm-nav' }, [
+        el('button', { class: 'btn wm-all', onclick: () => { regionPick = worldRegion; UI.show('world', { view: 'regions', keepPick: true }); } }, [UI.icon('map', 'tiny'), '지역 고르기']),
+        el('button', { class: 'icon-btn wm-step', 'aria-label': '이전 지역', disabled: worldRegion <= 1, onclick: () => go(worldRegion - 1) }, ['◀']),
+        el('div', { class: `wm-title theme-${curReg.theme}` }, [el('span', { class: 'rg-num', text: String(worldRegion) }), el('b', { text: curReg.name }), el('span', { class: 'wm-stars' }, [UI.icon('star', 'tiny'), `${cur.stars}/${cur.maxStars}`])]),
+        el('button', { class: 'icon-btn wm-step', 'aria-label': '다음 지역', disabled: worldRegion >= D().regions.length || !regionInfo(worldRegion + 1).open, onclick: () => go(worldRegion + 1) }, ['▶']),
+      ]);
       const reg = D().regions.find((r) => r.id === worldRegion);
       const maps = D().maps.filter((m) => m.region === worldRegion);
       const board = el('div', { class: `region-board theme-${reg.theme}` });
@@ -28484,7 +28710,9 @@ RG.render = (() => {
     raf = requestAnimationFrame(loop);
     updateHud(true);
     // 튜토리얼 팁
-    tipsQueue = (game.def.tips || []).filter((t) => !RG.progress.seen('tips', t) && TIPS[t]);
+    // 특정 탑을 설명하는 팁은 그 탑을 가지고 있을 때만 (탑은 뽑기로 얻으므로) — 안 보인 팁은 '본 것'으로 치지 않아 나중에 다시 나옴
+    const have = new Set(game.opts.towers || D().towerOrder);
+    tipsQueue = (game.def.tips || []).filter((t) => !RG.progress.seen('tips', t) && TIPS[t] && (!TIP_TOWER[t] || have.has(TIP_TOWER[t])));
     if (!data.resume && opts.mode === 'normal') setTimeout(nextTip, 600);
     if (!data.resume) banner(`${game.def.id} ${game.def.name}`, opts.mode === 'challenge' ? `도전: ${game.def.challenge.text}` : opts.mode === 'endless' ? '무한 모드' : '준비가 되면 웨이브를 호출하세요');
   }
@@ -29867,6 +30095,8 @@ RG.render = (() => {
   /* =====================================================
    * 튜토리얼 팁
    * ===================================================== */
+  /** 이 팁이 설명하는 탑 */
+  const TIP_TOWER = { barracks: 'stone_barracks', mine: 'crystal_mine', shred: 'quake_hammer', forge: 'forge', beam: 'sun_lens', support: 'sanctuary' };
   const TIPS = {
     build: { title: '탑 짓기', text: () => `${dockWhere()} 탑 목록에서 탑을 누른 뒤 맵의 빈 건설지를 누르면 지어집니다. 탑을 맵으로 끌어다 놓아도 돼요. 놓기 전에 사거리와 공명 미리보기가 보이고, 지을 수 없는 칸은 빨갛게 보입니다. 키보드는 숫자 키로 고르고 방향키·Enter로 놓아요. 일시정지 중에도 지을 수 있어요.` },
     callWave: { title: '웨이브 호출', text: '준비가 되면 왼쪽의 "전투 시작"(Space)을 누르세요. 다음 웨이브를 일찍 부르면 남은 시간만큼 보너스 골드를 받습니다.' },

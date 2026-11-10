@@ -75,7 +75,9 @@
     raf = requestAnimationFrame(loop);
     updateHud(true);
     // 튜토리얼 팁
-    tipsQueue = (game.def.tips || []).filter((t) => !RG.progress.seen('tips', t) && TIPS[t]);
+    // 특정 탑을 설명하는 팁은 그 탑을 가지고 있을 때만 (탑은 뽑기로 얻으므로) — 안 보인 팁은 '본 것'으로 치지 않아 나중에 다시 나옴
+    const have = new Set(game.opts.towers || D().towerOrder);
+    tipsQueue = (game.def.tips || []).filter((t) => !RG.progress.seen('tips', t) && TIPS[t] && (!TIP_TOWER[t] || have.has(TIP_TOWER[t])));
     if (!data.resume && opts.mode === 'normal') setTimeout(nextTip, 600);
     if (!data.resume) banner(`${game.def.id} ${game.def.name}`, opts.mode === 'challenge' ? `도전: ${game.def.challenge.text}` : opts.mode === 'endless' ? '무한 모드' : '준비가 되면 웨이브를 호출하세요');
   }
@@ -1458,6 +1460,8 @@
   /* =====================================================
    * 튜토리얼 팁
    * ===================================================== */
+  /** 이 팁이 설명하는 탑 */
+  const TIP_TOWER = { barracks: 'stone_barracks', mine: 'crystal_mine', shred: 'quake_hammer', forge: 'forge', beam: 'sun_lens', support: 'sanctuary' };
   const TIPS = {
     build: { title: '탑 짓기', text: () => `${dockWhere()} 탑 목록에서 탑을 누른 뒤 맵의 빈 건설지를 누르면 지어집니다. 탑을 맵으로 끌어다 놓아도 돼요. 놓기 전에 사거리와 공명 미리보기가 보이고, 지을 수 없는 칸은 빨갛게 보입니다. 키보드는 숫자 키로 고르고 방향키·Enter로 놓아요. 일시정지 중에도 지을 수 있어요.` },
     callWave: { title: '웨이브 호출', text: '준비가 되면 왼쪽의 "전투 시작"(Space)을 누르세요. 다음 웨이브를 일찍 부르면 남은 시간만큼 보너스 골드를 받습니다.' },
