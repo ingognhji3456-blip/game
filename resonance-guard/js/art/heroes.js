@@ -314,7 +314,7 @@
       case 'open': return P(`M${x - 2.4} ${y - 0.8}H${x + 2.4}Q${x + 2} ${y + 2.8} ${x} ${y + 2.8}Q${x - 2} ${y + 2.8} ${x - 2.4} ${y - 0.8}Z`, '#6a1a2a', 1.3) + P(`M${x - 1.2} ${y + 1.9}Q${x} ${y + 1} ${x + 1.2} ${y + 1.9}Q${x} ${y + 2.6} ${x - 1.2} ${y + 1.9}Z`, '#ff8a8a', 0);
       case 'shout': return P(`M${x - 3} ${y - 1.2}H${x + 2.8}Q${x + 2.4} ${y + 3.8} ${x} ${y + 3.8}Q${x - 2.6} ${y + 3.8} ${x - 3} ${y - 1.2}Z`, '#6a1a2a', 1.4) + P(`M${x - 2.4} ${y - 0.7}H${x + 2.2}V${y + 0.4}H${x - 2.4}Z`, '#fff', 0) + P(`M${x - 1.4} ${y + 2.8}Q${x} ${y + 1.6} ${x + 1.4} ${y + 2.8}Z`, '#ff8a8a', 0);
       case 'grin': return P(`M${x - 2.8} ${y - 1}Q${x} ${y - 0.2} ${x + 2.8} ${y - 1.4}Q${x + 2} ${y + 2.6} ${x} ${y + 2.6}Q${x - 2} ${y + 2.6} ${x - 2.8} ${y - 1}Z`, '#6a1a2a', 1.3) + P(`M${x - 2.2} ${y - 0.6}Q${x} ${y} ${x + 2.2} ${y - 0.9}V${y + 0.3}H${x - 2.2}Z`, '#fff', 0);
-      case 'grit': return P(`M${x - 2.8} ${y - 1}H${x + 2.6}V${y + 1.4}H${x - 2.8}Z`, '#fff', 1.3) + T(`M${x - 2.6} ${y + 0.2}H${x + 2.4}M${x} ${y - 0.9}V${y + 1.3}`, OLC, 0.9);
+      case 'grit': return P(`M${x - 2.8} ${y - 1}H${x + 2.6}V${y + 1.4}H${x - 2.8}Z`, '#fff', 1.3) + T(`M${x - 2.6} ${y + 0.2}H${x + 2.4}M${x} ${y - 0.9}V${y + 1.3}`, OLC, 1.1);
       case 'line': return T(`M${x - 1.8} ${y}H${x + 1.8}`, OLC, 1.4);
       case 'o': return E(x, y + 0.6, 1.3, 1.6, '#6a1a2a', 1.2);
       case 'smirk': return T(`M${x - 2.2} ${y + 0.4}Q${x + 0.6} ${y + 1.2} ${x + 2.4} ${y - 1.2}`, OLC, 1.5);
@@ -926,7 +926,7 @@
     // 배낭에서 막대 뒤끝으로 이어지는 선 (아래로 처짐)
     const pb = R.W(V(38.8, 66.6), R.br);
     const mid = V((pb.x + Rod.butt.x) / 2, Math.max(pb.y, Rod.butt.y) + 6);
-    const cable = L(`M${pt(pb)}Q${pt(mid)} ${pt(Rod.butt)}`, '#4a3e5c', 2, 2.4) + T(`M${pt(pb)}Q${pt(mid)} ${pt(Rod.butt)}`, '#8a7aa8', 0.8, op(0.8));
+    const cable = L(`M${pt(pb)}Q${pt(mid)} ${pt(Rod.butt)}`, '#4a3e5c', 2, 2.4) + T(`M${pt(pb)}Q${pt(mid)} ${pt(Rod.butt)}`, '#8a7aa8', 1.2, op(0.7));
 
     // 머리 (머리 좌표): 곱슬머리 덩어리 + 이마 위 고글
     const curlD = (cx, cy, rx, ry, a0, a1, n, r) => {
@@ -1229,9 +1229,6 @@
     // 효과
     let back = '';
     let front = '';
-    // 그림자 기운: 몸보다 길게 늘어지는 자홍빛 그림자 자락 (등 뒤로)
-    const wisp = (k) => `M${num(44 + R.dx)} ${num(70 + R.dy)}C${num(34 - k)} ${num(68 + R.dy)} ${num(26 - k)} ${num(74 + R.dy * 0.5)} ${num(14 - k * 1.5)} ${num(72)}C${num(22 - k)} ${num(78)} ${num(32 - k)} ${num(80)} ${num(44 + R.dx)} ${num(76 + R.dy * 0.5)}Z`;
-    void wisp;
     if (pose === 'aim') front += P(h().starPath(near.H.x + 2, near.H.y + 14, 2.4, 0.8, 4, 0), '#fff', 0);
     if (pose === 'attack') {
       back += P(arcBand(54, 58, 30, 22, -80, 26), '#f2b8ea', 0, op(0.5)) + P(arcBand(54, 58, 29.4, 25.4, -72, 22), '#fff', 0, op(0.65));
