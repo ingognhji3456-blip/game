@@ -10686,7 +10686,9 @@ RG.art._h = (() => {
     const hands = o.hands || P.hands;
     const F = fig(c, { skin: PRIEST.skin, shirt: PRIEST.robe, robe: tier === 'B' ? '#eef6f0' : PRIEST.robe, sleeve: '#efe8d8', boot: PRIEST.boot, trim: tier === 1 ? null : tier === 'B' ? '#5ab07a' : M.gold, hip: P.hip, lean: P.lean, feet: [[x - 4, y + 13], [x + 4, y + 13]], hands, bend: o.bend || P.bend, face: priestFace, hat: veil(tier) });
     // 영대(어깨띠)
-    const stole = tier === 1 ? '' : c.ln(`M${pp(mix2(F.sh[1], F.neck, 0.3))}L${f(x + 2.4)} ${f(y + 9)}`, OL, 3.4) + c.ln(`M${pp(mix2(F.sh[1], F.neck, 0.3))}L${f(x + 2.4)} ${f(y + 9)}`, tier === 'B' ? '#5ab07a' : M.gold, 1.8);
+    // 1단계도 어깨띠를 둘러 흰 건물에 묻히지 않게 (1 붉은 띠, 2~A 금빛, B 초록)
+    const stCol = tier === 1 ? '#c8402e' : tier === 'B' ? '#5ab07a' : M.gold;
+    const stole = c.ln(`M${pp(mix2(F.sh[1], F.neck, 0.3))}L${f(x + 2.4)} ${f(y + 9)}`, OL, 4.2) + c.ln(`M${pp(mix2(F.sh[1], F.neck, 0.3))}L${f(x + 2.4)} ${f(y + 9)}`, stCol, 2.6);
     return { F, all: F.back + F.body + stole + (o.held || '') + F.handB + F.front + (o.over || '') };
   }
   /** 빛의 고리(바닥) + 회복 십자·반짝이 */
