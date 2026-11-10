@@ -17,6 +17,17 @@ RG.render = (() => {
   let bg = null;         // 바탕 오프스크린 캔버스
   let bgFor = '';
   let time = 0;
+  let backdrop = null;    // 맵 바깥 바탕 (화면 크기, 한 번 그려 둠)
+  let baseFrame = null;   // 바깥 바탕 + 테두리 + 맵 층을 합친 한 장 (흔들림 없을 때)
+  /** 맵 테두리: 바깥 그늘 띠 + 금빛 선 */
+  function drawFrameBorder(c) {
+    c.strokeStyle = 'rgba(0,0,0,0.45)';
+    c.lineWidth = 4;
+    c.strokeRect(X(0) - 2, Y(0) - 2, game.map.cols * T + 4, game.map.rows * T + 4);
+    c.strokeStyle = 'rgba(233,196,122,0.55)';
+    c.lineWidth = 2;
+    c.strokeRect(X(0) - 3, Y(0) - 3, game.map.cols * T + 6, game.map.rows * T + 6);
+  }
   let shadeLayer = null;  // 바탕 + 탑 그림자 (탑이 바뀔 때만 다시 그림)
   let shadeFor = '';
   let shadeBaked = false; // 이번 프레임에 탑 그림자를 층에서 그렸는지
@@ -39,7 +50,8 @@ RG.render = (() => {
 
   function attach(cv, g) {
     canvas = cv;
-    ctx = canvas.getContext('2d');
+    // 불투명 캔버스: 브라우저가 매 프레임 캔버스를 뒤 배경과 섞지 않아도 됨(느린 기기에서 이득)
+    ctx = canvas.getContext('2d', { alpha: false });
     game = g;
     corpses = [];
     projStart.clear();
@@ -77,6 +89,27 @@ RG.render = (() => {
     bgFor = key;
     const w = Math.round(m.cols * T * dpr);
     const h = Math.round(m.rows * T * dpr);
+    // 화질만 낮아졌으면(같은 맵·같은 칸 크기) 이미 그린 바탕을 줄여 씀 — 큰 맵 SVG를 다시 그리는 것은 느린 기기에서 몇 초 걸림
+    if (bg && bg._map === m.id && bg._T === T && bg.width >= w) {
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      const c2 = cv.getContext('2d');
+      c2.imageSmoothingQuality = 'high';
+      c2.drawImage(bg, 0, 0, w, h);
+      cv._map = m.id; cv._T = T; cv._full = bg._full || bg;
+      bg = cv;
+      return;
+    }
+    // 화질이 다시 올라가면 가장 선명했던 바탕이 있으면 그것을 씀
+    if (bg && bg._full && bg._full._map === m.id && bg._full._T === T && bg._full.width >= w) {
+      const full = bg._full;
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(full, 0, 0, w, h);
+      cv._map = m.id; cv._T = T; cv._full = full;
+      bg = cv;
+      return;
+    }
     let svg = null;
     try { svg = RG.art.mapBackground ? RG.art.mapBackground(m) : null; } catch (e) { svg = null; }
     if (!svg) { bg = null; return; }
@@ -86,6 +119,7 @@ RG.render = (() => {
       const cv = document.createElement('canvas');
       cv.width = w; cv.height = h;
       cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      cv._map = m.id; cv._T = T;
       bg = cv;
     };
     img.src = RG.art.sprites.dataUrl(RG.art.sprites.sized(svg, w, h));
@@ -96,22 +130,58 @@ RG.render = (() => {
   const tileSize = () => T;
 
   /* ---------------- 그리기 도우미 ---------------- */
+  /*
+   * 화면 크기로 줄여 둔 그림: 168px 그림을 매 프레임 30px로 줄여 그리면 느린 기기에서 비용이 큼.
+   * 그림·표시 크기(화면 배율 포함)마다 한 번만 고품질로 줄여 두고, 그 뒤엔 같은 크기로 그대로 찍음.
+   */
+  function fitted(s, w, h, flip) {
+    const pw = Math.max(1, Math.round(w * dpr));
+    const ph = Math.max(1, Math.round(h * dpr));
+    if (pw * 1.3 >= s.canvas.width) return s.canvas; // 거의 같은 크기면 그대로
+    let m = s._fit;
+    if (!m) { m = new Map(); s._fit = m; }
+    const k = (pw * 4096 + ph) * 2 + (flip ? 1 : 0); // 좌우 반전본도 따로 (그릴 때 뒤집으면 느린 길로 그려짐)
+    let cv = m.get(k);
+    if (!cv) {
+      if (m.size > 6) m.clear(); // 크기가 자주 바뀌면(창 크기·화질) 오래된 것은 버림
+      cv = document.createElement('canvas');
+      cv.width = pw; cv.height = ph;
+      const c2 = cv.getContext('2d');
+      c2.imageSmoothingQuality = 'high'; // 고품질 축소 한 번 (임시 캔버스를 만들지 않음 — 시작 직후 수백 장을 만들 때 가벼움)
+      if (flip) { c2.translate(pw, 0); c2.scale(-1, 1); }
+      c2.drawImage(s.canvas, 0, 0, pw, ph);
+      m.set(k, cv);
+    }
+    return cv;
+  }
   function sprite(key, cx, cy, w, h, ax, ay, flip, alpha) {
     const s = RG.art.sprites.get(key);
     if (!s) return false;
+    const plain = plainTransform();
+    const img = plain ? fitted(s, w, h, flip) : fitted(s, w, h, false);
     const a0 = ctx.globalAlpha;
     if (alpha != null && alpha !== 1) ctx.globalAlpha = a0 * alpha;
-    if (flip) {
+    if (img !== s.canvas && plain) {
+      // 줄여 둔 그림(반전본 포함): 정수 화소 위치에 원래 크기 그대로 찍음 — 늘이기·반 화소·뒤집기 없이 가장 빠른 길
+      const x0 = Math.round((cx - w * ax) * dpr) / dpr;
+      const y0 = Math.round((cy - h * ay) * dpr) / dpr;
+      ctx.drawImage(img, x0, y0, img.width / dpr, img.height / dpr);
+    } else if (flip) {
       ctx.save();
       ctx.translate(cx, cy);
       ctx.scale(-1, 1);
-      ctx.drawImage(s.canvas, -w * ax, -h * ay, w, h);
+      ctx.drawImage(img, -w * ax, -h * ay, w, h);
       ctx.restore();
     } else {
-      ctx.drawImage(s.canvas, cx - w * ax, cy - h * ay, w, h);
+      ctx.drawImage(img, cx - w * ax, cy - h * ay, w, h);
     }
     ctx.globalAlpha = a0;
     return true;
+  }
+  /** 지금 변환이 화면 배율·이동뿐인가(흔들림 이동은 정수 화소로) — 회전·눌림이 있으면 일반 그리기 */
+  function plainTransform() {
+    const t = ctx.getTransform();
+    return t.b === 0 && t.c === 0 && Math.abs(t.a - dpr) < 1e-6 && Math.abs(t.d - dpr) < 1e-6 && Math.abs(t.e - Math.round(t.e)) < 1e-3 && Math.abs(t.f - Math.round(t.f)) < 1e-3;
   }
 
   /* ---------------- 그림자 (빛은 늘 왼쪽 위) ---------------- */
@@ -169,14 +239,58 @@ RG.render = (() => {
   }
   let shadowsOn = true;
 
+  let barQ = null; // 모으는 중이면 배열 (frame에서 켜고 끔)
   function bar(cx, top, w, ratio, color, shieldRatio, elite) {
+    if (barQ) { barQ.push({ cx, top, w, ratio, color, shieldRatio, elite }); return; }
+    drawBar(cx, top, w, ratio, color, shieldRatio, elite);
+  }
+  /** 모은 체력 막대를 한꺼번에: 테두리 한 경로, 빈 칸 한 경로, 채운 칸은 색마다 한 경로 (막대마다 칠하면 수백 번) */
+  function flushBars() {
+    const q = barQ;
+    barQ = null;
+    if (!q || !q.length) return;
+    const h = Math.max(3, Math.round(T * 0.09));
+    const pos = q.map((b) => [Math.round(b.cx - b.w / 2), Math.round(b.top)]);
+    ctx.fillStyle = 'rgba(15,10,25,0.85)';
+    ctx.beginPath();
+    q.forEach((b, i) => ctx.rect(pos[i][0] - 1, pos[i][1] - 1, b.w + 2, h + 2));
+    ctx.fill();
+    if (!manyEnemies) {
+      ctx.fillStyle = '#3a2a33';
+      ctx.beginPath();
+      q.forEach((b, i) => ctx.rect(pos[i][0], pos[i][1], b.w, h));
+      ctx.fill();
+    }
+    const byCol = new Map();
+    q.forEach((b, i) => { let l = byCol.get(b.color); if (!l) { l = []; byCol.set(b.color, l); } l.push(i); });
+    for (const [col, idx] of byCol) {
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      for (const i of idx) ctx.rect(pos[i][0], pos[i][1], Math.max(0, q[i].w * q[i].ratio), h);
+      ctx.fill();
+    }
+    const sh = q.map((b, i) => [b, i]).filter(([b]) => b.shieldRatio > 0);
+    if (sh.length) {
+      ctx.fillStyle = 'rgba(190,232,255,0.9)';
+      ctx.beginPath();
+      for (const [b, i] of sh) ctx.rect(pos[i][0], pos[i][1], Math.max(0, b.w * Math.min(1, b.shieldRatio)), Math.max(2, h * 0.5));
+      ctx.fill();
+    }
+    const el = q.map((b, i) => [b, i]).filter(([b]) => b.elite);
+    if (el.length) {
+      ctx.fillStyle = '#ffd34d';
+      ctx.beginPath();
+      for (const [, i] of el) { const [x, y] = pos[i]; ctx.moveTo(x - 6, y - 1); ctx.lineTo(x - 2, y + h / 2); ctx.lineTo(x - 6, y + h + 1); ctx.closePath(); }
+      ctx.fill();
+    }
+  }
+  function drawBar(cx, top, w, ratio, color, shieldRatio, elite) {
     const h = Math.max(3, Math.round(T * 0.09));
     const x = Math.round(cx - w / 2);
     const y = Math.round(top);
     ctx.fillStyle = 'rgba(15,10,25,0.85)';
     ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
-    ctx.fillStyle = '#3a2a33';
-    ctx.fillRect(x, y, w, h);
+    if (!manyEnemies) { ctx.fillStyle = '#3a2a33'; ctx.fillRect(x, y, w, h); }
     ctx.fillStyle = color;
     ctx.fillRect(x, y, Math.max(0, w * ratio), h);
     if (shieldRatio > 0) {
@@ -203,7 +317,7 @@ RG.render = (() => {
     const m = game.map;
     const A = RG.art.sprites;
     let key = `${bgFor}|${shadowsOn ? 1 : 0}`;
-    for (const t of st.towers) key += `|${t.id}:${t.type}:${t.level}:${t.branch || ''}:${t.building ? 1 : 0}:${A.get(A.towerKey(t.type, t.level, t.branch, 'idle')) ? 1 : 0}`;
+    for (const t of st.towers) key += `|${t.id}:${t.type}:${t.level}:${t.branch || ''}:${t.building ? 1 : 0}:${A.get(A.towerKey(t.type, t.level, t.branch, 'idle')) ? 1 : 0}:${t.links.join('.')}`;
     if (key === shadeFor && shadeLayer) return shadeLayer;
     shadeFor = key;
     if (!shadeLayer || shadeLayer.width !== bg.width || shadeLayer.height !== bg.height) {
@@ -222,6 +336,9 @@ RG.render = (() => {
     try {
       for (const t of st.towers) shadow(t.x, t.r + 0.8, 0.36, 0.12, 0.28);
       for (const t of st.towers) castShadow(A.towerKey(t.type, t.level, t.branch, 'idle'), X(t.x), Y(t.r + 0.82), T, T * 1.3, 0.5, 112 / 130, false, t.building ? 0.2 : 0.42);
+      const L = m.lantern;
+      castShadow(A.lanternKey(1), X(L.x), Y(L.r + 0.82), T, T * 1.3, 0.5, 112 / 130, false, 0.42);
+      bakeLinks(c2);
       // 빛 고르기: 왼쪽 위(빛이 오는 쪽)는 따뜻하게 살짝 밝게, 오른쪽 아래는 푸른 보랏빛으로 살짝 어둡게, 가장자리는 어둡게.
       // 매 프레임이 아니라 이 층에 한 번 구워 둠 (그리기 비용 없음)
       const W2 = m.cols * T;
@@ -243,9 +360,10 @@ RG.render = (() => {
     return shadeLayer;
   }
 
-  function drawBackground() {
+  function drawBackground(already) {
     const m = game.map;
     shadeBaked = false;
+    if (already) { shadeBaked = true; return; } // 바탕 한 장(baseFrame)으로 이미 그림
     if (bg) {
       const layer = towerShadeLayer();
       ctx.drawImage(layer || bg, X(0), Y(0), m.cols * T, m.rows * T);
@@ -406,39 +524,52 @@ RG.render = (() => {
   }
 
   /* ---------------- 공명 선 ---------------- */
-  function drawLinks() {
+  /** 공명 선 목록 [탑, 이웃] (같은 짝은 한 번) */
+  function linkPairs() {
     const st = game.state;
     const byId = new Map(st.towers.map((t) => [t.id, t]));
-    ctx.save();
-    ctx.lineCap = 'round';
-    for (const t of st.towers) {
-      for (const id of t.links) {
-        if (id < t.id) continue;
-        const n = byId.get(id);
-        if (!n) continue;
-        const ax = X(t.x);
-        const ay = Y(t.y + 0.15);
-        const bx = X(n.x);
-        const by = Y(n.y + 0.15);
-        const g = ctx.createLinearGradient(ax, ay, bx, by);
-        g.addColorStop(0, elColor(RG.data.towers[t.type].element));
-        g.addColorStop(1, elColor(RG.data.towers[n.type].element));
-        const pulse = 0.5 + 0.5 * Math.sin(time * 3 + (t.id + n.id) * 0.7);
-        ctx.globalAlpha = 0.35 + 0.35 * pulse;
-        ctx.strokeStyle = g;
-        ctx.lineWidth = Math.max(2, T * 0.09);
-        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
-        ctx.globalAlpha = 0.6 + 0.4 * pulse;
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = Math.max(1, T * 0.025);
-        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
-        // 흐르는 빛 구슬
-        const k = (time * 0.7 + (t.id * 0.13)) % 1;
-        ctx.fillStyle = '#ffffff';
-        ctx.globalAlpha = 0.9;
-        ctx.beginPath(); ctx.arc(lerp(ax, bx, k), lerp(ay, by, k), Math.max(1.5, T * 0.05), 0, Math.PI * 2); ctx.fill();
-      }
+    const out = [];
+    for (const t of st.towers) for (const id of t.links) { if (id < t.id) continue; const n = byId.get(id); if (n) out.push([t, n]); }
+    return out;
+  }
+  /** 공명 선(움직이지 않는 부분): 탑 그림자 층에 함께 구워 둠 — 탑이 바뀔 때만 다시 그림 */
+  function bakeLinks(c) {
+    c.save();
+    c.lineCap = 'round';
+    for (const [t, n] of linkPairs()) {
+      const ax = X(t.x); const ay = Y(t.y + 0.15); const bx = X(n.x); const by = Y(n.y + 0.15);
+      const g = c.createLinearGradient(ax, ay, bx, by);
+      g.addColorStop(0, elColor(RG.data.towers[t.type].element));
+      g.addColorStop(1, elColor(RG.data.towers[n.type].element));
+      c.globalAlpha = 0.55;
+      c.strokeStyle = g;
+      c.lineWidth = Math.max(2, T * 0.09);
+      c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.stroke();
+      c.globalAlpha = 0.8;
+      c.strokeStyle = '#ffffff';
+      c.lineWidth = Math.max(1, T * 0.025);
+      c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.stroke();
     }
+    c.restore();
+  }
+  /** 공명 선 위를 흐르는 빛 구슬: 모든 구슬을 한 경로로 모아 한 번에 칠함 (층이 없으면 선도 여기서) */
+  function drawLinks() {
+    if (!shadeBaked) bakeLinks(ctx);
+    const pairs = linkPairs();
+    if (!pairs.length) return;
+    const r = Math.max(1.5, T * 0.05);
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath();
+    for (const [t, n] of pairs) {
+      const k = (time * 0.7 + (t.id * 0.13)) % 1;
+      const x = lerp(X(t.x), X(n.x), k);
+      const y = lerp(Y(t.y + 0.15), Y(n.y + 0.15), k);
+      ctx.moveTo(x + r, y);
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+    }
+    ctx.fill();
     ctx.restore();
   }
 
@@ -673,7 +804,7 @@ RG.render = (() => {
     ctx.fillStyle = glow;
     ctx.beginPath(); ctx.arc(cx, baseY - T * 0.7, T * (0.6 + ratio * 0.9), 0, Math.PI * 2); ctx.fill();
     ctx.restore();
-    castShadow(RG.art.sprites.lanternKey(ratio), cx, baseY, T, T * 1.3, 0.5, 112 / 130, false, 0.42);
+    if (!shadeBaked) castShadow(RG.art.sprites.lanternKey(ratio), cx, baseY, T, T * 1.3, 0.5, 112 / 130, false, 0.42);
     sprite(RG.art.sprites.lanternKey(ratio), cx, baseY, T, T * 1.3, 0.5, 112 / 130, false);
   }
 
@@ -766,14 +897,14 @@ RG.render = (() => {
     const k0 = ekey(e.type, frame);
     const key = RG.art.sprites.get(k0) ? k0 : poseSprite(k0, ekey(e.type, 'walk0'), () => RG.art.enemy(e.type, frame), big, big);
     if (!manyEnemies || ed.boss || ed.size >= 1.4) castShadow(key, cx + dx, groundY, size, size, 0.5, 0.9, flip, (e.flying ? 0.16 : 0.32) * alphaS, lift);
-    const motion = rot || sxk !== 1 || syk !== 1 || dx;
+    const motion = !manyEnemies && (rot || sxk !== 1 || syk !== 1 || dx); // 적이 아주 많으면 변형 생략(성능), 튀기기는 유지
     if (motion) { ctx.save(); ctx.translate(cx + dx, cy); ctx.rotate(rot); ctx.scale(sxk, syk); ctx.translate(-cx, -cy); }
     const ok = sprite(key, cx, cy, size, size, 0.5, 0.9, flip, alphaS);
     if (!ok) {
       ctx.fillStyle = '#9a94a8';
       ctx.beginPath(); ctx.arc(cx, cy - size * 0.4, size * 0.35, 0, Math.PI * 2); ctx.fill();
     }
-    if (hurt && ok) {
+    if (hurt && ok && !manyEnemies) {
       ctx.save();
       ctx.globalAlpha = 0.45 * alphaS;
       ctx.globalCompositeOperation = 'lighter';
@@ -826,7 +957,7 @@ RG.render = (() => {
       ctx.beginPath(); ctx.ellipse(cx, Y(y) + 1, size * 0.36, size * 0.12, 0, 0, Math.PI * 2); ctx.stroke();
       ctx.restore();
     }
-    if (e.st.burns.length && Math.random() < 0.3) RG.fx.burst(x + (Math.random() - 0.5) * e.size * 0.6, y - e.size * 0.5, RG.fx.colorOf(e.st.burns[0].element), 1, 0.5, 0.45, 0.05, -1.6);
+    if (e.st.burns.length && Math.random() < (manyEnemies ? 0.08 : 0.3)) RG.fx.burst(x + (Math.random() - 0.5) * e.size * 0.6, y - e.size * 0.5, RG.fx.colorOf(e.st.burns[0].element), 1, 0.5, 0.45, 0.05, -1.6);
     if (e.st.curse && st.time < e.st.curse.until) icon('curse', cx + size * 0.38, top + 2, Math.max(10, T * 0.26));
     // 체력 막대
     const showBar = e.hp < e.maxHp || e.shield > 0 || ed.elite || ed.boss || overlay.selectedEnemy === e.id;
@@ -889,7 +1020,7 @@ RG.render = (() => {
       const bob = walking ? Math.abs(Math.sin(time * 10 + u.id)) * T * 0.03 : 0;
       const look = u.look || 'stone_soldier';
       const uk = poseSprite(RG.art.sprites.unitKey(look, pose), RG.art.sprites.unitKey(look, 'idle'), () => RG.art.unit(look, pose), 128, 128);
-      castShadow(uk, cx, cy, size, size, 0.5, 0.9, flip, 0.3, bob);
+      if (!manyEnemies) castShadow(uk, cx, cy, size, size, 0.5, 0.9, flip, 0.3, bob);
       sprite(uk, cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
       if (u.hp < u.maxHp) bar(cx, cy - size * 1.0, Math.max(14, T * 0.5), u.hp / u.maxHp, '#b8e986', 0, false);
       return;
@@ -944,6 +1075,8 @@ RG.render = (() => {
       const live = new Set(st.projectiles.map((q) => q.id));
       for (const id of projStart.keys()) if (!live.has(id)) projStart.delete(id);
     }
+    const arrows = [];
+    const arrowHeads = new Map();
     for (const p of st.projectiles) {
       let x = lerp(p.px, p.x, alpha);
       let y = lerp(p.py, p.y, alpha);
@@ -967,12 +1100,12 @@ RG.render = (() => {
       const dy = p.y - p.py;
       const L = Math.hypot(dx, dy) || 1;
       if (p.kind === 'arrow' || (p.kind === 'heroShot' && (p.heroId === 'sio'))) {
+        // 화살은 모아 두었다가 끝에 한 번에 그림(자루 한 경로, 촉은 색마다 한 경로)
         const len = T * 0.36;
-        ctx.strokeStyle = '#5a3d22';
-        ctx.lineWidth = Math.max(1.5, T * 0.04);
-        ctx.beginPath(); ctx.moveTo(sx - (dx / L) * len, sy - (dy / L) * len); ctx.lineTo(sx, sy); ctx.stroke();
-        ctx.fillStyle = col;
-        ctx.beginPath(); ctx.arc(sx, sy, Math.max(2, T * 0.06), 0, Math.PI * 2); ctx.fill();
+        arrows.push(sx - (dx / L) * len, sy - (dy / L) * len, sx, sy);
+        let hl = arrowHeads.get(col);
+        if (!hl) { hl = []; arrowHeads.set(col, hl); }
+        hl.push(sx, sy);
         continue;
       }
       if (p.kind === 'gust') {
@@ -1000,6 +1133,20 @@ RG.render = (() => {
       ctx.lineWidth = Math.max(1, T * 0.05);
       ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx - (dx / L) * T * 0.3, sy - (dy / L) * T * 0.3); ctx.stroke();
       ctx.globalAlpha = 1;
+    }
+    if (arrows.length) {
+      ctx.strokeStyle = '#5a3d22';
+      ctx.lineWidth = Math.max(1.5, T * 0.04);
+      ctx.beginPath();
+      for (let i = 0; i < arrows.length; i += 4) { ctx.moveTo(arrows[i], arrows[i + 1]); ctx.lineTo(arrows[i + 2], arrows[i + 3]); }
+      ctx.stroke();
+      const hr = Math.max(2, T * 0.06);
+      for (const [col, hl] of arrowHeads) {
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        for (let i = 0; i < hl.length; i += 2) { ctx.moveTo(hl[i] + hr, hl[i + 1]); ctx.arc(hl[i], hl[i + 1], hr, 0, Math.PI * 2); }
+        ctx.fill();
+      }
     }
     // 광선
     ctx.globalCompositeOperation = 'lighter';
@@ -1185,25 +1332,53 @@ RG.render = (() => {
     time += dt;
     RG.fx.update(dt);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // 맵 바깥 바탕은 캔버스 뒤 CSS 그라데이션(브라우저가 따로 합성 — 매 프레임 칠하지 않음), 캔버스는 비우기만
+    // 맵 바깥 바탕: 화면 크기의 그라데이션을 한 번 그려 두고 매 프레임 그대로 찍음(불투명 캔버스)
     const base = REGION_BASE[game.map.def.region] || '#556';
-    if (canvas._bgFor !== base) {
-      canvas._bgFor = base;
-      canvas.style.background = `radial-gradient(ellipse at center, ${RG.art._h.mix(base, '#141019', 0.55)} 20%, #0d0a12 75%)`;
+    const bk = `${base}|${canvas.width}x${canvas.height}`;
+    if (!backdrop || backdrop._k !== bk) {
+      backdrop = document.createElement('canvas');
+      backdrop.width = canvas.width; backdrop.height = canvas.height;
+      backdrop._k = bk;
+      const c2 = backdrop.getContext('2d', { alpha: false });
+      const g0 = c2.createRadialGradient(backdrop.width / 2, backdrop.height / 2, Math.min(backdrop.width, backdrop.height) * 0.2, backdrop.width / 2, backdrop.height / 2, Math.max(backdrop.width, backdrop.height) * 0.75);
+      g0.addColorStop(0, RG.art._h.mix(base, '#141019', 0.55));
+      g0.addColorStop(1, '#0d0a12');
+      c2.fillStyle = g0;
+      c2.fillRect(0, 0, backdrop.width, backdrop.height);
     }
-    ctx.clearRect(0, 0, W, H);
-    // 맵 테두리
-    // 테두리 그늘: 맵 넓이만큼 칠하지 않고 바깥 띠만 (맵 그림이 안쪽을 덮음)
-    ctx.strokeStyle = 'rgba(0,0,0,0.45)';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(X(0) - 2, Y(0) - 2, game.map.cols * T + 4, game.map.rows * T + 4);
-    ctx.strokeStyle = 'rgba(233,196,122,0.55)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(X(0) - 3, Y(0) - 3, game.map.cols * T + 6, game.map.rows * T + 6);
-    const [sx, sy] = RG.fx.shakeOffset(T);
+    const [sx0, sy0] = RG.fx.shakeOffset(T);
+    // 흔들림도 정수 화소로 (반 화소에 걸치면 모든 그림이 느린 길로 그려짐)
+    const sx = Math.round(sx0 * dpr) / dpr;
+    const sy = Math.round(sy0 * dpr) / dpr;
+    // 바깥 바탕 + 테두리 + 맵(탑 그림자 포함)을 한 장으로 구워 두고 매 프레임 한 번만 찍음 (화면 크기 그림 두 번 → 한 번)
+    const layer = bg ? towerShadeLayer() : null;
+    let based = false;
+    if (layer && !sx && !sy) {
+      const bk = `${backdrop._k}|${shadeFor}|${ox},${oy},${T},${dpr}`;
+      if (!baseFrame || baseFrame._k !== bk || baseFrame._layer !== layer) {
+        baseFrame = baseFrame && baseFrame.width === canvas.width && baseFrame.height === canvas.height ? baseFrame : document.createElement('canvas');
+        baseFrame.width = canvas.width; baseFrame.height = canvas.height;
+        const c2 = baseFrame.getContext('2d', { alpha: false });
+        c2.setTransform(1, 0, 0, 1, 0, 0);
+        c2.drawImage(backdrop, 0, 0);
+        c2.setTransform(dpr, 0, 0, dpr, 0, 0);
+        drawFrameBorder(c2);
+        c2.drawImage(layer, X(0), Y(0), game.map.cols * T, game.map.rows * T);
+        baseFrame._k = bk; baseFrame._layer = layer;
+      }
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(baseFrame, 0, 0);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      based = true;
+    } else {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(backdrop, 0, 0);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawFrameBorder(ctx);
+    }
     ctx.save();
     ctx.translate(sx, sy);
-    drawBackground();
+    drawBackground(based);
     drawPortals();
     drawZones();
     drawPathPreview();
@@ -1217,6 +1392,7 @@ RG.render = (() => {
     let alive = 0;
     for (const e of st.enemies) if (!e.dead) alive++;
     manyEnemies = alive > 60;
+    RG.fx.setLite(alive > 120);
     if (manyEnemies) {
       // 적이 아주 많을 때: 발밑 그늘을 한 경로로 모아 한 번에 칠함 (땅·비행 두 번)
       for (const fly of [false, true]) {
@@ -1242,6 +1418,7 @@ RG.render = (() => {
     }
     for (const u of st.units) if (!u.dead && u.kind !== 'drone') shadow(lerp(u.px, u.x, alpha), lerp(u.py, u.y, alpha), u.kind === 'wall' ? 0.45 : 0.22, 0.08, 0.3);
 
+    barQ = []; // 체력 막대는 모아 두었다가 모든 적을 그린 뒤 위에 한 번에
     // y 순서로
     const list = [];
     for (const t of st.towers) list.push([t.r + 0.82, 0, t]);
@@ -1262,6 +1439,7 @@ RG.render = (() => {
     // 비행 적은 위에
     const flyers = st.enemies.filter((e) => e.flying).sort((a, b) => a.y - b.y);
     for (const e of flyers) drawEnemy(e, alpha);
+    flushBars();
     // 건설 미리보기 탑 그림
     const gh = overlay.ghost;
     if (gh) {

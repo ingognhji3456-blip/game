@@ -8,10 +8,19 @@
 RG.sim = (() => {
   const DT = 1 / 30;
   const U = () => RG.util;
-  const D = () => RG.data;
+  // 데이터 참조는 판을 만들 때 한 번 잡아 둠 (매 틱 수만 번 부르므로 전역 RG를 찾는 비용이 큼)
+  let DATA = null;
+  const D = () => DATA || RG.data;
 
   /* ---------------- 도우미 ---------------- */
   const d2 = (ax, ay, bx, by) => (ax - bx) * (ax - bx) + (ay - by) * (ay - by);
+  /** 배열에서 조건에 맞는 것만 남김(제자리, 순서 유지) */
+  function compact(arr, keep) {
+    let j = 0;
+    for (let i = 0; i < arr.length; i++) { const v = arr[i]; if (keep(v)) { if (j !== i) arr[j] = v; j++; } }
+    if (j !== arr.length) arr.length = j;
+    return arr;
+  }
   const dist = (ax, ay, bx, by) => Math.sqrt(d2(ax, ay, bx, by));
 
   /** 선분(ax,ay)-(bx,by)과 점의 거리 */
@@ -43,6 +52,7 @@ RG.sim = (() => {
    * 생성
    * ===================================================== */
   function create(opts) {
+    DATA = RG.data;
     const o = Object.assign({ mode: 'normal', heroId: null, skills: [], seed: 1 }, opts);
     const def = findMapDef(o.mapId);
     if (!def) throw new Error(`맵 없음: ${o.mapId}`);
@@ -225,6 +235,7 @@ RG.sim = (() => {
     /** 장판(공허 구슬 등) 감속 중 가장 센 것 */
     function zoneSlowOf(e) {
       let best = 0;
+      if (!st.zones.length) return 0;
       for (const z of st.zones) {
         if (!z.slowPct || st.time > z.until) continue;
         if (z.kind !== 'void' && e.flying) continue;
@@ -718,43 +729,71 @@ RG.sim = (() => {
       ev('towerDisabled', { towerId: t.id, dur, reason });
     }
 
+    /**
+     * 사거리 안 표적 n개 (표적 방식에 따른 순서, 같으면 id가 작은 적).
+     * n이 1이면(대부분의 탑) 한 번 훑으며 가장 좋은 적만 고름 — 배열·정렬 없이 (적이 수백일 때 매 틱 비용이 큼). 결과는 정렬과 같음.
+     */
     function towerTargets(t, n, range, opt = {}) {
       const c = t.calc;
-      const out = [];
       const r2 = range * range;
       const min2 = c.minRange ? c.minRange * c.minRange : 0;
+      const mode = t.targetMode;
+      const tg = c.targets;
+      const tx = t.x;
+      const ty = t.y;
+      const keyOf = (e, dd) => (mode === 'last' ? -e.prog : mode === 'strong' ? -(e.hp + e.shield) : mode === 'weak' ? e.hp + e.shield : mode === 'close' ? dd : e.prog);
+      if (n === 1) {
+        let best = null;
+        let bk = 0;
+        for (const e of st.enemies) {
+          if (!targetable(e)) continue;
+          if (tg === 'ground' && e.flying) continue;
+          if (tg === 'air' && !e.flying) continue;
+          const dx = tx - e.x;
+          const dy = ty - e.y;
+          const dd = dx * dx + dy * dy;
+          if (dd > r2 || dd < min2) continue;
+          if (!opt.anyElement && !attackable(e, c.element)) continue;
+          if (opt.exclude && opt.exclude.has(e.id)) continue;
+          const k = keyOf(e, dd);
+          if (best === null || k < bk || (k === bk && e.id < best.id)) { best = e; bk = k; }
+        }
+        return best ? [best] : [];
+      }
+      const out = [];
       for (const e of st.enemies) {
         if (!targetable(e)) continue;
-        if (c.targets === 'ground' && e.flying) continue;
-        if (c.targets === 'air' && !e.flying) continue;
-        if (!opt.anyElement && !attackable(e, c.element)) continue;
-        const dd = d2(t.x, t.y, e.x, e.y);
+        if (tg === 'ground' && e.flying) continue;
+        if (tg === 'air' && !e.flying) continue;
+        const dx = tx - e.x;
+        const dy = ty - e.y;
+        const dd = dx * dx + dy * dy;
         if (dd > r2 || dd < min2) continue;
+        if (!opt.anyElement && !attackable(e, c.element)) continue;
         if (opt.exclude && opt.exclude.has(e.id)) continue;
-        out.push([dd, e]);
+        out.push({ k: keyOf(e, dd), e });
       }
-      const mode = t.targetMode;
-      const key = (p) => {
-        const e = p[1];
-        if (mode === 'last') return -e.prog;
-        if (mode === 'strong') return -(e.hp + e.shield);
-        if (mode === 'weak') return e.hp + e.shield;
-        if (mode === 'close') return p[0];
-        return e.prog;
-      };
-      out.sort((a, b) => key(a) - key(b) || a[1].id - b[1].id);
-      return out.slice(0, n).map((p) => p[1]);
+      out.sort((a, b) => a.k - b.k || a.e.id - b.e.id);
+      const res = [];
+      for (let i = 0; i < out.length && i < n; i++) res.push(out[i].e);
+      return res;
     }
 
     function enemiesInRadius(x, y, radius, filter) {
       const out = [];
       const r2 = radius * radius;
+      const far = radius + 1.5; // 몸 크기 보정(size×0.3)보다 넉넉한 거리 — 이보다 멀면 바로 건너뜀(결과는 같음)
       for (const e of st.enemies) {
+        const dx = x - e.x;
+        if (dx > far || dx < -far) continue;
+        const dy = y - e.y;
+        if (dy > far || dy < -far) continue;
         if (e.dead || e.burrowed) continue;
         if (filter === 'ground' && e.flying) continue;
         if (filter === 'air' && !e.flying) continue;
         const rr = radius + e.size * 0.3;
-        if (d2(x, y, e.x, e.y) <= Math.max(r2, rr * rr) && d2(x, y, e.x, e.y) <= rr * rr) out.push(e);
+        const dd = d2(x, y, e.x, e.y);
+        if (dd <= Math.max(r2, rr * rr) && dd <= rr * rr) out.push(e);
       }
       return out;
     }
@@ -1694,7 +1733,7 @@ RG.sim = (() => {
           if (z.meltArmor && !e.dead) addShred(e, 'melt', z.meltArmor, z.meltArmor, 0.4);
         }
       }
-      st.zones = st.zones.filter((z) => time <= z.until);
+      if (st.zones.length) compact(st.zones, (z) => time <= z.until);
 
       /* --- 덫 --- */
       for (let i = st.traps.length - 1; i >= 0; i--) {
@@ -1740,8 +1779,9 @@ RG.sim = (() => {
       }
 
       /* --- 정리 --- */
-      st.enemies = st.enemies.filter((e) => !e.dead);
-      st.units = st.units.filter((u) => !u.remove);
+      // 죽은 적·지운 유닛은 자리에서 당겨 지움(순서 그대로) — 매 틱 새 배열을 만들지 않아 쓰레기 수거가 줄어듦
+      compact(st.enemies, (e) => !e.dead);
+      compact(st.units, (u) => !u.remove);
       if (st.warnings.length > 20) st.warnings.splice(0, st.warnings.length - 20);
 
       /* --- 공명 과제 --- */

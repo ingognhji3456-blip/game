@@ -29,8 +29,12 @@ RG.fx = (() => {
 
   const rnd = Math.random;   // 연출 전용(시뮬레이션과 무관)
 
+  // 화면에 적이 아주 많을 때(렌더러가 알려 줌) 조각·글자 수를 줄여 느린 기기에서도 매끄럽게
+  let lite = false;
+  function setLite(v) { lite = !!v; }
   function burst(x, y, color, n, speed = 2.2, life = 0.5, size = 0.06, gravity = 0) {
-    for (let i = 0; i < n && parts.length < MAX_PARTS; i++) {
+    const cap = lite ? 250 : MAX_PARTS;
+    for (let i = 0; i < n && parts.length < cap; i++) {
       const a = rnd() * Math.PI * 2;
       const s = speed * (0.3 + rnd() * 0.7);
       parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - speed * 0.3, life, max: life, size: size * (0.6 + rnd() * 0.8), color, g: gravity });
@@ -265,11 +269,22 @@ RG.fx = (() => {
       ctx.lineWidth = Math.max(1, b.w * T * 0.35);
       ctx.stroke();
     }
+    // 조각: 같은 색·비슷한 투명도(6단계)끼리 한 경로로 모아 한 번에 칠함 (조각마다 칠하면 수백 번)
+    const groups = new Map();
     for (const p of parts) {
-      ctx.globalAlpha = Math.min(1, p.life / p.max * 1.5);
-      ctx.fillStyle = p.color;
-      const s = Math.max(1.2, p.size * T);
-      ctx.fillRect(X(p.x) - s / 2, Y(p.y) - s / 2, s, s);
+      const a = Math.min(1, p.life / p.max * 1.5);
+      const q = Math.max(1, Math.round(a * 6));
+      const k = `${p.color}|${q}`;
+      let g = groups.get(k);
+      if (!g) { g = { color: p.color, a: q / 6, list: [] }; groups.set(k, g); }
+      g.list.push(p);
+    }
+    for (const g of groups.values()) {
+      ctx.globalAlpha = g.a;
+      ctx.fillStyle = g.color;
+      ctx.beginPath();
+      for (const p of g.list) { const s = Math.max(1.2, p.size * T); ctx.rect(X(p.x) - s / 2, Y(p.y) - s / 2, s, s); }
+      ctx.fill();
     }
     ctx.restore();
   }
@@ -278,7 +293,9 @@ RG.fx = (() => {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    for (const t of texts) {
+    const from = lite ? Math.max(0, texts.length - 24) : 0; // 적이 아주 많으면 최근 글자만
+    for (let i = from; i < texts.length; i++) {
+      const t = texts[i];
       const a = Math.min(1, t.life / t.max * 2);
       ctx.globalAlpha = a;
       const fs = Math.round(Math.max(11, T * (t.big ? 0.42 : 0.3)));
@@ -294,5 +311,5 @@ RG.fx = (() => {
 
   function clear() { parts.length = 0; rings.length = 0; bolts.length = 0; texts.length = 0; areas.length = 0; shake = 0; }
 
-  return { onEvents, update, draw, drawUnder, drawTexts, shakeOffset, clear, settings, burst, ring, text, colorOf, lightOf };
+  return { onEvents, update, draw, drawUnder, drawTexts, shakeOffset, clear, settings, burst, ring, text, colorOf, lightOf, setLite };
 })();
