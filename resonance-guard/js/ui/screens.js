@@ -101,7 +101,7 @@
     const free = P().starsFree();
     const enemiesSeen = (P().get().seen.enemies || []).length;
     const enemiesAll = Object.keys(D().enemies).length;
-    const lastHero = heroes[heroes.length - 1] || D().heroOrder[0];
+    const lastHero = heroes.includes(P().get().lastHero) ? P().get().lastHero : heroes[heroes.length - 1] || D().heroOrder[0]; // 다음 출정 대표의 얼굴
     const tile = (cls, tone, medal, label, sub, badge, onclick) => el('button', { class: `btn tm-tile ${cls}`, style: `--tc:${tone}`, onclick }, [
       el('span', { class: 'tm-medal' }, [medal]),
       el('b', { class: 'tm-label', text: label }),
@@ -110,7 +110,7 @@
     ]);
     const tiles = [
       tile(`btn-gacha tm-gacha ${canPull() ? 'ready' : ''}`, '#b07cff', UI.icon('crystal', 'tm-ico'), '탑 뽑기', `공명석 ${g.crystals} · 탑 ${owned}/${D().towerOrder.length}`, nPull >= 10 ? '10회 가능' : nPull ? `${nPull}회 가능` : '', go(() => UI.show('gacha', { back: { screen: 'title' } }))),
-      tile('tm-heroes', '#ff7a6a', RG.art.portrait ? UI.portrait(lastHero, 'normal', 'tm-portrait') : UI.icon('hero', 'tm-ico'), '수호대', `영웅 ${heroes.length}/${D().heroOrder.length}`, '', go(() => UI.show('heroes', {}))),
+      tile('tm-heroes', '#ff7a6a', RG.art.portrait ? UI.portrait(lastHero, 'normal', 'tm-portrait') : UI.icon('hero', 'tm-ico'), '수호대', `영웅 ${heroes.length}/${D().heroOrder.length}`, '', go(() => UI.show('heroes', { back: { screen: 'title' } }))),
       tile('tm-tree', '#7ad46a', UI.icon('tree', 'tm-ico'), '기술 나무', free > 0 ? `쓸 수 있는 별 ★${free}` : `모은 별 ★${starsNow}`, free > 0 ? `★${free}` : '', go(() => UI.show('tree', {}))),
       tile('tm-codex', '#f2b24a', UI.icon('book', 'tm-ico'), '도감', `만난 적 ${enemiesSeen}/${enemiesAll}`, '', go(() => UI.show('codex', {}))),
     ];

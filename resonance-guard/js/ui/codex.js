@@ -135,42 +135,194 @@
    * 수호대
    * ===================================================== */
   let heroSel = 'kara';
+  let heroBack = null; // 뒤로 갈 곳 (로비에서 왔으면 로비)
+  /*
+   * 수호대 (2026-11-10 개편): 예전엔 작은 초상화 목록 + 글자 줄이 전부였음.
+   * 영웅 고르기 줄(원소 색 테두리, 잠긴 영웅은 실루엣과 합류 맵) + 영웅 원소 색으로 꾸민 무대
+   * (큰 초상화·숨 쉬는 전신 그림·누르면 공격 자세와 말풍선) + 능력치 막대 + 기술·패시브 카드 + 다음 출정 대표 정하기.
+   */
   UI.register('heroes', {
     enter(sec, data) {
-      if (data.hero) heroSel = data.hero;
+      if (data.hero && D().heroes[data.hero]) heroSel = data.hero;
+      if (data.back) heroBack = data.back;
+      else if (!data.hero) heroBack = null;
       sec.innerHTML = '';
       const unlocked = P().heroesFor(P().frontier());
-      const list = el('div', { class: 'hero-list' });
+      const lead = unlocked.includes(P().get().lastHero) ? P().get().lastHero : unlocked[0];
+      const back = heroBack && heroBack.screen ? () => UI.show(heroBack.screen, heroBack.data || {}) : null;
+      const bar = topBar('수호대', back);
+      bar.appendChild(el('span', { class: 'hx-count' }, [UI.icon('hero', 'tiny'), `영웅 ${unlocked.length} / ${D().heroOrder.length}`]));
+      const roster = el('nav', { class: 'hx-roster', 'aria-label': '영웅 고르기' });
       for (const h of D().heroOrder) {
+        const hd = D().heroes[h];
         const open = unlocked.includes(h);
-        list.appendChild(el('button', { class: `hl-item ${heroSel === h ? 'on' : ''} ${open ? '' : 'locked'}`, onclick: () => { if (open) { heroSel = h; UI.sfx('click'); UI.show('heroes', {}); } } }, [
-          open ? UI.portrait(h, 'normal', 'hl-portrait') : el('span', { class: 'hp-q', text: '?' }),
-          el('b', { text: open ? D().heroes[h].name : '???' }),
+        roster.appendChild(el('button', {
+          class: `hx-pick ${heroSel === h ? 'on' : ''} ${open ? '' : 'locked'}`,
+          style: `--hc:${hd.color};--ec:${D().elements[hd.element].color}`,
+          'aria-pressed': heroSel === h ? 'true' : 'false',
+          title: open ? `${hd.name} · ${hd.title}` : `${hd.unlock}에서 합류`,
+          onclick: () => { if (heroSel !== h) { heroSel = h; UI.sfx('click'); UI.show('heroes', { hero: h }); } },
+        }, [
+          el('span', { class: 'hx-pick-face' }, open
+            ? [UI.portrait(h, 'normal', 'hx-pick-img')]
+            : [RG.art.hero ? UI.svgImg(RG.art.hero(h, 'idle0'), 'hx-pick-shadow', '') : null, UI.icon('lock', 'hx-lock')]), // 잠긴 영웅: 배경 없는 전신 실루엣
+          el('b', { text: open ? hd.name : hd.unlock }),
+          open && h === lead ? el('i', { class: 'hx-lead-dot', title: '다음 출정 대표' }, [UI.icon('star', 'tiny')]) : null,
         ]));
       }
-      const hd = D().heroes[heroSel];
       const open = unlocked.includes(heroSel);
-      const detail = el('div', { class: 'hero-detail' });
-      if (open) {
-        const faces = el('div', { class: 'hd-faces' }, ['normal', 'happy', 'worried'].map((m) => UI.portrait(heroSel, m, 'hd-face')));
-        detail.append(
-          faces,
-          el('h3', {}, [hd.name, el('small', { text: ` · ${hd.title}` })]),
-          UI.elementBadge(hd.element),
-          el('p', { text: hd.bio }),
-          el('div', { class: 'stat-list' }, [
-            row('hp', '체력', String(hd.hp)), row('damage', '공격', `${hd.damage} / ${hd.interval}초`), row('range', '사거리', hd.melee ? '근접' : `${hd.range}칸`),
-            row('hero', '붙잡기', hd.block ? `${hd.block}명` : '없음'), row('speed', '이동', `${hd.speed}칸/초`), row('target', '대상', hd.targets === 'both' ? '지상·공중' : '지상'),
-          ]),
-          el('div', { class: 'skill-box' }, [el('b', { text: `기술 · ${hd.skill.name}` }), el('span', { text: hd.skill.desc }), el('small', { class: 'dim', text: `재사용 ${hd.skill.cooldown}초` })]),
-          el('div', { class: 'skill-box' }, [el('b', { text: `패시브 · ${hd.passive.name}` }), el('span', { text: hd.passive.desc })]),
-          el('div', { class: 'quotes' }, [...hd.lines.select, ...hd.lines.win].map((q) => el('q', { text: q }))),
-        );
-      } else detail.appendChild(el('p', { class: 'dim', text: `${hd.unlock}에서 만날 수 있습니다.` }));
-      sec.append(topBar('수호대'), el('div', { class: 'heroes-body' }, [list, detail]));
+      const main = el('div', { class: 'hx-main' }, [heroStage(heroSel, open, heroSel === lead), heroInfo(heroSel, open)]);
+      sec.append(bar, el('div', { class: 'hx-body' }, [roster, main]));
+      // 고른 영웅이 고르기 줄 안에 보이게
+      requestAnimationFrame(() => { const on = roster.querySelector('.hx-pick.on'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'center' }); });
     },
   });
-  function row(ic, name, val) { return el('div', { class: 'stat-row' }, [UI.icon(ic, 'tiny'), el('span', { text: name }), el('b', { text: val })]); }
+
+  /** 무대: 원소 색 배경 + 큰 초상화 + 전신 그림(숨쉬기) + 이름판 + 말풍선 */
+  function heroStage(h, open, isLead) {
+    const hd = D().heroes[h];
+    const ec = D().elements[hd.element].color;
+    const stage = el('div', { class: `hx-stage ${open ? '' : 'locked'}`, style: `--hc:${hd.color};--ec:${ec}` });
+    const portrait = UI.portrait(h, 'normal', 'hx-portrait');
+    const pose = (p) => (RG.art.hero ? UI.svgImg(RG.art.hero(h, p), `hx-body-img hx-${p}`, '') : null);
+    const figure = el('div', { class: 'hx-figure' }, [pose('idle0'), pose('idle1'), pose('attack')]);
+    const lines = hd.lines.select.concat(hd.lines.win);
+    let li = 0;
+    const bubble = el('div', { class: 'hx-bubble', text: open ? lines[0] : '' });
+    const art = el('div', { class: 'hx-art' }, [
+      el('div', { class: 'hx-rays' }),
+      RG.art.elementGem ? UI.svgImg(RG.art.elementGem(hd.element), 'hx-gem', '') : null,
+      open ? el('div', { class: 'hx-portrait-ring' }, [portrait]) : el('div', { class: 'hx-mystery', text: '?' }),
+      el('div', { class: 'hx-pedestal' }),
+      figure,
+      open ? bubble : null,
+    ]);
+    if (open) {
+      // 무대를 누르면: 공격 자세 + 기쁜 얼굴 + 다음 대사
+      let tm = 0;
+      const urlN = portrait.src;
+      let urlH = null;
+      art.addEventListener('click', () => {
+        li = (li + 1) % lines.length;
+        bubble.textContent = lines[li];
+        bubble.classList.remove('pop'); void bubble.offsetWidth; bubble.classList.add('pop');
+        figure.classList.add('strike');
+        if (!urlH) urlH = RG.art.sprites.dataUrl(RG.art.portrait(h, 'happy'));
+        portrait.src = urlH;
+        UI.sfx('heroAttack', { vol: 0.4 });
+        clearTimeout(tm);
+        tm = setTimeout(() => { figure.classList.remove('strike'); portrait.src = urlN; }, 700);
+      });
+      art.setAttribute('role', 'button');
+      art.setAttribute('tabindex', '0');
+      art.setAttribute('aria-label', `${hd.name} — 눌러서 대사 듣기`);
+      art.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); art.click(); } });
+    }
+    const chips = open ? roleChips(hd) : [];
+    const plate = el('div', { class: 'hx-plate' }, [
+      el('div', { class: 'hx-name' }, [el('h3', { text: open ? hd.name : '???' }), el('span', { class: 'hx-title', text: hd.title })]),
+      el('div', { class: 'hx-tags' }, [UI.elementBadge(hd.element), ...chips.map((c) => el('span', { class: 'hx-chip', text: c }))]),
+      open
+        ? el('button', {
+          class: `btn hx-lead ${isLead ? 'is-lead' : 'btn-primary'}`,
+          disabled: isLead ? true : null,
+          onclick: () => { P().get().lastHero = h; P().save(); UI.sfx('upgrade'); UI.toast(`${hd.name}, 다음 출정에 함께합니다`, 'good'); UI.show('heroes', { hero: h }); },
+        }, [UI.icon('star', 'tiny'), isLead ? '다음 출정 대표' : '다음 출정에 데려가기'])
+        : el('div', { class: 'hx-unlock' }, [UI.icon('lock', 'tiny'), el('span', {}, [el('b', { text: hd.unlock }), ` ${(D().maps.find((m) => m.id === hd.unlock) || {}).name || ''}에서 합류합니다`])]),
+    ]);
+    stage.append(art, plate);
+    return stage;
+  }
+
+  /** 영웅 특징 몇 개 (근접·붙잡기·공중 등) */
+  function roleChips(hd) {
+    const out = [hd.melee ? '근접' : `원거리 ${hd.range}칸`];
+    out.push(hd.block ? `붙잡기 ${hd.block}명` : '붙잡지 않음');
+    out.push(hd.targets === 'both' ? '공중도 공격' : '지상만 공격');
+    if (hd.splash) out.push('주변까지 타격');
+    if (hd.chain) out.push(`연쇄 ${hd.chain.count}번`);
+    if (hd.crit) out.push(`치명타 ${Math.round(hd.crit.chance * 100)}%`);
+    return out;
+  }
+
+  /** 오른쪽: 소개 · 능력치 막대 · 기술 · 패시브 · 대사 */
+  function heroInfo(h, open) {
+    const hd = D().heroes[h];
+    const info = el('div', { class: 'hx-info', style: `--ec:${D().elements[hd.element].color}` });
+    if (!open) {
+      info.append(
+        el('p', { class: 'hx-bio dim', text: '아직 만나지 못한 수호자입니다. 모험을 이어 가면 합류합니다.' }),
+        heroStats(hd, false),
+        el('div', { class: 'hx-card hx-skill locked' }, [el('span', { class: 'hx-card-ico' }, [UI.icon('lock', 'hx-ci')]), el('div', { class: 'hx-card-body' }, [el('span', { class: 'hx-kind', text: '기술' }), el('b', { text: '???' }), el('span', { class: 'dim', text: '합류하면 볼 수 있습니다.' })])]),
+      );
+      return info;
+    }
+    const ec = D().elements[hd.element].color;
+    const card = (kind, icon, name, desc, chips, cls) => el('div', { class: `hx-card ${cls}`, style: `--ec:${ec}` }, [
+      el('span', { class: 'hx-card-ico' }, [UI.icon(icon, 'hx-ci')]),
+      el('div', { class: 'hx-card-body' }, [
+        el('span', { class: 'hx-kind', text: kind }),
+        el('b', { text: name }),
+        el('span', { class: 'hx-desc', text: desc }),
+        chips.length ? el('div', { class: 'hx-mini' }, chips.map((c) => el('span', { text: c }))) : null,
+      ]),
+    ]);
+    const quotes = el('div', { class: 'hx-quotes' }, hd.lines.select.slice(0, 2).concat(hd.lines.win.slice(0, 1)).map((q) => el('q', { text: q })));
+    info.append(
+      el('p', { class: 'hx-bio', text: hd.bio }),
+      heroStats(hd, true),
+      card('기술', 'skill', hd.skill.name, hd.skill.desc, skillChips(hd.skill), 'hx-skill'),
+      card('패시브', hd.element, hd.passive.name, hd.passive.desc, passiveChips(hd.passive), 'hx-passive'),
+      el('div', { class: 'hx-sec' }, [el('span', { class: 'hx-kind', text: '대사' }), quotes]),
+    );
+    return info;
+  }
+
+  /** 능력치 막대: 영웅 여섯 중 가장 높은 값을 가득으로 */
+  function heroStats(hd, open) {
+    const all = D().heroOrder.map((k) => D().heroes[k]);
+    const max = (f) => Math.max(...all.map(f));
+    const dps = (x) => x.damage / x.interval;
+    const rows = [
+      ['hp', '체력', hd.hp / max((x) => x.hp), String(hd.hp)],
+      ['damage', '공격', dps(hd) / max(dps), `${hd.damage} / ${hd.interval}초`],
+      ['range', '사거리', (hd.melee ? 0.75 : hd.range) / max((x) => (x.melee ? 0.75 : x.range)), hd.melee ? '근접' : `${hd.range}칸`],
+      ['speed', '이동', hd.speed / max((x) => x.speed), `${hd.speed}칸/초`],
+      ['armor', '방어', (hd.armor || 0) / max((x) => x.armor || 0), `${Math.round((hd.armor || 0) * 100)}%`],
+      ['hero', '붙잡기', (hd.block || 0) / max((x) => x.block || 0), hd.block ? `${hd.block}명` : '없음'],
+    ];
+    return el('div', { class: 'hx-stats' }, rows.map(([ic, name, k, val]) => el('div', { class: 'hx-stat' }, [
+      UI.icon(ic, 'hx-si'),
+      el('span', { class: 'hx-sn', text: name }),
+      el('span', { class: 'hx-bar' }, [el('i', { style: `width:${open ? Math.max(4, Math.round(k * 100)) : 0}%` })]),
+      el('b', { text: open ? val : '?' }),
+    ])));
+  }
+  function skillChips(s) {
+    const c = [`재사용 ${s.cooldown}초`];
+    if (s.delay) c.push(`${s.delay}초 뒤`);
+    if (s.radius) c.push(`반경 ${s.radius}칸`);
+    if (s.damage) c.push(`피해 ${s.damage}`);
+    if (s.heal) c.push(`회복 ${s.heal}`);
+    if (s.burn) c.push(`화상 ${s.burn.dur}초`);
+    if (s.freeze) c.push(`빙결 ${s.freeze}초`);
+    if (s.blind) c.push(`실명 ${s.blind}초`);
+    if (s.duration) c.push(`${s.duration}초 지속`);
+    if (s.wallHp) c.push(`벽 체력 ${s.wallHp}`);
+    if (s.execute) c.push(`체력 ${Math.round(s.execute * 100)}% 이하 처치`);
+    return c;
+  }
+  function passiveChips(p) {
+    const c = [];
+    if (p.threshold) c.push(`체력 ${Math.round(p.threshold * 100)}% 이하`);
+    if (p.reduce) c.push(`받는 피해 −${Math.round(p.reduce * 100)}%`);
+    if (p.detect) c.push(`탐지 ${p.detect}칸`);
+    if (p.regen) c.push(`초당 회복 ${Math.round(p.regen * 100)}%`);
+    if (p.critChance) c.push(`치명타 ${Math.round(p.critChance * 100)}% · ${p.critMult}배`);
+    if (p.every) c.push(`${p.every}번에 1번`);
+    if (p.bountyPct) c.push(`현상금 +${Math.round(p.bountyPct * 100)}%`);
+    return c;
+  }
 
   /* =====================================================
    * 기술 나무
