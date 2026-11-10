@@ -1569,8 +1569,8 @@
       o += radOrb(c, 50, 26, 10.5, pose, '#ffffff');
       o += rg2(-tilt);
       const spread = by(pose, 1, 0.8, 1.35);
-      const cry = (x, y, s0) => crystal(c, 50 + (x - 50) * spread, 30 + (y - 30) * spread, 7 * s0, 12 * s0, '#fffbe6', 2);
-      o += cry(18, 52, 1) + cry(82, 48, 1) + cry(26, 8, 0.86) + cry(76, 8, 0.86);
+      const cry = (x, y, s0) => crystal(c, 50 + (x - 50) * spread, Math.max(9, 30 + (y - 30) * spread), 7 * s0, 12 * s0, '#fffbe6', 2);
+      o += cry(18, 52, 1) + cry(82, 48, 1) + cry(26, 10, 0.86) + cry(76, 10, 0.86);
       return o;
     },
   };
@@ -1604,8 +1604,8 @@
     const E = c.E;
     if (broken) {
       let s = '';
-      for (let i = 0; i < 6; i++) { const a = i * 60 + 20; const p = pol([x, y], r * 1.25, a); s += c.p(`M${pp(pol(p, 2.6, a + 90))}L${pp(pol(p, 2.2, a))}L${pp(pol(p, 2.6, a - 90))}Z`, E.light, 1.2); }
-      return s + c.ci(x, y, r * 1.35, 'none', 0, ` stroke="${E.color}" stroke-width="${c.sw(1.6)}" stroke-dasharray="${c.sw(3)} ${c.sw(4)}" opacity="0.8"`);
+      for (let i = 0; i < 6; i++) { const a = i * 60 + 20; const p = pol([x, y], r * 1.1, a); s += c.p(`M${pp(pol(p, 2.6, a + 90))}L${pp(pol(p, 2.2, a))}L${pp(pol(p, 2.6, a - 90))}Z`, E.light, 1.2); }
+      return s + c.ci(x, y, r * 1.18, 'none', 0, ` stroke="${E.color}" stroke-width="${c.sw(1.6)}" stroke-dasharray="${c.sw(3)} ${c.sw(4)}" opacity="0.8"`);
     }
     let ticks = '';
     for (let i = 0; i < 8; i++) { const a = i * 45; ticks += `M${pp(pol([x, y], r * 0.86, a))}L${pp(pol([x, y], r * 1.12, a))}`; }
@@ -1646,16 +1646,16 @@
   function eyeRig(c, x, y, w, pose, o = {}) {
     const S = eyeState(pose);
     let s = '';
-    if (pose === 'aim') s += o.sigil ? o.sigil(x, y, w * 0.95) : sigil(c, x, y, w * 0.95, false);
+    if (pose === 'aim') s += o.sigil ? o.sigil(x, y, w * 0.82) : sigil(c, x, y, w * 0.82, false);
     s += watchEye(c, x, y, w, S.open, S.look, S.flash, o);
-    if (pose === 'fire') s += sigil(c, x, y, w * 0.95, true) + curseBolt(c, x + w * 0.2, y - w * 0.15, o.boltK || 1.35) + c.ln(`M${f(x - w * 0.8)} ${f(y)}h-4M${f(x + w * 0.8)} ${f(y + 2)}h4M${f(x)} ${f(y + w * 0.6)}v4`, '#fff', 1.4, 0.8);
+    if (pose === 'fire') s += sigil(c, x, y, w * 0.82, true) + curseBolt(c, x + w * 0.2, y - w * 0.15, o.boltK || 1.35) + c.ln(`M${f(x - w * 0.8)} ${f(y)}h-4M${f(x + w * 0.8)} ${f(y + 2)}h4M${f(x)} ${f(y + w * 0.6)}v4`, '#fff', 1.4, 0.8);
     return s;
   }
   /** 떠 있는 룬 돌(오각) */
   const runeStone = (c, x, y, i, lit) => c.p(RG.art._h.polyPath(x, y, 6, 5, -80), c.vg('#4a4054', 0.25, -0.2), 2.2) + hexRune(c, x, y, 0.5, i, lit);
 
   T.hex_spire = {
-    muzzle: [[50, 30], [50, 22], [50, 16], [50, 26], [50, 30]],
+    muzzle: [[50, 30], [50, 23], [50, 21], [50, 30], [50, 29]],
     draw(c, v, pose = 'idle') {
       const h = c.h;
       const E = c.E;
@@ -1677,7 +1677,7 @@
         o += jagSpireB(c, L3 ? 34 : 38, 104, L3 ? 36 : 34, DST2, 144);
         if (L3) o += c.ln('M37 88Q50 93 63 88M40 66Q50 70 60 66', OL, 4.6) + c.ln('M37 88Q50 93 63 88M40 66Q50 70 60 66', '#a89cc0', 2.4) + rivets(c, [[42, 89.6], [50, 91], [58, 89.6]], '#e0d8f0', 0.7);
         o += hexRune(c, 46, 78, 1, 0, lit) + hexRune(c, 54, 56, 0.85, 1, lit);
-        const ey = L3 ? 16 : 22;
+        const ey = L3 ? 21 : 23;
         o += eyeRig(c, 50, ey, L3 ? 26 : 22, pose);
         if (L3) {
           const rs = by(pose, [[20, 36], [80, 32]], [[22, 26], [78, 22]], [[13, 30], [87, 26]]);
@@ -1689,7 +1689,7 @@
       if (v === 'A') {
         // 파멸 첨탑: 뿔 둘, 큰 눈, 해골 룬 문양
         let o = base(c, 4, { stone: '#4a3f58', trim: E.color, seed: 145 });
-        o += aura(c, 50, 26, 34, 28, E.color, 0.35 + lit * 0.12);
+        o += aura(c, 50, 30, 34, 28, E.color, 0.35 + lit * 0.12);
         o += ao(c, 50, 99, 24, 6, 0.55);
         const horn = (sgn) => c.p(sgn < 0 ? 'M40 50C26 46 12 34 10 6C18 24 28 32 42 36Z' : 'M60 50C74 46 88 34 90 6C82 24 72 32 58 36Z', c.vg('#e8dcc8', 0.2, -0.35), 3) + c.ln(sgn < 0 ? 'M16 22Q20 30 26 34M13 14Q16 20 20 24' : 'M84 22Q80 30 74 34M87 14Q84 20 80 24', '#a8987e', 1.4);
         const hr = by(pose, 0, -5, 3);
@@ -1697,7 +1697,7 @@
         o += jagSpireB(c, 32, 99, 40, DST2, 146);
         o += hexRune(c, 44, 80, 1.1, 0, lit) + hexRune(c, 56, 62, 1, 2, lit);
         const skull = (x, y, r) => sigil(c, x, y, r, false) + c.p(`M${f(x - 4)} ${f(y - r * 0.55)}Q${f(x)} ${f(y - r * 0.9)} ${f(x + 4)} ${f(y - r * 0.55)}`, 'none', 0, ` stroke="${E.light}" stroke-width="${c.sw(1.4)}"`);
-        o += eyeRig(c, 50, 26, 30, pose, { sigil: skull, boltK: 1.7 });
+        o += eyeRig(c, 50, 30, 30, pose, { sigil: skull, boltK: 1.3 });
         return o;
       }
       // 'B' 역병 첨탑: 부푼 역병 주머니 속 눈, 흘러내리는 독, 뱉어 내는 독 방울

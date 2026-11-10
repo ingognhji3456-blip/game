@@ -11,7 +11,7 @@
  *   땅에 떨어지는 그림자는 그리지 않음(렌더러 몫). 몸 아래쪽 형태 그림자·발끝 접지 그늘만 그림.
  * ========================================================= */
 (() => {
-  const { H, OL, sh, GREY, GREY_L, MISTC, HALO, GREEN, ICE, ICE_L, make, g } = RG.art._en;
+  const { H, OL, sh, GREY, GREY_L, MISTC, GREEN, ICE, ICE_L, make, g } = RG.art._en;
   const D = RG.art._en.D;
   const MOTION = RG.art._en.MOTION || (RG.art._en.MOTION = {});
 
@@ -158,13 +158,6 @@
       (light ? `<ellipse cx="${n(x - w * 0.35)}" cy="${n(y - h * 0.55)}" rx="${n(w * 0.55)}" ry="${n(h * 0.35)}" fill="#fff" opacity="${light}" ${c.soft()}/>` : '') +
       '</g>';
   }
-  /** 모양 d(변환 t) 안쪽에만 그리기 */
-  function inside(d, t, body) {
-    const id = H.uid('ec');
-    return `<clipPath id="${id}"><path d="${d}"${t ? ` transform="${t}"` : ''}/></clipPath><g clip-path="url(#${id})" stroke="none">${body}</g>`;
-  }
-  /** 흐린 그늘 덩어리(외곽선 없음) */
-  const shadeE = (c, x, y, rx, ry, op = 0.25, col = OL) => `<ellipse cx="${n(x)}" cy="${n(y)}" rx="${n(rx)}" ry="${n(ry)}" fill="${col}" opacity="${op}" stroke="none" ${c.soft()}/>`;
   /** 빛나는 눈이 꺼져 가는 모습(죽음): 감긴 눈 */
   const deadEye = (c, x, y, r) => c.L(`M${n(x - r)} ${n(y)}Q${n(x)} ${n(y + r * 0.9)} ${n(x + r)} ${n(y)}`, OL, 1.8);
   /** 맞는 순간 번쩍(작은 별) */
@@ -185,8 +178,6 @@
     const m = (a0 + a1) / 2;
     return `<path d="M${p(a0, r)}A${r} ${r} 0 ${big} ${sw} ${p(a1, r)}Q${p(m, r - w * 1.4)} ${p(a0, r)}Z" fill="${col}" opacity="${op}" stroke="none"/>`;
   }
-  /** 목표점: 배열이면 세계 좌표, {L:[x,y]}이면 몸 좌표계 F의 점 */
-  const tgt = (q, F) => (Array.isArray(q) ? q : F(q.L));
   /** 쥔 주먹(장갑·건틀릿): 손 p, 아래팔 방향 a(도). 자루 위에 그려서 손가락이 감싼 모양 */
   function fist(c, p, a, r, fill, knuckle = OL) {
     const k1 = pol(p, r * 0.55, a + 70);
@@ -924,7 +915,6 @@
     };
 
     let s = '';
-    if (!p.drop) s += '';
     s += arm([47, 39], p.fh, sh(rust, -0.28), false);
     s += leg([47, 59], p.fl, sh(rustD, -0.05)) + leg([53, 59], p.nl, rust);
     // 몸통: 가슴판·허리 갑옷 미늘·녹 구멍(속이 빔)

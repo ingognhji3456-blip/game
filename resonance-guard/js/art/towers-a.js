@@ -795,7 +795,7 @@
         o += ringWall(c, 50, 86, 104, 38, 5, st, 'back');
         /* 안쪽: 포탄 더미 + 포 + 받침 */
         o += shells(c, 76, 84, 0.85, L3 ? '#5a4040' : '#4a4450');
-        const g = mortarGun(c, 58, 86 + rec, L3 ? 40 : 38, L3 ? 14 : 13.5, ang, L3 ? { bands: [0.3, 0.62], trim: M.gold, dragon: '#b8402a', hot: pose !== 'idle' } : { hot: pose !== 'idle' });
+        const g = mortarGun(c, 58, 86 + rec, L3 ? 40 : 38, L3 ? 14 : 13.5, L3 && pose === 'idle' ? 46 : ang, L3 ? { bands: [0.3, 0.62], trim: M.gold, dragon: '#b8402a', hot: pose !== 'idle' } : { hot: pose !== 'idle' });
         o += g.s;
         o += c.p('M47 98L50 84Q58 78 66 84L69 98Z', c.vg(L3 ? h.shade(M.wood, -0.1) : M.wood, 0.25, -0.25), 2.6) + c.ln('M51 90H65', h.shade(M.wood, -0.4), 1.5);
         o += c.ci(58, 86 + rec, 3.2, c.sg(L3 ? M.gold : M.ironL), 2) + c.ci(58, 86 + rec, 1.1, OLC, 0);
@@ -1073,7 +1073,7 @@
     s += c.p(`M${f(x - w / 2 + 1)} ${f(yt + 3)}H${f(x + w / 2 - 1)}V${f(yt + 7)}H${f(x - w / 2 + 1)}Z`, '#1c1426', 0, ' opacity="0.3"');
     const big = pose === 'fire';
     s += flame(c, x, yt - 0.5, w * (big ? 1 : 0.75), w * (big ? 1.5 : 1));
-    s += OP(c.ci(x - 2, yt - w * 1.6, w * 0.32, '#8a8088', 0) + c.ci(x + 3, yt - w * 2.1, w * 0.4, '#8a8088', 0), 0.45);
+    s += OP(c.ci(x - 2, yt - w * 1.15, w * 0.28, '#8a8088', 0) + c.ci(x + 3, yt - w * 1.5, w * 0.34, '#8a8088', 0), 0.45);
     if (pose !== 'idle') s += embers(c, [[x + w * 0.7, yt - w * 1.2, 2], [x - w * 0.6, yt - w * 1.5, 1.6], [x + w * 0.2, yt - w * 2, 1.5]]);
     return s;
   }
