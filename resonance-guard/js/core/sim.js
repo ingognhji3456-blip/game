@@ -685,39 +685,63 @@ RG.sim = (() => {
       return !e.dead && !e.flying && !e.burrowed && !ed.traits.unstoppable && !(isHardCC(e) && e.ccKind === 'lift');
     }
 
+    // 붙잡기 계산에 매 틱 쓰는 배열은 다시 씀 (적 수백 × 병사 수십을 매 틱 훑으므로 새 배열을 만들면 쓰레기가 많음)
+    const freeEnemies = [];
+    const candE = [];
+    const candD = [];
+    const blockRank = (u) => (u.kind === 'hero' ? 0 : u.kind === 'wall' ? 1 : 2);
     function resolveBlocking() {
-      // 정리
+      // 정리 (제자리에서 걸러 냄 — 순서·부작용은 예전 filter와 같음)
       for (const u of st.units) {
-        if (!u.blocking.length) continue;
-        u.blocking = u.blocking.filter((id) => {
+        const bl = u.blocking;
+        if (!bl.length) continue;
+        let j = 0;
+        for (let i = 0; i < bl.length; i++) {
+          const id = bl[i];
           const e = enemyById(id);
           const ok = e && !e.dead && e.blockedBy === u.id && canBeBlocked(e) && d2(e.x, e.y, u.x, u.y) < 2.6;
           if (!ok && e && e.blockedBy === u.id) e.blockedBy = null;
-          return ok;
-        });
+          if (ok) bl[j++] = id;
+        }
+        bl.length = j;
       }
       // 배정: 영웅 → 벽 → 병사
       const building = new Set(st.towers.filter((t) => t.building).map((t) => t.id)); // 짓는 중인 병영의 병사는 아직 싸우지 않음
       const blockers = st.units.filter((u) => !u.dead && u.block > 0 && !(u.kind === 'hero' && u.path.length) && !(u.kind === 'soldier' && building.has(u.owner)));
-      blockers.sort((a, b) => (a.kind === 'hero' ? 0 : a.kind === 'wall' ? 1 : 2) - (b.kind === 'hero' ? 0 : b.kind === 'wall' ? 1 : 2));
+      if (!blockers.length) return;
+      blockers.sort((a, b) => blockRank(a) - blockRank(b));
+      // 붙잡을 수 있는 적은 이 틱 동안 바뀌지 않으므로 한 번만 골라 둠(순서 그대로). 배정되면 blockedBy로 건너뜀 → 예전과 같은 후보
+      freeEnemies.length = 0;
+      for (let i = 0; i < st.enemies.length; i++) { const e = st.enemies[i]; if (!e.blockedBy && canBeBlocked(e)) freeEnemies.push(e); }
       for (const u of blockers) {
         if (u.blocking.length >= u.block) continue;
         const ax = u.kind === 'soldier' ? u.homeX : u.x;
         const ay = u.kind === 'soldier' ? u.homeY : u.y;
         const R = u.kind === 'soldier' ? (u.taunt || 0.9) : u.kind === 'wall' ? 0.75 : 0.95;
-        const cands = [];
-        for (const e of st.enemies) {
-          if (e.blockedBy || !canBeBlocked(e)) continue;
+        const R2 = R * R;
+        candE.length = 0; candD.length = 0;
+        for (let i = 0; i < freeEnemies.length; i++) {
+          const e = freeEnemies[i];
+          if (e.blockedBy) continue;
+          const dx = e.x - ax;
+          if (dx > R + 1e-6 || dx < -R - 1e-6) continue; // 확실히 먼 적만 (경계는 아래 정확한 계산에 맡김)
           const dd = d2(e.x, e.y, ax, ay);
-          if (dd <= R * R) cands.push([dd, e]);
+          if (dd <= R2) {
+            // 가까운 순(같으면 id 작은 순)으로 끼워 넣기 — 후보는 보통 몇 마리뿐
+            let k = candE.length;
+            candE.push(e); candD.push(dd);
+            while (k > 0 && (candD[k - 1] > dd || (candD[k - 1] === dd && candE[k - 1].id > e.id))) { candE[k] = candE[k - 1]; candD[k] = candD[k - 1]; k--; }
+            candE[k] = e; candD[k] = dd;
+          }
         }
-        cands.sort((a, b) => a[0] - b[0] || a[1].id - b[1].id);
-        for (const [, e] of cands) {
+        for (let i = 0; i < candE.length; i++) {
           if (u.blocking.length >= u.block) break;
+          const e = candE[i];
           e.blockedBy = u.id;
           u.blocking.push(e.id);
         }
       }
+      candE.length = 0; freeEnemies.length = 0;
     }
 
     /* =====================================================
@@ -733,7 +757,8 @@ RG.sim = (() => {
      * 사거리 안 표적 n개 (표적 방식에 따른 순서, 같으면 id가 작은 적).
      * n이 1이면(대부분의 탑) 한 번 훑으며 가장 좋은 적만 고름 — 배열·정렬 없이 (적이 수백일 때 매 틱 비용이 큼). 결과는 정렬과 같음.
      */
-    function towerTargets(t, n, range, opt = {}) {
+    const NO_OPT = Object.freeze({});
+    function towerTargets(t, n, range, opt = NO_OPT) {
       const c = t.calc;
       const r2 = range * range;
       const min2 = c.minRange ? c.minRange * c.minRange : 0;
@@ -1505,7 +1530,7 @@ RG.sim = (() => {
       st.time = st.tick * DT;
       const time = st.time;
 
-      for (const e of st.enemies) { e.px = e.x; e.py = e.y; }
+      for (let i = 0; i < st.enemies.length; i++) { const e = st.enemies[i]; e.px = e.x; e.py = e.y; }
       for (const u of st.units) { u.px = u.x; u.py = u.y; }
       for (const p of st.projectiles) { p.px = p.x; p.py = p.y; }
 
@@ -1536,190 +1561,53 @@ RG.sim = (() => {
       statsDirty = false;
       const silencers = [];
       const dampeners = [];
-      for (const e of st.enemies) {
+      const ens = st.enemies;
+      for (let i = 0; i < ens.length; i++) {
+        const e = ens[i];
         if (e.dead) continue;
         const tr = D().enemies[e.type].traits;
-        if (tr.silence) silencers.push([e, tr.silence.radius]);
-        if (tr.dampen) dampeners.push([e, tr.dampen.radius]);
+        if (tr.silence) silencers.push(e, tr.silence.radius);
+        if (tr.dampen) dampeners.push(e, tr.dampen.radius);
       }
       const freezeLinks = time < st.linksFrozenUntil;
       for (const t of st.towers) {
         if (t.building && time >= t.buildUntil) { t.building = false; changed = true; }
         let sil = false;
-        for (const [e, R] of silencers) if (d2(e.x, e.y, t.x, t.y) <= R * R) { sil = true; break; }
+        for (let i = 0; i < silencers.length; i += 2) { const e = silencers[i]; const R = silencers[i + 1]; if (d2(e.x, e.y, t.x, t.y) <= R * R) { sil = true; break; } }
         const dis = sil || time < t.disabledUntil;
         let dmp = freezeLinks;
-        if (!dmp) for (const [e, R] of dampeners) if (d2(e.x, e.y, t.x, t.y) <= R * R) { dmp = true; break; }
+        if (!dmp) for (let i = 0; i < dampeners.length; i += 2) { const e = dampeners[i]; const R = dampeners[i + 1]; if (d2(e.x, e.y, t.x, t.y) <= R * R) { dmp = true; break; } }
         if (dis !== t.disabled || dmp !== t.dampened) { t.disabled = dis; t.dampened = dmp; t.silenced = sil; changed = true; }
       }
       if (changed) RG.stats.computeAll(game);
 
       /* --- 탐지 --- */
       const detectors = [];
-      for (const t of st.towers) if (t.calc && t.calc.detect && !t.disabled && !t.building) detectors.push([t.x, t.y, t.calc.detect]);
-      if (st.hero && !st.hero.dead && D().heroes[st.hero.heroId].passive.detect) detectors.push([st.hero.x, st.hero.y, D().heroes[st.hero.heroId].passive.detect]);
-      for (const e of st.enemies) {
+      for (const t of st.towers) if (t.calc && t.calc.detect && !t.disabled && !t.building) detectors.push(t.x, t.y, t.calc.detect);
+      if (st.hero && !st.hero.dead && D().heroes[st.hero.heroId].passive.detect) detectors.push(st.hero.x, st.hero.y, D().heroes[st.hero.heroId].passive.detect);
+      for (let k = 0; k < ens.length; k++) {
+        const e = ens[k];
         if (!e.stealth) { e.revealed = true; continue; }
         let rev = time < e.st.blindUntil;
-        if (!rev) for (const [x, y, R] of detectors) if (d2(x, y, e.x, e.y) <= R * R) { rev = true; break; }
+        if (!rev) for (let i = 0; i < detectors.length; i += 3) { const R = detectors[i + 2]; if (d2(detectors[i], detectors[i + 1], e.x, e.y) <= R * R) { rev = true; break; } }
         e.revealed = rev;
       }
 
       /* --- 적 --- */
-      for (const e of st.enemies) {
-        if (e.dead) continue;
-        const ed = D().enemies[e.type];
-        const tr = ed.traits;
-        e.pushRes = Math.max(0, e.pushRes - rules.push.decay * DT);
-        const healBlocked = time < e.st.purifyUntil || time < e.st.haltUntil;
-        const healMul = time < e.st.stillUntil ? 0.5 : 1;
-        // 재생
-        if (tr.regen && !healBlocked && time - e.lastHurt >= rules.regenDelay && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * tr.regen * healMul * DT);
-        // 보호막 재생
-        if (tr.shield && !healBlocked && time - e.lastHurt >= tr.shield.delay && e.shield < e.maxShield) e.shield = Math.min(e.maxShield, e.shield + e.maxShield * tr.shield.rate * DT);
-        // 치유사
-        if (tr.healer && canAct(e) && !e.burrowed) {
-          e.healCd -= DT;
-          if (e.healCd <= 0) {
-            e.healCd = tr.healer.every;
-            let any = false;
-            for (const o3 of st.enemies) {
-              if (o3.dead || d2(o3.x, o3.y, e.x, e.y) > tr.healer.radius ** 2) continue;
-              if (time < o3.st.purifyUntil || time < o3.st.haltUntil) continue;
-              const m = time < o3.st.stillUntil ? 0.5 : 1;
-              const before = o3.hp;
-              o3.hp = Math.min(o3.maxHp, o3.hp + o3.maxHp * tr.healer.pct * m);
-              if (o3.hp > before) any = true;
-            }
-            e.castAnim = 0.45;
-            if (any) ev('enemyHeal', { x: e.x, y: e.y, radius: tr.healer.radius });
-          }
-        }
-        // 보호막 부여
-        if (tr.shielder && canAct(e) && !e.burrowed) {
-          e.shieldCd -= DT;
-          if (e.shieldCd <= 0) {
-            e.shieldCd = tr.shielder.every;
-            for (const o3 of st.enemies) {
-              if (o3.dead || o3 === e || d2(o3.x, o3.y, e.x, e.y) > tr.shielder.radius ** 2) continue;
-              if (time < o3.st.purifyUntil) continue;
-              const amt = o3.maxHp * tr.shielder.pct;
-              if (amt > o3.shield) { o3.shield = amt; o3.maxShield = Math.max(o3.maxShield, amt); }
-            }
-            e.castAnim = 0.45;
-            ev('enemyShield', { x: e.x, y: e.y, radius: tr.shielder.radius });
-          }
-        }
-        // 굴착
-        if (tr.burrow) {
-          e.burrowT += DT;
-          if (!e.burrowed && e.burrowT >= tr.burrow.every) { e.burrowed = true; e.burrowT = 0; releaseEnemy(e); ev('burrow', { enemyId: e.id, x: e.x, y: e.y }); } else if (e.burrowed && e.burrowT >= tr.burrow.dur) { e.burrowed = false; e.burrowT = 0; ev('unburrow', { enemyId: e.id, x: e.x, y: e.y }); }
-        }
-        // 보스
-        if (e.boss && RG.bosses) RG.bosses.update(game, e, api);
-        if (e.dead) continue;
-        // 이동
-        if (e.blockedBy || !canMove(e)) { updateProg(e); continue; }
-        const sp = enemySpeed(e) * DT;
-        e.walkT += sp;
-        moveGround(e, sp); // 비행 적도 길을 따라감(붙잡히지 않을 뿐)
-        if (!e.dead) updateProg(e);
-      }
+      // 구간마다 작은 함수로 (큰 함수 하나면 최적화가 자꾸 풀려 느린 길로 돌았음 — 결과는 같음)
+      for (let i = 0; i < st.enemies.length; i++) stepEnemy(st.enemies[i], time);
 
       /* --- 붙잡기 --- */
       resolveBlocking();
 
       /* --- 적의 공격 --- */
-      for (const e of st.enemies) {
-        // 그림용 타이머 (규칙에는 쓰지 않음)
-        if (e.attackAnim) e.attackAnim = Math.max(0, e.attackAnim - DT);
-        if (e.castAnim) e.castAnim = Math.max(0, e.castAnim - DT);
-        e.aiming = false;
-        if (e.dead || !canAct(e) || e.burrowed) continue;
-        const ed = D().enemies[e.type];
-        if (e.blockedBy && ed.melee) {
-          if (e.meleeCd <= 0.4) e.aiming = true; // 휘두르기 직전 (그림용)
-          e.meleeCd -= DT;
-          if (e.meleeCd <= 0) {
-            e.meleeCd = ed.melee.interval;
-            const u = unitById(e.blockedBy);
-            if (u && !u.dead) { hurtUnit(u, ed.melee.damage, e); e.attackAnim = 0.25; e.dir = u.x > e.x ? 1 : -1; }
-          }
-        }
-        if (ed.traits.ranged && time >= e.st.blindUntil) {
-          e.rangedCd -= DT;
-          // 던지기 직전 자세 (그림용): 곧 쏠 때 사거리 안에 상대가 있으면
-          if (e.rangedCd <= 0.45 && e.rangedCd > 0) {
-            const R2 = ed.traits.ranged.range ** 2;
-            for (const u of st.units) if (!u.dead && u.kind !== 'drone' && u.kind !== 'wall' && d2(u.x, u.y, e.x, e.y) <= R2) { e.aiming = true; break; }
-          }
-          if (e.rangedCd <= 0) {
-            const R = ed.traits.ranged.range;
-            let best = null;
-            let bd = R * R;
-            for (const u of st.units) {
-              if (u.dead || u.kind === 'drone' || u.kind === 'wall') continue;
-              const dd = d2(u.x, u.y, e.x, e.y);
-              if (dd <= bd) { bd = dd; best = u; }
-            }
-            if (best) {
-              e.rangedCd = ed.traits.ranged.interval;
-              e.attackAnim = 0.3; e.dir = best.x > e.x ? 1 : -1;
-              hurtUnit(best, ed.traits.ranged.damage, e);
-              ev('enemyShot', { enemyId: e.id, x: e.x, y: e.y, tx: best.x, ty: best.y });
-            } else e.rangedCd = 0.2;
-          }
-        }
-      }
+      for (let i = 0; i < st.enemies.length; i++) stepEnemyAttack(st.enemies[i], time);
 
       /* --- 유닛 --- */
       updateUnits(time);
 
       /* --- 탑 공격 --- */
-      for (const t of st.towers) {
-        t.anim = Math.max(0, t.anim - DT);
-        const c = t.calc;
-        if (!c || t.disabled || t.building) continue;
-        if (c.role === 'barracks') {
-          for (const id of t.soldiers) {
-            const s = unitById(id);
-            if (s && s.dead && !s.remove && time >= s.respawnAt) {
-              s.dead = false; s.hp = s.maxHp; s.x = t.x; s.y = t.y; s.px = s.x; s.py = s.y;
-              ev('unitSpawn', { unitId: s.id });
-            }
-          }
-          continue;
-        }
-        if (c.discharge) {
-          t.dischargeCd = (t.dischargeCd || 0) - DT;
-          if (t.dischargeCd <= 0) {
-            const list = enemiesInRadius(t.x, t.y, c.discharge.radius);
-            if (list.length) {
-              t.dischargeCd = c.discharge.every;
-              for (const e of list) damage(e, c.discharge.damage, 'storm', { tower: t, calc: c }, { secondary: true, area: true });
-              ev('pulse', { towerId: t.id, x: t.x, y: t.y, radius: c.discharge.radius, element: 'storm' });
-            }
-          }
-        }
-        if (c.kind === 'none') continue;
-        if (c.kind === 'beam') { updateTowerBeams(t); continue; }
-        if (c.cyclone) {
-          t.cycloneCd = (t.cycloneCd == null ? c.cyclone.every * 0.5 : t.cycloneCd) - DT;
-          if (t.cycloneCd <= 0) {
-            const tg = towerTargets(t, 1, c.range, {});
-            const g = tg.find((e) => !e.flying);
-            if (g) {
-              t.cycloneCd = c.cyclone.every;
-              for (const e of enemiesInRadius(g.x, g.y, c.cyclone.radius, 'ground')) { push(e, c.cyclone.dist); hardCC(e, 'lift', c.cyclone.lift); }
-              ev('cyclone', { towerId: t.id, x: g.x, y: g.y, radius: c.cyclone.radius });
-            }
-          }
-        }
-        t.cd -= DT;
-        if (t.cd <= 0) {
-          if (fireTower(t)) { t.cd += c.interval; t.anim = 0.25; } else t.cd = 0;
-        }
-      }
+      for (const t of st.towers) stepTower(t, time);
 
       /* --- 투사체 --- */
       updateProjectiles();
@@ -1728,8 +1616,10 @@ RG.sim = (() => {
       for (const z of st.zones) {
         if (time > z.until) continue;
         const filter = z.kind === 'void' ? null : 'ground';
-        for (const e of enemiesInRadius(z.x, z.y, z.radius, filter)) {
-          damage(e, z.dps * DT, z.element, z.src, { dot: true, area: true, quiet: true });
+        const list = enemiesInRadius(z.x, z.y, z.radius, filter);
+        for (let i = 0; i < list.length; i++) {
+          const e = list[i];
+          damage(e, z.dps * DT, z.element, z.src, ZONE_HIT);
           if (z.meltArmor && !e.dead) addShred(e, 'melt', z.meltArmor, z.meltArmor, 0.4);
         }
       }
@@ -1765,17 +1655,13 @@ RG.sim = (() => {
       }
 
       /* --- 지속 피해 --- */
-      for (const e of st.enemies) {
+      for (let k = 0; k < st.enemies.length; k++) {
+        const e = st.enemies[k];
         if (e.dead) continue;
-        for (const list of [e.st.burns, e.st.bleeds]) {
-          for (let i = list.length - 1; i >= 0; i--) {
-            const b = list[i];
-            if (time > b.until) { list.splice(i, 1); continue; }
-            damage(e, b.dps * DT, b.element, b.src, { dot: true, quiet: true });
-            if (e.dead) break;
-          }
-          if (e.dead) break;
-        }
+        const burns = e.st.burns; // 둘 다 먼저 잡아 둠 (불사 부활 때 목록이 새로 바뀌어도 예전처럼)
+        const bleeds = e.st.bleeds;
+        if (burns.length && tickDots(e, burns, time)) continue;
+        if (bleeds.length) tickDots(e, bleeds, time);
       }
 
       /* --- 정리 --- */
@@ -1786,7 +1672,7 @@ RG.sim = (() => {
 
       /* --- 공명 과제 --- */
       if (st.task && !st.task.done && st.wave.started && st.tick % 10 === 0) checkTask(false); // 첫 웨이브 전엔 세지 않음 (지었다 100% 환불로 공짜 별 방지)
-      for (const t of st.towers) for (const id of (t.calc ? t.calc.resIds : [])) st.stats.resonanceSeen[id] = true;
+      for (const t of st.towers) { const ids = t.calc && t.calc.resIds; if (ids) for (let i = 0; i < ids.length; i++) st.stats.resonanceSeen[ids[i]] = true; }
 
       /* --- 결과 --- */
       if (st.lives <= 0) { st.result = 'lose'; ev('lose', {}); return; }
@@ -1798,6 +1684,170 @@ RG.sim = (() => {
         return;
       }
       if (st.tick > st.maxTicks) { st.result = 'lose'; st.timeout = true; ev('lose', { timeout: true }); }
+    }
+
+    // 매 틱 수백 번 쓰는 피해 옵션은 하나를 같이 씀 (damage는 옵션을 읽기만 함)
+    const DOT_HIT = Object.freeze({ dot: true, quiet: true });
+    const ZONE_HIT = Object.freeze({ dot: true, area: true, quiet: true });
+    /** 화상·출혈 목록 하나 처리 — 적이 죽으면 true */
+    function tickDots(e, list, time) {
+      for (let i = list.length - 1; i >= 0; i--) {
+        const b = list[i];
+        if (time > b.until) { list.splice(i, 1); continue; }
+        damage(e, b.dps * DT, b.element, b.src, DOT_HIT);
+        if (e.dead) return true;
+      }
+      return false;
+    }
+
+    /** 적 하나의 한 틱: 재생·보호막·치유·굴착·보스·이동 */
+    function stepEnemy(e, time) {
+      if (e.dead) return;
+      const ed = D().enemies[e.type];
+      const tr = ed.traits;
+      e.pushRes = Math.max(0, e.pushRes - rules.push.decay * DT);
+      const healBlocked = time < e.st.purifyUntil || time < e.st.haltUntil;
+      const healMul = time < e.st.stillUntil ? 0.5 : 1;
+      // 재생
+      if (tr.regen && !healBlocked && time - e.lastHurt >= rules.regenDelay && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * tr.regen * healMul * DT);
+      // 보호막 재생
+      if (tr.shield && !healBlocked && time - e.lastHurt >= tr.shield.delay && e.shield < e.maxShield) e.shield = Math.min(e.maxShield, e.shield + e.maxShield * tr.shield.rate * DT);
+      // 치유사
+      if (tr.healer && canAct(e) && !e.burrowed) {
+        e.healCd -= DT;
+        if (e.healCd <= 0) {
+          e.healCd = tr.healer.every;
+          let any = false;
+          for (const o3 of st.enemies) {
+            if (o3.dead || d2(o3.x, o3.y, e.x, e.y) > tr.healer.radius ** 2) continue;
+            if (time < o3.st.purifyUntil || time < o3.st.haltUntil) continue;
+            const m = time < o3.st.stillUntil ? 0.5 : 1;
+            const before = o3.hp;
+            o3.hp = Math.min(o3.maxHp, o3.hp + o3.maxHp * tr.healer.pct * m);
+            if (o3.hp > before) any = true;
+          }
+          e.castAnim = 0.45;
+          if (any) ev('enemyHeal', { x: e.x, y: e.y, radius: tr.healer.radius });
+        }
+      }
+      // 보호막 부여
+      if (tr.shielder && canAct(e) && !e.burrowed) {
+        e.shieldCd -= DT;
+        if (e.shieldCd <= 0) {
+          e.shieldCd = tr.shielder.every;
+          for (const o3 of st.enemies) {
+            if (o3.dead || o3 === e || d2(o3.x, o3.y, e.x, e.y) > tr.shielder.radius ** 2) continue;
+            if (time < o3.st.purifyUntil) continue;
+            const amt = o3.maxHp * tr.shielder.pct;
+            if (amt > o3.shield) { o3.shield = amt; o3.maxShield = Math.max(o3.maxShield, amt); }
+          }
+          e.castAnim = 0.45;
+          ev('enemyShield', { x: e.x, y: e.y, radius: tr.shielder.radius });
+        }
+      }
+      // 굴착
+      if (tr.burrow) {
+        e.burrowT += DT;
+        if (!e.burrowed && e.burrowT >= tr.burrow.every) { e.burrowed = true; e.burrowT = 0; releaseEnemy(e); ev('burrow', { enemyId: e.id, x: e.x, y: e.y }); } else if (e.burrowed && e.burrowT >= tr.burrow.dur) { e.burrowed = false; e.burrowT = 0; ev('unburrow', { enemyId: e.id, x: e.x, y: e.y }); }
+      }
+      // 보스
+      if (e.boss && RG.bosses) RG.bosses.update(game, e, api);
+      if (e.dead) return;
+      // 이동
+      if (e.blockedBy || !canMove(e)) { updateProg(e); return; }
+      const sp = enemySpeed(e) * DT;
+      e.walkT += sp;
+      moveGround(e, sp); // 비행 적도 길을 따라감(붙잡히지 않을 뿐)
+      if (!e.dead) updateProg(e);
+    }
+
+    /** 적 하나의 공격 (붙잡은 병사 근접·원거리) */
+    function stepEnemyAttack(e, time) {
+      // 그림용 타이머 (규칙에는 쓰지 않음)
+      if (e.attackAnim) e.attackAnim = Math.max(0, e.attackAnim - DT);
+      if (e.castAnim) e.castAnim = Math.max(0, e.castAnim - DT);
+      e.aiming = false;
+      if (e.dead || !canAct(e) || e.burrowed) return;
+      const ed = D().enemies[e.type];
+      if (e.blockedBy && ed.melee) {
+        if (e.meleeCd <= 0.4) e.aiming = true; // 휘두르기 직전 (그림용)
+        e.meleeCd -= DT;
+        if (e.meleeCd <= 0) {
+          e.meleeCd = ed.melee.interval;
+          const u = unitById(e.blockedBy);
+          if (u && !u.dead) { hurtUnit(u, ed.melee.damage, e); e.attackAnim = 0.25; e.dir = u.x > e.x ? 1 : -1; }
+        }
+      }
+      if (ed.traits.ranged && time >= e.st.blindUntil) {
+        e.rangedCd -= DT;
+        // 던지기 직전 자세 (그림용): 곧 쏠 때 사거리 안에 상대가 있으면
+        if (e.rangedCd <= 0.45 && e.rangedCd > 0) {
+          const R2 = ed.traits.ranged.range ** 2;
+          for (const u of st.units) if (!u.dead && u.kind !== 'drone' && u.kind !== 'wall' && d2(u.x, u.y, e.x, e.y) <= R2) { e.aiming = true; break; }
+        }
+        if (e.rangedCd <= 0) {
+          const R = ed.traits.ranged.range;
+          let best = null;
+          let bd = R * R;
+          for (const u of st.units) {
+            if (u.dead || u.kind === 'drone' || u.kind === 'wall') continue;
+            const dd = d2(u.x, u.y, e.x, e.y);
+            if (dd <= bd) { bd = dd; best = u; }
+          }
+          if (best) {
+            e.rangedCd = ed.traits.ranged.interval;
+            e.attackAnim = 0.3; e.dir = best.x > e.x ? 1 : -1;
+            hurtUnit(best, ed.traits.ranged.damage, e);
+            ev('enemyShot', { enemyId: e.id, x: e.x, y: e.y, tx: best.x, ty: best.y });
+          } else e.rangedCd = 0.2;
+        }
+      }
+    }
+
+    /** 탑 하나의 공격 한 틱 */
+    function stepTower(t, time) {
+      t.anim = Math.max(0, t.anim - DT);
+      const c = t.calc;
+      if (!c || t.disabled || t.building) return;
+      if (c.role === 'barracks') {
+        for (const id of t.soldiers) {
+          const s = unitById(id);
+          if (s && s.dead && !s.remove && time >= s.respawnAt) {
+            s.dead = false; s.hp = s.maxHp; s.x = t.x; s.y = t.y; s.px = s.x; s.py = s.y;
+            ev('unitSpawn', { unitId: s.id });
+          }
+        }
+        return;
+      }
+      if (c.discharge) {
+        t.dischargeCd = (t.dischargeCd || 0) - DT;
+        if (t.dischargeCd <= 0) {
+          const list = enemiesInRadius(t.x, t.y, c.discharge.radius);
+          if (list.length) {
+            t.dischargeCd = c.discharge.every;
+            for (const e of list) damage(e, c.discharge.damage, 'storm', { tower: t, calc: c }, { secondary: true, area: true });
+            ev('pulse', { towerId: t.id, x: t.x, y: t.y, radius: c.discharge.radius, element: 'storm' });
+          }
+        }
+      }
+      if (c.kind === 'none') return;
+      if (c.kind === 'beam') { updateTowerBeams(t); return; }
+      if (c.cyclone) {
+        t.cycloneCd = (t.cycloneCd == null ? c.cyclone.every * 0.5 : t.cycloneCd) - DT;
+        if (t.cycloneCd <= 0) {
+          const tg = towerTargets(t, 1, c.range, {});
+          const g = tg.find((e) => !e.flying);
+          if (g) {
+            t.cycloneCd = c.cyclone.every;
+            for (const e of enemiesInRadius(g.x, g.y, c.cyclone.radius, 'ground')) { push(e, c.cyclone.dist); hardCC(e, 'lift', c.cyclone.lift); }
+            ev('cyclone', { towerId: t.id, x: g.x, y: g.y, radius: c.cyclone.radius });
+          }
+        }
+      }
+      t.cd -= DT;
+      if (t.cd <= 0) {
+        if (fireTower(t)) { t.cd += c.interval; t.anim = 0.25; } else t.cd = 0;
+      }
     }
 
     function updateProjectiles() {

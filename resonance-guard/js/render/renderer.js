@@ -52,10 +52,11 @@ RG.render = (() => {
     canvas = cv;
     // 불투명 캔버스: 브라우저가 매 프레임 캔버스를 뒤 배경과 섞지 않아도 됨(느린 기기에서 이득)
     ctx = canvas.getContext('2d', { alpha: false });
+    trackTransform(ctx);
     game = g;
     corpses = [];
     projStart.clear();
-    dprCap = 2; perfT = 0; perfN = 0; perfSlow = 0; perfLast = 0; perfWin = 0;
+    dprCap = 2; perfT = 0; perfN = 0; perfSlow = 0; perfLast = 0; perfWin = 0; perfRaised = false; perfNoRaise = false;
     shadeFor = '';
     ambientFor = '';
     bg = null;
@@ -73,6 +74,7 @@ RG.render = (() => {
     H = Math.max(80, rect.height);
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
+    if (ctx && ctx._xf) ctx._xf.reset(); // 크기를 바꾸면 캔버스 상태(변환·저장 더미)가 처음으로 돌아감
     canvas.style.width = `${W}px`;
     canvas.style.height = `${H}px`;
     const m = game.map;
@@ -150,22 +152,99 @@ RG.render = (() => {
       c2.imageSmoothingQuality = 'high'; // 고품질 축소 한 번 (임시 캔버스를 만들지 않음 — 시작 직후 수백 장을 만들 때 가벼움)
       if (flip) { c2.translate(pw, 0); c2.scale(-1, 1); }
       c2.drawImage(s.canvas, 0, 0, pw, ph);
+      cv = cropOpaque(cv);
       m.set(k, cv);
     }
     return cv;
   }
-  function sprite(key, cx, cy, w, h, ax, ay, flip, alpha) {
+  /*
+   * 투명한 여백 잘라내기: 그림 캔버스는 동작(점프·기울기)을 위해 둘레에 여백이 넉넉한데,
+   * 여백도 매 프레임 한 화소씩 섞어 칠하므로 적 300마리면 칠할 화소의 절반 가까이가 빈 곳이었음.
+   * 줄인 그림을 한 번 읽어 불투명한 부분만 남기고, 잘라낸 위치(_ox,_oy)만큼 옮겨 찍음 — 화면 결과는 같음.
+   */
+  function cropOpaque(cv) {
+    const w = cv.width;
+    const h = cv.height;
+    cv._ox = 0; cv._oy = 0; cv._fw = w; cv._fh = h;
+    let d;
+    try { d = cv.getContext('2d').getImageData(0, 0, w, h).data; } catch (e) { return cv; } // 읽을 수 없는 그림이면 그대로
+    let y0 = 0;
+    let y1 = h - 1;
+    const rowEmpty = (y) => { for (let i = y * w * 4 + 3, e = i + w * 4; i < e; i += 4) if (d[i]) return false; return true; };
+    while (y0 <= y1 && rowEmpty(y0)) y0++;
+    if (y0 > y1) return cv; // 다 투명(아직 그려지지 않음 등) — 그대로
+    while (y1 > y0 && rowEmpty(y1)) y1--;
+    let x0 = w;
+    let x1 = -1;
+    for (let y = y0; y <= y1; y++) {
+      const row = y * w * 4 + 3;
+      for (let x = 0; x < x0; x++) if (d[row + x * 4]) { x0 = x; break; }
+      for (let x = w - 1; x > x1; x--) if (d[row + x * 4]) { x1 = x; break; }
+    }
+    const cw = x1 - x0 + 1;
+    const ch = y1 - y0 + 1;
+    if (cw * ch > w * h * 0.85) return cv; // 거의 꽉 찬 그림은 그대로
+    const out = document.createElement('canvas');
+    out.width = cw; out.height = ch;
+    out.getContext('2d').drawImage(cv, x0, y0, cw, ch, 0, 0, cw, ch);
+    out._ox = x0; out._oy = y0; out._fw = w; out._fh = h;
+    return out;
+  }
+  /*
+   * 발밑 그늘을 함께 구운 그림 (적이 아주 많을 때): 그늘을 따로 칠하면 적 300마리면 타원 300개를
+   * 경로로 만들고 칠해야 해서 비쌌음. 그림 한 장에 그늘을 먼저 깔고 그 위에 몸을 그려 두면 찍기 한 번으로 끝.
+   * sh = [그늘 가운데 x, y (그림 칸 왼쪽 위 기준, CSS 화소), 너비, 높이, 진하기]
+   */
+  function fittedSh(s, w, h, flip, sh) {
+    const pw = Math.max(1, Math.round(w * dpr));
+    const ph = Math.max(1, Math.round(h * dpr));
+    const gx = Math.round(sh[0] * dpr);
+    const gy = Math.round(sh[1] * dpr);
+    const gw = Math.max(4, Math.round(sh[2] * dpr));
+    const gh = Math.max(2, Math.round(sh[3] * dpr));
+    let m = s._fit;
+    if (!m) { m = new Map(); s._fit = m; }
+    const k = -((((pw * 4096 + ph) * 2 + (flip ? 1 : 0)) * 512 + (gy & 511)) * 4 + (sh[4] > 0.4 ? 1 : 0)) - 1; // 음수: 그늘 없는 그림과 겹치지 않게
+    let cv = m.get(k);
+    if (!cv) {
+      if (m.size > 6) m.clear();
+      cv = document.createElement('canvas');
+      cv.width = Math.max(pw, gx + (gw >> 1) + 2);
+      cv.height = Math.max(ph, gy + (gh >> 1) + 2);
+      const c2 = cv.getContext('2d');
+      c2.imageSmoothingQuality = 'high';
+      c2.globalAlpha = sh[4];
+      c2.drawImage(blob(), gx - gw / 2, gy - gh / 2, gw, gh);
+      c2.globalAlpha = 1;
+      if (flip) { c2.translate(pw, 0); c2.scale(-1, 1); }
+      c2.drawImage(s.canvas, 0, 0, pw, ph);
+      cv = cropOpaque(cv);
+      m.set(k, cv);
+    }
+    return cv;
+  }
+  function sprite(key, cx, cy, w, h, ax, ay, flip, alpha, sh) {
     const s = RG.art.sprites.get(key);
     if (!s) return false;
     const plain = plainTransform();
-    const img = plain ? fitted(s, w, h, flip) : fitted(s, w, h, false);
+    if (sh && !plain) shadowAt(cx - w * ax + sh[0], cy - h * ay + sh[1], sh[2], sh[3], sh[4]); // 구운 그림을 못 쓰면 그늘만 따로
+    const img = plain ? (sh ? fittedSh(s, w, h, flip, sh) : fitted(s, w, h, flip)) : fitted(s, w, h, false);
     const a0 = ctx.globalAlpha;
     if (alpha != null && alpha !== 1) ctx.globalAlpha = a0 * alpha;
     if (img !== s.canvas && plain) {
       // 줄여 둔 그림(반전본 포함): 정수 화소 위치에 원래 크기 그대로 찍음 — 늘이기·반 화소·뒤집기 없이 가장 빠른 길
-      const x0 = Math.round((cx - w * ax) * dpr) / dpr;
-      const y0 = Math.round((cy - h * ay) * dpr) / dpr;
+      const x0 = (Math.round((cx - w * ax) * dpr) + img._ox) / dpr;
+      const y0 = (Math.round((cy - h * ay) * dpr) + img._oy) / dpr;
       ctx.drawImage(img, x0, y0, img.width / dpr, img.height / dpr);
+    } else if (img !== s.canvas) {
+      // 회전·눌림 중: 잘라낸 그림을 원래 칸(w×h) 안의 제자리에 늘여 그림
+      const kx = w / img._fw;
+      const ky = h / img._fh;
+      ctx.save();
+      ctx.translate(cx, cy);
+      if (flip) ctx.scale(-1, 1);
+      ctx.drawImage(img, -w * ax + img._ox * kx, -h * ay + img._oy * ky, img.width * kx, img.height * ky);
+      ctx.restore();
     } else if (flip) {
       ctx.save();
       ctx.translate(cx, cy);
@@ -178,8 +257,38 @@ RG.render = (() => {
     ctx.globalAlpha = a0;
     return true;
   }
+  /*
+   * 화면 캔버스의 변환을 따라 적어 둠: 그림마다 getTransform()을 부르면 매번 새 행렬 객체가 생겨
+   * (적 300마리면 프레임마다 수백 개) 쓰레기 수거가 잦아짐. 배율·이동만 있는 동안은 직접 셈하고,
+   * 회전·기울임 등 모르는 변환이 끼면 예전처럼 getTransform으로 확인.
+   */
+  function trackTransform(c) {
+    if (c._xf) return;
+    const P = CanvasRenderingContext2D.prototype;
+    const xf = {
+      plain: true, s: 1, e: 0, f: 0, unknown: false, stack: [],
+      reset() { this.plain = true; this.s = 1; this.e = 0; this.f = 0; this.unknown = false; this.stack.length = 0; },
+    };
+    c._xf = xf;
+    c.save = function () { xf.stack.push(xf.plain, xf.s, xf.e, xf.f, xf.unknown); return P.save.call(this); };
+    c.restore = function () {
+      if (xf.stack.length) { xf.unknown = xf.stack.pop(); xf.f = xf.stack.pop(); xf.e = xf.stack.pop(); xf.s = xf.stack.pop(); xf.plain = xf.stack.pop(); }
+      return P.restore.call(this);
+    };
+    c.setTransform = function (a, b, cc, d, e, f) {
+      if (arguments.length >= 6) { xf.unknown = false; xf.plain = b === 0 && cc === 0 && a === d; xf.s = a; xf.e = e; xf.f = f; } else xf.unknown = true;
+      return P.setTransform.apply(this, arguments);
+    };
+    c.resetTransform = function () { xf.unknown = false; xf.plain = true; xf.s = 1; xf.e = 0; xf.f = 0; return P.resetTransform.call(this); };
+    c.translate = function (x, y) { if (xf.plain) { xf.e += x * xf.s; xf.f += y * xf.s; } return P.translate.call(this, x, y); };
+    c.scale = function (x, y) { if (x !== 1 || y !== 1) xf.plain = false; return P.scale.call(this, x, y); };
+    c.rotate = function (r) { if (r !== 0) xf.plain = false; return P.rotate.call(this, r); };
+    c.transform = function () { xf.unknown = true; return P.transform.apply(this, arguments); };
+  }
   /** 지금 변환이 화면 배율·이동뿐인가(흔들림 이동은 정수 화소로) — 회전·눌림이 있으면 일반 그리기 */
   function plainTransform() {
+    const xf = ctx._xf;
+    if (xf && !xf.unknown) return xf.plain && Math.abs(xf.s - dpr) < 1e-6 && Math.abs(xf.e - Math.round(xf.e)) < 1e-3 && Math.abs(xf.f - Math.round(xf.f)) < 1e-3;
     const t = ctx.getTransform();
     return t.b === 0 && t.c === 0 && Math.abs(t.a - dpr) < 1e-6 && Math.abs(t.d - dpr) < 1e-6 && Math.abs(t.e - Math.round(t.e)) < 1e-3 && Math.abs(t.f - Math.round(t.f)) < 1e-3;
   }
@@ -197,6 +306,13 @@ RG.render = (() => {
     c2.fillStyle = g;
     c2.save(); c2.scale(1, 0.5); c2.beginPath(); c2.arc(64, 64, 64, 0, Math.PI * 2); c2.fill(); c2.restore();
     return blobCanvas;
+  }
+  /** 화면 좌표(CSS 화소)에 그늘 하나 — 가운데·너비·높이·진하기 */
+  function shadowAt(x, y, w, h, a) {
+    const a0 = ctx.globalAlpha;
+    ctx.globalAlpha = a0 * a;
+    ctx.drawImage(blob(), x - w / 2, y - h / 2, w, h);
+    ctx.globalAlpha = a0;
   }
   function shadow(x, y, rx, ry, a = 0.32) {
     const a0 = ctx.globalAlpha;
@@ -239,50 +355,65 @@ RG.render = (() => {
   }
   let shadowsOn = true;
 
-  let barQ = null; // 모으는 중이면 배열 (frame에서 켜고 끔)
+  // 체력 막대 모으기: 항목 객체를 모아 두고 다시 씀 (매 프레임 수백 개를 새로 만들지 않음)
+  let barOn = false; // 모으는 중인가 (frame에서 켜고 flushBars에서 끔)
+  const barPool = [];
+  let barN = 0;
   function bar(cx, top, w, ratio, color, shieldRatio, elite) {
-    if (barQ) { barQ.push({ cx, top, w, ratio, color, shieldRatio, elite }); return; }
+    if (barOn) {
+      let b = barPool[barN];
+      if (!b) { b = { x: 0, y: 0, w: 0, ratio: 0, color: '', shieldRatio: 0, elite: false }; barPool[barN] = b; }
+      b.x = Math.round(cx - w / 2); b.y = Math.round(top); b.w = w; b.ratio = ratio; b.color = color; b.shieldRatio = shieldRatio; b.elite = !!elite;
+      barN++;
+      return;
+    }
     drawBar(cx, top, w, ratio, color, shieldRatio, elite);
   }
+  const barCols = [];
   /** 모은 체력 막대를 한꺼번에: 테두리 한 경로, 빈 칸 한 경로, 채운 칸은 색마다 한 경로 (막대마다 칠하면 수백 번) */
   function flushBars() {
-    const q = barQ;
-    barQ = null;
-    if (!q || !q.length) return;
+    const n = barN;
+    barOn = false;
+    barN = 0;
+    if (!n) return;
+    const q = barPool;
     const h = Math.max(3, Math.round(T * 0.09));
-    const pos = q.map((b) => [Math.round(b.cx - b.w / 2), Math.round(b.top)]);
     ctx.fillStyle = 'rgba(15,10,25,0.85)';
     ctx.beginPath();
-    q.forEach((b, i) => ctx.rect(pos[i][0] - 1, pos[i][1] - 1, b.w + 2, h + 2));
+    for (let i = 0; i < n; i++) { const b = q[i]; ctx.rect(b.x - 1, b.y - 1, b.w + 2, h + 2); }
     ctx.fill();
     if (!manyEnemies) {
       ctx.fillStyle = '#3a2a33';
       ctx.beginPath();
-      q.forEach((b, i) => ctx.rect(pos[i][0], pos[i][1], b.w, h));
+      for (let i = 0; i < n; i++) { const b = q[i]; ctx.rect(b.x, b.y, b.w, h); }
       ctx.fill();
     }
-    const byCol = new Map();
-    q.forEach((b, i) => { let l = byCol.get(b.color); if (!l) { l = []; byCol.set(b.color, l); } l.push(i); });
-    for (const [col, idx] of byCol) {
+    // 색 종류는 몇 가지뿐 — 처음 나온 순서대로 색마다 한 경로
+    barCols.length = 0;
+    for (let i = 0; i < n; i++) if (barCols.indexOf(q[i].color) < 0) barCols.push(q[i].color);
+    for (let c = 0; c < barCols.length; c++) {
+      const col = barCols[c];
       ctx.fillStyle = col;
       ctx.beginPath();
-      for (const i of idx) ctx.rect(pos[i][0], pos[i][1], Math.max(0, q[i].w * q[i].ratio), h);
+      for (let i = 0; i < n; i++) { const b = q[i]; if (b.color === col) ctx.rect(b.x, b.y, Math.max(0, b.w * b.ratio), h); }
       ctx.fill();
     }
-    const sh = q.map((b, i) => [b, i]).filter(([b]) => b.shieldRatio > 0);
-    if (sh.length) {
+    let anyShield = false;
+    let anyElite = false;
+    for (let i = 0; i < n; i++) { if (q[i].shieldRatio > 0) anyShield = true; if (q[i].elite) anyElite = true; }
+    if (anyShield) {
       ctx.fillStyle = 'rgba(190,232,255,0.9)';
       ctx.beginPath();
-      for (const [b, i] of sh) ctx.rect(pos[i][0], pos[i][1], Math.max(0, b.w * Math.min(1, b.shieldRatio)), Math.max(2, h * 0.5));
+      for (let i = 0; i < n; i++) { const b = q[i]; if (b.shieldRatio > 0) ctx.rect(b.x, b.y, Math.max(0, b.w * Math.min(1, b.shieldRatio)), Math.max(2, h * 0.5)); }
       ctx.fill();
     }
-    const el = q.map((b, i) => [b, i]).filter(([b]) => b.elite);
-    if (el.length) {
+    if (anyElite) {
       ctx.fillStyle = '#ffd34d';
       ctx.beginPath();
-      for (const [, i] of el) { const [x, y] = pos[i]; ctx.moveTo(x - 6, y - 1); ctx.lineTo(x - 2, y + h / 2); ctx.lineTo(x - 6, y + h + 1); ctx.closePath(); }
+      for (let i = 0; i < n; i++) { const b = q[i]; if (!b.elite) continue; const x = b.x; const y = b.y; ctx.moveTo(x - 6, y - 1); ctx.lineTo(x - 2, y + h / 2); ctx.lineTo(x - 6, y + h + 1); ctx.closePath(); }
       ctx.fill();
     }
+    for (let i = 0; i < n; i++) q[i].color = '';
   }
   function drawBar(cx, top, w, ratio, color, shieldRatio, elite) {
     const h = Math.max(3, Math.round(T * 0.09));
@@ -844,10 +975,24 @@ RG.render = (() => {
   }
 
   /* ---------------- 적 ---------------- */
+  const NO_MOTION = Object.freeze({});
+  const shSpec = [0, 0, 0, 0, 0];
+  /** 적이 아주 많을 때 이 적의 그늘을 그림에 구워 넣는가 (큰 적·보스는 드리운 그림자, 깡충 뛰는 적·띄워진 적은 따로 칠함) */
+  function bakesShadow(e) {
+    if (!manyEnemies || e.burrowed) return false;
+    const ed = RG.data.enemies[e.type];
+    if (ed.boss || ed.size >= 1.4) return false;
+    const mo = RG.art.ENEMY_MOTION && RG.art.ENEMY_MOTION[e.type];
+    if (mo && mo.hop) return false;
+    if (game.state.time < e.ccUntil && e.ccKind === 'lift') return false;
+    return true;
+  }
+  // 매 프레임 적마다 부르므로 같은 점 객체를 다시 씀 — 받은 쪽은 바로 읽고 넘김(보관하지 않음)
+  const ePt = { x: 0, y: 0 };
   function enemyScreen(e, alpha) {
-    const x = lerp(e.px, e.x, alpha);
-    const y = lerp(e.py, e.y, alpha);
-    return { x, y };
+    ePt.x = lerp(e.px, e.x, alpha);
+    ePt.y = lerp(e.py, e.y, alpha);
+    return ePt;
   }
 
   function drawEnemy(e, alpha) {
@@ -871,7 +1016,7 @@ RG.render = (() => {
     const moving = !e.blockedBy && !(st.time < e.ccUntil) ;
     const frame = enemyFrame(e, moving);
     // 몬스터별 움직임 (그림 파일의 MOTION, docs/design/animation.md §2.5)
-    const mo = (RG.art.ENEMY_MOTION && RG.art.ENEMY_MOTION[e.type]) || {};
+    const mo = (RG.art.ENEMY_MOTION && RG.art.ENEMY_MOTION[e.type]) || NO_MOTION;
     const stride = 0.45 + e.size * 0.55;
     const ph = e.flying ? time * 5 + e.id : (e.walkT / stride) * Math.PI * 2;
     let lift = 0;
@@ -899,7 +1044,18 @@ RG.render = (() => {
     if (!manyEnemies || ed.boss || ed.size >= 1.4) castShadow(key, cx + dx, groundY, size, size, 0.5, 0.9, flip, (e.flying ? 0.16 : 0.32) * alphaS, lift);
     const motion = !manyEnemies && (rot || sxk !== 1 || syk !== 1 || dx); // 적이 아주 많으면 변형 생략(성능), 튀기기는 유지
     if (motion) { ctx.save(); ctx.translate(cx + dx, cy); ctx.rotate(rot); ctx.scale(sxk, syk); ctx.translate(-cx, -cy); }
-    const ok = sprite(key, cx, cy, size, size, 0.5, 0.9, flip, alphaS);
+    let sh = null;
+    if (bakesShadow(e)) {
+      // 그늘을 구워 넣은 그림으로 (그늘 위치는 쉬는 높이 기준 — 걸음 튀기기 1~2화소만큼은 몸과 같이 움직임)
+      const lift0 = e.flying ? T * (mo.hover != null ? mo.hover : 0.42) : 0;
+      sh = shSpec;
+      sh[0] = size * 0.5 + T * 0.03;
+      sh[1] = size * 0.9 + lift0 + T * 0.01;
+      sh[2] = Math.max(4, e.size * 0.32 * T * 2.2);
+      sh[3] = Math.max(2, e.size * 0.11 * T * 2.2);
+      sh[4] = e.flying ? 0.36 : 0.58;
+    }
+    const ok = sprite(key, cx, cy, size, size, 0.5, 0.9, flip, alphaS, sh);
     if (!ok) {
       ctx.fillStyle = '#9a94a8';
       ctx.beginPath(); ctx.arc(cx, cy - size * 0.4, size * 0.35, 0, Math.PI * 2); ctx.fill();
@@ -1303,6 +1459,8 @@ RG.render = (() => {
 
   /* ---------------- 한 프레임 ---------------- */
   let perfWin = 0;
+  let perfRaised = false; // 이 판에서 화질을 다시 높인 적이 있는가
+  let perfNoRaise = false; // 높였다가 다시 느려짐 → 이 판에서는 더 높이지 않음
   function watchSpeed() {
     const now = performance.now();
     const gap = perfLast ? (now - perfLast) / 1000 : 0;
@@ -1313,19 +1471,38 @@ RG.render = (() => {
     perfN++;
     perfWin += gap;
     if (gap > 1 / 30) perfSlow++;
-    // 2초마다(높인 뒤 되돌리기는 6초마다) 판단 — 프레임 수가 아니라 시간으로 재야 아주 느릴 때도 빨리 반응함
+    // 2초마다 판단 — 프레임 수가 아니라 시간으로 재야 아주 느릴 때도 빨리 반응함.
+    // 화질을 바꿀 때마다 그림 캐시를 모두 다시 만들어 잠깐 멈추므로: 아주 느리면(평균 24fps 미만) 한 번에 가장 낮게,
+    // 다시 높이는 것은 오래(20초) 부드러울 때만, 높였다가 다시 느려진 판에서는 더 높이지 않음(오르내림 반복 방지).
     if (perfWin >= 2 && perfN >= 12 && perfSlow / perfN > 0.6 && dprCap > 1 && (window.devicePixelRatio || 1) > 1) {
-      dprCap = Math.max(1, dprCap - 0.5);
+      const avg = perfWin / perfN;
+      dprCap = avg > 1 / 24 ? 1 : Math.max(1, dprCap - 0.5);
+      if (perfRaised) perfNoRaise = true;
       resize();
       perfN = 0; perfSlow = 0; perfWin = 0;
-    } else if (dprCap < 2 && perfWin >= 6) {
-      if (perfSlow / perfN < 0.03) { dprCap = Math.min(2, dprCap + 0.5); resize(); }
+    } else if (dprCap < 2 && !perfNoRaise && perfWin >= 20) {
+      if (perfSlow / perfN < 0.03) { dprCap = Math.min(2, dprCap + 0.5); perfRaised = true; resize(); }
       perfN = 0; perfSlow = 0; perfWin = 0;
-    } else if (dprCap >= 2 && perfWin >= 2) {
+    } else if ((dprCap >= 2 || perfNoRaise) && perfWin >= 2) {
       perfN = 0; perfSlow = 0; perfWin = 0;
+    } else if (dprCap < 2 && perfWin >= 2 && perfSlow / perfN > 0.1) {
+      perfN = 0; perfSlow = 0; perfWin = 0; // 아직 부드럽지 않음 — 높이기 판단은 처음부터 다시
     }
   }
 
+  // 그릴 것 목록 (y 순서) — 항목 객체를 모아 두고 다시 씀
+  const dlPool = [];
+  const dlOrder = [];
+  const flyQ = [];
+  let dlN = 0;
+  function dlAdd(y, k, o) {
+    let it = dlPool[dlN];
+    if (!it) { it = { y: 0, k: 0, o: null }; dlPool[dlN] = it; }
+    it.y = y; it.k = k; it.o = o;
+    dlN++;
+  }
+  const byY = (a, b) => a.y - b.y;
+  const byEnemyY = (a, b) => a.y - b.y;
   function frame(alpha, dt) {
     if (!game || !ctx) return;
     watchSpeed();
@@ -1395,10 +1572,11 @@ RG.render = (() => {
     RG.fx.setLite(alive > 120);
     if (manyEnemies) {
       // 적이 아주 많을 때: 발밑 그늘을 한 경로로 모아 한 번에 칠함 (땅·비행 두 번)
+      // (그늘 그림 300장을 찍는 것보다 이쪽이 조금 빠름 — 그리기 호출 하나하나의 고정 비용이 큼)
       for (const fly of [false, true]) {
         ctx.beginPath();
         for (const e of st.enemies) {
-          if (e.burrowed || !!e.flying !== fly) continue;
+          if (e.burrowed || !!e.flying !== fly || bakesShadow(e)) continue; // 그늘을 그림에 구워 넣은 적은 건너뜀
           const p = enemyScreen(e, alpha);
           const ex = X(p.x) + T * 0.03;
           const ey = Y(p.y) + T * 0.01;
@@ -1418,27 +1596,37 @@ RG.render = (() => {
     }
     for (const u of st.units) if (!u.dead && u.kind !== 'drone') shadow(lerp(u.px, u.x, alpha), lerp(u.py, u.y, alpha), u.kind === 'wall' ? 0.45 : 0.22, 0.08, 0.3);
 
-    barQ = []; // 체력 막대는 모아 두었다가 모든 적을 그린 뒤 위에 한 번에
-    // y 순서로
-    const list = [];
-    for (const t of st.towers) list.push([t.r + 0.82, 0, t]);
-    list.push([game.map.lantern.r + 0.82, 1, null]);
-    for (const e of st.enemies) if (!e.flying) list.push([lerp(e.py, e.y, alpha), 2, e]);
-    for (const u of st.units) if (!u.dead) list.push([lerp(u.py, u.y, alpha), 3, u]);
-    for (const c of corpses) c.t += dt;
-    corpses = corpses.filter((c) => c.t < c.dur);
-    for (const c of corpses) list.push([c.y - 0.001, 4, c]);
-    list.sort((a, b) => a[0] - b[0]);
-    for (const [, kind, obj] of list) {
+    barOn = true; barN = 0; // 체력 막대는 모아 두었다가 모든 적을 그린 뒤 위에 한 번에
+    // y 순서로 (그릴 것 목록은 매 프레임 새로 만들지 않고 다시 씀)
+    dlN = 0;
+    for (const t of st.towers) dlAdd(t.r + 0.82, 0, t);
+    dlAdd(game.map.lantern.r + 0.82, 1, null);
+    for (let i = 0; i < st.enemies.length; i++) { const e = st.enemies[i]; if (!e.flying) dlAdd(lerp(e.py, e.y, alpha), 2, e); }
+    for (const u of st.units) if (!u.dead) dlAdd(lerp(u.py, u.y, alpha), 3, u);
+    let cn = 0;
+    for (let i = 0; i < corpses.length; i++) { const c = corpses[i]; c.t += dt; if (c.t < c.dur) corpses[cn++] = c; }
+    corpses.length = cn;
+    for (let i = 0; i < corpses.length; i++) dlAdd(corpses[i].y - 0.001, 4, corpses[i]);
+    dlOrder.length = dlN;
+    for (let i = 0; i < dlN; i++) dlOrder[i] = dlPool[i];
+    dlOrder.sort(byY);
+    for (let i = 0; i < dlN; i++) {
+      const it = dlOrder[i];
+      const kind = it.k;
+      const obj = it.o;
       if (kind === 0) drawTower(obj);
       else if (kind === 1) drawLantern();
       else if (kind === 2) drawEnemy(obj, alpha);
       else if (kind === 4) drawCorpse(obj);
       else drawUnit(obj, alpha);
+      it.o = null;
     }
     // 비행 적은 위에
-    const flyers = st.enemies.filter((e) => e.flying).sort((a, b) => a.y - b.y);
-    for (const e of flyers) drawEnemy(e, alpha);
+    flyQ.length = 0;
+    for (let i = 0; i < st.enemies.length; i++) if (st.enemies[i].flying) flyQ.push(st.enemies[i]);
+    flyQ.sort(byEnemyY);
+    for (let i = 0; i < flyQ.length; i++) drawEnemy(flyQ[i], alpha);
+    flyQ.length = 0;
     flushBars();
     // 건설 미리보기 탑 그림
     const gh = overlay.ghost;

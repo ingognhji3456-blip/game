@@ -33,7 +33,7 @@ RG.fx = (() => {
   let lite = false;
   function setLite(v) { lite = !!v; }
   function burst(x, y, color, n, speed = 2.2, life = 0.5, size = 0.06, gravity = 0) {
-    const cap = lite ? 250 : MAX_PARTS;
+    const cap = lite ? 160 : MAX_PARTS; // 적이 아주 많으면 조각 수를 줄임(그래도 화면은 충분히 붐빔)
     for (let i = 0; i < n && parts.length < cap; i++) {
       const a = rnd() * Math.PI * 2;
       const s = speed * (0.3 + rnd() * 0.7);
@@ -201,6 +201,12 @@ RG.fx = (() => {
     }
   }
 
+  const TIMED = [rings, bolts, texts, areas];
+  // 조각 묶음: 색마다 투명도 7단계 칸을 한 번 만들어 두고 매 프레임 다시 씀 (문자열 키·배열을 새로 만들지 않음)
+  const pBuckets = new Map();
+  const pOrder = [];
+  let pFrame = 0;
+  const fontCache = new Map();
   function addShake(v) { if (settings.shake) shake = Math.min(1, shake + v); }
 
   function update(dt) {
@@ -213,7 +219,8 @@ RG.fx = (() => {
       p.y += p.vy * dt;
       p.vx *= 0.96; p.vy *= 0.96;
     }
-    for (const list of [rings, bolts, texts, areas]) {
+    for (let k = 0; k < TIMED.length; k++) {
+      const list = TIMED[k];
       for (let i = list.length - 1; i >= 0; i--) { list[i].life -= dt; if (list[i].life <= 0) list.splice(i, 1); }
     }
     for (const t of texts) t.y -= dt * (t.big ? 0.9 : 1.2);
@@ -270,22 +277,30 @@ RG.fx = (() => {
       ctx.stroke();
     }
     // 조각: 같은 색·비슷한 투명도(6단계)끼리 한 경로로 모아 한 번에 칠함 (조각마다 칠하면 수백 번)
-    const groups = new Map();
-    for (const p of parts) {
+    pFrame++;
+    pOrder.length = 0;
+    if (pBuckets.size > 64) pBuckets.clear();
+    for (let i = 0; i < parts.length; i++) {
+      const p = parts[i];
       const a = Math.min(1, p.life / p.max * 1.5);
       const q = Math.max(1, Math.round(a * 6));
-      const k = `${p.color}|${q}`;
-      let g = groups.get(k);
-      if (!g) { g = { color: p.color, a: q / 6, list: [] }; groups.set(k, g); }
+      let bs = pBuckets.get(p.color);
+      if (!bs) { bs = []; for (let j = 0; j <= 6; j++) bs.push({ color: p.color, a: j / 6, list: [], f: 0 }); pBuckets.set(p.color, bs); }
+      const g = bs[q];
+      if (g.f !== pFrame) { g.f = pFrame; g.list.length = 0; pOrder.push(g); } // 처음 나온 순서대로 칠함 (예전과 같은 순서)
       g.list.push(p);
     }
-    for (const g of groups.values()) {
+    for (let k = 0; k < pOrder.length; k++) {
+      const g = pOrder[k];
       ctx.globalAlpha = g.a;
       ctx.fillStyle = g.color;
       ctx.beginPath();
-      for (const p of g.list) { const s = Math.max(1.2, p.size * T); ctx.rect(X(p.x) - s / 2, Y(p.y) - s / 2, s, s); }
+      const l = g.list;
+      for (let i = 0; i < l.length; i++) { const p = l[i]; const s = Math.max(1.2, p.size * T); ctx.rect(X(p.x) - s / 2, Y(p.y) - s / 2, s, s); }
       ctx.fill();
+      l.length = 0;
     }
+    pOrder.length = 0;
     ctx.restore();
   }
 
@@ -299,7 +314,9 @@ RG.fx = (() => {
       const a = Math.min(1, t.life / t.max * 2);
       ctx.globalAlpha = a;
       const fs = Math.round(Math.max(11, T * (t.big ? 0.42 : 0.3)));
-      ctx.font = `800 ${fs}px system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`;
+      let font = fontCache.get(fs);
+      if (!font) { font = `800 ${fs}px system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`; fontCache.set(fs, font); }
+      if (ctx.font !== font) ctx.font = font;
       ctx.lineWidth = Math.max(2.5, fs * 0.22);
       ctx.strokeStyle = 'rgba(20,14,30,0.9)';
       ctx.strokeText(t.str, X(t.x), Y(t.y));
