@@ -1857,13 +1857,21 @@
       return s;
     };
   }
-  /** 곰덫(쇠 이빨 둘) */
+  /** 쇠 덫(위에서 본 둥근 테 + 안쪽 이빨 + 가운데 발판) */
   function bearTrapB(c, x, y, k, ang = 0, glow = false) {
-    const P = (a, b) => `${f(x + a * k)} ${f(y + b * k)}`;
-    let s = glow ? aura(c, x, y, 9 * k, 7 * k, c.E.color, 0.6) : '';
-    s += c.p(`M${P(-8, 0)}Q${P(0, 6)} ${P(8, 0)}L${P(6, -3)}L${P(4, 0)}L${P(2, -3)}L${P(0, 0)}L${P(-2, -3)}L${P(-4, 0)}L${P(-6, -3)}Z`, c.vg('#dfe5ec', 0.2, -0.25), 1.8);
-    s += c.p(`M${P(-8, 2)}Q${P(0, -4)} ${P(8, 2)}L${P(6, 5)}L${P(4, 2)}L${P(2, 5)}L${P(0, 2)}L${P(-2, 5)}L${P(-4, 2)}L${P(-6, 5)}Z`, c.vg('#aab4c2', 0.2, -0.25), 1.8);
-    s += c.ci(x, y + 1 * k, 1.6 * k, c.E.color, 1);
+    const E = c.E;
+    let teeth = '';
+    for (let i = 0; i < 8; i++) {
+      const a = i * 45 + 22;
+      const p0 = [x + Math.cos(a * RAD) * 6.2 * k, y + Math.sin(a * RAD) * 4 * k];
+      const p1 = [x + Math.cos((a - 12) * RAD) * 6.4 * k, y + Math.sin((a - 12) * RAD) * 4.2 * k];
+      const p2 = [x + Math.cos((a + 12) * RAD) * 6.4 * k, y + Math.sin((a + 12) * RAD) * 4.2 * k];
+      teeth += `M${pp(p1)}L${pp(mix2(p0, [x, y], 0.45))}L${pp(p2)}Z`;
+    }
+    let s = glow ? aura(c, x, y, 10 * k, 7 * k, E.color, 0.65) : '';
+    s += c.e(x, y, 7 * k, 4.6 * k, 'none', 0, ` stroke="${OL}" stroke-width="${c.sw(4.6)}"`) + c.e(x, y, 7 * k, 4.6 * k, 'none', 0, ` stroke="#dfe5ec" stroke-width="${c.sw(2.2)}"`);
+    s += c.p(teeth, '#c3cbd6', 1) + c.e(x, y, 2.6 * k, 1.8 * k, c.sg(E.color), 1.4);
+    s += c.ln(`M${f(x - 5 * k)} ${f(y - 2.6 * k)}Q${f(x)} ${f(y - 4.6 * k)} ${f(x + 5 * k)} ${f(y - 2.6 * k)}`, '#fff', 1, 0.8);
     return ang ? rotG(s, ang, [x, y]) : s;
   }
   /** 톱니 칼날 덫(4B) */
@@ -1909,10 +1917,10 @@
     // 망토(등 뒤로 늘어짐)
     const cape = c.p(`M${pp(F.sh[0])}Q${f(x - 10)} ${f(y + 2)} ${f(x - 8 + by(pose, 0, -3, -6))} ${f(y + 12)}L${f(x - 1)} ${f(y + 10)}Q${f(x - 2)} ${f(y)} ${pp(F.neck)}Z`, c.vg('#3a2c4e', 0.2, -0.25), 2.2) + c.ln(`M${pp(F.sh[0])}Q${f(x - 10)} ${f(y + 2)} ${f(x - 8 + by(pose, 0, -3, -6))} ${f(y + 12)}`, '#8a78b0', 1, 0.8);
     // 허리에 찬 여분 덫(2단계부터)
-    const spare = tier === 1 ? '' : bearTrapB(c, x - 2.5, y + 3.5, 0.42, 80);
+    const spare = '';
     let held = '';
     let fx = '';
-    if (pose !== 'fire') held = trapFn(P.hF[0] + (pose === 'aim' ? -3 : 1.5), P.hF[1] + (pose === 'aim' ? -4 : 4), pose === 'aim' ? -40 : 90);
+    if (pose !== 'fire') held = trapFn(P.hF[0] + (pose === 'aim' ? -3 : 2), P.hF[1] + (pose === 'aim' ? -4 : 5), pose === 'aim' ? -30 : 70);
     else {
       const t = [P.hF[0] + 9, P.hF[1] - 4];
       fx = c.ln(`M${f(P.hF[0] - 2)} ${f(P.hF[1] + 8)}Q${f(P.hF[0] + 4)} ${f(P.hF[1] - 6)} ${f(t[0] - 4)} ${f(t[1] - 2)}`, '#fff', 1.4, 0.6) + c.ln(`M${f(P.hF[0] - 6)} ${f(P.hF[1] + 4)}Q${f(P.hF[0])} ${f(P.hF[1] - 10)} ${f(t[0] - 6)} ${f(t[1] - 6)}`, c.E.light, 1.2, 0.5) + trapFn(t[0], t[1], 25);
@@ -1933,7 +1941,7 @@
         o += ao(c, 40, 104, 24, 6, 0.55);
         o += aHutB(c, 40, 58, 104, 22, M.plank, '#7a6a4a', M.woodD, 162);
         o += darkDoorB(c, 40, 105, 13, 19, true);
-        o += hunter(c, pose, 72, 95, 1, (x, y, a) => bearTrapB(c, x, y, 0.8, a, pose !== 'idle'));
+        o += hunter(c, pose, 72, 95, 1, (x, y, a) => bearTrapB(c, x, y, 1, a, pose !== 'idle'));
         return o;
       }
       if (v === 2 || v === 3) {
@@ -1947,8 +1955,8 @@
         o += darkDoorB(c, 44, 97, 14, 22, true);
         o += c.ol('M44 42V38', M.iron, 1.4) + aura(c, 44, 34, 6, 6, E.color, 0.8) + c.ci(44, 34, 3.4, c.sg(E.color), 1.8);
         if (L3) o += hexRune(c, 44, 66, 0.75, 2, by(pose, 0, 1, 2)) + runeCircleB(c, 88, 104, 7, 0.8, flash);
-        else o += c.ol('M30 60V66', M.iron, 1.2) + bearTrapB(c, 30, 69, 0.7);
-        o += hunter(c, pose, 74, 96, L3 ? 3 : 2, (x, y, a) => bearTrapB(c, x, y, 0.85, a, pose !== 'idle' || L3));
+        else o += c.ol('M30 60V64', M.iron, 1.2) + bearTrapB(c, 30, 68, 0.6, 80);
+        o += hunter(c, pose, 74, 96, L3 ? 3 : 2, (x, y, a) => bearTrapB(c, x, y, 1.05, a, pose !== 'idle' || L3));
         return o;
       }
       if (v === 'A') {
@@ -1967,7 +1975,7 @@
         o += darkDoorB(c, 42, 93, 14, 22, true);
         o += runeCircleB(c, 18, 104, 8, 0.85, flash) + runeCircleB(c, 64, 108, 7, 0.85, flash);
         const P = hunterPose(pose, 74, 91);
-        o += hunter(c, pose, 74, 91, 'A', (x, y, a) => bearTrapB(c, x, y, 0.95, a, true));
+        o += hunter(c, pose, 74, 91, 'A', (x, y, a) => bearTrapB(c, x, y, 1.1, a, true));
         // 손목에서 덫까지 사슬
         const t = pose === 'fire' ? [P.hF[0] + 9, P.hF[1] - 4] : [P.hF[0] + (pose === 'aim' ? -3 : 1.5), P.hF[1] + (pose === 'aim' ? -4 : 4)];
         const anchor = [56, 70];

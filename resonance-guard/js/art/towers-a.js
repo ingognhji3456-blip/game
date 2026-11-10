@@ -1736,13 +1736,13 @@
         /* 정적의 종: 두꺼운 얼음 아치 안의 커다란 종(무거워서 조금만 흔들림), 울리면 하얗고 넓은 고요의 고리 */
         let o = plat(c, 4, { stone: '#8ea2b6', trim: M.silver });
         o += footShade(c, 50, 99, 36, 8);
-        const angA = { idle: 0, aim: -16, fire: 12 }[pose];
+        const angA = { idle: 0, aim: -13, fire: 11 }[pose];
         o += aura(c, 50, 60, 42, 36, E.light, pose === 'fire' ? 0.6 : 0.35);
         o += c.p('M10 100V48C10 18 28 4 50 4C72 4 90 18 90 48V100H76V50C76 30 66 18 50 18C34 18 24 30 24 50V100Z', c.vg(E.light, 0.35, -0.2), 3);
         o += c.ln('M10 66H24M76 66H90M10 84H24M76 84H90M12 40L25 44M88 40L75 44M30 12L36 22M70 12L64 22M50 4V18M17 52V66M83 52V66M17 84V100M83 84V100', h.shade(E.color, -0.1), 1.6, 0.8);
         o += c.ln('M14 30Q16 22 22 16', '#ffffff', 2, 0.8);
         o += c.ol('M50 18V22', M.silver, 2.4);
-        const B = swingBell(c, 50, 25, 44, 54, h.mix(E.color, '#ffffff', 0.3), angA, pose, { lever: 6, yoke: M.silver, frost: true });
+        const B = swingBell(c, 50, 25, 40, 52, h.mix(E.color, '#ffffff', 0.3), angA, pose, { lever: 6, yoke: M.silver, frost: true });
         o += B.s;
         o += icicleRow(c, 26, 74, 19, 8, 6, '#ffffff');
         const P = ringer(c, 12, 88, 104, 1, pose, { tunic: '#2a4a7a', headCol: '#e8eef6', head: 'hood', glove: '#9ab0c8', trim: E.light });
@@ -1832,7 +1832,7 @@
     let s = '';
     if (pose === 'aim') {
       s += aura(c, x, y, r * 3.4, r * 3.2, E.color, 0.85);
-      s += zapArc(c, x - r * 2.6, y + r * 0.6, x - r * 0.8, y - r * 0.4, { n: 3, j: 2, w: 1.6, seed: 3 }) + zapArc(c, x + r * 2.6, y + r * 0.2, x + r * 0.9, y - r * 0.5, { n: 3, j: 2, w: 1.6, seed: 5 }) + zapArc(c, x - r * 0.4, y - r * 2.8, x, y - r, { n: 3, j: 2, w: 1.6, seed: 8 });
+      s += zapArc(c, x - r * 2.6, y + r * 0.6, x - r * 0.8, y - r * 0.4, { n: 3, j: 2, w: 1.6, seed: 3 }) + zapArc(c, x + r * 2.6, y + r * 0.2, x + r * 0.9, y - r * 0.5, { n: 3, j: 2, w: 1.6, seed: 5 }) + zapArc(c, x - r * 0.4, y - r * 2.2, x, y - r, { n: 3, j: 2, w: 1.6, seed: 8 });
     } else if (pose === 'idle') s += aura(c, x, y, r * 2.2, r * 2, E.color, 0.55);
     s += orb(c, x, y, r, o.col || COPPER, 2.2);
     if (pose === 'idle') s += spark(c, x + r * 0.9, y - r * 0.9, r * 0.9, E.light, 1.2);
