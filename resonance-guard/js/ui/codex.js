@@ -136,73 +136,105 @@
    * ===================================================== */
   let heroSel = 'kara';
   let heroBack = null; // 뒤로 갈 곳 (로비에서 왔으면 로비)
+  let heroTapped = false; // 무대를 한 번이라도 눌렀나 ('눌러 보세요' 안내는 그 뒤로 숨김)
+  /** 받침 고르기: 받침이 있으면 a, 없으면 b (예: 과/와, 을/를, 이/가) */
+  const josa = (word, a, b) => { const c = word.charCodeAt(word.length - 1) - 0xac00; return c >= 0 && c <= 11171 && c % 28 ? a : b; };
+  /** 꾸미기용 그림 (화면 읽기 프로그램이 내부 이름을 읽지 않게 alt는 비움) */
+  const deco = (svg, cls) => UI.svgImg(svg, cls, '');
+  // 영웅 기술이 닿는 적 (시뮬 규칙 그대로: 내려찍기는 지상만, 벽은 지상 적만 막음, 나머지는 공중도)
+  const SKILL_HITS = { flame_slam: '지상 적만', earth_wall: '지상 적을 막음', dawn_prayer: '지상·공중', frost_volley: '지상·공중', thunder_drone: '지상·공중', shadow_strike: '비행 적도 가능' };
+  const SKILL_ICON = { flame_slam: 'burn', frost_volley: 'freeze', dawn_prayer: 'healer', thunder_drone: 'shock', earth_wall: 'shield', shadow_strike: 'dash' };
+  const SKILL_TARGET = { point: '고른 곳', enemy: '적 하나', path: '길 한 칸' };
   /*
    * 수호대 (2026-11-10 개편): 예전엔 작은 초상화 목록 + 글자 줄이 전부였음.
-   * 영웅 고르기 줄(원소 색 테두리, 잠긴 영웅은 실루엣과 합류 맵) + 영웅 원소 색으로 꾸민 무대
-   * (큰 초상화·숨 쉬는 전신 그림·누르면 공격 자세와 말풍선) + 능력치 막대 + 기술·패시브 카드 + 다음 출정 대표 정하기.
+   * 영웅 고르기 줄(원소 색 테두리, 잠긴 영웅은 전신 실루엣과 합류 맵) + 영웅 원소 색으로 꾸민 무대
+   * (왼쪽 큰 초상화 · 오른쪽 숨 쉬는 전신 그림, 누르면 공격 자세와 대사) + 능력치 막대 + 기술·패시브 카드 + 출정 영웅 정하기.
+   * 독립 검토(디자인 3·코드·문구) 지적 반영.
    */
   UI.register('heroes', {
     enter(sec, data) {
-      if (data.hero && D().heroes[data.hero]) heroSel = data.hero;
       if (data.back) heroBack = data.back;
       else if (!data.hero) heroBack = null;
       sec.innerHTML = '';
       const unlocked = P().heroesFor(P().frontier());
       const lead = unlocked.includes(P().get().lastHero) ? P().get().lastHero : unlocked[0];
+      if (data.hero && D().heroes[data.hero]) heroSel = data.hero;
+      else heroSel = lead; // 새로 들어올 때는 출정 영웅부터 (처음부터 다시 뒤 잠긴 영웅에 머물지 않게)
       const back = heroBack && heroBack.screen ? () => UI.show(heroBack.screen, heroBack.data || {}) : null;
       const bar = topBar('수호대', back);
-      bar.appendChild(el('span', { class: 'hx-count' }, [UI.icon('hero', 'tiny'), `영웅 ${unlocked.length} / ${D().heroOrder.length}`]));
+      bar.appendChild(el('span', { class: 'hx-count', 'aria-label': `영웅 ${unlocked.length}명 합류 (전체 ${D().heroOrder.length}명)` }, [deco(RG.art.icon('hero'), 'icon hx-count-ico'), `영웅 ${unlocked.length} / ${D().heroOrder.length}`]));
       const roster = el('nav', { class: 'hx-roster', 'aria-label': '영웅 고르기' });
       for (const h of D().heroOrder) {
         const hd = D().heroes[h];
         const open = unlocked.includes(h);
+        const join = joinText(hd);
         roster.appendChild(el('button', {
           class: `hx-pick ${heroSel === h ? 'on' : ''} ${open ? '' : 'locked'}`,
           style: `--hc:${hd.color};--ec:${D().elements[hd.element].color}`,
           'aria-pressed': heroSel === h ? 'true' : 'false',
-          title: open ? `${hd.name} · ${hd.title}` : `${hd.unlock}에서 합류`,
-          onclick: () => { if (heroSel !== h) { heroSel = h; UI.sfx('click'); UI.show('heroes', { hero: h }); } },
+          'aria-label': open ? `${hd.name}${h === lead ? ' · 출정 영웅' : ''}` : `잠긴 영웅 · ${join}`,
+          title: open ? `${hd.name} · ${hd.title}` : join,
+          onclick: () => { if (heroSel !== h) { UI.sfx('click'); UI.show('heroes', { hero: h, focus: 'pick' }); } },
         }, [
           el('span', { class: 'hx-pick-face' }, open
-            ? [UI.portrait(h, 'normal', 'hx-pick-img')]
-            : [RG.art.hero ? UI.svgImg(RG.art.hero(h, 'idle0'), 'hx-pick-shadow', '') : null, UI.icon('lock', 'hx-lock')]), // 잠긴 영웅: 배경 없는 전신 실루엣
-          el('b', { text: open ? hd.name : hd.unlock }),
-          open && h === lead ? el('i', { class: 'hx-lead-dot', title: '다음 출정 대표' }, [UI.icon('star', 'tiny')]) : null,
+            ? [deco(RG.art.portrait(h, 'normal'), 'hx-pick-img')]
+            : [RG.art.hero ? deco(RG.art.hero(h, 'idle0'), 'hx-pick-shadow') : null, deco(RG.art.icon('lock'), 'icon hx-lock'), el('small', { class: 'hx-pick-map', text: hd.unlock })]), // 잠긴 영웅: 배경 없는 전신 실루엣
+          el('b', { text: open ? hd.name : '???' }),
+          open && h === lead ? el('i', { class: 'hx-lead-dot' }, [deco(RG.art.icon('star'), 'icon')]) : null,
         ]));
       }
       const open = unlocked.includes(heroSel);
       const main = el('div', { class: 'hx-main' }, [heroStage(heroSel, open, heroSel === lead), heroInfo(heroSel, open)]);
       sec.append(bar, el('div', { class: 'hx-body' }, [roster, main]));
-      // 고른 영웅이 고르기 줄 안에 보이게
-      requestAnimationFrame(() => { const on = roster.querySelector('.hx-pick.on'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'center' }); });
+      requestAnimationFrame(() => {
+        const on = roster.querySelector('.hx-pick.on');
+        if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'center' });
+        // 다시 그린 뒤 키보드 위치를 되돌림 (매번 맨 위부터 다시 탭하지 않게)
+        if (data.focus === 'pick' && on) on.focus({ preventScroll: true });
+        else if (data.focus === 'lead') { const f = sec.querySelector('.hx-lead, .hx-lead-badge'); if (f) f.focus({ preventScroll: true }); }
+      });
     },
   });
 
-  /** 무대: 원소 색 배경 + 큰 초상화 + 전신 그림(숨쉬기) + 이름판 + 말풍선 */
+  /** 합류 조건: 합류 맵 바로 앞 맵을 깨면 합류 */
+  function joinPrev(hd) { const i = P().mapIndex(hd.unlock); return i > 0 ? D().maps[i - 1] : null; }
+  function joinText(hd) {
+    const prev = joinPrev(hd);
+    return prev ? `${prev.id} ${prev.name}${josa(prev.name, '을', '를')} 깨면 합류` : `${hd.unlock}에서 합류`;
+  }
+
+  /** 무대: 원소 색 배경 + 왼쪽 큰 초상화 + 오른쪽 전신 그림(숨쉬기) + 말풍선 + 이름판 */
   function heroStage(h, open, isLead) {
     const hd = D().heroes[h];
     const ec = D().elements[hd.element].color;
     const stage = el('div', { class: `hx-stage ${open ? '' : 'locked'}`, style: `--hc:${hd.color};--ec:${ec}` });
-    const portrait = UI.portrait(h, 'normal', 'hx-portrait');
-    const pose = (p) => (RG.art.hero ? UI.svgImg(RG.art.hero(h, p), `hx-body-img hx-${p}`, '') : null);
-    const figure = el('div', { class: 'hx-figure' }, [pose('idle0'), pose('idle1'), pose('attack')]);
-    const lines = hd.lines.select.concat(hd.lines.win);
-    let li = 0;
-    const bubble = el('div', { class: 'hx-bubble', text: open ? lines[0] : '' });
+    const pose = (p) => (RG.art.hero ? deco(RG.art.hero(h, p), `hx-body-img hx-${p}`) : null);
+    const figure = el('div', { class: 'hx-figure' }, open ? [pose('idle0'), pose('idle1'), pose('attack')] : [pose('idle0')]);
+    const wrap = el('div', { class: 'hx-artwrap' });
     const art = el('div', { class: 'hx-art' }, [
       el('div', { class: 'hx-rays' }),
-      RG.art.elementGem ? UI.svgImg(RG.art.elementGem(hd.element), 'hx-gem', '') : null,
-      open ? el('div', { class: 'hx-portrait-ring' }, [portrait]) : el('div', { class: 'hx-mystery', text: '?' }),
+      RG.art.elementGem ? deco(RG.art.elementGem(hd.element), 'hx-gem') : null,
+      open ? el('div', { class: 'hx-portrait-ring' }, [deco(RG.art.portrait(h, 'normal'), 'hx-portrait')]) : el('div', { class: 'hx-mystery', 'aria-hidden': 'true', text: '?' }),
       el('div', { class: 'hx-pedestal' }),
       figure,
-      open ? bubble : null,
     ]);
+    wrap.appendChild(art);
     if (open) {
-      // 무대를 누르면: 공격 자세 + 기쁜 얼굴 + 다음 대사
-      let tm = 0;
+      const lines = hd.lines.select;
+      let li = 0;
+      const bubbleId = `hx-bubble-${h}`;
+      // 말풍선은 누르는 칸(버튼) 바깥에 두어 화면 읽기 프로그램이 새 대사를 읽을 수 있게
+      const bubble = el('div', { class: 'hx-bubble', id: bubbleId, 'aria-live': 'polite', text: lines[0] });
+      const hint = heroTapped ? null : el('span', { class: 'hx-tap', 'aria-hidden': 'true' }, [deco(RG.art.icon('play'), 'icon'), '눌러 보세요']);
+      wrap.appendChild(bubble);
+      if (hint) wrap.appendChild(hint);
+      const portrait = art.querySelector('.hx-portrait');
       const urlN = portrait.src;
       let urlH = null;
+      let tm = 0;
       art.addEventListener('click', () => {
+        heroTapped = true;
+        if (hint) hint.remove();
         li = (li + 1) % lines.length;
         bubble.textContent = lines[li];
         bubble.classList.remove('pop'); void bubble.offsetWidth; bubble.classList.add('pop');
@@ -215,32 +247,49 @@
       });
       art.setAttribute('role', 'button');
       art.setAttribute('tabindex', '0');
-      art.setAttribute('aria-label', `${hd.name} — 눌러서 대사 듣기`);
-      art.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); art.click(); } });
+      art.setAttribute('aria-label', `${hd.name}에게 말 걸기`);
+      art.setAttribute('aria-describedby', bubbleId);
+      art.addEventListener('keydown', (e) => { if (e.repeat) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); art.click(); } });
     }
-    const chips = open ? roleChips(hd) : [];
+    // 이야기상 다음 맵에 정해진 영웅이 있으면 출정 준비에서 그 영웅이 먼저 골라짐 — 숨기지 않고 알려 줌
+    const fd = D().maps.find((m) => m.id === P().frontier());
+    const forced = fd && fd.hero && fd.hero !== h && !P().mapRec(fd.id).cleared && P().heroesFor(fd.id).includes(fd.hero) ? fd : null;
+    let action;
+    const prev = joinPrev(hd);
+    if (!open) {
+      action = el('div', { class: 'hx-unlock' }, [deco(RG.art.icon('lock'), 'icon tiny'), prev
+        ? el('span', {}, [el('b', { text: `${prev.id} ${prev.name}` }), `${josa(prev.name, '을', '를')} 깨면 ${hd.unlock}에서 합류합니다`])
+        : el('span', {}, [el('b', { text: hd.unlock }), '에서 합류합니다'])]);
+    }
+    else if (isLead) action = el('span', { class: 'hx-lead-badge', tabindex: '-1' }, [deco(RG.art.icon('star'), 'icon tiny'), '출정 영웅']);
+    else {
+      action = el('button', {
+        class: 'btn hx-lead',
+        onclick: () => {
+          P().get().lastHero = h; P().save(); UI.sfx('upgrade');
+          UI.toast(`다음 출정은 ${hd.name}${josa(hd.name, '과', '와')} 함께!`, 'good');
+          UI.show('heroes', { hero: h, focus: 'lead' });
+        },
+      }, [deco(RG.art.icon('star'), 'icon tiny'), '이 영웅으로 출정']);
+    }
+    const note = open
+      ? el('p', { class: 'hx-note', text: forced ? `${forced.id}에서는 이야기에 따라 ${D().heroes[forced.hero].name}${josa(D().heroes[forced.hero].name, '이', '가')} 먼저 함께합니다 · 출정 준비에서 바꿀 수 있어요` : '전투에는 영웅 한 명이 함께합니다 · 출정 준비에서도 바꿀 수 있어요' })
+      : null;
     const plate = el('div', { class: 'hx-plate' }, [
       el('div', { class: 'hx-name' }, [el('h3', { text: open ? hd.name : '???' }), el('span', { class: 'hx-title', text: hd.title })]),
-      el('div', { class: 'hx-tags' }, [UI.elementBadge(hd.element), ...chips.map((c) => el('span', { class: 'hx-chip', text: c }))]),
-      open
-        ? el('button', {
-          class: `btn hx-lead ${isLead ? 'is-lead' : 'btn-primary'}`,
-          disabled: isLead ? true : null,
-          onclick: () => { P().get().lastHero = h; P().save(); UI.sfx('upgrade'); UI.toast(`${hd.name}, 다음 출정에 함께합니다`, 'good'); UI.show('heroes', { hero: h }); },
-        }, [UI.icon('star', 'tiny'), isLead ? '다음 출정 대표' : '다음 출정에 데려가기'])
-        : el('div', { class: 'hx-unlock' }, [UI.icon('lock', 'tiny'), el('span', {}, [el('b', { text: hd.unlock }), ` ${(D().maps.find((m) => m.id === hd.unlock) || {}).name || ''}에서 합류합니다`])]),
+      el('div', { class: 'hx-tags' }, [UI.elementBadge(hd.element), ...(open ? roleChips(hd) : []).map((c) => el('span', { class: 'hx-chip', text: c }))]),
+      el('div', { class: 'hx-act' }, [action]),
+      note,
     ]);
-    stage.append(art, plate);
+    stage.append(wrap, plate);
     return stage;
   }
 
-  /** 영웅 특징 몇 개 (근접·붙잡기·공중 등) */
+  /** 영웅 특징 칩 — 능력치 막대에 없는 것만 (공중 공격 여부, 범위·연쇄·치명) */
   function roleChips(hd) {
-    const out = [hd.melee ? '근접' : `원거리 ${hd.range}칸`];
-    out.push(hd.block ? `붙잡기 ${hd.block}명` : '붙잡지 않음');
-    out.push(hd.targets === 'both' ? '공중도 공격' : '지상만 공격');
+    const out = [hd.targets === 'both' ? '지상·공중 공격' : '지상 적만 공격'];
     if (hd.splash) out.push('주변까지 타격');
-    if (hd.chain) out.push(`연쇄 ${hd.chain.count}번`);
+    if (hd.chain) out.push(`연쇄 ${hd.chain.count}명 더`);
     if (hd.crit) out.push(`치명타 ${Math.round(hd.crit.chance * 100)}%`);
     return out;
   }
@@ -248,18 +297,10 @@
   /** 오른쪽: 소개 · 능력치 막대 · 기술 · 패시브 · 대사 */
   function heroInfo(h, open) {
     const hd = D().heroes[h];
-    const info = el('div', { class: 'hx-info', style: `--ec:${D().elements[hd.element].color}` });
-    if (!open) {
-      info.append(
-        el('p', { class: 'hx-bio dim', text: '아직 만나지 못한 수호자입니다. 모험을 이어 가면 합류합니다.' }),
-        heroStats(hd, false),
-        el('div', { class: 'hx-card hx-skill locked' }, [el('span', { class: 'hx-card-ico' }, [UI.icon('lock', 'hx-ci')]), el('div', { class: 'hx-card-body' }, [el('span', { class: 'hx-kind', text: '기술' }), el('b', { text: '???' }), el('span', { class: 'dim', text: '합류하면 볼 수 있습니다.' })])]),
-      );
-      return info;
-    }
     const ec = D().elements[hd.element].color;
-    const card = (kind, icon, name, desc, chips, cls) => el('div', { class: `hx-card ${cls}`, style: `--ec:${ec}` }, [
-      el('span', { class: 'hx-card-ico' }, [UI.icon(icon, 'hx-ci')]),
+    const info = el('div', { class: `hx-info ${open ? '' : 'locked'}`, style: `--ec:${ec}` });
+    const card = (kind, icon, name, desc, chips, cls) => el('div', { class: `hx-card ${cls}` }, [
+      el('span', { class: 'hx-card-ico' }, [deco(RG.art.icon(icon), 'icon hx-ci')]),
       el('div', { class: 'hx-card-body' }, [
         el('span', { class: 'hx-kind', text: kind }),
         el('b', { text: name }),
@@ -267,60 +308,79 @@
         chips.length ? el('div', { class: 'hx-mini' }, chips.map((c) => el('span', { text: c }))) : null,
       ]),
     ]);
-    const quotes = el('div', { class: 'hx-quotes' }, hd.lines.select.slice(0, 2).concat(hd.lines.win.slice(0, 1)).map((q) => el('q', { text: q })));
+    if (!open) {
+      info.append(
+        el('p', { class: 'hx-bio', text: '아직 만나지 못한 영웅입니다. 어떤 힘을 가졌는지는 합류하면 알 수 있어요.' }),
+        heroStats(hd, false),
+        card('기술', 'lock', '???', '합류하면 볼 수 있습니다.', [], 'hx-skill locked'),
+        card('패시브', 'lock', '???', '합류하면 볼 수 있습니다.', [], 'hx-passive locked'),
+      );
+      return info;
+    }
+    // 대사: 말풍선이 돌려 보여 주는 인사말 말고, 상황별 한마디
+    const said = [['기술을 쓸 때', hd.lines.skill], ['쓰러질 때', hd.lines.down], ['다시 일어날 때', hd.lines.revive], ['이겼을 때', hd.lines.win]]
+      .filter(([, l]) => l && l.length).map(([when, l]) => el('div', { class: 'hx-line' }, [el('span', { class: 'hx-when', text: when }), el('q', { text: l[0] })]));
     info.append(
       el('p', { class: 'hx-bio', text: hd.bio }),
       heroStats(hd, true),
-      card('기술', 'skill', hd.skill.name, hd.skill.desc, skillChips(hd.skill), 'hx-skill'),
+      card('기술', SKILL_ICON[hd.skill.id] || 'skill', hd.skill.name, hd.skill.desc, skillChips(hd.skill), 'hx-skill'),
       card('패시브', hd.element, hd.passive.name, hd.passive.desc, passiveChips(hd.passive), 'hx-passive'),
-      el('div', { class: 'hx-sec' }, [el('span', { class: 'hx-kind', text: '대사' }), quotes]),
+      el('div', { class: 'hx-sec' }, [el('span', { class: 'hx-kind', text: '대사' }), el('div', { class: 'hx-lines' }, said)]),
     );
     return info;
   }
 
-  /** 능력치 막대: 영웅 여섯 중 가장 높은 값을 가득으로 */
+  /** 능력치 막대: 영웅 여섯 중 가장 높은 값을 가득으로 (레벨 1 기준) */
   function heroStats(hd, open) {
     const all = D().heroOrder.map((k) => D().heroes[k]);
     const max = (f) => Math.max(...all.map(f));
     const dps = (x) => x.damage / x.interval;
+    const reach = (x) => (x.melee ? 0.75 : x.range);
     const rows = [
-      ['hp', '체력', hd.hp / max((x) => x.hp), String(hd.hp)],
-      ['damage', '공격', dps(hd) / max(dps), `${hd.damage} / ${hd.interval}초`],
-      ['range', '사거리', (hd.melee ? 0.75 : hd.range) / max((x) => (x.melee ? 0.75 : x.range)), hd.melee ? '근접' : `${hd.range}칸`],
-      ['speed', '이동', hd.speed / max((x) => x.speed), `${hd.speed}칸/초`],
-      ['armor', '방어', (hd.armor || 0) / max((x) => x.armor || 0), `${Math.round((hd.armor || 0) * 100)}%`],
-      ['hero', '붙잡기', (hd.block || 0) / max((x) => x.block || 0), hd.block ? `${hd.block}명` : '없음'],
+      ['hp', '체력', hd.hp / max((x) => x.hp), String(hd.hp), ''],
+      ['damage', '초당 피해', dps(hd) / max(dps), String(Math.round(dps(hd))), `한 번에 ${hd.damage} · ${hd.interval}초마다`],
+      ['range', '사거리', reach(hd) / max(reach), hd.melee ? '근접' : `${hd.range}칸`, ''],
+      ['speed', '이동 속도', hd.speed / max((x) => x.speed), `${hd.speed}칸/초`, ''],
+      ['armor', '갑옷', (hd.armor || 0) / max((x) => x.armor || 0), `${Math.round((hd.armor || 0) * 100)}%`, '받는 피해를 이만큼 줄임'],
+      ['hero', '붙잡기', (hd.block || 0) / max((x) => x.block || 0), hd.block ? `${hd.block}명` : '없음', '한 번에 막아 세우는 적 수'],
     ];
-    return el('div', { class: 'hx-stats' }, rows.map(([ic, name, k, val]) => el('div', { class: 'hx-stat' }, [
-      UI.icon(ic, 'hx-si'),
-      el('span', { class: 'hx-sn', text: name }),
-      el('span', { class: 'hx-bar' }, [el('i', { style: `width:${open ? Math.max(4, Math.round(k * 100)) : 0}%` })]),
-      el('b', { text: open ? val : '?' }),
-    ])));
+    const maxLv = D().heroXp ? D().heroXp.length : 5;
+    return el('div', { class: 'hx-stats' }, [
+      ...rows.map(([ic, name, k, val, tip]) => el('div', { class: 'hx-stat', title: open && tip ? tip : null }, [
+        deco(RG.art.icon(ic), 'icon hx-si'),
+        el('span', { class: 'hx-sn', text: name }),
+        el('span', { class: 'hx-bar' }, [el('i', { style: `width:${open && k > 0 ? Math.max(4, Math.round(k * 100)) : 0}%` })]),
+        el('b', { text: open ? val : '?' }),
+      ])),
+      open ? el('p', { class: 'hx-cap', text: `레벨 1 기준 · 막대는 영웅 ${all.length}명 중 비교 · 전투에서 적을 물리치면 Lv${maxLv}까지 레벨마다 +${Math.round(D().heroLevelBonus.stat * 100)}%` }) : null,
+    ]);
   }
   function skillChips(s) {
-    const c = [`재사용 ${s.cooldown}초`];
-    if (s.delay) c.push(`${s.delay}초 뒤`);
+    const c = [];
+    if (SKILL_TARGET[s.target]) c.push(SKILL_TARGET[s.target]);
+    if (SKILL_HITS[s.id]) c.push(SKILL_HITS[s.id]);
+    c.push(`재사용 대기 ${s.cooldown}초`);
+    if (s.delay) c.push(`${s.delay}초 뒤 떨어짐`);
     if (s.radius) c.push(`반경 ${s.radius}칸`);
     if (s.damage) c.push(`피해 ${s.damage}`);
     if (s.heal) c.push(`회복 ${s.heal}`);
-    if (s.burn) c.push(`화상 ${s.burn.dur}초`);
+    if (s.burn) c.push(`화상 초당 ${s.burn.dps} · ${s.burn.dur}초`);
     if (s.freeze) c.push(`빙결 ${s.freeze}초`);
     if (s.blind) c.push(`실명 ${s.blind}초`);
-    if (s.duration) c.push(`${s.duration}초 지속`);
+    if (s.duration) c.push(`${s.duration}초 동안`);
+    if (s.drone) c.push(`번개 ${s.drone.damage} · ${s.drone.interval}초마다`, `사거리 ${s.drone.range}칸`, `연쇄 ${s.drone.chain.count}명 더`);
     if (s.wallHp) c.push(`벽 체력 ${s.wallHp}`);
-    if (s.execute) c.push(`체력 ${Math.round(s.execute * 100)}% 이하 처치`);
+    if (s.execute) c.push(`체력 ${Math.round(s.execute * 100)}% 이하 즉시 처치`);
+    if (s.bossMult) c.push(`보스 피해 ${s.bossMult}배`);
     return c;
   }
+  /** 패시브 칩은 설명에 없는 숫자만 */
   function passiveChips(p) {
     const c = [];
-    if (p.threshold) c.push(`체력 ${Math.round(p.threshold * 100)}% 이하`);
-    if (p.reduce) c.push(`받는 피해 −${Math.round(p.reduce * 100)}%`);
-    if (p.detect) c.push(`탐지 ${p.detect}칸`);
-    if (p.regen) c.push(`초당 회복 ${Math.round(p.regen * 100)}%`);
-    if (p.critChance) c.push(`치명타 ${Math.round(p.critChance * 100)}% · ${p.critMult}배`);
-    if (p.every) c.push(`${p.every}번에 1번`);
-    if (p.bountyPct) c.push(`현상금 +${Math.round(p.bountyPct * 100)}%`);
+    if (p.critMult) c.push(`치명타 피해 ${p.critMult}배`);
+    if (p.radius) c.push(`주변 ${p.radius}칸 탑`);
+    if (p.every) c.push(`${p.every}번째 공격마다`);
+    if (p.damage) c.push(`번개 피해 ${p.damage}`);
     return c;
   }
 

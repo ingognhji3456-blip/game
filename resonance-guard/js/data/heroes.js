@@ -16,7 +16,7 @@ RG.data.heroes = {
     splash: 0.6, targets: 'ground',
     skill: {
       id: 'flame_slam', name: '불꽃 내려찍기', cooldown: 18, target: 'point', radius: 1.5, damage: 70, burn: { dps: 10, dur: 3 },
-      desc: '고른 곳으로 뛰어올라 내려찍습니다. 반경 1.5칸 피해와 화상, 주변 적을 붙잡습니다.',
+      desc: '고른 곳으로 뛰어올라 내려찍습니다. 반경 1.5칸의 지상 적에게 피해와 화상을 주고, 그 자리에서 적을 붙잡아 싸웁니다.',
     },
     passive: { id: 'unyielding', name: '불굴', threshold: 0.3, reduce: 0.3, desc: '체력 30% 이하일 때 받는 피해 −30%.' },
     bio: '마을이 좋아서 망치를 든, 앞뒤 안 가리는 대장장이 딸.',
@@ -38,7 +38,7 @@ RG.data.heroes = {
       id: 'dawn_prayer', name: '새벽의 기도', cooldown: 22, target: 'point', radius: 2.0, heal: 120, damage: 60, blind: 3,
       desc: '고른 곳 반경 2칸의 영웅·병사를 크게 회복하고, 적에게 피해와 실명을 줍니다.',
     },
-    passive: { id: 'lamp_keeper', name: '등불지기', detect: 1.8, regen: 0.01, desc: '주변 1.8칸의 숨은 적을 드러내고, 자신은 매초 체력 1%를 회복합니다.' },
+    passive: { id: 'lamp_keeper', name: '등불지기', detect: 1.8, regen: 0.01, desc: '주변 1.8칸의 숨은 적을 드러내고, 자신은 매초 최대 체력의 1%를 회복합니다.' },
     bio: '겁은 많지만 등불만큼은 절대 놓지 않는 견습 등불지기.',
     lines: {
       select: ['세라예요. 등불은 제가 지킬게요.', '빛이 닿는 곳이라면 괜찮아요.', '다들, 다치지 마세요.'],
@@ -79,7 +79,7 @@ RG.data.heroes = {
       drone: { damage: 22, interval: 0.8, range: 2.5, chain: { count: 3, falloff: 0.25, radius: 1.5 } },
       desc: '고른 곳에 10초 동안 연쇄 번개를 쏘는 드론을 띄웁니다.',
     },
-    passive: { id: 'field_mod', name: '현장 개조', radius: 2.0, every: 4, damage: 12, desc: '주변 2칸 탑의 공격 4번에 1번, 대상에게 작은 번개가 덧붙습니다.' },
+    passive: { id: 'field_mod', name: '현장 개조', radius: 2.0, every: 4, damage: 12, desc: '주변 2칸 안의 탑이 4번 공격할 때마다, 맞은 적에게 작은 번개가 한 번 더 떨어집니다.' },
     bio: '안개마저 연구 대상으로 보는, 수다스러운 떠돌이 발명가.',
     lines: {
       select: ['제나 등장! 오늘의 실험, 시작합니다!', '코일 충전 완료, 아마도!', '안개 표본 채집해도 돼요?'],
@@ -117,7 +117,7 @@ RG.data.heroes = {
     crit: { chance: 0.3, mult: 2 }, targets: 'ground',
     skill: {
       id: 'shadow_strike', name: '그림자 습격', cooldown: 16, target: 'enemy', damage: 180, execute: 0.2, bossMult: 2,
-      desc: '고른 적에게 순간이동해 큰 피해를 줍니다. 체력 20% 이하면 처치(보스에게는 피해 2배).',
+      desc: '고른 적에게 순간이동해 큰 피해를 줍니다. 체력이 20% 이하인 적은 바로 처치합니다. 보스는 처치되지 않는 대신 피해를 2배로 받습니다.',
     },
     passive: { id: 'plunder', name: '약탈', bountyPct: 0.5, desc: '야로가 처치한 적의 현상금 +50%.' },
     bio: '침묵을 믿던 교단을 떠나 등불 편에 선, 비꼬는 그림자 도적.',

@@ -509,21 +509,197 @@ button { font-family: var(--font); color: inherit; }
 .rt-cell.pure { background: #3c2f22; color: var(--gold2); }
 .res-list { margin-top: 8px; }
 
-/* 수호대 */
-.heroes-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 110px 1fr; gap: 12px; padding: 10px calc(14px + var(--safe-r)) calc(14px + var(--safe-b)) calc(14px + var(--safe-l)); overflow: hidden; }
-.hero-list { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
-.hl-item { appearance: none; border: 2px solid var(--line); background: var(--panel); border-radius: 12px; padding: 4px; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; color: var(--text); font-size: 0.85rem; }
-.hl-item.on { border-color: var(--gold); background: #3c2f22; }
-.hl-item.locked { opacity: 0.4; }
-.hl-portrait { width: 64px; height: 64px; border-radius: 50%; }
-.hero-detail { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
-.hd-faces { display: flex; gap: 8px; }
-.hd-face { width: min(120px, 26vw); border-radius: 50%; }
-.hero-detail h3 { color: var(--gold2); font-size: 1.4rem; }
-.skill-box { background: #0004; border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; font-size: 0.88rem; }
-.skill-box b { color: var(--gold2); }
-.quotes { display: flex; flex-direction: column; gap: 3px; font-size: 0.86rem; color: var(--dim); }
-.quotes q { quotes: '“' '”'; }
+/* 수호대 (2026-11-10 개편 + 독립 검토 반영) — 고르기 줄 + 영웅 원소 색 무대 + 능력치 막대·기술 카드 */
+#screen-heroes { background: radial-gradient(ellipse at 30% 0%, #33244e 0%, #1a1228 50%, #100b18 100%); }
+#screen-heroes .top-bar { background: linear-gradient(180deg, #2c1f44, #1a1229); border-bottom: 1px solid #ffdf9a33; box-shadow: 0 4px 18px #0008; }
+#screen-heroes .top-bar h2 { font-size: 1.35rem; background: linear-gradient(180deg, #fff6d6, #f2c46a); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 2px 0 #3a1e06); }
+.hx-count { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px 4px 8px; border-radius: 999px; background: #0006; border: 1px solid #ffd56a55; font-weight: 800; font-size: 0.86rem; color: #fff1d6; }
+.hx-count-ico { width: 20px; height: 20px; }
+.hx-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; padding: 4px calc(14px + var(--safe-r)) calc(12px + var(--safe-b)) calc(14px + var(--safe-l)); }
+.hx-body p { margin: 0; }
+/* 고르기 줄 — 글로우가 잘리지 않게 안쪽 여백을 두고 바깥 여백으로 되돌림 */
+.hx-roster { display: flex; gap: 12px; justify-content: center; overflow-x: auto; padding: 12px 14px 8px; margin: 0 -14px; scrollbar-width: none; flex: none; }
+.hx-roster::-webkit-scrollbar { display: none; }
+.hx-pick { --hc: #c9a; --ec: #c9a; position: relative; flex: none; appearance: none; border: 0; background: none; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 64px; cursor: pointer; color: #f3e8ff; font: inherit; font-size: 0.84rem; }
+.hx-pick-face { position: relative; display: block; width: 62px; height: 62px; border-radius: 50%; padding: 3px; background: conic-gradient(from 200deg, var(--ec), color-mix(in srgb, var(--ec) 40%, #1a1028), var(--ec)); box-shadow: 0 0 0 2px #0a0612, 0 4px 10px #0009; transition: transform 0.15s, box-shadow 0.15s; }
+.hx-pick-img { display: block; width: 100%; height: 100%; border-radius: 50%; background: #1a1028; }
+.hx-pick b { font-weight: 800; text-shadow: 0 1px 2px #000; }
+.hx-pick:hover .hx-pick-face { transform: translateY(-2px); }
+.hx-pick.locked .hx-pick-face { background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--ec) 50%, #3a3050) 0%, #1e1828 80%); box-shadow: 0 0 0 2px #0a0612, inset 0 0 0 2px color-mix(in srgb, var(--ec) 45%, #3a3048), 0 4px 10px #0009; }
+.hx-pick.locked b { color: #c9bedb; }
+.hx-pick-shadow { position: absolute; inset: 8%; width: 84%; height: 84%; filter: brightness(0) drop-shadow(0 0 1px color-mix(in srgb, var(--ec) 90%, #fff)) drop-shadow(0 0 4px color-mix(in srgb, var(--ec) 60%, transparent)); }
+.hx-lock { position: absolute; right: -4px; top: -4px; width: 22px; height: 22px; filter: drop-shadow(0 1px 2px #000); }
+.hx-pick-map { position: absolute; left: 50%; bottom: -6px; translate: -50% 0; padding: 0 6px; border-radius: 999px; background: #0a0612; border: 1px solid #ffd56a66; font-size: 0.66rem; font-weight: 900; line-height: 1.5; color: var(--gold2); white-space: nowrap; }
+/* 고른 영웅: 금빛 (잠긴 영웅을 골라도 같은 강조) */
+.hx-pick.on .hx-pick-face, .hx-pick.on.locked .hx-pick-face { transform: translateY(-2px) scale(1.08); background: conic-gradient(from 200deg, #fff2c4, #f4b84a, #fff2c4); box-shadow: 0 0 0 2px #5a2e0c, 0 0 14px #ffcf6a, 0 6px 14px #000a; }
+.hx-pick.on.locked .hx-pick-face { background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--ec) 50%, #3a3050) 0%, #1e1828 70%) padding-box, conic-gradient(from 200deg, #fff2c4, #f4b84a, #fff2c4) border-box; border: 3px solid transparent; padding: 0; }
+.hx-pick.on b, .hx-pick.on.locked b { color: var(--gold2); }
+.hx-lead-dot { position: absolute; top: -4px; right: 2px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #2a1708; border: 2px solid #ffd56a; box-shadow: 0 0 8px #ffd56a99; }
+.hx-lead-dot .icon { width: 14px; height: 14px; }
+.hx-pick:focus-visible { outline: none; }
+.hx-pick:focus-visible .hx-pick-face { box-shadow: 0 0 0 3px #fff2c4, 0 0 16px #ffcf6a; }
+/* 본문: 무대 | 정보 */
+.hx-main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 14px; width: min(1180px, 100%); margin: 0 auto; }
+.hx-stage { --hc: #c9a; --ec: #c9a; position: relative; min-height: 0; display: flex; flex-direction: column; border-radius: 20px; overflow: hidden;
+  background: radial-gradient(90% 70% at 50% 38%, color-mix(in srgb, var(--hc) 46%, transparent) 0%, transparent 70%), linear-gradient(180deg, color-mix(in srgb, var(--hc) 30%, #2a1c44) 0%, #1c1330 62%, #120c1e 100%);
+  border: 2px solid color-mix(in srgb, var(--ec) 60%, #ffffff10); box-shadow: 0 0 0 2px #0a0612, 0 14px 30px #000a, inset 0 1px 0 #ffffff26; }
+/* 그림 칸: 크기 단위(cqw·cqh)로 초상화(왼쪽)와 전신 그림(오른쪽)이 겹치지 않게 나눔 */
+.hx-artwrap { position: relative; flex: 1; min-height: 200px; container-type: size; }
+.hx-art { position: absolute; inset: 0; cursor: pointer; outline: none; overflow: hidden; }
+.hx-art:focus-visible { box-shadow: inset 0 0 0 3px #fff2c4; }
+.hx-rays { position: absolute; left: 34%; top: 50%; width: 150%; aspect-ratio: 1; translate: -50% -50%; background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--hc) 30%, transparent) 0deg 8deg, transparent 8deg 22deg); -webkit-mask: radial-gradient(circle, #000 0%, transparent 62%); mask: radial-gradient(circle, #000 0%, transparent 62%); opacity: 0.55; animation: hx-spin 80s linear infinite; pointer-events: none; }
+@keyframes hx-spin { to { rotate: 360deg; } }
+.hx-gem { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; filter: drop-shadow(0 3px 4px #000a); z-index: 3; }
+.hx-portrait-ring { position: absolute; left: 7%; top: 50%; translate: 0 -50%; width: min(46%, 260px); width: min(46cqw, 84cqh, 280px); aspect-ratio: 1; border-radius: 50%; padding: 6px;
+  background: conic-gradient(from 210deg, #fff2c4, color-mix(in srgb, var(--ec) 80%, #fff), #b06a1c, #fff2c4); box-shadow: 0 0 0 3px #0a0612, 0 0 40px color-mix(in srgb, var(--hc) 70%, transparent), 0 16px 30px #000b; }
+.hx-portrait { display: block; width: 100%; height: 100%; border-radius: 50%; background: #1a1028; }
+.hx-pedestal { position: absolute; right: 6%; bottom: 6%; width: 38%; width: min(38cqw, 76cqh); aspect-ratio: 3 / 1; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--ec) 70%, #fff) 0%, color-mix(in srgb, var(--ec) 40%, transparent) 45%, transparent 100%); animation: hx-glow 2.6s ease-in-out infinite; pointer-events: none; }
+@keyframes hx-glow { 50% { opacity: 0.6; scale: 0.94; } }
+.hx-figure { position: absolute; right: 5%; bottom: 9%; width: 42%; width: min(42cqw, 78cqh); aspect-ratio: 1; pointer-events: none; filter: drop-shadow(0 0 2px #0a0612) drop-shadow(0 6px 6px #000a); z-index: 2; }
+.hx-body-img { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* 숨쉬기: 두 장을 번갈아 (겹쳐 보이지 않게 서로 반대 박자) */
+.hx-idle0 { animation: hx-breathe 1.2s steps(1) infinite; animation-delay: -0.6s; }
+.hx-idle1 { animation: hx-breathe 1.2s steps(1) infinite; }
+@keyframes hx-breathe { 0% { opacity: 0; } 50% { opacity: 1; } }
+.hx-attack { opacity: 0; }
+.hx-figure.strike .hx-idle0, .hx-figure.strike .hx-idle1 { opacity: 0 !important; animation: none; }
+.hx-figure.strike .hx-attack { opacity: 1; }
+.hx-figure.strike { animation: hx-hop 0.35s ease-out; }
+@keyframes hx-hop { 40% { translate: 0 -8%; scale: 1.04; } }
+/* 말풍선: 전신 그림 머리 위, 꼬리가 아래로 그림을 가리킴 */
+.hx-bubble { position: absolute; right: 9%; top: 7%; max-width: 46%; padding: 8px 12px; border-radius: 14px; background: #fffaf0; color: #3a2414; font-weight: 800; font-size: 0.86rem; line-height: 1.35; box-shadow: 0 0 0 2px #3a2414, 0 6px 12px #0008; pointer-events: none; z-index: 4; text-wrap: balance; word-break: keep-all; transform-origin: 80% 100%; }
+.hx-bubble::after { content: ''; position: absolute; right: 22%; bottom: -10px; border: 8px solid transparent; border-top: 10px solid #fffaf0; border-bottom: 0; filter: drop-shadow(0 2px 0 #3a2414); }
+.hx-bubble.pop { animation: hx-pop 0.3s ease-out; }
+@keyframes hx-pop { 0% { scale: 0.85; opacity: 0.4; } }
+.hx-tap { position: absolute; left: 12px; bottom: 10px; display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px 3px 6px; border-radius: 999px; background: #0009; border: 1px solid #ffffff2a; font-size: 0.74rem; font-weight: 800; color: #fff1d6; pointer-events: none; z-index: 4; animation: hx-hint 1.6s ease-in-out infinite; }
+.hx-tap .icon { width: 14px; height: 14px; }
+@keyframes hx-hint { 50% { opacity: 0.55; } }
+/* 잠긴 영웅: 가운데 큰 실루엣(테두리 빛) + 떠 있는 물음표 */
+.hx-stage.locked { background: radial-gradient(70% 60% at 50% 55%, color-mix(in srgb, var(--ec) 22%, transparent) 0%, transparent 70%), linear-gradient(180deg, #2a2238, #16111e); border-color: #5a4e6c; }
+.hx-stage.locked .hx-art { cursor: default; }
+.hx-stage.locked .hx-rays { opacity: 0.18; left: 50%; }
+.hx-stage.locked .hx-figure { right: auto; left: 50%; bottom: 10%; width: min(54cqw, 74cqh); translate: -50% 0; filter: drop-shadow(0 0 1.5px color-mix(in srgb, var(--ec) 85%, #fff)) drop-shadow(0 0 14px color-mix(in srgb, var(--ec) 55%, transparent)); }
+.hx-stage.locked .hx-body-img { filter: brightness(0); animation: none; opacity: 1; }
+.hx-stage.locked .hx-pedestal { right: auto; left: 50%; bottom: 7%; width: min(50cqw, 70cqh); translate: -50% 0; animation: none; background: radial-gradient(closest-side, color-mix(in srgb, var(--ec) 45%, transparent), transparent); }
+.hx-mystery { position: absolute; top: 4%; left: 50%; translate: -50% 0; z-index: 3; font-size: clamp(3rem, 14cqh, 6rem); font-weight: 900; line-height: 1; color: color-mix(in srgb, var(--ec) 60%, #fff); text-shadow: 0 0 20px color-mix(in srgb, var(--ec) 70%, transparent), 0 3px 0 #0008; animation: hx-float 2.4s ease-in-out infinite; pointer-events: none; }
+@keyframes hx-float { 50% { translate: -50% -8px; } }
+/* 이름판: 왼쪽 이름·칩, 오른쪽 출정 버튼 */
+.hx-plate { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'name act' 'tags act' 'note note'; column-gap: 14px; row-gap: 8px; align-items: center; padding: 12px 16px 14px; background: linear-gradient(180deg, #120c1ecc, #0c0814f0); border-top: 1px solid color-mix(in srgb, var(--ec) 50%, transparent); }
+.hx-name { grid-area: name; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.hx-name h3 { margin: 0; font-size: clamp(1.5rem, 3.6vh, 2.1rem); font-weight: 900; letter-spacing: 0.04em; color: #fff3cf; text-shadow: 0 2px 0 #3a1c06, 0 0 16px color-mix(in srgb, var(--hc) 70%, transparent); }
+.hx-title { font-weight: 800; color: color-mix(in srgb, var(--ec) 60%, #fff); }
+.hx-tags { grid-area: tags; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
+.hx-chip, .hx-tags .el-badge { box-sizing: border-box; height: 26px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
+.hx-chip { background: #ffffff14; border: 1px solid #ffffff26; color: #efe4ff; }
+.hx-tags .el-badge { align-self: center; padding-left: 5px; background: color-mix(in srgb, var(--ec) 24%, #0008); border: 1px solid color-mix(in srgb, var(--ec) 60%, transparent); }
+.hx-act { grid-area: act; display: flex; justify-content: flex-end; }
+.hx-lead { display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 20px; border-radius: 999px; font-weight: 900; font-size: 1rem; color: #3a1e06; background: linear-gradient(180deg, #fff0bc 0%, #f6cf78 40%, #d98f32 100%); border: 2px solid #fff2c4; box-shadow: 0 0 0 2px #6a3a10, 0 4px 0 #5a2e0c, 0 0 18px #ffbf5a66; white-space: nowrap; }
+.hx-lead:hover { filter: brightness(1.07); }
+.hx-lead-badge { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 16px; border-radius: 999px; font-weight: 900; color: #ffe6a0; background: #2a1708; border: 2px solid #ffd56a; box-shadow: 0 0 14px #ffd56a55; white-space: nowrap; outline: none; }
+.hx-lead-badge:focus-visible { box-shadow: 0 0 0 3px #fff2c4, 0 0 14px #ffd56a55; }
+.hx-note { grid-area: note; font-size: 0.76rem; color: #cbbfdc; text-wrap: pretty; word-break: keep-all; }
+.hx-unlock { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; background: #0006; border: 1px dashed #8a7aa8; color: #e6dcf4; font-size: 0.88rem; text-wrap: pretty; word-break: keep-all; }
+.hx-unlock b { color: var(--gold2); }
+.hx-stage.locked .hx-plate { grid-template-areas: 'name name' 'tags tags' 'act act'; }
+.hx-stage.locked .hx-act { justify-content: flex-start; }
+/* 정보 (넘겨 보는 칸: 위·아래를 부드럽게 흐려 잘린 것이 아니라 넘길 수 있음을 보여 줌) */
+.hx-info { --ec: #ffd56a; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 6px 4px 22px 0; -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 10px, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(180deg, transparent 0, #000 10px, #000 calc(100% - 24px), transparent); }
+.hx-bio { padding: 2px 12px; border-left: 3px solid color-mix(in srgb, var(--ec) 70%, transparent); font-size: 0.95rem; line-height: 1.5; color: #f1e8fc; text-wrap: pretty; word-break: keep-all; }
+.hx-stats { display: grid; gap: 8px; padding: 12px 14px; border-radius: 16px; background: linear-gradient(180deg, color-mix(in srgb, var(--ec) 12%, #1a1228), #110b1c); border: 1px solid color-mix(in srgb, var(--ec) 35%, transparent); }
+.hx-stat { display: grid; grid-template-columns: 22px 66px 1fr minmax(60px, auto); align-items: center; gap: 8px; font-size: 0.9rem; }
+.hx-si { width: 20px; height: 20px; }
+.hx-sn { color: #d9cdea; font-weight: 700; white-space: nowrap; }
+.hx-bar { height: 10px; border-radius: 99px; background: #ffffff1f; overflow: hidden; box-shadow: inset 0 0 0 1px #ffffff14, inset 0 1px 2px #0008; }
+.hx-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, color-mix(in srgb, var(--ec) 70%, #fff3) 0%, #fff1c0 100%); box-shadow: 0 0 8px color-mix(in srgb, var(--ec) 50%, transparent); transition: width 0.5s ease; }
+.hx-stat b { text-align: right; font-weight: 900; color: #fff6e0; white-space: nowrap; }
+.hx-cap { font-size: 0.74rem; color: #b9adcc; text-wrap: pretty; word-break: keep-all; }
+.hx-card { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; background: linear-gradient(135deg, color-mix(in srgb, var(--ec) 20%, #221834) 0%, #150f22 70%); border: 1px solid color-mix(in srgb, var(--ec) 45%, transparent); box-shadow: 0 6px 16px #0007, inset 0 1px 0 #ffffff1c; }
+.hx-card-ico { flex: none; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--ec) 60%, #fff 10%), color-mix(in srgb, var(--ec) 40%, #120a1e)); box-shadow: 0 0 0 2px #0a0612, 0 0 0 4px color-mix(in srgb, var(--ec) 50%, #ffe6a0), 0 0 14px color-mix(in srgb, var(--ec) 50%, transparent); }
+.hx-ci { width: 34px; height: 34px; }
+.hx-card-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.hx-kind { font-size: 0.8rem; font-weight: 900; letter-spacing: 0.04em; color: color-mix(in srgb, var(--ec) 55%, #fff); }
+.hx-card-body b { font-size: 1.08rem; font-weight: 900; color: #fff3cf; }
+.hx-desc { font-size: 0.9rem; line-height: 1.45; color: #ece2f8; text-wrap: pretty; word-break: keep-all; }
+.hx-mini { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.hx-mini span { padding: 2px 8px; border-radius: 8px; background: #0007; border: 1px solid #ffffff1c; font-size: 0.76rem; font-weight: 800; color: #fff0d0; }
+.hx-sec { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 16px; background: #0005; border: 1px solid #ffffff14; }
+.hx-sec > .hx-kind { align-self: flex-start; padding: 2px 10px; border-radius: 999px; background: color-mix(in srgb, var(--ec) 22%, #0006); border: 1px solid color-mix(in srgb, var(--ec) 45%, transparent); }
+.hx-lines { display: grid; gap: 6px; }
+.hx-line { display: grid; grid-template-columns: 84px 1fr; gap: 8px; align-items: baseline; }
+.hx-when { font-size: 0.74rem; font-weight: 800; color: #bfb2d4; white-space: nowrap; }
+.hx-line q { quotes: '“' '”'; font-size: 0.88rem; color: #f0e6fb; text-wrap: pretty; word-break: keep-all; }
+/* 잠긴 영웅의 정보: 빗금 막대·점선 카드 (고장이 아니라 비밀처럼) */
+.hx-info.locked .hx-bar { background: repeating-linear-gradient(-45deg, #ffffff16 0 5px, transparent 5px 10px); }
+.hx-info.locked .hx-stat b { color: #8f84a6; }
+.hx-info.locked .hx-stats, .hx-info.locked .hx-card { border-style: dashed; border-color: #6a5e80; background: #ffffff06; box-shadow: none; }
+.hx-info.locked .hx-card-ico { background: #2a2238; box-shadow: 0 0 0 2px #0a0612; }
+/* 넓은 데스크톱: 고르기 얼굴을 크게 */
+@media (min-width: 900px) and (min-height: 700px) {
+  .hx-roster { gap: 18px; }
+  .hx-pick { font-size: 0.92rem; min-width: 76px; }
+  .hx-pick-face { width: 74px; height: 74px; padding: 4px; }
+  .hx-lock { width: 24px; height: 24px; }
+}
+/* 낮은 화면 (휴대폰 가로·낮은 창): 고르기 줄은 왼쪽 세로, 이름은 숨기고 얼굴만 */
+@media (max-height: 540px) {
+  .hx-body { flex-direction: row; gap: 10px; padding-top: 8px; }
+  .hx-roster { flex-direction: column; justify-content: flex-start; align-items: center; overflow-x: hidden; overflow-y: auto; padding: 8px 10px; margin: -8px 0; gap: 6px; flex: none; }
+  .hx-pick { min-width: 0; }
+  .hx-pick b { display: none; }
+  .hx-pick-face { width: 42px; height: 42px; padding: 2px; }
+  .hx-lock { width: 18px; height: 18px; right: -4px; top: -4px; }
+  .hx-pick-map { font-size: 0.6rem; bottom: -5px; }
+  .hx-lead-dot { width: 18px; height: 18px; top: -4px; right: -4px; }
+  .hx-lead-dot .icon { width: 11px; height: 11px; }
+  .hx-main { gap: 10px; }
+  .hx-artwrap { min-height: 0; }
+  .hx-portrait-ring { padding: 4px; left: 6%; }
+  .hx-gem { display: none; } /* 낮은 무대에선 말풍선과 겹침 — 원소는 이름판 배지로 보임 */
+  .hx-bubble { font-size: 0.72rem; padding: 4px 8px; max-width: 48%; top: 6%; right: 6%; }
+  .hx-bubble::after { border-width: 6px; border-top-width: 8px; bottom: -8px; }
+  .hx-tap { font-size: 0.66rem; bottom: 6px; left: 8px; }
+  .hx-plate { padding: 8px 12px 8px; column-gap: 10px; row-gap: 5px; }
+  .hx-name h3 { font-size: 1.3rem; }
+  .hx-tags { flex-wrap: nowrap; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 18px), transparent); }
+  .hx-chip, .hx-tags .el-badge { height: 22px; font-size: 0.7rem; padding: 0 8px; flex: none; }
+  .hx-lead { min-height: 42px; padding: 0 14px; font-size: 0.88rem; }
+  .hx-lead-badge { min-height: 40px; padding: 0 12px; font-size: 0.84rem; }
+  .hx-note { display: none; }
+  .hx-info { gap: 8px; }
+  .hx-bio { font-size: 0.84rem; order: 3; }
+  .hx-stats { gap: 4px; padding: 8px 10px; }
+  .hx-stat { font-size: 0.78rem; grid-template-columns: 18px 58px 1fr minmax(52px, auto); }
+  .hx-bar { height: 8px; }
+  .hx-cap { font-size: 0.66rem; }
+  .hx-card { padding: 8px 10px; gap: 8px; }
+  .hx-card-ico { width: 40px; height: 40px; }
+  .hx-ci { width: 26px; height: 26px; }
+  .hx-desc { font-size: 0.82rem; }
+  .hx-sec { order: 5; padding: 8px 10px; }
+  .hx-line { grid-template-columns: 72px 1fr; }
+  .hx-count { font-size: 0.78rem; }
+  #screen-heroes .top-bar { padding-top: calc(4px + var(--safe-t)); padding-bottom: 4px; }
+}
+/* 휴대폰 세로: 한 줄로 쌓고 본문 전체를 넘겨 봄 */
+@media (max-width: 640px) and (min-height: 541px) {
+  .hx-body { padding-left: 12px; padding-right: 12px; padding-bottom: 0; gap: 4px; }
+  .hx-roster { justify-content: flex-start; gap: 6px; padding: 12px 12px 8px; margin: 0 -12px; scroll-padding-inline: 12px; }
+  .hx-pick { min-width: 54px; font-size: 0.78rem; }
+  .hx-pick-face { width: 50px; height: 50px; }
+  .hx-main { display: flex; flex-direction: column; overflow-y: auto; gap: 12px; padding-bottom: calc(24px + var(--safe-b)); -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 10px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(180deg, transparent 0, #000 10px, #000 calc(100% - 28px), transparent); }
+  .hx-stage { flex: none; }
+  .hx-artwrap { flex: none; min-height: 0; aspect-ratio: 1 / 0.78; }
+  .hx-plate { grid-template-areas: 'name' 'tags' 'act' 'note'; grid-template-columns: minmax(0, 1fr); }
+  .hx-tags { flex-wrap: nowrap; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent); }
+  .hx-tags > * { flex: none; }
+  .hx-act { justify-content: stretch; }
+  .hx-lead, .hx-lead-badge { width: 100%; justify-content: center; }
+  .hx-info { overflow: visible; padding-right: 0; -webkit-mask-image: none; mask-image: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hx-rays, .hx-pedestal, .hx-idle0, .hx-idle1, .hx-figure.strike, .hx-bubble.pop, .hx-mystery, .hx-tap { animation: none !important; }
+  .hx-idle1 { opacity: 0; }
+}
 
 /* 기술 나무 */
 .tree-note { padding: 0 calc(14px + var(--safe-l)); font-size: 0.82rem; }
@@ -2061,7 +2237,7 @@ RG.data.heroes = {
     splash: 0.6, targets: 'ground',
     skill: {
       id: 'flame_slam', name: '불꽃 내려찍기', cooldown: 18, target: 'point', radius: 1.5, damage: 70, burn: { dps: 10, dur: 3 },
-      desc: '고른 곳으로 뛰어올라 내려찍습니다. 반경 1.5칸 피해와 화상, 주변 적을 붙잡습니다.',
+      desc: '고른 곳으로 뛰어올라 내려찍습니다. 반경 1.5칸의 지상 적에게 피해와 화상을 주고, 그 자리에서 적을 붙잡아 싸웁니다.',
     },
     passive: { id: 'unyielding', name: '불굴', threshold: 0.3, reduce: 0.3, desc: '체력 30% 이하일 때 받는 피해 −30%.' },
     bio: '마을이 좋아서 망치를 든, 앞뒤 안 가리는 대장장이 딸.',
@@ -2083,7 +2259,7 @@ RG.data.heroes = {
       id: 'dawn_prayer', name: '새벽의 기도', cooldown: 22, target: 'point', radius: 2.0, heal: 120, damage: 60, blind: 3,
       desc: '고른 곳 반경 2칸의 영웅·병사를 크게 회복하고, 적에게 피해와 실명을 줍니다.',
     },
-    passive: { id: 'lamp_keeper', name: '등불지기', detect: 1.8, regen: 0.01, desc: '주변 1.8칸의 숨은 적을 드러내고, 자신은 매초 체력 1%를 회복합니다.' },
+    passive: { id: 'lamp_keeper', name: '등불지기', detect: 1.8, regen: 0.01, desc: '주변 1.8칸의 숨은 적을 드러내고, 자신은 매초 최대 체력의 1%를 회복합니다.' },
     bio: '겁은 많지만 등불만큼은 절대 놓지 않는 견습 등불지기.',
     lines: {
       select: ['세라예요. 등불은 제가 지킬게요.', '빛이 닿는 곳이라면 괜찮아요.', '다들, 다치지 마세요.'],
@@ -2124,7 +2300,7 @@ RG.data.heroes = {
       drone: { damage: 22, interval: 0.8, range: 2.5, chain: { count: 3, falloff: 0.25, radius: 1.5 } },
       desc: '고른 곳에 10초 동안 연쇄 번개를 쏘는 드론을 띄웁니다.',
     },
-    passive: { id: 'field_mod', name: '현장 개조', radius: 2.0, every: 4, damage: 12, desc: '주변 2칸 탑의 공격 4번에 1번, 대상에게 작은 번개가 덧붙습니다.' },
+    passive: { id: 'field_mod', name: '현장 개조', radius: 2.0, every: 4, damage: 12, desc: '주변 2칸 안의 탑이 4번 공격할 때마다, 맞은 적에게 작은 번개가 한 번 더 떨어집니다.' },
     bio: '안개마저 연구 대상으로 보는, 수다스러운 떠돌이 발명가.',
     lines: {
       select: ['제나 등장! 오늘의 실험, 시작합니다!', '코일 충전 완료, 아마도!', '안개 표본 채집해도 돼요?'],
@@ -2162,7 +2338,7 @@ RG.data.heroes = {
     crit: { chance: 0.3, mult: 2 }, targets: 'ground',
     skill: {
       id: 'shadow_strike', name: '그림자 습격', cooldown: 16, target: 'enemy', damage: 180, execute: 0.2, bossMult: 2,
-      desc: '고른 적에게 순간이동해 큰 피해를 줍니다. 체력 20% 이하면 처치(보스에게는 피해 2배).',
+      desc: '고른 적에게 순간이동해 큰 피해를 줍니다. 체력이 20% 이하인 적은 바로 처치합니다. 보스는 처치되지 않는 대신 피해를 2배로 받습니다.',
     },
     passive: { id: 'plunder', name: '약탈', bountyPct: 0.5, desc: '야로가 처치한 적의 현상금 +50%.' },
     bio: '침묵을 믿던 교단을 떠나 등불 편에 선, 비꼬는 그림자 도적.',
@@ -28296,7 +28472,7 @@ RG.render = (() => {
     const free = P().starsFree();
     const enemiesSeen = (P().get().seen.enemies || []).length;
     const enemiesAll = Object.keys(D().enemies).length;
-    const lastHero = heroes[heroes.length - 1] || D().heroOrder[0];
+    const lastHero = heroes.includes(P().get().lastHero) ? P().get().lastHero : heroes[heroes.length - 1] || D().heroOrder[0]; // 다음 출정 대표의 얼굴
     const tile = (cls, tone, medal, label, sub, badge, onclick) => el('button', { class: `btn tm-tile ${cls}`, style: `--tc:${tone}`, onclick }, [
       el('span', { class: 'tm-medal' }, [medal]),
       el('b', { class: 'tm-label', text: label }),
@@ -28305,7 +28481,7 @@ RG.render = (() => {
     ]);
     const tiles = [
       tile(`btn-gacha tm-gacha ${canPull() ? 'ready' : ''}`, '#b07cff', UI.icon('crystal', 'tm-ico'), '탑 뽑기', `공명석 ${g.crystals} · 탑 ${owned}/${D().towerOrder.length}`, nPull >= 10 ? '10회 가능' : nPull ? `${nPull}회 가능` : '', go(() => UI.show('gacha', { back: { screen: 'title' } }))),
-      tile('tm-heroes', '#ff7a6a', RG.art.portrait ? UI.portrait(lastHero, 'normal', 'tm-portrait') : UI.icon('hero', 'tm-ico'), '수호대', `영웅 ${heroes.length}/${D().heroOrder.length}`, '', go(() => UI.show('heroes', {}))),
+      tile('tm-heroes', '#ff7a6a', RG.art.portrait ? UI.portrait(lastHero, 'normal', 'tm-portrait') : UI.icon('hero', 'tm-ico'), '수호대', `영웅 ${heroes.length}/${D().heroOrder.length}`, '', go(() => UI.show('heroes', { back: { screen: 'title' } }))),
       tile('tm-tree', '#7ad46a', UI.icon('tree', 'tm-ico'), '기술 나무', free > 0 ? `쓸 수 있는 별 ★${free}` : `모은 별 ★${starsNow}`, free > 0 ? `★${free}` : '', go(() => UI.show('tree', {}))),
       tile('tm-codex', '#f2b24a', UI.icon('book', 'tm-ico'), '도감', `만난 적 ${enemiesSeen}/${enemiesAll}`, '', go(() => UI.show('codex', {}))),
     ];
@@ -29036,42 +29212,254 @@ RG.render = (() => {
    * 수호대
    * ===================================================== */
   let heroSel = 'kara';
+  let heroBack = null; // 뒤로 갈 곳 (로비에서 왔으면 로비)
+  let heroTapped = false; // 무대를 한 번이라도 눌렀나 ('눌러 보세요' 안내는 그 뒤로 숨김)
+  /** 받침 고르기: 받침이 있으면 a, 없으면 b (예: 과/와, 을/를, 이/가) */
+  const josa = (word, a, b) => { const c = word.charCodeAt(word.length - 1) - 0xac00; return c >= 0 && c <= 11171 && c % 28 ? a : b; };
+  /** 꾸미기용 그림 (화면 읽기 프로그램이 내부 이름을 읽지 않게 alt는 비움) */
+  const deco = (svg, cls) => UI.svgImg(svg, cls, '');
+  // 영웅 기술이 닿는 적 (시뮬 규칙 그대로: 내려찍기는 지상만, 벽은 지상 적만 막음, 나머지는 공중도)
+  const SKILL_HITS = { flame_slam: '지상 적만', earth_wall: '지상 적을 막음', dawn_prayer: '지상·공중', frost_volley: '지상·공중', thunder_drone: '지상·공중', shadow_strike: '비행 적도 가능' };
+  const SKILL_ICON = { flame_slam: 'burn', frost_volley: 'freeze', dawn_prayer: 'healer', thunder_drone: 'shock', earth_wall: 'shield', shadow_strike: 'dash' };
+  const SKILL_TARGET = { point: '고른 곳', enemy: '적 하나', path: '길 한 칸' };
+  /*
+   * 수호대 (2026-11-10 개편): 예전엔 작은 초상화 목록 + 글자 줄이 전부였음.
+   * 영웅 고르기 줄(원소 색 테두리, 잠긴 영웅은 전신 실루엣과 합류 맵) + 영웅 원소 색으로 꾸민 무대
+   * (왼쪽 큰 초상화 · 오른쪽 숨 쉬는 전신 그림, 누르면 공격 자세와 대사) + 능력치 막대 + 기술·패시브 카드 + 출정 영웅 정하기.
+   * 독립 검토(디자인 3·코드·문구) 지적 반영.
+   */
   UI.register('heroes', {
     enter(sec, data) {
-      if (data.hero) heroSel = data.hero;
+      if (data.back) heroBack = data.back;
+      else if (!data.hero) heroBack = null;
       sec.innerHTML = '';
       const unlocked = P().heroesFor(P().frontier());
-      const list = el('div', { class: 'hero-list' });
+      const lead = unlocked.includes(P().get().lastHero) ? P().get().lastHero : unlocked[0];
+      if (data.hero && D().heroes[data.hero]) heroSel = data.hero;
+      else heroSel = lead; // 새로 들어올 때는 출정 영웅부터 (처음부터 다시 뒤 잠긴 영웅에 머물지 않게)
+      const back = heroBack && heroBack.screen ? () => UI.show(heroBack.screen, heroBack.data || {}) : null;
+      const bar = topBar('수호대', back);
+      bar.appendChild(el('span', { class: 'hx-count', 'aria-label': `영웅 ${unlocked.length}명 합류 (전체 ${D().heroOrder.length}명)` }, [deco(RG.art.icon('hero'), 'icon hx-count-ico'), `영웅 ${unlocked.length} / ${D().heroOrder.length}`]));
+      const roster = el('nav', { class: 'hx-roster', 'aria-label': '영웅 고르기' });
       for (const h of D().heroOrder) {
+        const hd = D().heroes[h];
         const open = unlocked.includes(h);
-        list.appendChild(el('button', { class: `hl-item ${heroSel === h ? 'on' : ''} ${open ? '' : 'locked'}`, onclick: () => { if (open) { heroSel = h; UI.sfx('click'); UI.show('heroes', {}); } } }, [
-          open ? UI.portrait(h, 'normal', 'hl-portrait') : el('span', { class: 'hp-q', text: '?' }),
-          el('b', { text: open ? D().heroes[h].name : '???' }),
+        const join = joinText(hd);
+        roster.appendChild(el('button', {
+          class: `hx-pick ${heroSel === h ? 'on' : ''} ${open ? '' : 'locked'}`,
+          style: `--hc:${hd.color};--ec:${D().elements[hd.element].color}`,
+          'aria-pressed': heroSel === h ? 'true' : 'false',
+          'aria-label': open ? `${hd.name}${h === lead ? ' · 출정 영웅' : ''}` : `잠긴 영웅 · ${join}`,
+          title: open ? `${hd.name} · ${hd.title}` : join,
+          onclick: () => { if (heroSel !== h) { UI.sfx('click'); UI.show('heroes', { hero: h, focus: 'pick' }); } },
+        }, [
+          el('span', { class: 'hx-pick-face' }, open
+            ? [deco(RG.art.portrait(h, 'normal'), 'hx-pick-img')]
+            : [RG.art.hero ? deco(RG.art.hero(h, 'idle0'), 'hx-pick-shadow') : null, deco(RG.art.icon('lock'), 'icon hx-lock'), el('small', { class: 'hx-pick-map', text: hd.unlock })]), // 잠긴 영웅: 배경 없는 전신 실루엣
+          el('b', { text: open ? hd.name : '???' }),
+          open && h === lead ? el('i', { class: 'hx-lead-dot' }, [deco(RG.art.icon('star'), 'icon')]) : null,
         ]));
       }
-      const hd = D().heroes[heroSel];
       const open = unlocked.includes(heroSel);
-      const detail = el('div', { class: 'hero-detail' });
-      if (open) {
-        const faces = el('div', { class: 'hd-faces' }, ['normal', 'happy', 'worried'].map((m) => UI.portrait(heroSel, m, 'hd-face')));
-        detail.append(
-          faces,
-          el('h3', {}, [hd.name, el('small', { text: ` · ${hd.title}` })]),
-          UI.elementBadge(hd.element),
-          el('p', { text: hd.bio }),
-          el('div', { class: 'stat-list' }, [
-            row('hp', '체력', String(hd.hp)), row('damage', '공격', `${hd.damage} / ${hd.interval}초`), row('range', '사거리', hd.melee ? '근접' : `${hd.range}칸`),
-            row('hero', '붙잡기', hd.block ? `${hd.block}명` : '없음'), row('speed', '이동', `${hd.speed}칸/초`), row('target', '대상', hd.targets === 'both' ? '지상·공중' : '지상'),
-          ]),
-          el('div', { class: 'skill-box' }, [el('b', { text: `기술 · ${hd.skill.name}` }), el('span', { text: hd.skill.desc }), el('small', { class: 'dim', text: `재사용 ${hd.skill.cooldown}초` })]),
-          el('div', { class: 'skill-box' }, [el('b', { text: `패시브 · ${hd.passive.name}` }), el('span', { text: hd.passive.desc })]),
-          el('div', { class: 'quotes' }, [...hd.lines.select, ...hd.lines.win].map((q) => el('q', { text: q }))),
-        );
-      } else detail.appendChild(el('p', { class: 'dim', text: `${hd.unlock}에서 만날 수 있습니다.` }));
-      sec.append(topBar('수호대'), el('div', { class: 'heroes-body' }, [list, detail]));
+      const main = el('div', { class: 'hx-main' }, [heroStage(heroSel, open, heroSel === lead), heroInfo(heroSel, open)]);
+      sec.append(bar, el('div', { class: 'hx-body' }, [roster, main]));
+      requestAnimationFrame(() => {
+        const on = roster.querySelector('.hx-pick.on');
+        if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'center' });
+        // 다시 그린 뒤 키보드 위치를 되돌림 (매번 맨 위부터 다시 탭하지 않게)
+        if (data.focus === 'pick' && on) on.focus({ preventScroll: true });
+        else if (data.focus === 'lead') { const f = sec.querySelector('.hx-lead, .hx-lead-badge'); if (f) f.focus({ preventScroll: true }); }
+      });
     },
   });
-  function row(ic, name, val) { return el('div', { class: 'stat-row' }, [UI.icon(ic, 'tiny'), el('span', { text: name }), el('b', { text: val })]); }
+
+  /** 합류 조건: 합류 맵 바로 앞 맵을 깨면 합류 */
+  function joinPrev(hd) { const i = P().mapIndex(hd.unlock); return i > 0 ? D().maps[i - 1] : null; }
+  function joinText(hd) {
+    const prev = joinPrev(hd);
+    return prev ? `${prev.id} ${prev.name}${josa(prev.name, '을', '를')} 깨면 합류` : `${hd.unlock}에서 합류`;
+  }
+
+  /** 무대: 원소 색 배경 + 왼쪽 큰 초상화 + 오른쪽 전신 그림(숨쉬기) + 말풍선 + 이름판 */
+  function heroStage(h, open, isLead) {
+    const hd = D().heroes[h];
+    const ec = D().elements[hd.element].color;
+    const stage = el('div', { class: `hx-stage ${open ? '' : 'locked'}`, style: `--hc:${hd.color};--ec:${ec}` });
+    const pose = (p) => (RG.art.hero ? deco(RG.art.hero(h, p), `hx-body-img hx-${p}`) : null);
+    const figure = el('div', { class: 'hx-figure' }, open ? [pose('idle0'), pose('idle1'), pose('attack')] : [pose('idle0')]);
+    const wrap = el('div', { class: 'hx-artwrap' });
+    const art = el('div', { class: 'hx-art' }, [
+      el('div', { class: 'hx-rays' }),
+      RG.art.elementGem ? deco(RG.art.elementGem(hd.element), 'hx-gem') : null,
+      open ? el('div', { class: 'hx-portrait-ring' }, [deco(RG.art.portrait(h, 'normal'), 'hx-portrait')]) : el('div', { class: 'hx-mystery', 'aria-hidden': 'true', text: '?' }),
+      el('div', { class: 'hx-pedestal' }),
+      figure,
+    ]);
+    wrap.appendChild(art);
+    if (open) {
+      const lines = hd.lines.select;
+      let li = 0;
+      const bubbleId = `hx-bubble-${h}`;
+      // 말풍선은 누르는 칸(버튼) 바깥에 두어 화면 읽기 프로그램이 새 대사를 읽을 수 있게
+      const bubble = el('div', { class: 'hx-bubble', id: bubbleId, 'aria-live': 'polite', text: lines[0] });
+      const hint = heroTapped ? null : el('span', { class: 'hx-tap', 'aria-hidden': 'true' }, [deco(RG.art.icon('play'), 'icon'), '눌러 보세요']);
+      wrap.appendChild(bubble);
+      if (hint) wrap.appendChild(hint);
+      const portrait = art.querySelector('.hx-portrait');
+      const urlN = portrait.src;
+      let urlH = null;
+      let tm = 0;
+      art.addEventListener('click', () => {
+        heroTapped = true;
+        if (hint) hint.remove();
+        li = (li + 1) % lines.length;
+        bubble.textContent = lines[li];
+        bubble.classList.remove('pop'); void bubble.offsetWidth; bubble.classList.add('pop');
+        figure.classList.add('strike');
+        if (!urlH) urlH = RG.art.sprites.dataUrl(RG.art.portrait(h, 'happy'));
+        portrait.src = urlH;
+        UI.sfx('heroAttack', { vol: 0.4 });
+        clearTimeout(tm);
+        tm = setTimeout(() => { figure.classList.remove('strike'); portrait.src = urlN; }, 700);
+      });
+      art.setAttribute('role', 'button');
+      art.setAttribute('tabindex', '0');
+      art.setAttribute('aria-label', `${hd.name}에게 말 걸기`);
+      art.setAttribute('aria-describedby', bubbleId);
+      art.addEventListener('keydown', (e) => { if (e.repeat) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); art.click(); } });
+    }
+    // 이야기상 다음 맵에 정해진 영웅이 있으면 출정 준비에서 그 영웅이 먼저 골라짐 — 숨기지 않고 알려 줌
+    const fd = D().maps.find((m) => m.id === P().frontier());
+    const forced = fd && fd.hero && fd.hero !== h && !P().mapRec(fd.id).cleared && P().heroesFor(fd.id).includes(fd.hero) ? fd : null;
+    let action;
+    const prev = joinPrev(hd);
+    if (!open) {
+      action = el('div', { class: 'hx-unlock' }, [deco(RG.art.icon('lock'), 'icon tiny'), prev
+        ? el('span', {}, [el('b', { text: `${prev.id} ${prev.name}` }), `${josa(prev.name, '을', '를')} 깨면 ${hd.unlock}에서 합류합니다`])
+        : el('span', {}, [el('b', { text: hd.unlock }), '에서 합류합니다'])]);
+    }
+    else if (isLead) action = el('span', { class: 'hx-lead-badge', tabindex: '-1' }, [deco(RG.art.icon('star'), 'icon tiny'), '출정 영웅']);
+    else {
+      action = el('button', {
+        class: 'btn hx-lead',
+        onclick: () => {
+          P().get().lastHero = h; P().save(); UI.sfx('upgrade');
+          UI.toast(`다음 출정은 ${hd.name}${josa(hd.name, '과', '와')} 함께!`, 'good');
+          UI.show('heroes', { hero: h, focus: 'lead' });
+        },
+      }, [deco(RG.art.icon('star'), 'icon tiny'), '이 영웅으로 출정']);
+    }
+    const note = open
+      ? el('p', { class: 'hx-note', text: forced ? `${forced.id}에서는 이야기에 따라 ${D().heroes[forced.hero].name}${josa(D().heroes[forced.hero].name, '이', '가')} 먼저 함께합니다 · 출정 준비에서 바꿀 수 있어요` : '전투에는 영웅 한 명이 함께합니다 · 출정 준비에서도 바꿀 수 있어요' })
+      : null;
+    const plate = el('div', { class: 'hx-plate' }, [
+      el('div', { class: 'hx-name' }, [el('h3', { text: open ? hd.name : '???' }), el('span', { class: 'hx-title', text: hd.title })]),
+      el('div', { class: 'hx-tags' }, [UI.elementBadge(hd.element), ...(open ? roleChips(hd) : []).map((c) => el('span', { class: 'hx-chip', text: c }))]),
+      el('div', { class: 'hx-act' }, [action]),
+      note,
+    ]);
+    stage.append(wrap, plate);
+    return stage;
+  }
+
+  /** 영웅 특징 칩 — 능력치 막대에 없는 것만 (공중 공격 여부, 범위·연쇄·치명) */
+  function roleChips(hd) {
+    const out = [hd.targets === 'both' ? '지상·공중 공격' : '지상 적만 공격'];
+    if (hd.splash) out.push('주변까지 타격');
+    if (hd.chain) out.push(`연쇄 ${hd.chain.count}명 더`);
+    if (hd.crit) out.push(`치명타 ${Math.round(hd.crit.chance * 100)}%`);
+    return out;
+  }
+
+  /** 오른쪽: 소개 · 능력치 막대 · 기술 · 패시브 · 대사 */
+  function heroInfo(h, open) {
+    const hd = D().heroes[h];
+    const ec = D().elements[hd.element].color;
+    const info = el('div', { class: `hx-info ${open ? '' : 'locked'}`, style: `--ec:${ec}` });
+    const card = (kind, icon, name, desc, chips, cls) => el('div', { class: `hx-card ${cls}` }, [
+      el('span', { class: 'hx-card-ico' }, [deco(RG.art.icon(icon), 'icon hx-ci')]),
+      el('div', { class: 'hx-card-body' }, [
+        el('span', { class: 'hx-kind', text: kind }),
+        el('b', { text: name }),
+        el('span', { class: 'hx-desc', text: desc }),
+        chips.length ? el('div', { class: 'hx-mini' }, chips.map((c) => el('span', { text: c }))) : null,
+      ]),
+    ]);
+    if (!open) {
+      info.append(
+        el('p', { class: 'hx-bio', text: '아직 만나지 못한 영웅입니다. 어떤 힘을 가졌는지는 합류하면 알 수 있어요.' }),
+        heroStats(hd, false),
+        card('기술', 'lock', '???', '합류하면 볼 수 있습니다.', [], 'hx-skill locked'),
+        card('패시브', 'lock', '???', '합류하면 볼 수 있습니다.', [], 'hx-passive locked'),
+      );
+      return info;
+    }
+    // 대사: 말풍선이 돌려 보여 주는 인사말 말고, 상황별 한마디
+    const said = [['기술을 쓸 때', hd.lines.skill], ['쓰러질 때', hd.lines.down], ['다시 일어날 때', hd.lines.revive], ['이겼을 때', hd.lines.win]]
+      .filter(([, l]) => l && l.length).map(([when, l]) => el('div', { class: 'hx-line' }, [el('span', { class: 'hx-when', text: when }), el('q', { text: l[0] })]));
+    info.append(
+      el('p', { class: 'hx-bio', text: hd.bio }),
+      heroStats(hd, true),
+      card('기술', SKILL_ICON[hd.skill.id] || 'skill', hd.skill.name, hd.skill.desc, skillChips(hd.skill), 'hx-skill'),
+      card('패시브', hd.element, hd.passive.name, hd.passive.desc, passiveChips(hd.passive), 'hx-passive'),
+      el('div', { class: 'hx-sec' }, [el('span', { class: 'hx-kind', text: '대사' }), el('div', { class: 'hx-lines' }, said)]),
+    );
+    return info;
+  }
+
+  /** 능력치 막대: 영웅 여섯 중 가장 높은 값을 가득으로 (레벨 1 기준) */
+  function heroStats(hd, open) {
+    const all = D().heroOrder.map((k) => D().heroes[k]);
+    const max = (f) => Math.max(...all.map(f));
+    const dps = (x) => x.damage / x.interval;
+    const reach = (x) => (x.melee ? 0.75 : x.range);
+    const rows = [
+      ['hp', '체력', hd.hp / max((x) => x.hp), String(hd.hp), ''],
+      ['damage', '초당 피해', dps(hd) / max(dps), String(Math.round(dps(hd))), `한 번에 ${hd.damage} · ${hd.interval}초마다`],
+      ['range', '사거리', reach(hd) / max(reach), hd.melee ? '근접' : `${hd.range}칸`, ''],
+      ['speed', '이동 속도', hd.speed / max((x) => x.speed), `${hd.speed}칸/초`, ''],
+      ['armor', '갑옷', (hd.armor || 0) / max((x) => x.armor || 0), `${Math.round((hd.armor || 0) * 100)}%`, '받는 피해를 이만큼 줄임'],
+      ['hero', '붙잡기', (hd.block || 0) / max((x) => x.block || 0), hd.block ? `${hd.block}명` : '없음', '한 번에 막아 세우는 적 수'],
+    ];
+    const maxLv = D().heroXp ? D().heroXp.length : 5;
+    return el('div', { class: 'hx-stats' }, [
+      ...rows.map(([ic, name, k, val, tip]) => el('div', { class: 'hx-stat', title: open && tip ? tip : null }, [
+        deco(RG.art.icon(ic), 'icon hx-si'),
+        el('span', { class: 'hx-sn', text: name }),
+        el('span', { class: 'hx-bar' }, [el('i', { style: `width:${open && k > 0 ? Math.max(4, Math.round(k * 100)) : 0}%` })]),
+        el('b', { text: open ? val : '?' }),
+      ])),
+      open ? el('p', { class: 'hx-cap', text: `레벨 1 기준 · 막대는 영웅 ${all.length}명 중 비교 · 전투에서 적을 물리치면 Lv${maxLv}까지 레벨마다 +${Math.round(D().heroLevelBonus.stat * 100)}%` }) : null,
+    ]);
+  }
+  function skillChips(s) {
+    const c = [];
+    if (SKILL_TARGET[s.target]) c.push(SKILL_TARGET[s.target]);
+    if (SKILL_HITS[s.id]) c.push(SKILL_HITS[s.id]);
+    c.push(`재사용 대기 ${s.cooldown}초`);
+    if (s.delay) c.push(`${s.delay}초 뒤 떨어짐`);
+    if (s.radius) c.push(`반경 ${s.radius}칸`);
+    if (s.damage) c.push(`피해 ${s.damage}`);
+    if (s.heal) c.push(`회복 ${s.heal}`);
+    if (s.burn) c.push(`화상 초당 ${s.burn.dps} · ${s.burn.dur}초`);
+    if (s.freeze) c.push(`빙결 ${s.freeze}초`);
+    if (s.blind) c.push(`실명 ${s.blind}초`);
+    if (s.duration) c.push(`${s.duration}초 동안`);
+    if (s.drone) c.push(`번개 ${s.drone.damage} · ${s.drone.interval}초마다`, `사거리 ${s.drone.range}칸`, `연쇄 ${s.drone.chain.count}명 더`);
+    if (s.wallHp) c.push(`벽 체력 ${s.wallHp}`);
+    if (s.execute) c.push(`체력 ${Math.round(s.execute * 100)}% 이하 즉시 처치`);
+    if (s.bossMult) c.push(`보스 피해 ${s.bossMult}배`);
+    return c;
+  }
+  /** 패시브 칩은 설명에 없는 숫자만 */
+  function passiveChips(p) {
+    const c = [];
+    if (p.critMult) c.push(`치명타 피해 ${p.critMult}배`);
+    if (p.radius) c.push(`주변 ${p.radius}칸 탑`);
+    if (p.every) c.push(`${p.every}번째 공격마다`);
+    if (p.damage) c.push(`번개 피해 ${p.damage}`);
+    return c;
+  }
 
   /* =====================================================
    * 기술 나무
