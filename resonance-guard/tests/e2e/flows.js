@@ -2,10 +2,11 @@
 
 /*
  * 입력 방식별 한 판 + 이어하기 (QUALITY.md §5)
- *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|resume]
+ *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|mouse|resume]
  *
- * - keyboard: 방향키·Enter·숫자·U·Space·F만으로 1-1을 깬다 (마우스·터치 없음)
- * - touch:    휴대폰 가로(터치 에뮬레이션)에서 화면 두드리기만으로 1-1을 깬다
+ * - keyboard: 숫자(탑 고르기)·방향키·Enter·U·Space·F만으로 1-1을 깬다 (마우스·터치 없음)
+ * - touch:    휴대폰 가로(터치 에뮬레이션)에서 탑 목록 탭 → 칸 탭, 탑 끌어다 놓기만으로 1-1을 깬다
+ * - mouse:    탑 고르고 놓기의 세부 동작 (누르기·끌어다 놓기·Shift 이어 짓기·취소·못 짓는 칸·빈 칸 안내)
  * - resume:   판 도중 새로고침 → 타이틀의 "이어하기" → 같은 틱·같은 상태 해시
  *
  * 시험을 빨리 끝내려고 배속만 코드로 올립니다(입력은 전부 실제 키·터치 이벤트).
@@ -76,16 +77,18 @@ async function keyboardRun(browser) {
     const t = (await page.evaluate(targetsInPage))[0];
     if (!t) return false;
     const before = (await state(page)).towers;
-    await moveTo(t.c, t.r);
-    await page.keyboard.press('Enter'); // 칸 고르기 → 탑 목록
-    await page.keyboard.press('1');     // 첫 번째 탑
-    await page.keyboard.press('Enter'); // 짓기
-    if ((await state(page)).modal) { await closeModals(); await moveTo(t.c, t.r); await page.keyboard.press('Enter'); await page.keyboard.press('1'); await page.keyboard.press('Enter'); }
-    await page.waitForTimeout(80);
-    const ok = (await state(page)).towers === before + 1;
-    if (ok) built.push(t);
-    else await page.keyboard.press('Escape');
-    return ok;
+    // 팁 창이 끼어들 수 있으니 한 번 더 시도
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await closeModals();
+      if (await page.evaluate(() => !!RG.ui.game.placing)) await page.keyboard.press('Escape');
+      await page.keyboard.press('1');     // 탑 목록의 첫 번째 탑 → 커서 칸에 미리보기
+      await moveTo(t.c, t.r);             // 방향키로 미리보기 옮기기
+      await page.keyboard.press('Enter'); // 짓기
+      await page.waitForTimeout(80);
+      if ((await state(page)).towers === before + 1) { built.push(t); return true; }
+    }
+    await page.keyboard.press('Escape');
+    return false;
   };
   for (let i = 0; i < 3; i++) if (!(await buildOne())) break;
   if (built.length < 2) throw new Error(`키보드로 지은 탑 ${built.length}개`);
@@ -133,6 +136,23 @@ async function touchRun(browser) {
   };
   await closeModals();
   const built = [];
+  let dragged = 0;
+  const cdp = await ctx.newCDPSession(page);
+  const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: Math.round(x), y: Math.round(y) }] });
+  /** 살 수 있는 첫 탑 카드 가운데 (없으면 null) */
+  const cardAt = () => page.evaluate(() => { const b = document.querySelector('.tower-card:not(.poor):not(.banned)'); if (!b) return null; const r = b.getBoundingClientRect(); return { type: b.dataset.type, x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  const closePanel = async () => { const x = await page.$('.info-panel:not(.hidden) .x-btn'); if (x) { try { await x.tap({ timeout: 2000 }); } catch (e) { /* 무시 */ } } };
+  /** 탑 카드를 손가락으로 끌어 칸에 놓기 — 끄는 동안 미리보기는 손가락 위쪽 칸에 보이므로 손가락은 그 칸 아래에서 뗌 */
+  const dragTo = async (card, c, r) => {
+    const p = await page.evaluate(([c2, r2]) => { const s = RG.render.worldToScreen(c2 + 0.5, r2 + 0.5); const b = document.querySelector('#screen-game canvas').getBoundingClientRect(); return { x: b.left + s.x, y: b.top + s.y, T: RG.render.T }; }, [c, r]);
+    const fy = p.y + Math.max(p.T * 1.05, 42);
+    await touch('touchStart', card.x, card.y);
+    for (let i = 1; i <= 12; i++) { await touch('touchMove', card.x + (p.x - card.x) * i / 12, card.y + (fy - card.y) * i / 12); await page.waitForTimeout(16); }
+    const pl = await page.evaluate(() => RG.ui.game.placing);
+    await touch('touchEnd');
+    await page.waitForTimeout(120);
+    return pl;
+  };
   const buildOne = async () => {
     const t = (await page.evaluate(targetsInPage))[0];
     if (!t) return false;
@@ -140,16 +160,21 @@ async function touchRun(browser) {
     // 팁 창이 늦게 떠서 탭을 가릴 수 있으니 단계마다 창을 닫고, 실패하면 한 번 더
     for (let attempt = 0; attempt < 3; attempt++) {
       await closeModals();
+      await closePanel(); // 병영을 지으면 정보 창이 열려 탑 목록을 가림
+      const card = await cardAt();
+      if (!card) return false;
+      if (built.length === 0 && attempt === 0) {
+        // 첫 탑은 끌어다 놓기
+        const pl = await dragTo(card, t.c, t.r);
+        if (pl && (pl.c !== t.c || pl.r !== t.r)) throw new Error(`끄는 중 미리보기 칸 ${pl.c},${pl.r} ≠ ${t.c},${t.r}`);
+        if ((await state(page)).towers === before + 1) { built.push(t); dragged++; return true; }
+        continue;
+      }
+      // 나머지는 탭: 탑 카드 → 칸
+      const cur = await page.evaluate(() => RG.ui.game.placing);
+      if (!cur || cur.type !== card.type) { await page.touchscreen.tap(card.x, card.y); await page.waitForTimeout(80); }
+      await closeModals();
       await tapTile(t.c, t.r);
-      await closeModals();
-      const item = await page.$('.build-menu .build-item:not(.disabled)');
-      if (!item) continue;
-      try { await item.tap({ timeout: 3000 }); } catch (e) { continue; }
-      await page.waitForTimeout(100);
-      await closeModals();
-      const ok2 = await page.$('.build-confirm .btn-build');
-      if (ok2) { try { await ok2.tap({ timeout: 3000 }); } catch (e) { continue; } }
-      await page.waitForTimeout(120);
       if ((await state(page)).towers === before + 1) { built.push(t); return true; }
     }
     return false;
@@ -169,8 +194,7 @@ async function touchRun(browser) {
       await tapTile(t.c, t.r);
       const up = await page.$('.up-box .btn-up:not([disabled])');
       if (up) { await up.tap(); upgrades++; }
-      const x = await page.$('.popover .x-btn');
-      if (x) await x.tap();
+      await closePanel();
     }
     if (s.countdown !== null) { const b = await page.$('.btn-call:not([disabled])'); if (b) await b.tap(); }
     await page.waitForTimeout(400);
@@ -179,7 +203,80 @@ async function touchRun(browser) {
   const res = await page.evaluate(() => document.querySelector('.result-box h2').textContent);
   await page.screenshot({ path: path.join(SHOTS, 'flow-touch-result.png') });
   await ctx.close();
-  return { name: '터치만으로 1-1 (휴대폰 가로)', ok: /승리|지켜|클리어/.test(res), detail: `"${res}", 탑 ${built.length}개, 강화 ${upgrades}회`, errors };
+  return { name: '터치만으로 1-1 (휴대폰 가로)', ok: /승리|지켜|클리어/.test(res) && dragged > 0, detail: `"${res}", 탑 ${built.length}개(끌어다 놓기 ${dragged}), 강화 ${upgrades}회`, errors };
+}
+
+/* ---------------- 마우스: 탑 고르고 놓기 ---------------- */
+async function mouseRun(browser) {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await openGame(page, '1-2');
+  await page.evaluate(() => { RG.ui.closeAllModals(); RG.ui.game.game.state.gold = 1000; });
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const tile = (c, r) => page.evaluate(([c2, r2]) => { const s = RG.render.worldToScreen(c2 + 0.5, r2 + 0.5); const b = document.querySelector('#screen-game canvas').getBoundingClientRect(); return { x: b.left + s.x, y: b.top + s.y }; }, [c, r]);
+  const card = (i) => page.evaluate((i2) => { const r = document.querySelectorAll('.tower-card')[i2].getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, i);
+  const placing = () => page.evaluate(() => RG.ui.game.placing);
+  const has = (s2) => page.evaluate((x) => RG.ui.game.game.state.towers.some((t) => `${t.type}@${t.c},${t.r}` === x), s2);
+  const toasts = () => page.evaluate(() => [...document.querySelectorAll('.toast')].map((t) => t.textContent).join(' | '));
+  // 1-2: (6~8, 3~5)는 건설지, (5,4)는 길
+  const t64 = await tile(6, 4);
+  await page.mouse.click(t64.x, t64.y);
+  check(/탑 목록에서 탑을 골라/.test(await toasts()) && !(await placing()), '빈 칸 누르기 → 안내만 (놓기 모드 아님)');
+  const c0 = await card(0);
+  await page.mouse.click(c0.x, c0.y);
+  await page.mouse.move(t64.x, t64.y, { steps: 4 });
+  const pl = await placing();
+  check(pl && pl.type === 'ember_archer' && pl.c === 6 && pl.r === 4 && pl.ok, `탑 고르기 → 맵 위 미리보기 ${JSON.stringify(pl)}`);
+  check(await page.evaluate(() => !document.querySelector('.place-label').classList.contains('hidden')), '놓기 이름표');
+  await page.mouse.click(t64.x, t64.y);
+  check(await has('ember_archer@6,4') && !(await placing()), '칸 누르기 → 짓고 놓기 모드 끝');
+  // 못 짓는 칸: 이유를 알리고 놓기 모드 유지
+  await page.mouse.click(c0.x, c0.y);
+  const t54 = await tile(5, 4);
+  await page.mouse.move(t54.x, t54.y, { steps: 3 });
+  check((await placing()).ok === false, '길 위 미리보기는 불가(빨강)');
+  await page.mouse.click(t54.x, t54.y);
+  check(/지을 수 없/.test(await toasts()) && (await placing()), '못 짓는 칸 → 이유, 놓기 모드 유지');
+  // Shift: 이어서 짓기
+  const t74 = await tile(7, 4);
+  const t75 = await tile(7, 5);
+  await page.keyboard.down('Shift');
+  await page.mouse.move(t74.x, t74.y, { steps: 3 }); await page.mouse.click(t74.x, t74.y);
+  await page.mouse.move(t75.x, t75.y, { steps: 3 }); await page.mouse.click(t75.x, t75.y);
+  await page.keyboard.up('Shift');
+  check(await has('ember_archer@7,4') && await has('ember_archer@7,5') && (await placing()), 'Shift 누른 채 두 번 짓기, 놓기 모드 유지');
+  // 취소 방법들
+  await page.keyboard.press('Escape');
+  check(!(await placing()), 'Esc 취소');
+  await page.mouse.click(c0.x, c0.y); await page.mouse.click(c0.x, c0.y);
+  check(!(await placing()), '같은 탑 다시 누르기 → 취소');
+  await page.mouse.click(c0.x, c0.y); await page.mouse.move(t64.x, t64.y, { steps: 3 });
+  await page.mouse.click(t64.x, t64.y, { button: 'right' });
+  check(!(await placing()), '오른쪽 클릭 → 취소');
+  await page.mouse.click(c0.x, c0.y); await page.mouse.click(60, 420);
+  check(!(await placing()), '맵 밖(왼쪽 띠) 누르기 → 취소');
+  // 끌어다 놓기
+  const c2 = await card(2);
+  const t83 = await tile(8, 3);
+  await page.mouse.move(c2.x, c2.y); await page.mouse.down();
+  await page.mouse.move(c2.x, c2.y - 40, { steps: 3 });
+  await page.mouse.move(t83.x, t83.y, { steps: 8 });
+  const pd = await placing();
+  await page.mouse.up();
+  check(pd && pd.c === 8 && pd.r === 3 && await has(`${pd.type}@8,3`) && !(await placing()), `끌어다 놓기로 짓기 ${JSON.stringify(pd)}`);
+  await page.mouse.move(c2.x, c2.y); await page.mouse.down();
+  await page.mouse.move(t83.x, t83.y - 80, { steps: 6 });
+  await page.mouse.move(c2.x + 4, c2.y, { steps: 6 });
+  await page.mouse.up();
+  check(!(await placing()), '끌다가 탑 목록 위에서 놓기 → 취소');
+  // 지은 탑 누르기 → 정보 창 (예전과 같음)
+  await page.mouse.click(t64.x, t64.y);
+  check(await page.evaluate(() => !document.querySelector('.info-panel').classList.contains('hidden')), '지은 탑 누르기 → 정보 창');
+  await page.close();
+  return { name: '마우스로 탑 고르고 놓기', ok: !fails.length, detail: fails.length ? `실패: ${fails.join(' / ')}` : '누르기·끌어다 놓기·Shift·취소 4가지·못 짓는 칸·빈 칸 안내 모두 통과', errors };
 }
 
 /* ---------------- 이어하기 ---------------- */
@@ -221,7 +318,7 @@ async function resumeRun(browser) {
 
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
-  const runs = { keyboard: keyboardRun, touch: touchRun, resume: resumeRun };
+  const runs = { keyboard: keyboardRun, touch: touchRun, mouse: mouseRun, resume: resumeRun };
   let fail = 0;
   for (const [k, fn] of Object.entries(runs)) {
     if (only && only !== k) continue;

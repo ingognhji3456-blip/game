@@ -135,7 +135,7 @@
       /** 하얗게 빛나는 눈 (fine: 선 대신 어두운 눈구멍과 대비로 — 가장 밝은 점이 되게) */
       eye(x, y, r, ring = true) {
         if (fine) {
-          const so = H.n(r + Math.max(0.9, r * 0.36));
+          const so = H.n(r + Math.max(0.8, r * 0.28));
           return `<circle cx="${x}" cy="${y}" r="${H.n(r * 2.1)}" fill="${HALO}" opacity=".55" stroke="none" ${c.soft()}/>` +
             (ring ? `<circle cx="${x}" cy="${y}" r="${so}" fill="#1a1430" stroke="none"/>` : '') +
             `<circle cx="${x}" cy="${y}" r="${r}" fill="#ffffff" stroke="none"/>` +

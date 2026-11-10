@@ -82,23 +82,21 @@ async function run() {
     });
     await page.waitForTimeout(6000);
     await shot(page, dir, '06-game-wave');
-    // 빈 칸 눌러 건설 메뉴
+    // 탑 목록에서 탑을 고르고 맵 위에 올린 모습 (놓기 모드: 미리보기·사거리·공명 선·이름표)
     await page.evaluate(() => {
-      const g = RG.ui.game.game;
+      RG.ui.game.game.state.gold += 200; // 지을 수 있는(초록) 미리보기를 찍으려고
+      document.querySelector('.tower-card').click();
       const p = RG.render.worldToScreen(6.5, 4.5);
       const cv = document.querySelector('.game-canvas');
       const r = cv.getBoundingClientRect();
-      const opt = { clientX: r.left + p.x, clientY: r.top + p.y, bubbles: true, pointerType: 'mouse' };
-      cv.dispatchEvent(new PointerEvent('pointerdown', opt));
-      cv.dispatchEvent(new PointerEvent('pointerup', opt));
-      return !!g;
+      cv.dispatchEvent(new PointerEvent('pointermove', { clientX: r.left + p.x, clientY: r.top + p.y, bubbles: true, pointerType: 'mouse' }));
     });
-    await page.waitForTimeout(300);
-    await page.evaluate(() => { const b = document.querySelector('.build-item'); if (b) b.click(); });
-    await shot(page, dir, '07-build-menu'); await checkLayout(page, `${sizeName}/build`, issues);
-    // 탑 눌러 정보 창
+    await shot(page, dir, '07-placing'); await checkLayout(page, `${sizeName}/placing`, issues);
+    const ghost = await page.evaluate(() => { const g = RG.render.overlay.ghost; return g ? `${g.type}@${g.c},${g.r} ${g.ok ? '가능' : '불가'}` : null; });
+    if (!ghost) issues.push(`${sizeName}/placing: 놓기 미리보기가 없음`);
+    // 탑 눌러 정보 창 (먼저 Esc로 놓기 모드를 끝냄)
+    await page.keyboard.press('Escape');
     await page.evaluate(() => {
-      document.querySelector('.x-btn') && document.querySelector('.x-btn').click();
       const p = RG.render.worldToScreen(6.5, 3.5);
       const cv = document.querySelector('.game-canvas');
       const r = cv.getBoundingClientRect();

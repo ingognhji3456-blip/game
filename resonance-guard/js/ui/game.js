@@ -665,15 +665,20 @@
     return dock;
   }
 
-  /** 데스크톱: 탑 목록이 맵을 줄이게 되면 작은 카드 한 줄(가로로 넘김)로. 넘치는 방향만 브라우저 스크롤에 맡김 */
+  /**
+   * 데스크톱: 맵 크기를 줄이지 않는 가장 큰 카드 모양을 고름 — 큰 카드(여러 줄) → 작은 카드(여러 줄) → 작은 카드 한 줄(가로로 넘김).
+   * 넘치는 방향만 브라우저 스크롤에 맡김
+   */
   function fitDock() {
     if (!R.dock || !game) return;
     const side = sideDock();
-    R.dock.classList.remove('compact');
+    const cl = R.dock.classList;
+    cl.remove('small', 'compact');
     if (!side) {
       const m = game.map;
       const mapH = Math.floor(R.stage.clientWidth / m.cols) * m.rows; // 폭에 맞춘 맵 높이
-      if (R.stage.offsetHeight < mapH) R.dock.classList.add('compact');
+      if (R.stage.offsetHeight < mapH) cl.add('small');
+      if (R.stage.offsetHeight < mapH) cl.add('compact');
     }
     const L = R.dockList;
     const scroll = side ? L.scrollHeight > L.clientHeight + 1 : L.scrollWidth > L.clientWidth + 1;
@@ -929,7 +934,7 @@
     if (!d.started) { togglePick(d.type, d.touch ? 'touch' : 'click'); return; }
     // 끌어다 놓기: 맵의 칸 위에서 떼면 짓기, 목록 위나 맵 밖이면 취소
     if (!pick || pick.type !== d.type) return; // 끄는 중에 Esc로 취소함
-    dragAt(e);
+    // 마지막으로 보이던 미리보기 칸에 짓기 (손가락은 손가락 위쪽 칸)
     if (pick.c != null) placeAt(pick.c, pick.r, e.shiftKey);
     else { cancelAll(); UI.sfx('click', { vol: 0.4 }); }
   }

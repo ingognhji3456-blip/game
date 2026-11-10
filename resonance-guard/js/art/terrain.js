@@ -52,6 +52,9 @@
       leaf: '#5ca83a', leafL: '#9cd85e', leafD: '#357026',
       flowers: ['#fff6c8', '#ffd23f', '#ff9db5', '#ffffff'], mist: '#5e5478',
       shadow: '#15300a', shadowOp: 0.34,
+      // 4차: 판석 색 틀기(따뜻한 황토·푸른 회색·분홍빛), 칸 표시 징, 땅 색 얼룩(햇빛·그늘·마른 풀)
+      stoneTints: ['#dcc596', '#adb8b4', '#d2b2a0'], stud: '#e2bd62',
+      patchW: '#9fc24e', patchC: '#3f7f4a', patchX: '#a9a24c',
       skyTop: '#86cdf2', skyBot: '#fcf2c4',
     },
     2: { // 서리 고개 — 하양·하늘
@@ -69,6 +72,8 @@
       leaf: '#2e6a5c', leafL: '#4f927a', leafD: '#1b463d',
       flowers: ['#ffffff', '#d6f1ff'], mist: '#66658a',
       shadow: '#4f6f99', shadowOp: 0.3,
+      stoneTints: ['#a9a6cf', '#a7bccc', '#b8b3bc'], stud: '#eaf8ff',
+      patchW: '#fff8ee', patchC: '#b4c8e6', patchX: '#d3dcf2',
       skyTop: '#bfe2fa', skyBot: '#f4fbff',
     },
     3: { // 붉은 협곡 — 주황·적갈
@@ -86,6 +91,8 @@
       leaf: '#5e9a48', leafL: '#8fc86c', leafD: '#3a682e',
       flowers: ['#ffd36b', '#ff7a4a', '#fff1c0'], mist: '#5a4466',
       shadow: '#3a1206', shadowOp: 0.34,
+      stoneTints: ['#e8b47e', '#c4846a', '#dcb48e'], stud: '#ffd27a',
+      patchW: '#c27548', patchC: '#7a3a2c', patchX: '#b7774a',
       skyTop: '#ff9f5c', skyBot: '#ffe0a8',
     },
     4: { // 폭풍 해안 — 청록·남색
@@ -103,6 +110,8 @@
       leaf: '#4cae62', leafL: '#8edc8a', leafD: '#2a7442',
       flowers: ['#ffd6c9', '#fff2d6', '#ff9a8a'], mist: '#4a5578',
       shadow: '#081e20', shadowOp: 0.38,
+      stoneTints: ['#b9c4a4', '#92adb2', '#c9bda2'], stud: '#9fe3cf',
+      patchW: '#5f9a78', patchC: '#25595e', patchX: '#6f8a5c',
       skyTop: '#1d3a58', skyBot: '#4f8c94',
     },
     5: { // 깨진 대종 — 회보라·금
@@ -120,6 +129,8 @@
       leaf: '#e2b84a', leafL: '#f6dc84', leafD: '#a8802a',
       flowers: ['#f2d27a', '#ffffff'], mist: '#241d33',
       shadow: '#0e0a18', shadowOp: 0.4,
+      stoneTints: ['#d8c6ec', '#b4b6dc', '#dccfb6'], stud: '#f4d36e',
+      patchW: '#5f5480', patchC: '#33304f', patchX: '#5a4a64',
       skyTop: '#4e4864', skyBot: '#b4a6c6',
     },
   };
@@ -673,6 +684,10 @@
       return memo[key];
     };
     const clip = (d, tf = '') => { const id = h.uid('tc'); defs.push(`<clipPath id="${id}"><path d="${d}"${tf ? ` transform="${tf}"` : ''} clip-rule="evenodd"/></clipPath>`); return `url(#${id})`; };
+    /** 큰 윤곽(축대·절벽)은 defs에 한 번만 두고 <use>로 여러 번 씀 (용량 절약 → 그만큼 세부 묘사에 씀) */
+    const shape = (d) => { const id = h.uid('ts'); defs.push(`<path id="${id}" d="${d}" fill-rule="evenodd" clip-rule="evenodd"/>`); return id; };
+    const clipU = (id, tf = '') => { const cid = h.uid('tc'); defs.push(`<clipPath id="${cid}"><use href="#${id}"${tf ? ` transform="${tf}"` : ''}/></clipPath>`); return `url(#${cid})`; };
+    const X = { shape, clipU, vn, fbm };
     const body = [];
     const P_ = (d, attrs) => (d ? `<path d="${d}" ${attrs}/>` : '');
     const EO = 'fill-rule="evenodd"';
@@ -893,7 +908,7 @@
     }
     if (treeSet) F.tree = sdField(treeSet, 10, 14, 60, 481, 5, 12);
     if (rubbleSet) F.rubble = sdField(rubbleSet, 10, 11, 35, 501, 4);
-    if (anyCliff) F.cliff = sdField(cliffSet, 11, 10, 52, 521, 4.5, 13); // 4차: 더 흐리고 굽이를 키워 계단 같은 테두리를 없앰
+    if (anyCliff) F.cliff = sdField(cliffSet, 15, 17, 62, 521, 6, 15); // 4차: 더 흐리고 굽이를 키워 계단 같은 테두리를 없앰
 
     /* ---- 길: 길 칸 중심을 잇는 뼈대까지의 거리 ---- */
     const HW = 33; // 길 반폭
@@ -979,6 +994,160 @@
     /** 맨땅인가 (풀·장식 자리) */
     const wild = (x, y, m = 0) => val('road', x, y, -99) < -11 - m && val('water', x, y, -99) < -12 - m && val('lava', x, y, -99) < -14 - m &&
       val('open', x, y, -99) < -6 - m && val('build', x, y, -99) < -5 - m && val('cliff', x, y, -99) < -3 - m;
+
+    /* =====================================================
+     * 0.5 맨땅 색과 결 (4차): 색상을 튼 큰 얼룩(햇빛·그늘·마른 땅) + 지역별 결
+     *     들판 = 토끼풀·꽃 무리, 서리 = 푸른 그늘·반짝임, 협곡 = 지층 띠·먼지, 해안 = 바닷풀 얼룩, 대종 = 모자이크 조각·금빛 맥
+     * ===================================================== */
+    {
+      // 맨땅 정도: 길·물·용암·공터·건설지·절벽에서 떨어질수록 + (등고선을 맨땅 근처에서만 만들어 용량 절약)
+      const WM = new Float32Array(G.N).fill(99);
+      const lim = (a, off) => { if (a) for (let k = 0; k < G.N; k++) { const v = -a[k] - off; if (v < WM[k]) WM[k] = v; } };
+      lim(F.road, 11); lim(F.water, 12); lim(F.lava, 14); lim(F.open, 6); lim(F.build, 5); lim(F.cliff, 3);
+      const M3 = maskF(G.make((x, y) => fbm(x / 120 + 11.3, y / 120 - 4.1, 2101, 3)), WM, -14);
+      const M4 = maskF(G.make((x, y) => fbm(x / 80 - 7.7, y / 80 + 2.9, 2111, 2)), WM, -14);
+      const inv = (a) => a.map((v) => (v === -9 ? 9 : v));
+      let s = '';
+      s += fillP(pathD(G.loops(M3, 0.61), 0.6), P.patchW, region === 2 ? 0.55 : 0.32);
+      s += fillP(pathD(G.loops(inv(M3), 0.37, true), 0.6), P.patchC, region === 2 ? 0.4 : 0.3);
+      s += fillP(pathD(G.loops(M4, 0.66), 0.6), P.patchX, region === 2 ? 0.45 : 0.28);
+      if (region === 3) {
+        // 지층 띠: 비스듬히 휘는 줄무늬가 군데군데 드러남
+        const ST = maskF(G.make((x, y) => {
+          const m = fbm(x / 160 + 5, y / 160, 2121, 2);
+          if (m < 0.42) return -1;
+          return Math.sin(((y * 0.95 + x * 0.16 + 70 * fbm(x / 260, y / 260, 2123, 2)) / 44) * 6.283) * Math.min(1, (m - 0.42) * 6);
+        }), WM, -6);
+        s += fillP(pathD(G.loops(ST, 0.55), 0.5), '#bf7a48', 0.42);
+        s += fillP(pathD(G.loops(inv(ST), -0.6, true), 0.5), '#6e3220', 0.32);
+      }
+      body.push(s);
+      // 잔결: 아주 작은 점(빛 받은 알갱이/어두운 알갱이). 0 길이 선 + 둥근 끝 = 점 (글자 수가 적음)
+      const dotL = region === 2 ? '#ffffff' : region === 3 ? '#d99a62' : region === 5 ? '#8f86b4' : P.tuftL;
+      const dotD = region === 2 ? '#a9bfd9' : region === 3 ? '#6e3220' : region === 5 ? '#2b2640' : P.tuft;
+      let dl = '';
+      let dd = '';
+      let sp = '';
+      let spC = '';
+      const GD = 15;
+      for (let gy = 0; gy * GD < H + GD; gy++) {
+        for (let gx = 0; gx * GD < W + GD; gx++) {
+          const v = rnd(gx, gy, 2131);
+          if (v > 0.55) continue;
+          const x = Math.round((gx + rnd(gx, gy, 2132)) * GD);
+          const y = Math.round((gy + rnd(gx, gy, 2133)) * GD);
+          if (G.at(WM, x, y) < 2) continue;
+          if (region === 2 && v < 0.12) { if (v < 0.03) spC += `M${x} ${y}h.1`; else sp += `M${x} ${y}h.1`; continue; }
+          if (v < 0.3) dl += `M${x} ${y}h.1`; else dd += `M${x} ${y}h.1`;
+        }
+      }
+      body.push(P_(dd, strokeA(dotD, 2.2, region === 2 ? 0.35 : 0.3)) + P_(dl, strokeA(dotL, 2, region === 2 ? 0.9 : 0.35)));
+      if (sp) body.push(P_(sp, strokeA('#ffffff', 3, 1)) + P_(spC, strokeA('#bfefff', 3, 1)));
+      // 무리 장식: 토끼풀·꽃 무리(들판), 모자이크 조각·금빛 맥(대종), 지층 바위 턱(협곡)
+      const bk = Buckets();
+      const GC = 64;
+      for (let gy = 0; gy * GC < H + GC; gy++) {
+        for (let gx = 0; gx * GC < W + GC; gx++) {
+          const v = rnd(gx, gy, 2141);
+          const x = (gx + 0.15 + rnd(gx, gy, 2142) * 0.7) * GC;
+          const y = (gy + 0.15 + rnd(gx, gy, 2143) * 0.7) * GC;
+          if (G.at(WM, x, y) < 14) continue;
+          if (val('tree', x, y, -99) > -10 || val('rubble', x, y, -99) > -6) continue;
+          if (region === 1) {
+            if (v < 0.3) {
+              // 토끼풀 무리: 잎 셋 = 점 셋
+              let d = '';
+              let dh = '';
+              const n = 4 + Math.floor(rnd(gx, gy, 2144) * 5);
+              for (let i = 0; i < n; i++) {
+                const a = rnd(gx, gy, 2150 + i) * 6.283;
+                const rr = 3 + rnd(gx, gy, 2160 + i) * 11;
+                const px = Math.round(x + Math.cos(a) * rr);
+                const py = Math.round(y + Math.sin(a) * rr * 0.7);
+                d += `M${px - 2} ${py}h.1M${px + 2} ${py}h.1M${px} ${py - 2.6}h.1`;
+                dh += `M${px - 2.6} ${py - 0.6}h.1M${px - 0.6} ${py - 3.2}h.1`;
+              }
+              bk.add(strokeA('#3f7d2c', 3.6), d);
+              bk.add(strokeA('#8fca5c', 1.6, 0.9), dh);
+            } else if (v < 0.5) {
+              // 꽃 무리: 한 색의 작은 꽃 여럿 + 가운데
+              const col = ['#ffffff', '#ffe066', '#ffb3c8', '#c9a8ff', '#fff3c4'][Math.floor(rnd(gx, gy, 2145) * 5) % 5];
+              let d = '';
+              let dc = '';
+              const n = 5 + Math.floor(rnd(gx, gy, 2146) * 6);
+              for (let i = 0; i < n; i++) {
+                const a = rnd(gx, gy, 2170 + i) * 6.283;
+                const rr = 2 + rnd(gx, gy, 2180 + i) * 13;
+                const px = Math.round(x + Math.cos(a) * rr);
+                const py = Math.round(y + Math.sin(a) * rr * 0.65);
+                d += `M${px} ${py}h.1`;
+                dc += `M${px + 0.4} ${py + 0.3}h.1`;
+              }
+              bk.add(strokeA('#2f5a1c', 4.6, 0.35), d.replace(/M(-?\d+) (-?\d+)/g, (m0, a1, b1) => `M${+a1 + 1} ${+b1 + 1.2}`));
+              bk.add(strokeA(col, 3.6), d);
+              bk.add(strokeA(col === '#ffe066' ? '#e08a1a' : '#f2b21f', 1.3), dc);
+            }
+          } else if (region === 2) {
+            if (v < 0.22) {
+              // 바람 자국(눈 물결): 푸른 그늘 + 위쪽 흰 턱
+              const w = 14 + rnd(gx, gy, 2144) * 14;
+              const d = `M${f(x - w)} ${f(y)}q${f(w * 0.5)} ${f(-5)} ${f(w)} 0q${f(w * 0.45)} 4 ${f(w * 0.9)} -1`;
+              bk.add(strokeA('#9fb6d6', 2.6, 0.6), d);
+              bk.add(strokeA('#ffffff', 2, 0.95), d.replace(/^M(-?[\d.]+) (-?[\d.]+)/, (m0, a1, b1) => `M${f(+a1 + 1)} ${f(+b1 - 2.4)}`));
+            }
+          } else if (region === 3) {
+            if (v < 0.16) {
+              // 먼지 회오리 자국 + 잔돌
+              bk.add(strokeA('#d99a62', 1.8, 0.55), `M${f(x - 12)} ${f(y)}q6 -5 12 0t12 0M${f(x - 8)} ${f(y + 5)}q4 -3 8 0t8 0`);
+            } else if (v < 0.26) {
+              bk.add(strokeA('#5a2414', 1.8, 0.6), `M${f(x - 10)} ${f(y - 3)}l6 3l3 -2l7 4l5 -1M${f(x - 4)} ${f(y)}l-2 6`);
+            }
+          } else if (region === 4) {
+            if (v < 0.18) {
+              // 조개·조약돌 무리
+              bk.add(`fill="#f7ead2" stroke="${P.tuft}" stroke-width="1"`, `M${f(x - 3.5)} ${f(y + 2)}q3.5 -8 7 0Z`);
+              bk.add(fillA('#d9cbb0'), ell(x + 7, y + 3, 2.6, 1.8) + ell(x - 6, y + 4, 2, 1.4));
+            } else if (v < 0.34) {
+              bk.add(strokeA('#7fc1a0', 1.6, 0.55), `M${f(x - 6)} ${f(y)}q3 -6 6 -2q3 -6 6 0`);
+            }
+          } else {
+            if (v < 0.2) {
+              // 옛 모자이크 조각: 작은 네모 돌 몇 개가 남아 있음
+              const cols5 = ['#b89a52', '#4f7a86', '#8f86b4', '#cfc4a8', '#9a5a6a'];
+              const a = (rnd(gx, gy, 2144) - 0.5) * 0.6;
+              const ca = Math.cos(a);
+              const sa = Math.sin(a);
+              for (let i = 0; i < 9; i++) {
+                if (rnd(gx, gy, 2190 + i) < 0.38) continue;
+                const u = (i % 3) * 7 - 7;
+                const w = Math.floor(i / 3) * 7 - 7;
+                const px = x + u * ca - w * sa;
+                const py = y + u * sa + w * ca;
+                const col = cols5[Math.floor(rnd(gx, gy, 2200 + i) * 5) % 5];
+                bk.add(`fill="${col}" fill-opacity="0.8"`, `M${f(px - 2.6 * ca + 2.6 * sa)} ${f(py - 2.6 * sa - 2.6 * ca)}l${f(5.2 * ca)} ${f(5.2 * sa)}l${f(-5.2 * sa)} ${f(5.2 * ca)}l${f(-5.2 * ca)} ${f(-5.2 * sa)}Z`);
+              }
+            } else if (v < 0.33) {
+              // 금빛 맥: 갈라진 금 사이로 새는 빛
+              let px = x;
+              let py = y;
+              let a = rnd(gx, gy, 2145) * 6.283;
+              let d = `M${f(px)} ${f(py)}`;
+              for (let i = 0; i < 5; i++) {
+                a += (rnd(gx, gy, 2210 + i) - 0.5) * 1.4;
+                px += Math.cos(a) * 9;
+                py += Math.sin(a) * 9;
+                d += `L${f(px)} ${f(py)}`;
+                if (i === 2) d += `M${f(px)} ${f(py)}l${f(Math.cos(a + 1) * 8)} ${f(Math.sin(a + 1) * 8)}M${f(px)} ${f(py)}`;
+              }
+              bk.add(strokeA(P.accent, 5, 0.16), d);
+              bk.add(strokeA('#1d182b', 2.4, 0.7), d);
+              bk.add(strokeA('#f6dc84', 1.2, 0.95), d);
+            }
+          }
+        }
+      }
+      body.push(bk.out());
+    }
 
     /* =====================================================
      * 1. 맨땅 장식 (풀포기·꽃·돌멩이·눈더미…)
@@ -1336,7 +1505,7 @@
      * 8. 건설지: 이웃한 건설 칸을 하나로 묶은 낮은 돌 축대, 윗면은 칸과 무관하게 깐 판석 + 옅은 칸 모서리 표시
      * ===================================================== */
     const buildCells = cellsWhere((k) => k === K.BUILD);
-    if (F.build) body.push(drawTerrace(F.build, G, buildCells, P, region, rnd, def, clip, kAt, maskF(G.make((x, y) => fbm(x / 38, y / 38, 471, 2)), F.build, -12), val));
+    if (F.build) body.push(drawTerrace(F.build, G, buildCells, P, region, rnd, def, clip, kAt, maskF(G.make((x, y) => fbm(x / 38, y / 38, 471, 2)), F.build, -12), val, X));
 
     /* =====================================================
      * 9. 다리
@@ -1652,21 +1821,26 @@
 
   /** 건설지 축대: 이어진 건설 칸 = 하나의 낮은 돌 축대(그림자 → 앞면 → 윗면).
    *  윗면은 크기·모양이 제각각인 판석을 칸 경계와 상관없이 깐 하나의 바닥(보로노이 돌깔기).
-   *  칸은 아주 옅은 모서리 십자·가장자리 눈금으로만 표시 → 바둑판처럼 보이지 않지만 탑 자리는 보임 */
-  function drawTerrace(A, G, cells, P, region, rnd, def, clip, kAt, CM, val) {
+   *  4차: 판석 색을 지역 색 안에서 틀고(따뜻한/차가운 돌), 큰 돌엔 왼쪽 위 볼록한 빛, 오른쪽 아래로 옅어지는 부드러운 그림자·접지 그늘,
+   *       칸 표시는 판석에 새긴 홈(어두운 홈 + 오른쪽 아래 밝은 턱) 십자 + 작은 징 → 휴대폰에서도 탑 자리가 보이되 바둑판처럼 보이지 않게 */
+  function drawTerrace(A, G, cells, P, region, rnd, def, clip, kAt, CM, val, X) {
     const EO = 'fill-rule="evenodd"';
     const HT = 6;
     const L0 = 1.5;
     const loops = G.loops(A, L0);
     const base = pathD(loops, 0.3);
     const BIG = `M-60 -60H${G.nx * GS + 60}V${G.ny * GS + 60}H-60Z`;
+    const sid = X.shape(base);
+    const cid = X.shape(BIG + base);
+    const U = (id, a) => `<use href="#${id}" ${a}/>`;
     let s = '';
-    // 그림자(오른쪽 아래) + 접지 그늘
-    s += `<path d="${base}" ${EO} fill="${P.shadow}" fill-opacity="${f(P.shadowOp * 0.75)}" transform="translate(7 6)"/>`;
-    s += `<path d="${base}" ${EO} fill="${P.shadow}" fill-opacity="${f(P.shadowOp * 0.5)}" transform="translate(2 2.5)"/>`;
-    // 앞면
-    s += `<path d="${base}" ${EO} fill="${P.slabSide}" stroke="${OL}" stroke-width="2.6" stroke-opacity="0.75"/>`;
-    s += `<path d="${base}" ${EO} fill="${h.mix(P.slabSide, P.slabD, 0.45)}" transform="translate(0 ${-HT * 0.5})"/>`;
+    // 그림자: 오른쪽 아래로 갈수록 옅어지는 네 겹(가장자리가 부드럽게) + 발치 접지 그늘
+    for (const [dx, dy, op] of [[15, 13, 0.17], [10.5, 9, 0.25], [6.5, 5.5, 0.36], [3, 2.6, 0.5]]) s += U(sid, `fill="${P.shadow}" fill-opacity="${f(P.shadowOp * op)}" transform="translate(${dx} ${dy})"`);
+    s += U(sid, `fill="none" stroke="${P.shadow}" stroke-width="8" stroke-opacity="${f(P.shadowOp * 0.45)}"`);
+    // 앞면: 아래(땅에 닿는 곳)는 어둡고 위 턱은 밝게
+    s += U(sid, `fill="${P.slabSide}" stroke="${OL}" stroke-width="2.6" stroke-opacity="0.75"`);
+    s += U(sid, `fill="${h.mix(P.slabSide, P.slabD, 0.45)}" transform="translate(0 ${-HT * 0.5})"`);
+    s += U(sid, `fill="${h.mix(P.slabSide, P.slabD, 0.75)}" transform="translate(0 ${-HT + 1.2})"`);
     // ---- 판석 깔기 (세상 좌표, 칸과 무관한 엇갈린 격자 + 흔들림, 군데군데 돌을 더하거나 빼서 크기가 들쭉날쭉) ----
     const SX = 40;
     const SY = 34;
@@ -1702,10 +1876,15 @@
       }
       return out;
     };
-    const tones = [h.mix(P.slab, P.slabL, 0.45), P.slab, h.mix(P.slab, P.slabD, 0.3), h.mix(P.slab, P.slabD, 0.55)];
+    // 돌 색: 밝은 돌·본색·어두운 돌 + 지역 색 안에서 색상을 튼 돌 셋(따뜻한/차가운/붉은빛) → 회색 덩어리처럼 보이지 않게
+    const TI = P.stoneTints || [P.slabL, P.slab, P.slabD];
+    const tones = [h.mix(P.slab, P.slabL, 0.45), P.slab, h.mix(P.slab, P.slabD, 0.3), h.mix(P.slab, P.slabD, 0.55),
+      h.mix(P.slab, TI[0], 0.55), h.mix(P.slab, TI[1], 0.55), h.mix(h.mix(P.slab, TI[2], 0.6), P.slabD, 0.15)];
     const toneB = tones.map(() => '');
     let lit = '';
     let shd = '';
+    let dome = '';
+    let pits = '';
     const det = Buckets();
     const joints = [];
     for (let i = 0; i < sites.length; i++) {
@@ -1732,8 +1911,14 @@
       // 줄눈만큼 안쪽으로
       const pts = poly.map(([x, y]) => { const dx = x - cx; const dy = y - cy; const L = Math.hypot(dx, dy) || 1; const k = Math.max(0.2, 1 - 2.3 / L); return [cx + dx * k, cy + dy * k]; });
       for (const p of poly) if (rnd(Math.round(p[0]), Math.round(p[1]), 1510) < 0.04) joints.push(p);
-      const tv = Math.floor(rnd(gx * 3 + sites[i][4], gy, 1506) * 4) % 4;
+      const sk = gx * 3 + sites[i][4];
+      const tv = Math.floor(rnd(sk, gy, 1506) * tones.length) % tones.length;
       toneB[tv] += roundPolyI(pts, 4.5);
+      // 큰 돌은 왼쪽 위가 볼록하게 밝음(작은 면은 색 변화로만)
+      let rad = 0;
+      for (const [x, y] of pts) rad += Math.hypot(x - cx, y - cy);
+      rad /= pts.length;
+      if (rad > 13 && rnd(sk, gy, 1508) < 0.62) dome += roundPolyI(pts.map(([x, y]) => [cx - 3.2 + (x - cx) * 0.52, cy - 3.6 + (y - cy) * 0.5]), 4);
       // 돌마다 빛: 왼쪽 위를 향한 변은 밝게, 오른쪽 아래를 향한 변은 어둡게
       for (let e = 0; e < pts.length; e++) {
         const p0 = pts[e];
@@ -1751,64 +1936,82 @@
         const seg = `M${Math.round(a0[0])} ${Math.round(a0[1])}L${Math.round(a1[0])} ${Math.round(a1[1])}`;
         if (dot > 0.3) lit += seg; else if (dot < -0.3) shd += seg;
       }
-      // 판석 장식: 금·이끼·눈·모래·금빛 맥
-      const m = rnd(gx * 3 + sites[i][4], gy, 1507);
+      // 판석 장식: 금·이끼·눈·모래·금빛 맥, 작은 구멍(풍화)
+      const m = rnd(sk, gy, 1507);
       if (m < 0.12) {
         const d = `M${f(cx - 8)} ${f(cy - 4)}l5 4l4 -2l6 5`;
         det.add(strokeA(P.slabLine, 1.6, 0.65), d);
+        det.add(strokeA(P.slabL, 1.1, 0.5), `M${f(cx - 7)} ${f(cy - 2.4)}l5 4l4 -2l6 5`);
       } else if (m < 0.2) {
         if (region === 1 || region === 4) { det.add(fillA(P.moss, 0.85), circ(cx - 3, cy + 2, 4) + circ(cx + 2, cy + 3, 3)); det.add(fillA(P.mossL, 0.85), circ(cx - 4, cy, 1.6)); }
         else if (region === 2) det.add(fillA('#ffffff', 0.92), ellR(cx - 2, cy - 3, 9, 3.6, -8));
         else if (region === 3) det.add(fillA(P.moss, 0.8), ellR(cx, cy + 2, 10, 4, -12));
-        else det.add(strokeA(P.moss, 1.6, 0.8), `M${f(cx - 7)} ${f(cy + 3)}l4 -5l3 3l5 -6`);
+        else { det.add(strokeA(P.moss, 1.6, 0.85), `M${f(cx - 7)} ${f(cy + 3)}l4 -5l3 3l5 -6`); det.add(strokeA('#fff3c4', 0.9, 0.7), `M${f(cx - 6.4)} ${f(cy + 2.2)}l4 -5`); }
+      } else if (m < 0.34 && rad > 11) {
+        pits += circ(cx + 4 - rnd(sk, gy, 1511) * 8, cy + 3 - rnd(sk, gy, 1512) * 6, 1.3) + circ(cx - 5 + rnd(sk, gy, 1513) * 3, cy + 4, 0.9);
       }
     }
     // 윗면 조립
     const up = `translate(0 ${-HT})`;
-    const topClip = clip(base, up);
+    const topClip = X.clipU(sid, up);
     const jointC = region === 5 ? h.mix(P.moss, P.slabSide, 0.35) : h.mix(P.slabD, P.slabSide, 0.28);
-    let t = `<path d="${base}" ${EO} fill="${jointC}" transform="${up}"/>`;
+    let t = U(sid, `fill="${jointC}" transform="${up}"`);
     let pav = '';
     tones.forEach((col, k) => { if (toneB[k]) pav += `<path d="${toneB[k]}" fill="${col}"/>`; });
-    pav += `<path d="${lit}" ${strokeA(P.slabL, 2, 0.75)}/><path d="${shd}" ${strokeA(P.slabD, 2, 0.6)}/>`;
+    if (dome) pav += `<path d="${dome}" fill="${P.slabL}" fill-opacity="0.3"/>`;
+    if (pits) pav += `<path d="${pits}" fill="${P.slabLine}" fill-opacity="0.45"/>`;
+    pav += `<path d="${lit}" ${strokeA(P.slabL, 1.9, 0.8)}/><path d="${shd}" ${strokeA(h.mix(P.slabD, P.slabSide, 0.25), 1.9, 0.6)}/>`;
     pav += det.out();
-    // 큰 얼룩(색 변화 / 눈·모래 쌓임)
+    // 큰 얼룩(색 변화 / 눈·모래 쌓임) + 색상을 튼 큰 얼룩(따뜻한 빛 / 차가운 그늘)
     if (region === 2) pav += `<path d="${pathD(G.loops(CM, 0.74), 0.4)}" ${EO} fill="#ffffff" fill-opacity="0.6"/>`;
     else if (region === 3) pav += `<path d="${pathD(G.loops(CM, 0.68), 0.4)}" ${EO} fill="${P.moss}" fill-opacity="0.55"/>`;
     else pav += `<path d="${pathD(G.loops(CM, 0.64), 0.4)}" ${EO} fill="${P.slabL}" fill-opacity="0.25"/>`;
-    pav += `<path d="${pathD(G.loops(CM.map((v) => (v === -9 ? 9 : v)), 0.36, true), 0.4)}" ${EO} fill="${P.slabD}" fill-opacity="0.2"/>`;
+    const CMi = CM.map((v) => (v === -9 ? 9 : v));
+    pav += `<path d="${pathD(G.loops(CMi, 0.36, true), 0.4)}" ${EO} fill="${P.slabD}" fill-opacity="0.2"/>`;
+    {
+      const HU = G.make((x, y) => (G.at(A, x, y) < -12 ? -9 : X.fbm(x / 70 + 3.1, y / 70 - 1.7, 1531, 2)));
+      pav += `<path d="${pathD(G.loops(HU, 0.6), 0.5)}" ${EO} fill="${TI[0]}" fill-opacity="0.2"/>`;
+      pav += `<path d="${pathD(G.loops(HU.map((v) => (v === -9 ? 9 : v)), 0.38, true), 0.5)}" ${EO} fill="${TI[1]}" fill-opacity="0.22"/>`;
+    }
     // 줄눈 사이 풀/눈
     const jb = Buckets();
     for (const [x, y] of joints) {
-      if (region === 1 || region === 4) jb.add(strokeA(region === 1 ? '#5c8a30' : P.tuft, 1.9, 0.9), tuftD(x, y + 2, 0.55));
+      if (region === 1 || region === 4) { jb.add(strokeA(region === 1 ? '#5c8a30' : P.tuft, 1.9, 0.9), tuftD(x, y + 2, 0.55)); jb.add(strokeA(region === 1 ? '#a6d064' : P.tuftL, 1.2, 0.8), tuftHiD(x, y + 2, 0.55)); }
       else if (region === 2) jb.add(fillA('#ffffff', 0.9), ell(x, y, 4, 2));
+      else if (region === 5) jb.add(fillA(P.moss, 0.8), circ(x, y, 1.6));
     }
     pav += jb.out();
-    // 칸 표시: 네 칸이 만나는 모서리엔 작은 십자, 축대 가장자리에 걸친 칸 경계엔 짧은 눈금 (아주 옅게)
+    // 칸 표시: 네 칸이 만나는 모서리엔 새긴 십자 + 작은 징, 축대 가장자리에 걸친 칸 경계엔 새긴 눈금
     const isB = (c, r) => kAt(c, r) === K.BUILD;
     let tick = '';
+    let stud = '';
     for (const [c, r] of cells) {
       const x = c * 100 + 100;
       const y = r * 100 + 100;
       const R = isB(c + 1, r);
       const D = isB(c, r + 1);
-      if (R && D && isB(c + 1, r + 1)) tick += `M${x - 9} ${y}h18M${x} ${y - 9}v18`;
+      if (R && D && isB(c + 1, r + 1)) {
+        tick += `M${x - 14} ${y}h9M${x + 5} ${y}h9M${x} ${y - 14}v9M${x} ${y + 5}v9`;
+        stud += `M${x} ${y - 4.6}l4.6 4.6l-4.6 4.6l-4.6 -4.6Z`;
+      }
       if (R) {
-        if (!(isB(c, r - 1) && isB(c + 1, r - 1))) tick += `M${x} ${y - 100 + 7}v9`;
-        if (!(D && isB(c + 1, r + 1))) tick += `M${x} ${y - 7}v-9`;
+        if (!(isB(c, r - 1) && isB(c + 1, r - 1))) tick += `M${x} ${y - 100 + 7}v12`;
+        if (!(D && isB(c + 1, r + 1))) tick += `M${x} ${y - 7}v-12`;
       }
       if (D) {
-        if (!(isB(c - 1, r) && isB(c - 1, r + 1))) tick += `M${x - 100 + 7} ${y}h9`;
-        if (!(R && isB(c + 1, r + 1))) tick += `M${x - 7} ${y}h-9`;
+        if (!(isB(c - 1, r) && isB(c - 1, r + 1))) tick += `M${x - 100 + 7} ${y}h12`;
+        if (!(R && isB(c + 1, r + 1))) tick += `M${x - 7} ${y}h-12`;
       }
     }
-    pav += `<path d="${tick}" ${strokeA(P.slabL, 2.2, 0.7)} transform="translate(1.5 1.5)"/><path d="${tick}" ${strokeA(P.slabSide, 3.4, 0.7)}/>`;
+    const groove = h.mix(h.mix(P.slabSide, P.slabD, 0.2), TI[1], 0.15);
+    pav += `<path d="${tick}" ${strokeA(P.slabL, 2.6, 0.85)} transform="translate(1.5 1.7)"/><path d="${tick}" ${strokeA(groove, 4, 0.82)}/>`;
+    if (stud) pav += `<path d="${stud}" fill="${P.stud || P.slabL}" stroke="${groove}" stroke-width="1.5" stroke-linejoin="round"/><path d="${stud.replace(/M(-?[\d.]+) (-?[\d.]+)l4\.6 4\.6l-4\.6 4\.6l-4\.6 -4\.6Z/g, (mm, a1, b1) => `M${f(+a1 - 1.6)} ${f(+b1 + 2.6)}l1.6 -1.4`)}" ${strokeA('#ffffff', 1.3, 0.85)}/>`;
     t += `<g transform="${up}">${pav}</g>`;
     // 테두리 빛: 바깥(여집합)을 오른쪽 아래로 밀면 왼쪽 위 안쪽 테가, 왼쪽 위로 밀면 오른쪽 아래 안쪽 테가 됨
-    t += `<path d="${BIG}${base}" ${EO} fill="${P.slabL}" fill-opacity="0.75" transform="translate(3 ${-HT + 3})"/>`;
-    t += `<path d="${BIG}${base}" ${EO} fill="${P.slabD}" fill-opacity="0.6" transform="translate(-3 ${-HT - 3})"/>`;
+    t += U(cid, `fill="${P.slabL}" fill-opacity="0.75" transform="translate(3 ${-HT + 3})"`);
+    t += U(cid, `fill="${P.slabD}" fill-opacity="0.6" transform="translate(-3 ${-HT - 3})"`);
     s += `<g clip-path="${topClip}">${t}</g>`;
-    s += `<path d="${base}" ${EO} fill="none" stroke="${OL}" stroke-width="2.2" stroke-opacity="0.55" transform="${up}"/>`;
+    s += U(sid, `fill="none" stroke="${OL}" stroke-width="2.2" stroke-opacity="0.55" transform="${up}"`);
     // 축대 가장자리: 덮어 자란 풀·눈, 굴러 나온 돌
     const bk = Buckets();
     let q = 0;

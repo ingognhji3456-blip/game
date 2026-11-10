@@ -194,7 +194,7 @@
   function dk(col, amt = 0.35, cool) {
     const [h, s, l] = hsl(col);
     const cc = coolOf(h, s, cool);
-    return fromHsl(turn(h, cc ? 250 : 335, 62 * amt), Math.min(1, s + (1 - s) * 0.32 * amt), l * (1 - amt));
+    return fromHsl(turn(h, cc ? 250 : 335, 50 * amt), Math.min(1, s + (1 - s) * 0.2 * amt), l * (1 - amt));
   }
   /** 밝은 면: 따뜻한 색은 누런 빛, 차가운 색은 맑은 청록 빛 쪽으로 밝게 */
   function lt(col, amt = 0.3, cool) {
@@ -207,8 +207,10 @@
     [1, dk(base, (o.lo != null ? o.lo : 0.3) + 0.14, o.cool)]], o.cx != null ? o.cx : 0.32, o.cy != null ? o.cy : 0.26, o.r != null ? o.r : 0.86);
   /** 팔다리·관 칠(선형, 기본 위→아래) */
   const GL = (c, base, o = {}) => c.lin([[0, lt(base, o.hi != null ? o.hi : 0.18, o.cool)], [0.45, base], [1, dk(base, o.lo != null ? o.lo : 0.34, o.cool)]], o.dir || 'v');
+  /** 안쪽 선 색: 그 자리 색을 짙은 보라(따뜻한 색)·짙은 남색(차가운 색)과 섞음 — 색은 남고 윤곽색보다 연함 */
+  const ink = (col, amt = 0.5, cool) => { const [h, s] = hsl(col); return H.mix(col, coolOf(h, s, cool) ? '#141634' : '#2a1228', amt); };
   /** 안쪽 선: 그 자리 색의 어두운 변형(굵기 = 바깥 윤곽의 50~65%) */
-  const inl = (c, d, base, w = 1.7, amt = 0.5, x = '') => c.L(d, dk(base, amt), w, x);
+  const inl = (c, d, base, w = 1.7, amt = 0.5, x = '') => c.L(d, ink(base, amt), w, x);
   /** 초승달 띠: 도형 d에서 왼쪽 위로 k만큼 옮긴 자기 모양을 뺀 부분(= 오른쪽 아래 가장자리 띠)을 칠함.
    *  a: 그 좌표계의 회전(도) — 돌아간 무리 안에서도 화면 기준 오른쪽 아래를 유지, sc: 그 좌표계의 배율 */
   function crescent(c, d, fill, k, op, a = 0, sc = 1) {
@@ -267,25 +269,34 @@
    *     죽음: 맞고 머리를 젖힘 → 납작 엎어지며 불씨가 꺼짐 → 잿빛 껍데기가 재로 부서짐 --- */
   RG.art._en.MOTION.cinder_lizard = { gait: 'scuttle', bob: 0.015, tilt: 2, sway: 0.025, deathFx: 'ash', deathTime: 0.7 };
   D.cinder_lizard = (fr) => {
-    const c = make(3, { fine: true });
+    const c = make(3, FINE);
     const cool = fr === 'die1' ? 0.5 : fr === 'die2' ? 1 : 0; // 식어 가는 정도
-    const red = H.mix('#b0564a', '#6a6270', cool);
-    const redD = sh(red, -0.3);
+    // 4차: 붉은 바위 위에서 묻히지 않게 진홍 바탕 + 주황빛 등줄기·배의 용암빛(가장 밝은 점은 눈과 가시 끝)
+    const red = H.mix('#b8443a', '#6a6270', cool);
+    const redD = dk(red, 0.32);
     const emb = H.mix(EMBER, '#55505c', cool);
     const embL = H.mix(EMBER_L, '#77707e', cool);
     if (fr === 'die2') {
       // 잿빛 껍데기가 마디마디 부서져 재 더미로
+      const ash = '#7e7686';
       const sp = spline([[8, 84], [22, 84.5], [40, 83], [58, 83], [72, 83], [78, 83]], 5);
       const hw = (t) => 1.5 + t * 4.2;
-      const seg = (a, b) => c.P(tube(sp.slice(a, b), (t) => hw((a + t * (b - a)) / (sp.length - 1))), c.lin([[0, '#857d8a'], [1, '#4e4856']]));
+      const seg = (a, b) => {
+        const d = tube(sp.slice(a, b), (t) => hw((a + t * (b - a)) / (sp.length - 1)));
+        return c.P(d, GL(c, ash, { hi: 0.22, lo: 0.4 })) + rimL(c, d, '#c9a08a', { k: 1.2, op: 0.45 });
+      };
+      const pile = (d) => c.P(d, G3(c, '#9a92a2', { lo: 0.34 })) + shadeL(c, d, dk('#9a92a2', 0.5), { k: 3, op: 0.5 });
       return c.out(
         c.mist([[44, 70, 3], [48, 62, 3.6], [53, 54, 4], [60, 47, 3.4]], '#9a94a4', 0.45) +
-        c.P('M16 88.5C20 80 34 79 40 88.5Z', c.lin([[0, '#a39cab'], [1, '#6a6472']])) + c.P('M46 88.5C50 81 62 81 68 88.5Z', c.lin([[0, '#a39cab'], [1, '#6a6472']])) +
+        pile('M16 88.5C20 80 34 79 40 88.5Z') + pile('M46 88.5C50 81 62 81 68 88.5Z') +
+        grains(c, [[22, 85, 0.7], [30, 83.5, 0.6], [52, 85, 0.7], [60, 84, 0.6]], '#c8c0cc') +
         seg(0, 9) + seg(10, 17) + seg(18, 25) +
-        c.P('M74 86C74 80 84 79 90 82C93 84 92 87 88 88L76 88Z', c.lin([[0, '#8a8290'], [1, '#544e5c']])) + c.E(84, 83, 1.6, 1.4, '#3a3442') +
-        c.P('M30 82l3-4l2 4ZM52 81l2-5l3 5ZM64 82l3-3l1 4Z', '#6a6270') +
+        inl(c, 'M24 83l1.4 3M40 82.5l-1 3M58 82.6l1.2 3', ash, 1.2, 0.55) +
+        c.P('M74 86C74 80 84 79 90 82C93 84 92 87 88 88L76 88Z', G3(c, '#8a8290')) + c.E(84, 83, 1.6, 1.4, dk('#8a8290', 0.6)) +
+        inl(c, 'M77 85.5C80 84.5 84 84.6 88 85.6', '#8a8290', 1.1, 0.5) +
+        c.P('M30 82l3-4l2 4ZM52 81l2-5l3 5ZM64 82l3-3l1 4Z', GL(c, '#6a6270')) +
         c.En(26, 86, 1.3, 0.8, '#3a3442') + c.En(57, 86, 1.3, 0.8, '#3a3442') +
-        c.spark(36, 84, 1.2, EMBER) + c.spark(61, 85, 1, EMBER_L)
+        glowR(c, 36, 84.5, 4, 2.4, EMBER, 0.55) + c.spark(36, 84, 1.2, EMBER) + c.spark(61, 85, 1, EMBER_L)
       );
     }
     // 자세 표: sp 등뼈(꼬리 끝→목), hd 머리 각도, jaw 턱 벌림, ft 발 [앞가까운, 앞먼, 뒤가까운, 뒤먼] = [x, 들림]
@@ -309,23 +320,25 @@
     const hip = add(at(sp, 0.47).p, 0, 3.5);
     const sho = add(at(sp, 0.85).p, 0, 3.5);
     const neck = sp[sp.length - 1];
-    const legFill = (col) => c.lin([[0, col], [1, sh(col, -0.28)]]);
+    const claw = '#f2dcc4';
     const leg = (root, [fx, lift], front, near) => {
       const col = near ? red : redD;
       const ank = [fx, GND(c, 2 + lift)];
       const knee = ik(root, ank, 7.5, 9, (front ? 1 : -1) * (S.flat ? -1 : 1));
-      let toes;
-      if (S.claw && front && near) {
-        toes = cap(ank, pol(ank, 6, -50), 2.6, 1.6) + cap(ank, pol(ank, 6.5, -18), 2.6, 1.6) + cap(ank, pol(ank, 5.5, 14), 2.6, 1.6);
-      } else if (lift > 2) {
-        toes = cap(ank, pol(ank, 5, 70), 2.6, 1.8) + cap(ank, pol(ank, 4.5, 110), 2.6, 1.8);
-      } else {
-        toes = cap(ank, [fx + 5.5, GND(c, 0.9)], 2.6, 1.8) + cap(ank, [fx + 2.5, GND(c, 0.9)], 2.6, 1.8) + cap(ank, [fx - 3.5, GND(c, 0.9)], 2.4, 1.6);
-      }
-      return solid(c, capsD([root, knee, ank], [7, 5, 3.6]) + toes, legFill(col));
+      let tips;
+      if (S.claw && front && near) tips = [pol(ank, 6, -50), pol(ank, 6.5, -18), pol(ank, 5.5, 14)];
+      else if (lift > 2) tips = [pol(ank, 5, 70), pol(ank, 4.5, 110)];
+      else tips = [[fx + 5.5, GND(c, 0.9)], [fx + 2.5, GND(c, 0.9)], [fx - 3.5, GND(c, 0.9)]];
+      const toes = tips.map((q, i) => cap(ank, q, i === 2 && !S.claw && lift <= 2 ? 2.4 : 2.6, 1.7)).join('');
+      const d = capsD([root, knee, ank], [7, 5, 3.6]) + toes;
+      // 발톱 끝(밝은 뼈색, 선 없이 색 대비로)
+      const nails = tips.map((q) => { const a = ang(ank, q); return c.Pn(`M${P2(pol(q, 1.1, a + 90))}L${P2(pol(q, 2.2, a))}L${P2(pol(q, 1.1, a - 90))}Z`, near ? claw : dk(claw, 0.3)); }).join('');
+      return solid(c, d, GL(c, col, { hi: near ? 0.24 : 0.08, lo: 0.42 })) +
+        (near ? rimL(c, d, R3_RIM, { k: 1.4, op: 0.5 }) + inl(c, `M${P2(mixp(root, knee, 0.55))}Q${P2(add(knee, 1, -1))} ${P2(mixp(knee, ank, 0.4))}`, col, 1.1, 0.45) : '') + nails;
     };
-    // 등 가시(불씨 비늘): 등뼈 위쪽으로
+    // 등 가시(불씨 비늘): 등뼈 위쪽으로, 끝으로 갈수록 밝게 달아오름
     let spikes = '';
+    let spikeGlow = '';
     [0.34, 0.43, 0.52, 0.61, 0.7, 0.78].forEach((t, i) => {
       const { p, a } = at(sp, t);
       const nrm = a - 90;
@@ -334,20 +347,30 @@
       const tip = pol(base, hgt, nrm - (S.flat ? 50 : 22));
       const b1 = pol(base, 3.8, a + 180);
       const b2 = pol(base, 3.8, a);
-      spikes += c.P(`M${P2(b1)}Q${P2(mixp(b1, tip, 0.6))} ${P2(tip)}Q${P2(mixp(b2, tip, 0.3))} ${P2(b2)}Z`, c.lin([[0, embL], [1, emb]]));
+      spikes += c.P(`M${P2(b1)}Q${P2(mixp(b1, tip, 0.6))} ${P2(tip)}Q${P2(mixp(b2, tip, 0.3))} ${P2(b2)}Z`, c.lin([[0, cool ? embL : '#fff0b0'], [0.35, embL], [1, dk(emb, 0.18)]])) +
+        c.Pn(`M${P2(mixp(b2, tip, 0.25))}Q${P2(mixp(b2, tip, 0.55))} ${P2(mixp(b2, tip, 0.85))}L${P2(mixp(b1, tip, 0.85))}Z`, dk(emb, 0.35), 0.45);
+      if (!cool) spikeGlow += glowR(c, base[0], base[1] + 1, 5, 3, EMBER, 0.32);
       if (!cool && i % 2 === 0) spikes += c.spark(n(tip[0]), n(tip[1]), 0.9, EMBER_L);
     });
     // 머리: 목에서 회전, 아래턱은 경첩(3,2)에서 벌어짐
     const open = S.jaw > 10;
+    const ha = n(at(sp, 1).a * 0.4 + S.hd);
+    const skull = 'M-3-6C3-11 14-10 19-6C22-4 23-1 21 2L4 3C-1 3-4-1-3-6Z';
     const head = g(
-      (open ? c.P('M2 1L21 0L19 13Z', '#4a1a22', ` transform="rotate(${S.jaw * 0.5} 3 2)"`) : '') +
+      (open ? c.P('M2 1L21 0L19 13Z', c.lin([[0, '#6a1e2a'], [1, '#3a0e1c']]), ` transform="rotate(${S.jaw * 0.5} 3 2)"`) + c.Pn('M6 3C10 5 14 6 18 5L17 8C13 8 9 7 6 5Z', '#c0405a', 0.6) : '') +
       (S.bite ? `<ellipse cx="22" cy="6" rx="8" ry="6" fill="${EMBER}" opacity=".75" stroke="none" ${c.soft()}/>` + c.spark(24, 4, 2, EMBER_L) + c.spark(28, 10, 1.4, EMBER) : '') +
-      g(c.P('M2 1L20 2C19 5 13 7 5 6C1 5 0 3 2 1Z', c.lin([[0, red], [1, redD]])) + (open ? c.P('M9 2.2l1.5 2.6l1.5-2.6M14 2.4l1.3 2.4l1.3-2.4', '#fff', ' stroke-width="1"') : ''), `rotate(${S.jaw} 3 2)`) +
-      c.P('M-3-6C3-11 14-10 19-6C22-4 23-1 21 2L4 3C-1 3-4-1-3-6Z', c.body(red, 0.35)) +
-      (open ? c.P('M9 2.6l1.5-2.4l1.5 2.4M15 2.3l1.2-2.2l1.2 2.2', '#fff', ' stroke-width="1"') : c.L('M5 2.5L19 1.8', OL, 1.6)) +
-      c.En(19, -3, 1, 0.8, OL) + c.L('M7-7.5C10-9.5 13-9.5 16-8', redD, 1.6) +
-      (fr === 'die1' ? c.L('M10-5l4 3M14-5l-4 3', OL, 1.8) : c.eye(12, -3.5, 2.6)),
-      `translate(${P2(neck)}) rotate(${n(at(sp, 1).a * 0.4 + S.hd)})`
+      g(c.P('M2 1L20 2C19 5 13 7 5 6C1 5 0 3 2 1Z', GL(c, red, { hi: 0.1, lo: 0.4 })) + inl(c, 'M6 4.6C10 5.2 14 4.6 18 3.2', red, 1, 0.5) +
+        (open ? c.P('M9 2.2l1.5 2.6l1.5-2.6M14 2.4l1.3 2.4l1.3-2.4', '#fff6ea', ' stroke-width="1"') : ''), `rotate(${S.jaw} 3 2)`) +
+      c.P(skull, G3(c, red, { hi: 0.4, cx: 0.3, cy: 0.2 })) +
+      shadeL(c, skull, dk(red, 0.5), { k: 3.2, op: 0.45, a: ha }) +
+      rimL(c, skull, R3_RIM, { k: 1.3, op: 0.55, a: ha }) +
+      // 머리 비늘판(안쪽 선) + 눈두덩
+      inl(c, 'M3-8.4C5-7 6-5 6-2.6M8.6-9.4C9.6-8.4 10-7 10.2-5.8M15.4-8C16-7 16.4-5.6 16.6-4.6', red, 1, 0.42) +
+      (open ? c.P('M9 2.6l1.5-2.4l1.5 2.4M15 2.3l1.2-2.2l1.2 2.2', '#fff6ea', ' stroke-width="1"') : inl(c, 'M5 2.5L19 1.8', red, 1.4, 0.62)) +
+      c.En(19, -3, 1, 0.8, dk(red, 0.62)) + inl(c, 'M7-7.5C10-9.5 13-9.5 16-8', red, 1.6, 0.4) +
+      c.Pn('M8-9.2C11-10.6 14-10.4 16.4-9C13.6-9.4 10.8-9.2 8-8.2Z', lt(red, 0.5), 0.55) +
+      (fr === 'die1' ? inl(c, 'M10-5l4 3M14-5l-4 3', red, 1.8, 0.7) : c.eye(12, -3.5, 2.6) + spec(c, 11.1, -4.5, 0.75)),
+      `translate(${P2(neck)}) rotate(${ha})`
     );
     let fx = '';
     if (fr === 'aim') fx = c.spark(40, 36, 2, EMBER) + c.spark(52, 30, 1.7, EMBER_L) + c.spark(28, 42, 1.5, EMBER) + c.spark(62, 38, 1.4, EMBER_L);
@@ -356,16 +379,25 @@
     else if (!S.bite) { const k = wi(fr); fx = c.spark(36 + k * 5, 50 - (k % 2) * 4, 1.6, EMBER) + c.spark(58 - k * 3, 52 + (k % 2) * 3, 1.3, EMBER_L); }
     const body = tube(sp, hw);
     const mid = at(sp, 0.6);
+    // 비늘: 옆구리에 엇갈린 작은 호(색 튼 안쪽 선), 등줄기에 밝은 비늘 점
+    const scales = inl(c, scaleArcs(sp, hw, 0.3, 0.86, 9, [-0.32, 0.16], 1.7), red, 0.95, 0.42, ' opacity=".85"');
+    const back = [0.42, 0.5, 0.58, 0.66, 0.74].map((t) => { const q = at(sp, t); const b = pol(q.p, hw(t) * 0.55, q.a - 90); return c.En(n(b[0]), n(b[1]), 1.8, 1.1, lt(red, 0.28), 0.7); }).join('');
     return c.out(
       fx +
       leg(sho, S.ft[1], true, false) + leg(hip, S.ft[3], false, false) +
       spikes +
-      c.P(body, c.lin([[0, sh(red, 0.2)], [0.5, red], [1, sh(red, -0.22)]])) +
-      // 배 아래 불빛(용암 비늘) + 등 무늬
-      c.Pn(tube(sp.slice(14, 30).map((q) => add(q, 0, 4.6)), () => 1.3), emb, 0.75) +
-      [0.5, 0.6, 0.7].map((t) => { const q = at(sp, t); return c.En(n(q.p[0]), n(q.p[1] - 1.8), 2.2, 1.4, redD, 0.7); }).join('') +
-      c.shine(n(mid.p[0]), n(mid.p[1] - 3.5), 7, 1.8, 0.35, n(mid.a)) +
+      c.P(body, c.lin([[0, lt(red, 0.3)], [0.35, red], [0.75, dk(red, 0.22)], [1, dk(red, 0.4)]])) +
+      spikeGlow +
+      // 배 아래 불빛(용암 비늘): 배 쪽 가장자리에 달아오른 띠 + 비늘
+      c.Pn(tube(sp.slice(14, 30).map((q) => add(q, 0, 4.6)), () => 1.5), emb, cool ? 0.6 : 0.85) +
+      (cool ? '' : c.Pn(tube(sp.slice(16, 28).map((q) => add(q, 0, 4.4)), () => 0.6), '#ffe3a0', 0.8)) +
+      rimL(c, body, cool ? '#a89aa0' : R3_RIM, { k: 1.6, op: 0.55 }) +
+      scales + back +
+      [0.5, 0.6, 0.7].map((t) => { const q = at(sp, t); return c.En(n(q.p[0]), n(q.p[1] - 1.8), 2.2, 1.4, redD, 0.55); }).join('') +
+      c.shine(n(mid.p[0]), n(mid.p[1] - 3.5), 7, 1.6, 0.32, n(mid.a)) +
+      ao(c, hip[0] + 1, hip[1] - 1, 5, 3.2, 0.5) + ao(c, sho[0] + 1, sho[1] - 1, 4.4, 3, 0.5) +
       leg(hip, S.ft[2], false, true) +
+      ao(c, neck[0], neck[1] + 1.5, 4.6, 3.4, 0.45) +
       head +
       leg(sho, S.ft[0], true, true)
     );
@@ -376,12 +408,14 @@
    *     죽음: 맞고 몸을 뒤로 젖힘 → 모래 위에 축 늘어짐 → 모래 속으로 가라앉음 --- */
   RG.art._en.MOTION.sand_burrower = { gait: 'slither', bob: 0.02, tilt: 2, sway: 0.03, deathFx: 'crumble', deathTime: 0.8 };
   D.sand_burrower = (fr) => {
-    const c = make(3, { fine: true });
+    const c = make(3, FINE);
     const dull = fr === 'die1' || fr === 'die2' ? 0.3 : 0;
-    const shell = H.mix('#bf9f76', '#8d8478', dull);
-    const shellD = sh(shell, -0.32);
+    // 4차: 모래 길 위에서도 읽히게 껍질은 따뜻한 황갈색 + 붉은 보라 그늘, 큰 턱은 짙은 적갈색 키틴(가장 먼저 보이게)
+    const shell = H.mix('#c4976a', '#8d8478', dull);
+    const shellD = dk(shell, 0.34);
     const sand = '#d9bb84';
-    const sandD = sh(sand, -0.25);
+    const sandD = dk(sand, 0.26);
+    const chit = H.mix('#6a2f22', '#5a4a44', dull);
     // sp 등뼈(모래 속 꼬리 → 목), hd 머리 각도, md 턱 벌림, ph 마디 물결 위상
     const T = {
       walk0: { sp: [[13, 96], [20, 77], [30, 66], [44, 58], [57, 52], [66, 49]], hd: 12, md: 22, ph: 0 },
@@ -397,20 +431,29 @@
       // 모래 위로 축 늘어져 쓰러짐
       die1: { sp: [[14, 90], [24, 85], [36, 82], [48, 80], [58, 79], [66, 79]], hd: 2, md: 16, ph: 0.6, lie: true },
     };
-    // 헤쳐진 모래 둔덕(울퉁불퉁 두 봉우리, 왼쪽 위가 밝음)
+    // 헤쳐진 모래 둔덕(울퉁불퉁 두 봉우리, 왼쪽 위가 밝음) + 바람 물결·자갈
     const mound = (x0, x1, h) => {
       const w = x1 - x0;
-      return c.P(`M${x0} 88.5C${x0 + w * 0.08} ${88.5 - h * 0.7} ${x0 + w * 0.2} ${88.5 - h * 1.1} ${x0 + w * 0.34} ${88.5 - h}C${x0 + w * 0.44} ${88.5 - h * 0.85} ${x0 + w * 0.5} ${88.5 - h * 1.25} ${x0 + w * 0.64} ${88.5 - h * 1.1}C${x0 + w * 0.8} ${88.5 - h * 0.95} ${x1 - w * 0.06} ${88.5 - h * 0.4} ${x1} 88.5Z`, c.lin([[0, sh(sand, 0.2)], [0.55, sand], [1, sandD]])) +
-        c.L(`M${x0 + w * 0.22} ${88.5 - h * 0.55}q${w * 0.08} -${h * 0.3} ${w * 0.16} 0M${x0 + w * 0.56} ${88.5 - h * 0.6}q${w * 0.07} -${h * 0.3} ${w * 0.15} 0`, sandD, 1.5);
+      const d = `M${x0} 88.5C${x0 + w * 0.08} ${88.5 - h * 0.7} ${x0 + w * 0.2} ${88.5 - h * 1.1} ${x0 + w * 0.34} ${88.5 - h}C${x0 + w * 0.44} ${88.5 - h * 0.85} ${x0 + w * 0.5} ${88.5 - h * 1.25} ${x0 + w * 0.64} ${88.5 - h * 1.1}C${x0 + w * 0.8} ${88.5 - h * 0.95} ${x1 - w * 0.06} ${88.5 - h * 0.4} ${x1} 88.5Z`;
+      const peb = (x, y, r) => c.En(n(x), n(y), r, r * 0.7, G3(c, '#a8866a', { hi: 0.4 })) + spec(c, x - r * 0.35, y - r * 0.3, r * 0.3, 0.7);
+      return c.P(d, c.lin([[0, lt(sand, 0.3)], [0.5, sand], [1, sandD]])) +
+        shadeL(c, d, dk(sand, 0.4), { k: 3.5, op: 0.45 }) +
+        inl(c, `M${x0 + w * 0.22} ${88.5 - h * 0.55}q${w * 0.08} -${h * 0.3} ${w * 0.16} 0M${x0 + w * 0.56} ${88.5 - h * 0.6}q${w * 0.07} -${h * 0.3} ${w * 0.15} 0`, sand, 1.3, 0.35) +
+        c.L(`M${x0 + w * 0.12} ${88.5 - h * 0.62}q${w * 0.06} -${h * 0.28} ${w * 0.13} -${h * 0.2}M${x0 + w * 0.46} ${88.5 - h * 0.92}q${w * 0.05} -${h * 0.18} ${w * 0.12} -${h * 0.12}`, lt(sand, 0.6), 1.1, ' opacity=".8"') +
+        peb(x0 + w * 0.3, 87, 1.4) + peb(x0 + w * 0.74, 86.6, 1.2);
     };
+    const pale = '#f2e2c2';
     if (fr === 'die2') {
       // 모래 속으로 가라앉음: 둔덕 위로 마지막 마디와 턱 끝만
+      const seg = tube(spline([[30, 88], [40, 82], [52, 80], [62, 84]], 5), () => 6);
+      const tusk = (d) => c.P(d, c.lin([[0, lt(chit, 0.3)], [1, dk(chit, 0.3)]]));
       return c.out(
-        clipY(c.P(tube(spline([[30, 88], [40, 82], [52, 80], [62, 84]], 5), () => 6), c.body(shellD, 0.25)) +
-        c.L('M38 80.5l3 6M46 78l2 6M54 78.5l1 6', sh(shellD, -0.3), 1.8), -20, 88) +
+        clipY(c.P(seg, G3(c, shellD, { hi: 0.3 })) + rimL(c, seg, '#ffd6a0', { k: 1.4, op: 0.5 }) +
+        inl(c, 'M38 80.5l3 6M46 78l2 6M54 78.5l1 6', shellD, 1.6, 0.45) + c.L('M39.6 80l3 6M47.6 77.6l2 6', lt(shellD, 0.35), 1, ' opacity=".8"'), -20, 88) +
+        ao(c, 46, 87.5, 18, 2.4, 0.4) +
         mound(4, 94, 11) +
-        c.P('M70 84C74 78 80 76 84 79C80 79 76 81 74 85Z', c.lin([[0, '#efe3c8'], [1, '#8a7258']])) +
-        c.P('M64 86C66 81 70 79 73 80C71 82 69 84 68 87Z', c.lin([[0, '#efe3c8'], [1, '#8a7258']])) +
+        tusk('M70 84C74 78 80 76 84 79C80 79 76 81 74 85Z') + tusk('M64 86C66 81 70 79 73 80C71 82 69 84 68 87Z') +
+        spec(c, 79, 78, 0.8, 0.8) +
         grains(c, [[20, 82, 1.2], [34, 79, 1], [50, 81, 1.3], [62, 78, 1], [78, 83, 1.2], [86, 85, 1]], sandD) +
         c.mist([[40, 72, 2.4], [52, 70, 2], [30, 74, 1.8]], sand, 0.7)
       );
@@ -419,8 +462,10 @@
     const sp = spline(S.sp, 6);
     const hw = (t) => 10.5 - Math.abs(t - 0.55) * 4;
     const body = tube(sp, hw);
-    // 마디 고리와 배 쪽 짧은 다리(모래를 긁음)
+    // 마디 고리(앞 가장자리는 밝은 테, 이음매는 짙은 홈)와 배 쪽 짧은 다리(모래를 긁음), 마디 위 짧은 털
     let rings = '';
+    let ringHi = '';
+    let hairs = '';
     let legs = '';
     for (let k = 0; k < 7; k++) {
       const t = 0.1 + ((k + S.ph) / 7) * 0.86;
@@ -429,25 +474,38 @@
       const w = hw(t);
       const p1 = pol(p, w - 0.8, a + 90);
       const p2 = pol(p, w - 0.8, a - 90);
-      rings += c.L(`M${P2(p1)}Q${P2(pol(p, 3, a + 180))} ${P2(p2)}`, shellD, 2);
+      rings += `M${P2(p1)}Q${P2(pol(p, 3, a + 180))} ${P2(p2)}`;
+      const q = pol(p, 1.6, a);
+      ringHi += `M${P2(pol(q, w - 2.4, a - 90))}Q${P2(pol(q, 2.4, a + 180))} ${P2(pol(q, w * 0.15, a + 90))}`;
+      const top = pol(p, w - 0.6, a - 90);
+      hairs += `M${P2(top)}l${n(Math.cos((a - 130) * RAD) * 2.2)} ${n(Math.sin((a - 130) * RAD) * 2.2)}`;
       const l0 = pol(p, w, a + 90);
       const swing = (k % 2 ? 1 : -1) * (S.lie ? 0 : 18) * (wi(fr) % 2 ? 1 : -1);
       legs += cap(l0, pol(l0, 5, a + 90 + 25 + swing), 2.8, 2);
     }
     const neck = sp[sp.length - 1];
     const ha = at(sp, 1).a * 0.5 + S.hd;
+    // 큰 턱: 짙은 적갈색 키틴, 안쪽 이빨은 밝게, 날 끝에 반짝임
     const mand = (sgn) => g(
-      c.P(sgn < 0 ? 'M0-2C7-7 16-6 21 3C17 0 10 0 1 3Z' : 'M0 2C7 7 16 6 21-3C17 0 10 0 1-3Z', c.lin([[0, '#f2e6cc'], [1, '#8a7258']])) +
-      c.P(sgn < 0 ? 'M8-1.6l1.5 2.6l1.4-2.4M13-1.2l1.3 2.4l1.2-2' : 'M8 1.6l1.5-2.6l1.4 2.4M13 1.2l1.3-2.4l1.2 2', '#f7efdc', ' stroke-width="1"'),
+      c.P(sgn < 0 ? 'M0-2C7-7 16-6 21 3C17 0 10 0 1 3Z' : 'M0 2C7 7 16 6 21-3C17 0 10 0 1-3Z', c.lin([[0, lt(chit, 0.35)], [0.5, chit], [1, dk(chit, 0.35)]])) +
+      c.P(sgn < 0 ? 'M8-1.6l1.5 2.6l1.4-2.4M13-1.2l1.3 2.4l1.2-2' : 'M8 1.6l1.5-2.6l1.4 2.4M13 1.2l1.3-2.4l1.2 2', pale, ' stroke-width="1"') +
+      c.L(sgn < 0 ? 'M3-2.6C8-5.4 13-5.2 17-2' : 'M3 2.6C8 5.4 13 5.2 17 2', lt(chit, 0.55), 1, ' opacity=".8"') +
+      spec(c, 18.5, sgn * -0.6, 0.7, 0.85),
       `translate(15 ${sgn * 3.5}) rotate(${sgn * S.md * 0.5})`
     );
+    const skull = 'M-6-9C3-13 13-11 17-5C19-1 19 4 16 8C10 12 0 11-6 8Z';
+    const plate = 'M-5-8C3-12 12-10 16-5C9-7 1-7-5-4Z';
     const head = g(
       mand(1) + mand(-1) +
-      c.P('M-6-9C3-13 13-11 17-5C19-1 19 4 16 8C10 12 0 11-6 8Z', c.body(sh(shell, 0.05), 0.35)) +
-      c.P('M-5-8C3-12 12-10 16-5C9-7 1-7-5-4Z', shellD) +
-      c.L('M-3 2C3 4 9 4 14 2', shellD, 1.6) +
-      (S.hurt ? c.L('M5-3l4 3M9-3l-4 3', OL, 1.8) + c.L('M11-2l3 2.5M14-2l-3 2.5', OL, 1.6) : c.eye(7, -1, 2.4) + c.eye(12.5, -0.5, 2)) +
-      c.shine(2, -5, 4, 1.6, 0.4),
+      c.P(skull, G3(c, lt(shell, 0.06), { hi: 0.38, cx: 0.3, cy: 0.22 })) +
+      shadeL(c, skull, dk(shell, 0.48), { k: 3.4, op: 0.5, a: ha }) +
+      rimL(c, skull, '#ffd6a0', { k: 1.3, op: 0.55, a: ha }) +
+      c.P(plate, c.lin([[0, lt(shellD, 0.12)], [1, dk(shellD, 0.2)]])) +
+      c.L('M-3-8.4C3-10.8 9-10 13-6.6', lt(shell, 0.45), 1, ' opacity=".8"') +
+      inl(c, 'M-3 2C3 4 9 4 14 2', shell, 1.4, 0.5) +
+      c.En(1, 5.4, 0.9, 0.7, dk(shell, 0.45)) + c.En(4.6, 6.4, 0.8, 0.6, dk(shell, 0.45)) + c.En(-2.4, 3.6, 0.7, 0.55, dk(shell, 0.45)) +
+      (S.hurt ? inl(c, 'M5-3l4 3M9-3l-4 3', shell, 1.8, 0.75) + inl(c, 'M11-2l3 2.5M14-2l-3 2.5', shell, 1.6, 0.75) : c.eye(7, -1, 2.4) + c.eye(12.5, -0.5, 2)) +
+      c.shine(2, -5, 4, 1.4, 0.4),
       `translate(${P2(neck)}) rotate(${n(ha)})`
     );
     let fx = '';
@@ -457,13 +515,21 @@
       const k = wi(fr);
       fx = grains(c, [[6 + k, 78 - k * 2, 1.2], [4 + k * 2, 70 + k, 1], [10 - k, 74 + k * 2, 1.1], [26 + k, 80 - k, 1]], sandD);
     }
+    const mid = at(sp, 0.5);
     return c.out(g(
       fx +
-      clipY(solid(c, legs, shellD) +
-      c.P(body, c.body(shell, 0.32, -0.3, 0.3, 0.2)) +
-      rings, -20, 88) +
-      c.shine(n(at(sp, 0.5).p[0] - 3), n(at(sp, 0.5).p[1] - 4), 6, 2, 0.35, n(at(sp, 0.5).a)) +
+      clipY(solid(c, legs, GL(c, shellD, { lo: 0.4 })) +
+      c.P(body, G3(c, shell, { hi: 0.34, lo: 0.32, cx: 0.3, cy: 0.2 })) +
+      shadeL(c, body, dk(shell, 0.5), { k: 4.5, op: 0.42 }) +
+      rimL(c, body, '#ffd6a0', { k: 1.7, op: 0.6 }) +
+      c.L(ringHi, lt(shell, 0.42), 1.3, ' opacity=".85"') +
+      inl(c, rings, shell, 1.7, 0.5) +
+      inl(c, hairs, shell, 1, 0.55) +
+      inl(c, scaleArcs(sp, hw, 0.15, 0.9, 10, [0.42], 0.9), shell, 0.8, 0.35, ' opacity=".7"'), -20, 88) +
+      c.shine(n(mid.p[0] - 3), n(mid.p[1] - 4), 6, 1.8, 0.35, n(mid.a)) +
+      ao(c, neck[0] - 1, neck[1] + 2, 6, 5, 0.42) +
       head +
+      ao(c, 22, 82, 14, 4, 0.4) +
       mound(4, 46, S.lie ? 5 : 9) +
       grains(c, [[12, 83, 1.2], [24, 80, 1.1], [34, 84, 1]], sandD), S.hit ? 'translate(-8 0)' : 'translate(-5 0)'));
   };
@@ -478,14 +544,17 @@
     const shF = W(K.shF);
     const hipN = W([7, 0]);
     const hipF = W([-8, -1]);
+    // K.limbRim(c, 경로, 가까운 쪽?): 팔다리 덩어리 위에 반사광·형태 그늘을 얹음(4차)
     const leg = (root, [fx, lift], col, near) => {
       const ank = [fx, GND(c, K.footH + lift)];
       const knee = ik(root, ank, K.thigh, K.shin, -1);
-      return chain(c, [root, knee, ank], K.legW, col) + K.foot(c, ank, lift, near) + (K.limbDeco ? K.limbDeco(c, root, knee, ank, near) : '');
+      const d = capsD([root, knee, ank], K.legW);
+      return solid(c, d, col) + (K.limbRim ? K.limbRim(c, d, near) : '') + K.foot(c, ank, lift, near) + (K.limbDeco ? K.limbDeco(c, root, knee, ank, near) : '');
     };
     const arm = (root, hand, col, near, bend = 1) => {
       const el = ik(root, hand, K.upper, K.fore, bend);
-      return chain(c, [root, el, hand], K.armW, col) + (K.limbDeco ? K.limbDeco(c, root, el, hand, near) : '') + K.fist(c, hand, ang(el, hand), near);
+      const d = capsD([root, el, hand], K.armW);
+      return solid(c, d, col) + (K.limbRim ? K.limbRim(c, d, near) : '') + (K.limbDeco ? K.limbDeco(c, root, el, hand, near) : '') + K.fist(c, hand, ang(el, hand), near);
     };
     return { shN, shF, hipN, hipF, W, leg, arm };
   }
@@ -494,9 +563,9 @@
    *     죽음: 금이 하얗게 달아오르며 휘청 → 무릎 꿇고 금에서 용암이 쏟아짐 → 식어 굳은 바위 더미 --- */
   RG.art._en.MOTION.magma_brute = { gait: 'stomp', bob: 0.035, tilt: 3, sway: 0.01, deathFx: 'crumble', deathTime: 1.0 };
   D.magma_brute = (fr) => {
-    const c = make(3, { fine: true });
-    const rock = '#5d5462';
-    const cool = fr === 'die2' ? 1 : 0;
+    const c = make(3, FINE);
+    // 4차: 보랏빛 현무암(그늘은 붉은 보라) + 깎인 면·구멍, 금 둘레에 용암빛이 비치고 아래쪽 가장자리에 주황 반사광
+    const rock = '#5e5263';
     const lava = fr === 'die0' ? '#fff0c0' : EMBER_L;
     const T = {
       walk0: { hip: [50, 64], lean: 4, ft: [[60, 0], [38, 3]], hn: [[56, 72], [50, 70]], hd: 0 },
@@ -515,42 +584,79 @@
     const crack = (d, w = 2.2) => glowLine(c, d, EMBER, lava, w);
     if (fr === 'die2') {
       // 식어 굳은 바위 더미 + 검게 굳은 용암 웅덩이와 김
-      const boulder = (x, y, rx, ry) => c.P(`M${x - rx} ${y + ry * 0.4}C${x - rx} ${y - ry} ${x - rx * 0.3} ${y - ry * 1.1} ${x + rx * 0.2} ${y - ry}C${x + rx} ${y - ry * 0.8} ${x + rx * 1.05} ${y} ${x + rx * 0.8} ${y + ry * 0.6}L${x - rx * 0.7} ${y + ry * 0.7}Z`, c.body(sh(rock, -0.1), 0.3, -0.4));
+      const boulder = (x, y, rx, ry, col = dk(rock, 0.1)) => {
+        const d = `M${x - rx} ${y + ry * 0.4}C${x - rx} ${y - ry} ${x - rx * 0.3} ${y - ry * 1.1} ${x + rx * 0.2} ${y - ry}C${x + rx} ${y - ry * 0.8} ${x + rx * 1.05} ${y} ${x + rx * 0.8} ${y + ry * 0.6}L${x - rx * 0.7} ${y + ry * 0.7}Z`;
+        return c.P(d, G3(c, col, { hi: 0.3, lo: 0.36 })) + shadeL(c, d, dk(col, 0.5), { k: ry * 0.5, op: 0.45 }) +
+          c.Pn(`M${x - rx * 0.7} ${y - ry * 0.1}L${x - rx * 0.3} ${y - ry * 0.85}L${x + rx * 0.15} ${y - ry * 0.8}L${x - rx * 0.2} ${y - ry * 0.1}Z`, lt(col, 0.3), 0.45) +
+          pits(c, [[x + rx * 0.3, y - ry * 0.2, Math.max(0.7, rx * 0.08)], [x - rx * 0.1, y + ry * 0.25, Math.max(0.6, rx * 0.06)]], col);
+      };
+      const crust = 'M8 88.5C10 84 22 82 34 83C44 84 52 84 64 83C76 82 90 84 92 88.5Z';
       return c.out(
         c.mist([[38, 54, 3.4], [44, 46, 4], [52, 40, 3.6], [64, 50, 3], [68, 42, 2.6]], '#c8c2d0', 0.45) +
-        c.P('M8 88.5C10 84 22 82 34 83C44 84 52 84 64 83C76 82 90 84 92 88.5Z', c.lin([[0, '#3a2a30'], [1, '#22181e']])) +
-        c.L('M20 86l6-1l4 1.5M60 85.5l7 0.5l3-1', '#9a3a20', 1.8) +
-        boulder(30, 78, 13, 9) + boulder(60, 78, 15, 10) + boulder(45, 66, 12, 9) + boulder(74, 84, 7, 4) + boulder(16, 84, 6, 4) +
-        c.L('M40 62l4 4l-2 4M54 74l5 3M24 76l4 2', '#2a2230', 1.8) +
-        c.L('M58 71l4 3l4-2', '#a8401e', 1.8) +
+        c.P(crust, c.lin([[0, '#4a3036'], [0.5, '#2e1e26'], [1, '#1e141c']])) +
+        c.L('M14 85.6C20 84.4 26 84.6 30 85.6M56 85C62 84.2 70 84.4 76 85.4', '#6a4a4e', 1.1, ' opacity=".8"') +
+        c.L('M20 86l6-1l4 1.5M60 85.5l7 0.5l3-1', '#9a3a20', 1.6) + glowR(c, 26, 86, 6, 2, '#c4401b', 0.4) +
+        boulder(30, 78, 13, 9) + boulder(60, 78, 15, 10) + boulder(45, 66, 12, 9, rock) + boulder(74, 84, 7, 4) + boulder(16, 84, 6, 4) +
+        inl(c, 'M40 62l4 4l-2 4M54 74l5 3M24 76l4 2', rock, 1.6, 0.6) +
+        c.L('M58 71l4 3l4-2', '#a8401e', 1.6) + glowR(c, 62, 73, 4, 2.4, '#c4401b', 0.35) +
         // 굴러 떨어진 머리(빛이 꺼진 눈구멍)
-        c.P('M64 62C64 54 72 51 78 54C83 57 83 64 79 67C74 69 66 68 64 62Z', c.body(rock, 0.3)) + c.P('M68 58L80 57L80 61L68 62Z', '#241b2c')
+        c.P('M64 62C64 54 72 51 78 54C83 57 83 64 79 67C74 69 66 68 64 62Z', G3(c, rock, { hi: 0.3 })) + c.P('M68 58L80 57L80 61L68 62Z', '#241b2c') +
+        inl(c, 'M66 56C70 54 75 54 79 55.6', rock, 1.2, 0.5) + rimL(c, 'M64 62C64 54 72 51 78 54C83 57 83 64 79 67C74 69 66 68 64 62Z', '#c88a78', { k: 1.3, op: 0.4 })
       );
     }
     const S = T[fr];
-    const rockF = c.body(rock, 0.3, -0.42);
+    const rockF = G3(c, rock, { hi: 0.32, lo: 0.36 });
+    const rockFar = G3(c, dk(rock, 0.22), { hi: 0.18, lo: 0.32 });
+    const rimC = fr === 'die0' ? '#ffe0b0' : R3_RIM;
     const K = {
       shN: [18, -36], shF: [-14, -38], thigh: 12, shin: 12, footH: 5, upper: 17, fore: 17,
       legW: [14, 12, 10], armW: [14, 11, 12],
-      foot: (cc, a, lift, near) => cc.P(`M${n(a[0] - 8)} ${n(a[1] + 4.5)}C${n(a[0] - 8)} ${n(a[1] - 3)} ${n(a[0] + 6)} ${n(a[1] - 4)} ${n(a[0] + 10)} ${n(a[1] + 1)}L${n(a[0] + 11)} ${n(a[1] + 4.5)}Z`, cc.body(near ? rock : sh(rock, -0.25), 0.25)),
-      fist: (cc, h, a, near) => g(cc.P('M-4-8C3-11 11-9 13-2C14 5 9 10 1 9C-5 8-7-4-4-8Z', cc.body(near ? rock : sh(rock, -0.25), 0.3)) + cc.L('M6-6l2 3M9-1l3 1M7 4l3 1', '#2a2230', 1.6) + crack('M1-3l3 3l-1 3', 1.4), `translate(${P2(h)}) rotate(${n(a)})`),
-      limbDeco: (cc, a, b, e, near) => crack(crackAlong(mixp(a, b, 0.2), mixp(b, e, 0.5), 3, 1.6, near ? 0 : 1), near ? 1.8 : 1.4),
+      foot: (cc, a, lift, near) => {
+        const d = `M${n(a[0] - 8)} ${n(a[1] + 4.5)}C${n(a[0] - 8)} ${n(a[1] - 3)} ${n(a[0] + 6)} ${n(a[1] - 4)} ${n(a[0] + 10)} ${n(a[1] + 1)}L${n(a[0] + 11)} ${n(a[1] + 4.5)}Z`;
+        return cc.P(d, near ? G3(cc, rock, { hi: 0.28 }) : rockFar) + (near ? rimL(cc, d, rimC, { k: 1.4, op: 0.55 }) : '') +
+          inl(cc, `M${n(a[0] + 2)} ${n(a[1] - 1.4)}l1 4M${n(a[0] + 6)} ${n(a[1] - 0.4)}l0.6 3.4`, rock, 1.1, 0.5);
+      },
+      fist: (cc, h, a, near) => {
+        const d = 'M-4-8C3-11 11-9 13-2C14 5 9 10 1 9C-5 8-7-4-4-8Z';
+        return g(cc.P(d, near ? G3(cc, rock, { hi: 0.34 }) : rockFar) +
+          (near ? shadeL(cc, d, dk(rock, 0.5), { k: 3, op: 0.45, a }) + rimL(cc, d, rimC, { k: 1.3, op: 0.6, a }) : '') +
+          inl(cc, 'M6-6l2 3M9-1l3 1M7 4l3 1', rock, 1.3, 0.6) + crack('M1-3l3 3l-1 3', 1.4) +
+          cc.Pn('M-2-7C2-9 7-8 9-5C5-6 1-6-2-4Z', lt(rock, 0.35), 0.5), `translate(${P2(h)}) rotate(${n(a)})`);
+      },
+      limbDeco: (cc, a, b, e, near) => crack(crackAlong(mixp(a, b, 0.2), mixp(b, e, 0.5), 3, 1.6, near ? 0 : 1), near ? 1.8 : 1.4) +
+        (near ? pits(cc, [[...mixp(a, b, 0.62), 0.9], [...mixp(b, e, 0.72), 0.8]].map(([x, y, r]) => [x + 2.4, y - 1, r]), rock) : ''),
+      limbRim: (cc, d, near) => (near ? shadeL(cc, d, dk(rock, 0.5), { k: 3.6, op: 0.4 }) + rimL(cc, d, rimC, { k: 1.6, op: 0.55 }) : ''),
     };
     const B = brute(c, S, K);
+    const torsoD = 'M-27-4C-32-22-23-43-3-46C17-48 31-37 30-18C29-4 22 5 8 5L-14 5C-21 4-26 1-27-4Z';
     const torso = g(
-      c.P('M-27-4C-32-22-23-43-3-46C17-48 31-37 30-18C29-4 22 5 8 5L-14 5C-21 4-26 1-27-4Z', rockF) +
-      c.Pn('M-26-2C-20 3 10 6 26-6C22 3 12 6 4 6L-14 6C-20 5-25 2-26-2Z', '#1c1426', 0.35) +
+      c.P(torsoD, rockF) +
+      // 깎인 면(왼쪽 위는 밝은 면, 오른쪽 아래는 짙은 면) — 바위 덩어리 느낌
+      c.Pn('M-24-20L-16-38L-4-44L-10-30Z', lt(rock, 0.3), 0.5) + c.Pn('M2-44L16-42L8-34Z', lt(rock, 0.22), 0.45) +
+      c.Pn('M14-14L28-22L26-6L16-2Z', dk(rock, 0.45), 0.45) +
+      shadeL(c, torsoD, dk(rock, 0.55), { k: 7, op: 0.42, a: S.lean }) +
+      glowR(c, -10, -20, 12, 16, EMBER, fr === 'die0' ? 0.4 : 0.22) + glowR(c, 10, -26, 8, 12, EMBER, 0.18) +
+      rimL(c, torsoD, rimC, { k: 1.8, op: 0.6, a: S.lean }) +
+      inl(c, 'M-20-28l4-2M-2-34l-3 3M18-30l4 1M-18-6l3-2', rock, 1.2, 0.55) +
+      pits(c, [[-18, -24, 1.2], [4, -18, 1.1], [16, -34, 0.9], [-6, -8, 1]], rock) +
       crack('M-14-36L-8-26L-13-16L-5-6L-8 2') + crack('M10-38L5-29L12-21L7-11', 2) + crack('M22-20L15-11L21-3', 1.8) + crack('M-24-16L-19-12', 1.6) +
-      c.P('M-8-44l5-6l5 5ZM6-46l6-5l3 6Z', c.body(sh(rock, -0.1), 0.3)) +
-      c.shine(-12, -34, 9, 3.5, 0.25, -30),
+      c.P('M-8-44l5-6l5 5ZM6-46l6-5l3 6Z', G3(c, dk(rock, 0.1), { hi: 0.4 })) +
+      c.shine(-12, -34, 9, 3.2, 0.22, -30) +
+      ao(c, 16, -38, 7, 5, 0.5) + ao(c, -2, 4, 14, 3, 0.45),
       `translate(${P2(S.hip)}) rotate(${S.lean})`
     );
     const hc = B.W([20, -42]);
+    const hA = S.lean * 0.6 + S.hd;
+    const skullD = 'M-9 0C-9-11 0-16 9-14C16-12 18-4 15 2C10 7-4 7-9 0Z';
     const head = g(
-      c.P('M-9 0C-9-11 0-16 9-14C16-12 18-4 15 2C10 7-4 7-9 0Z', c.body(rock, 0.3)) +
-      c.P('M-2-8L16-8.5L16-3.5L-2-3Z', '#241b2c') + c.L('M-4-11C1-13 8-13 13-11', sh(rock, -0.35), 1.8) +
-      (S.hurt ? c.eye(3, -5, 2.4, false) + c.eye(10, -5.2, 2.2, false) + crack('M0 3l4-1l3 2l4-1', 1.6) : c.eye(3, -5, 2, false) + c.eye(10, -5.2, 1.8, false) + crack('M1 2.5L11 2', 1.5)),
-      `translate(${P2(hc)}) rotate(${S.lean * 0.6 + S.hd})`
+      c.P(skullD, G3(c, rock, { hi: 0.36, cx: 0.28, cy: 0.2 })) +
+      shadeL(c, skullD, dk(rock, 0.5), { k: 3.4, op: 0.45, a: hA }) + rimL(c, skullD, rimC, { k: 1.3, op: 0.55, a: hA }) +
+      // 눈구멍: 속에서 용암빛이 새어 나옴
+      c.P('M-2-8L16-8.5L16-3.5L-2-3Z', c.lin([[0, '#3a1420'], [1, '#6a2418']])) + glowR(c, 7, -5.5, 9, 3.6, EMBER, 0.55) +
+      c.Pn('M-4-11C1-13 8-13 13-11C8-11.6 1-11.4-4-10Z', lt(rock, 0.45), 0.6) + inl(c, 'M-4-11C1-13 8-13 13-11', rock, 1.5, 0.55) +
+      (S.hurt ? c.eye(3, -5, 2.4, false) + c.eye(10, -5.2, 2.2, false) + crack('M0 3l4-1l3 2l4-1', 1.6) : c.eye(3, -5, 2, false) + c.eye(10, -5.2, 1.8, false) + crack('M1 2.5L11 2', 1.5)) +
+      pits(c, [[-4, -5, 0.8]], rock),
+      `translate(${P2(hc)}) rotate(${hA})`
     );
     let fx = '';
     if (S.up) fx = c.spark(30, 6, 2, EMBER) + c.spark(50, 8, 1.6, EMBER_L) + c.spark(24, 18, 1.4, EMBER);
@@ -558,25 +664,29 @@
       fx += `<ellipse cx="82" cy="86" rx="16" ry="5" fill="${EMBER}" opacity=".6" stroke="none" ${c.soft()}/>` +
         [[70, 80, 2], [76, 74, 2.4], [90, 76, 2.2], [95, 82, 1.6]].map(([x, y, r]) => c.E(x, y, r, r * 1.2, c.lin([[0, '#fff1a0'], [1, EMBER]]), ' stroke-width="1.6"')).join('') +
         c.P('M66 88.5C70 85 78 84 84 85C90 84 96 86 98 88.5Z', c.lin([[0, EMBER_L], [1, EMBER]])) +
-        c.P('M64 74l-4-5l5 1ZM96 72l4-5l0 6Z', sh(rock, 0.1)) + c.spark(68, 70, 1.6, EMBER_L) + c.spark(96, 66, 1.4, EMBER) +
+        c.L('M72 86.6C76 85.6 80 85.6 84 86.4', '#fff6c8', 1.1) +
+        c.P('M64 74l-4-5l5 1ZM96 72l4-5l0 6Z', G3(c, rock, { hi: 0.4 })) + c.spark(68, 70, 1.6, EMBER_L) + c.spark(96, 66, 1.4, EMBER) +
         c.L('M62 84l-6-2M98 84l2-6', '#fff', 1.8);
     }
-    if (S.hurt) fx = c.P('M64 40l6-4l1 5ZM70 50l7 0l-3 4ZM60 32l2-6l3 4Z', sh(rock, 0.05)) + c.spark(72, 36, 1.8, '#fff0c0') + c.spark(66, 46, 1.4, EMBER_L) + c.L('M80 30l6-3M82 40l7 1', '#fff', 1.8);
+    if (S.hurt) fx = c.P('M64 40l6-4l1 5ZM70 50l7 0l-3 4ZM60 32l2-6l3 4Z', G3(c, rock, { hi: 0.4 })) + c.spark(72, 36, 1.8, '#fff0c0') + c.spark(66, 46, 1.4, EMBER_L) + c.L('M80 30l6-3M82 40l7 1', '#fff', 1.8);
     let spill = '';
     if (S.kneel) {
       // 금에서 쏟아진 용암이 땅에 고임
       spill = `<ellipse cx="54" cy="87" rx="26" ry="4" fill="${EMBER}" opacity=".55" stroke="none" ${c.soft()}/>` +
         c.P('M28 88.5C32 85 48 84 60 85C70 85 80 86 82 88.5Z', c.lin([[0, EMBER_L], [1, EMBER]])) +
+        c.Pn('M36 87C40 86 44 86.4 46 87.4L42 88ZM62 86.6C66 86 70 86.4 72 87.4L68 88Z', '#5a2418', 0.55) +
         glowLine(c, 'M42 62C41 70 44 76 43 85', EMBER, EMBER_L, 2.6) + glowLine(c, 'M58 66C59 72 57 78 59 85', EMBER, EMBER_L, 2.2) +
         c.spark(43, 80, 1.6, EMBER_L) + c.spark(59, 82, 1.4, EMBER_L);
     }
     return c.out(
-      B.arm(B.shF, S.hn[1], sh(rock, -0.25), false) +
-      B.leg(B.hipF, S.ft[1], sh(rock, -0.25), false) +
+      B.arm(B.shF, S.hn[1], rockFar, false) +
+      B.leg(B.hipF, S.ft[1], rockFar, false) +
       torso +
       B.leg(B.hipN, S.ft[0], rockF, true) +
       spill +
+      ao(c, hc[0] - 2, hc[1] + 5, 8, 4, 0.5) +
       head +
+      ao(c, B.shN[0], B.shN[1] + 2, 7, 6, 0.45) +
       B.arm(B.shN, S.hn[0], rockF, true) +
       fx
     );
@@ -588,10 +698,11 @@
    *     죽음: 맞고 깃털이 흩날림 → 날개가 꺾여 곤두박질 → 땅에 날개를 펼친 채 쓰러짐(불꽃 깃이 식음) --- */
   RG.art._en.MOTION.thermal_vulture = { gait: 'fly', bob: 0.04, tilt: 4, hover: 0.5, deathFx: 'feathers', deathTime: 0.8 };
   D.thermal_vulture = (fr) => {
-    const c = make(3, { fine: true });
+    const c = make(3, FINE);
     const dead = fr === 'die2';
-    const body = '#6a5a58';
-    const skin = '#cfb4ae';
+    // 4차: 몸은 따뜻한 잿갈색(그늘은 붉은 보라), 날개는 어깨의 짙은 갈색 → 진홍 → 불꽃 → 금빛 끝으로 번지고 깃마다 결
+    const body = '#6e5a58';
+    const skin = '#d4b0a6';
     const T = {
       walk0: { o: [2, 6], p: 0, wn: [[-4, -18], [-12, -34], [-26, -46]], wf: [[-7, -16], [-16, -30], [-30, -38]], leg: 'tuck' },
       walk1: { o: [2, 2], p: 2, wn: [[-13, -7], [-27, -9], [-46, -5]], wf: [[-11, -9], [-25, -13], [-42, -13]], leg: 'tuck' },
@@ -615,63 +726,113 @@
       const all = W.lead.concat(W.trail);
       const [fx0, fy0] = bboxFrac(all, s0);
       const [fx1, fy1] = bboxFrac(all, t);
-      const grad = c.lin([[0, far ? '#4a3a3a' : '#6a504a'], [0.35, far ? '#7a3a2a' : '#a8492c'], [0.7, fire], [1, fireL]], [fx0, fy0, fx1, fy1]);
-      // 덮깃(안쪽 짙은 줄) + 깃 결
+      const root = far ? '#3e3036' : '#5e443e';
+      const mid = far ? '#7a3428' : dead ? '#7a5a50' : '#b0402a';
+      const grad = c.lin([[0, root], [0.32, mid], [0.68, far ? dk(fire, 0.2) : fire], [1, far ? dk(fireL, 0.15) : fireL]], [fx0, fy0, fx1, fy1]);
+      // 덮깃(안쪽 짙은 줄, 끝이 물결) + 첫째깃 갈래 결 + 깃 끝 밝은 결
       const cov = wingD(s0, e, w, mixp(w, t, 0.4), far ? 7 : 8, 0.2);
-      const lines = [0.35, 0.55, 0.75, 0.9].map((k) => { const i = Math.round(k * (W.lead.length - 1)); return `M${P2(mixp(W.lead[i], W.trail[i], 0.3))}L${P2(mixp(W.lead[i], W.trail[i], 0.9))}`; }).join('');
-      return c.P(W.d, grad) + c.Pn(cov.d, far ? '#3a2e30' : '#5e4a46', 0.8) + c.L(lines, far ? '#2a2026' : '#3a2a2a', 1.5, ' opacity=".7"');
+      const N = W.lead.length;
+      const quill = [0.3, 0.42, 0.54, 0.66, 0.78, 0.9].map((k) => { const i = Math.round(k * (N - 1)); return `M${P2(mixp(W.lead[i], W.trail[i], 0.28))}L${P2(mixp(W.lead[i], W.trail[i], 0.95))}`; }).join('');
+      const tipHi = [0.5, 0.64, 0.78, 0.92].map((k) => { const i = Math.round(k * (N - 1)); return `M${P2(mixp(W.lead[i], W.trail[i], 0.62))}L${P2(mixp(W.lead[i], W.trail[i], 0.86))}`; }).join('');
+      const scal = [0.18, 0.3, 0.42, 0.54].map((k) => { const i = Math.round(k * (N - 1)); const a0 = mixp(W.lead[i], W.trail[i], 0.38); return `M${P2(add(a0, -2, -1.2))}q2 2.6 4 0.4`; }).join('');
+      return c.P(W.d, grad) +
+        c.Pn(cov.d, c.lin([[0, far ? '#3a2e30' : lt(root, 0.12)], [1, far ? '#2a2026' : dk(root, 0.35)]]), 0.88) +
+        inl(c, scal, root, 1.1, 0.5) +
+        c.L(quill, far ? '#2a1a22' : ink(mid, 0.55), far ? 1.2 : 1.3, ' opacity=".75"') +
+        (far ? '' : c.L(tipHi, lt(fireL, 0.55), 1, ' opacity=".7"') + rimL(c, W.d, dead ? '#c8a898' : '#ffd890', { k: 1.6, op: 0.55 }));
     };
     // 다리: 엉덩이 → 뒤꿈치 → 발(발가락 셋)
     const hipP = Wd([2, 9]);
-    let legs = '';
     const legAt = (dx, near) => {
       const r = add(hipP, dx, 0);
       let hock;
       let foot;
       let toes;
       if (S.leg === 'tuck') { hock = Wd([-5 + dx, 12]); foot = Wd([-13 + dx, 12]); toes = [S.p + 200, S.p + 170, S.p + 140]; } else if (S.leg === 'reach') { hock = Wd([10 + dx, 16]); foot = Wd([18 + dx, 20]); toes = [S.p - 20, S.p + 20, S.p + 60]; } else if (S.leg === 'grab') { hock = Wd([12 + dx, 16]); foot = Wd([24 + dx, 20]); toes = [S.p - 50, S.p - 10, S.p + 40]; } else { hock = Wd([2 + dx, 17]); foot = Wd([-2 + dx, 23]); toes = [S.p + 70, S.p + 100, S.p + 130]; }
-      const col = near ? '#c9a889' : '#9a7c66';
-      const toeD = toes.map((a) => { const m = pol(foot, 4, a); return cap(foot, m, 2.4, 2) + cap(m, pol(m, 3, a + (S.leg === 'grab' || S.leg === 'reach' ? 60 : 40)), 2, 1.6); }).join('');
-      return solid(c, capsD([r, hock, foot], [3.4, 3, 2.6]) + toeD, col);
+      const col = near ? '#cfa888' : '#9a7c66';
+      const bend = S.leg === 'grab' || S.leg === 'reach' ? 60 : 40;
+      let talons = '';
+      const toeD = toes.map((a) => {
+        const m = pol(foot, 4, a);
+        const tip = pol(m, 3, a + bend);
+        talons += c.Pn(`M${P2(pol(tip, 1, a + bend + 90))}L${P2(pol(tip, 2.4, a + bend + 30))}L${P2(pol(tip, 1, a + bend - 90))}Z`, '#2e2228');
+        return cap(foot, m, 2.4, 2) + cap(m, tip, 2, 1.6);
+      }).join('');
+      const d = capsD([r, hock, foot], [3.4, 3, 2.6]) + toeD;
+      return solid(c, d, GL(c, col, { hi: 0.2, lo: 0.4 })) + talons +
+        (near ? inl(c, `M${P2(mixp(hock, foot, 0.3))}l1.4 -0.6M${P2(mixp(hock, foot, 0.6))}l1.4 -0.6`, col, 0.9, 0.45) : '');
     };
-    legs = legAt(-3, false) + legAt(2, true);
-    // 꼬리 깃(불꽃 끝)
+    // 꼬리 깃(불꽃 끝, 깃대 줄)
     const tb = Wd([-24, 2]);
-    const tail = [-14, 0, 14].map((a, i) => { const tip = pol(tb, 16 - i * 2, 180 + a + S.p); return c.P(`M${P2(pol(tb, 3, 90 + S.p + a))}Q${P2(mixp(tb, tip, 0.6))} ${P2(tip)}Q${P2(mixp(tb, tip, 0.5))} ${P2(pol(tb, 3, -90 + S.p + a))}Z`, c.lin([[0, fire], [1, '#5a4642']], 'h')); }).join('');
+    const tail = [-14, 0, 14].map((a, i) => {
+      const tip = pol(tb, 16 - i * 2, 180 + a + S.p);
+      return c.P(`M${P2(pol(tb, 3, 90 + S.p + a))}Q${P2(mixp(tb, tip, 0.6))} ${P2(tip)}Q${P2(mixp(tb, tip, 0.5))} ${P2(pol(tb, 3, -90 + S.p + a))}Z`, c.lin([[0, fireL], [0.35, fire], [1, '#5a4642']], 'h')) +
+        inl(c, `M${P2(mixp(tb, tip, 0.15))}L${P2(mixp(tb, tip, 0.85))}`, fire, 0.9, 0.5);
+    }).join('');
     // 몸통 + 목 + 머리
+    const torsoD = 'M-26 1C-22-9-8-13 6-11C16-10 22-5 24 1C20 9 10 12 0 12C-12 13-22 9-26 1Z';
     const torso = g(
-      c.P('M-26 1C-22-9-8-13 6-11C16-10 22-5 24 1C20 9 10 12 0 12C-12 13-22 9-26 1Z', c.body(body, 0.3, -0.4)) +
-      c.L('M-14 2C-6 5 4 5 12 3M-10 7C-2 9 6 9 12 7', sh(body, -0.3), 1.5) +
-      c.shine(-6, -6, 9, 2.5, 0.3, -8),
+      c.P(torsoD, G3(c, body, { hi: 0.32, lo: 0.36, cx: 0.36, cy: 0.2 })) +
+      shadeL(c, torsoD, dk(body, 0.5), { k: 4, op: 0.45, a: S.p }) +
+      rimL(c, torsoD, dead ? '#b8a098' : R3_RIM, { k: 1.6, op: 0.5, a: S.p }) +
+      // 가슴 깃 결(짧은 V자)
+      inl(c, 'M-14 2C-6 5 4 5 12 3M-10 7C-2 9 6 9 12 7M-4-3l2 1.6l2-1.6M4-4l2 1.6l2-1.6M10-1l2 1.6l2-1.6M-10-2l2 1.6l2-1.6', body, 1.1, 0.5) +
+      c.shine(-6, -6, 9, 2.2, 0.28, -8),
       `translate(${P2(C0)}) rotate(${S.p})`
     );
     const nk0 = Wd([18, -4]);
     const hdP = S.hurt && fr !== 'die0' ? Wd([fr === 'die2' ? 28 : 34, 2]) : Wd([30, -18]);
     const nk1 = mixp(nk0, hdP, 0.55);
-    const neck = chain(c, [nk0, add(nk1, 2, -1), hdP], [7, 5.5, 5], c.lin([[0, skin], [1, sh(skin, -0.25)]]));
-    const ruff = c.cloud([[0, 0, 3.4], [3.5, -2, 2.8], [-3.5, -1, 2.8], [1.5, 2.6, 2.6]].map(([x, y, r]) => { const q = add(nk0, x, y); return [n(q[0]), n(q[1]), r]; }), '#efe9ee');
+    const neckD = capsD([nk0, add(nk1, 2, -1), hdP], [7, 5.5, 5]);
+    const neck = solid(c, neckD, GL(c, skin, { hi: 0.12, lo: 0.36 })) +
+      inl(c, `M${P2(add(nk1, -1.6, -1))}l2.4 1.6M${P2(add(mixp(nk0, nk1, 0.5), -1.6, -1))}l2.4 1.6`, skin, 0.9, 0.42);
+    // 목도리 깃: 짧은 깃 다발이 목 둘레로 부풀어 오름(끝이 뾰족한 술)
+    const ruffD = (() => {
+      const N = 15;
+      let d = '';
+      for (let i = 0; i <= N; i++) {
+        const a = S.p + 90 + (i / N) * 360;
+        const r = i % 2 ? 6 : 4.9;
+        const q = pol(add(nk0, 0.5, 0.5), r, a);
+        const m = pol(add(nk0, 0.5, 0.5), 5.6, a - 360 / N / 2);
+        d += i === 0 ? `M${P2(q)}` : `Q${P2(m)} ${P2(q)}`;
+      }
+      return `${d}Z`;
+    })();
+    const ruff = c.P(ruffD, G3(c, '#efe4e6', { hi: 0.5, lo: 0.26 })) + shadeL(c, ruffD, '#8a6a80', { k: 2.6, op: 0.4 }) +
+      inl(c, [30, 100, 170, 240].map((a) => `M${P2(pol(nk0, 1.2, a + S.p))}L${P2(pol(nk0, 4.4, a + S.p))}`).join(''), '#efe4e6', 0.9, 0.32);
     const ha = S.p * 0.6 + (fr === 'die1' ? 40 : fr === 'die2' ? 20 : S.beak ? -6 : 4);
     const bk = S.beak || 0;
+    const headD = 'M-6 0C-6-7 2-10 8-8C11-7 13-5 13-2L18-2C22-2 23 2 21 5C19 4 17 3 14 3L8 3C2 6-6 5-6 0Z';
+    const beakC = '#d8c08e';
     const head = g(
-      g(c.P('M8 2L17 3C16 6 12 7 9 6Z', '#cdb88c'), `rotate(${bk} 8 2)`) +
+      g(c.P('M8 2L17 3C16 6 12 7 9 6Z', GL(c, beakC, { lo: 0.4 })), `rotate(${bk} 8 2)`) +
       (bk > 8 ? c.P('M8 1.5L17 1.5L12 7Z', '#5a1e22', ` transform="rotate(${bk * 0.5} 8 2)"`) : '') +
-      c.P('M-6 0C-6-7 2-10 8-8C11-7 13-5 13-2L18-2C22-2 23 2 21 5C19 4 17 3 14 3L8 3C2 6-6 5-6 0Z', c.body(skin, 0.3)) +
-      c.P('M12-3C15-3 19-3 21 0', 'none', ` stroke-width="1.4"`) +
-      (S.hurt ? c.L('M1-5l4 3M5-5l-4 3', OL, 1.7) : c.eye(3, -3, 2.6)) + c.L('M-2-7C1-9 5-9 8-7', sh(skin, -0.35), 1.5),
+      c.P(headD, G3(c, skin, { hi: 0.36, cx: 0.3, cy: 0.2 })) +
+      shadeL(c, headD, dk(skin, 0.45), { k: 2.6, op: 0.4, a: ha }) +
+      // 갈고리 부리: 위는 밝은 뿔빛, 끝은 짙게 + 반짝점, 콧구멍
+      c.Pn('M13-2L18-2C22-2 23 2 21 5C19 4 17 3 14 3Z', c.lin([[0, lt(beakC, 0.25)], [0.6, beakC], [1, '#5a4030']], 'h'), 0.95) +
+      spec(c, 17.6, -1, 0.7, 0.85) + c.En(15, -0.4, 0.8, 0.55, dk(beakC, 0.55)) +
+      inl(c, 'M12-3C15-3 19-3 21 0', beakC, 1.2, 0.5) +
+      inl(c, 'M-3 2.4C-1 3.4 2 3.4 4 2.6M-4-3.6C-3-2 -3 0 -2 1', skin, 0.9, 0.4) +
+      (S.hurt ? inl(c, 'M1-5l4 3M5-5l-4 3', skin, 1.6, 0.75) : c.eye(3, -3, 2.6) + spec(c, 2.2, -3.9, 0.7)) + inl(c, 'M-2-7C1-9 5-9 8-7', skin, 1.4, 0.5),
       `translate(${P2(hdP)}) rotate(${n(ha)})`
     );
     let fx = '';
     if (fr === 'attack') fx = c.L('M18 34l-12-4M14 46l-14 0M20 24l-10-6', fire, 2, ' opacity=".8"') + c.spark(86, 80, 1.6, EMBER_L);
     if (fr === 'aim') fx = c.spark(14, 22, 1.6, EMBER) + c.spark(22, 12, 1.3, EMBER_L);
-    const feather = (x, y, a) => g(c.P('M0-1.6C4-2.4 8-1 10 0C8 1 4 2.4 0 1.6Z', c.lin([[0, '#5a4642'], [1, fire]], 'h')) + c.L('M0 0L9 0', '#3a2a2a', 1), `translate(${x} ${y}) rotate(${a})`);
+    const feather = (x, y, a) => g(c.P('M0-1.6C4-2.4 8-1 10 0C8 1 4 2.4 0 1.6Z', c.lin([[0, '#5a4642'], [1, fire]], 'h')) + inl(c, 'M0 0L9 0', fire, 0.9, 0.55), `translate(${x} ${y}) rotate(${a})`);
     if (fr === 'die0') fx = feather(74, 26, -30) + feather(20, 30, 40) + feather(64, 80, 160) + c.L('M80 40l6-4M82 48l7 0', '#fff', 1.8);
     if (fr === 'die1') fx = c.L('M30 10l0-8M44 8l0-8M58 12l0-8', '#ffffff', 1.8, ' opacity=".6"') + feather(76, 22, -60) + feather(24, 70, 30);
     if (fr === 'die2') fx = feather(80, 86, 10) + feather(14, 84, -170) + c.mist([[50, 70, 2], [54, 64, 2.4]], '#a8a2b0', 0.45);
     const wingFar = wingG([4, -6], S.wf, true);
     const wingNear = wingG([2, -4], S.wn, false);
+    const sh0 = Wd([2, -4]);
     return c.out(
       fx +
-      wingFar + legAt(-3, false) + tail + torso + legAt(2, true) + neck + ruff + head + wingNear
+      wingFar + legAt(-3, false) + tail + torso + legAt(2, true) + neck + ruff +
+      ao(c, hdP[0] - 2, hdP[1] + 3, 4, 3, 0.4) + head +
+      ao(c, sh0[0] - 2, sh0[1] + 2, 7, 4, 0.45) + wingNear
     );
   };
   D.thermal_vulture.frames = true;
@@ -689,16 +850,24 @@
       const [fx, lift = 0, toe = 0] = f;
       const ank = [fx, GND(c, K.footH + lift)];
       const knee = ik(root, ank, K.thigh, K.shin, S.kneeBend || -1);
-      return chain(c, [root, knee, ank], K.legW, near ? K.legFill : K.legFillF) + (K.legDeco ? K.legDeco(c, root, knee, ank, near) : '') + K.boot(c, ank, toe, near);
+      const d = capsD([root, knee, ank], K.legW);
+      return solid(c, d, near ? K.legFill : K.legFillF) + (K.limbRim ? K.limbRim(c, d, near, 'leg') : '') + (K.legDeco ? K.legDeco(c, root, knee, ank, near) : '') + K.boot(c, ank, toe, near);
     };
+    // K.limbRim(c, 경로, 가까운 쪽?, 'leg'|'arm'): 팔다리 위에 반사광·형태 그늘(4차)
     const arm = (root, hand, near, bend = 1) => {
       const el = ik(root, hand, K.upper, K.fore, bend);
-      return { d: chain(c, [root, el, hand], K.armW, near ? K.armFill : K.armFillF) + (K.armDeco ? K.armDeco(c, root, el, hand, near) : ''), el, hand, fa: ang(el, hand) };
+      const d = capsD([root, el, hand], K.armW);
+      return { d: solid(c, d, near ? K.armFill : K.armFillF) + (K.limbRim ? K.limbRim(c, d, near, 'arm') : '') + (K.armDeco ? K.armDeco(c, root, el, hand, near) : ''), el, hand, fa: ang(el, hand) };
     };
     return { W, shN, shF, hipN, hipF, leg, arm, neck: W(K.neck) };
   }
   /** 쥔 손: 손바닥 원 + 손가락 마디 줄(자루를 감쌈). a = 아래팔 방향 */
-  const fist = (c, h, a, fill, r = 3.4) => c.E(n(h[0]), n(h[1]), r, r * 0.92, fill) + c.L(`M${P2(pol(h, r * 0.75, a - 70))}L${P2(pol(h, r * 0.75, a + 70))}`, sh(fill.startsWith('#') ? fill : '#888888', -0.4), 1.2);
+  const fist = (c, h, a, fill, r = 3.4) => {
+    const base = fill.startsWith('#') ? fill : '#888888';
+    return c.E(n(h[0]), n(h[1]), r, r * 0.92, fill.startsWith('#') ? G3(c, fill, { hi: 0.3 }) : fill) +
+      inl(c, `M${P2(pol(h, r * 0.75, a - 70))}L${P2(pol(h, r * 0.75, a + 70))}M${P2(pol(h, r * 0.45, a - 40))}L${P2(pol(h, r * 0.85, a - 20))}`, base, 1, 0.5) +
+      c.En(n(h[0] - r * 0.3), n(h[1] - r * 0.35), r * 0.32, r * 0.22, lt(base, 0.6), 0.6);
+  };
   /** 신발: 발목 a, 발끝 각 toe(도, +는 발끝이 아래로), 길이 len */
   const bootD = (a, toe, len = 9, h = 4.4) => {
     const p = (x, y) => P2(rot(add(a, x, y), a, toe));
@@ -710,11 +879,12 @@
    *     죽음: 칼을 놓치며 휘청 → 무릎 꿇고 고꾸라짐 → 몸은 안개로 흩어지고 두건과 옷가지·칼만 남음 --- */
   RG.art._en.MOTION.dune_raider = { gait: 'walk', bob: 0.05, tilt: 3, deathFx: 'mist', deathTime: 0.9 };
   D.dune_raider = (fr) => {
-    const c = make(3, { fine: true });
-    const cloth = '#d2ae78';
-    const clothD = sh(cloth, -0.25);
+    const c = make(3, FINE);
+    // 4차: 모래 길에서 묻히지 않게 두건·옷은 짙은 황토색(그늘은 붉은 보라), 허리띠 천은 진홍, 칼날은 가장 밝게
+    const cloth = '#c68f57';
+    const clothD = dk(cloth, 0.3);
     const skin = '#8f8b9e';
-    const sash = '#a3463a';
+    const sash = '#b4383a';
     const T = {
       walk0: { hip: [50, 62], lean: 6, ft: [[62, 0, 0], [38, 1, 22]], hn: [[66, 62], [38, 58]], bl: -14 },
       walk1: { hip: [50, 60], lean: 5, ft: [[50, 0, 0], [52, 7, 30]], hn: [[63, 63], [44, 62]], bl: -8 },
@@ -729,21 +899,28 @@
       // 무릎 꿇고 앞으로 고꾸라짐
       die1: { hip: [46, 76], lean: 40, ft: [[60, 0, 60], [36, 0, 70]], hn: [[74, 86], [62, 86]], bl: null, kneel: true },
     };
+    // 언월도: 감은 손잡이 · 금빛 코등이 · 휘어진 날(등은 어둡고 날 쪽은 밝은 띠, 끝에 반짝점)
     const blade = (h, a) => g(
-      c.P('M-4-1.6L5-1.6L5 1.6L-4 1.6Z', '#5a3a2a') + c.P('M-6-2.4L-3-2.4L-3 2.4L-6 2.4Z', GOLD) +
-      c.P('M4-4.6L6-4.6L6 4.6L4 4.6Z', GOLD) +
-      c.P('M6-2C14-3 22-6 28-12C27-4 22 2 14 3.4L6 2.4Z', c.lin([[0, '#f4f2f8'], [0.6, '#b8b8c8'], [1, '#7a7a8e']])) +
-      c.L('M8-0.6C15-1.4 21-4 26-9', '#ffffff', 1.2, ' opacity=".8"'),
+      c.P('M-4-1.6L5-1.6L5 1.6L-4 1.6Z', GL(c, '#6a4430')) + inl(c, 'M-2-1.6l1.4 3.2M1-1.6l1.4 3.2M4-1.6l1 3.2', '#6a4430', 0.9, 0.55) +
+      c.P('M-6-2.4L-3-2.4L-3 2.4L-6 2.4Z', G3(c, GOLD, { hi: 0.5 })) +
+      c.P('M4-4.6L6-4.6L6 4.6L4 4.6Z', GL(c, GOLD, { hi: 0.45, lo: 0.4 })) + spec(c, 4.8, -3.4, 0.6, 0.9) +
+      c.P('M6-2C14-3 22-6 28-12C27-4 22 2 14 3.4L6 2.4Z', c.lin([[0, '#ffffff'], [0.35, '#d8dae6'], [0.75, '#9a9cb2'], [1, '#6a6a84']])) +
+      c.Pn('M7 1.2C14 1.6 21-1 26.6-7.4C25-1.6 20 2.4 14 3.2L6.6 2.2Z', '#55557a', 0.4) +
+      c.L('M8-0.6C15-1.4 21-4 26-9', '#ffffff', 1.1, ' opacity=".9"') + inl(c, 'M8 0.8C14 0.6 19-1.4 23-4.6', '#b8b8c8', 0.8, 0.45) +
+      spec(c, 26.4, -10.2, 0.9, 1),
       `translate(${P2(h)}) rotate(${n(a)})`
     );
     if (fr === 'die2') {
       // 안개로 흩어진 뒤 남은 두건·옷가지와 칼
+      const heap = 'M24 88.5C26 80 34 76 44 77C54 76 62 80 66 88.5Z';
+      const hood = 'M44 79C46 72 54 70 60 74C64 77 64 82 60 84C54 85 46 84 44 79Z';
       return c.out(
         c.mist([[40, 66, 4], [48, 58, 5], [56, 50, 4.4], [62, 42, 3.6], [52, 70, 3.4]], MISTC, 0.55) +
-        c.P('M24 88.5C26 80 34 76 44 77C54 76 62 80 66 88.5Z', c.lin([[0, cloth], [1, clothD]])) +
-        c.L('M32 86C36 81 42 80 46 82M50 85C54 81 58 81 62 84', clothD, 1.6) +
-        c.P('M44 79C46 72 54 70 60 74C64 77 64 82 60 84C54 85 46 84 44 79Z', c.body(cloth, 0.3)) + c.P('M52 74L62 75L61 79L52 79Z', '#2a2236') +
-        c.P('M26 84C22 82 16 84 12 88.5L22 88.5Z', sash) +
+        c.P(heap, G3(c, cloth, { hi: 0.3, lo: 0.34 })) + shadeL(c, heap, dk(cloth, 0.5), { k: 3.4, op: 0.45 }) +
+        inl(c, 'M32 86C36 81 42 80 46 82M50 85C54 81 58 81 62 84M28 87.6C30 84 33 82 36 82', cloth, 1.4, 0.5) +
+        c.P(hood, G3(c, cloth, { hi: 0.36 })) + rimL(c, hood, R3_RIM, { k: 1.2, op: 0.45 }) + c.P('M52 74L62 75L61 79L52 79Z', '#2a1c26') +
+        inl(c, 'M47 78C49 75 52 73 55 73', cloth, 1.1, 0.45) +
+        c.P('M26 84C22 82 16 84 12 88.5L22 88.5Z', GL(c, sash, { hi: 0.25 })) + inl(c, 'M22 85.4C19 85.6 16 86.6 14 88', sash, 1, 0.5) +
         blade([62, 86], -6)
       );
     }
@@ -751,33 +928,49 @@
     const K = {
       shN: [5, -24], shF: [-5, -25], neck: [3, -27], thigh: 13, shin: 13, footH: 4.4, upper: 11, fore: 11,
       legW: [9, 7.5, 6], armW: [6.4, 5.4, 4.6],
-      legFill: c.lin([[0, sh(cloth, -0.05)], [1, clothD]]), legFillF: c.lin([[0, clothD], [1, sh(cloth, -0.42)]]),
-      armFill: c.lin([[0, skin], [1, sh(skin, -0.25)]]), armFillF: sh(skin, -0.32),
-      legDeco: (cc, r, k, a, near) => cc.L(`M${P2(mixp(k, a, 0.45))}l${n((a[0] - k[0]) * 0.08 - 2.6)} 0.6M${P2(mixp(k, a, 0.7))}l-2.6 0.6`, near ? '#efe0c0' : '#a89270', 1.6),
-      armDeco: (cc, r, e, h, near) => cc.L(`M${P2(mixp(e, h, 0.4))}L${P2(pol(mixp(e, h, 0.4), 2.6, ang(e, h) + 90))}M${P2(mixp(e, h, 0.65))}L${P2(pol(mixp(e, h, 0.65), 2.4, ang(e, h) + 90))}`, near ? '#e8dcc4' : '#9a907e', 1.4),
-      boot: (cc, a, toe, near) => cc.P(bootD(a, toe, 8.5, 4.2), near ? '#5a4640' : '#3e3030'),
+      legFill: GL(c, cloth, { hi: 0.12, lo: 0.36 }), legFillF: c.lin([[0, clothD], [1, dk(cloth, 0.48)]]),
+      armFill: GL(c, skin, { lo: 0.32 }), armFillF: dk(skin, 0.3),
+      // 정강이 감개(밝은 천 띠 두 줄)
+      legDeco: (cc, r, k, a, near) => cc.L(`M${P2(mixp(k, a, 0.45))}l${n((a[0] - k[0]) * 0.08 - 2.6)} 0.6M${P2(mixp(k, a, 0.7))}l-2.6 0.6`, near ? '#efdcb8' : '#a08a68', 1.6) +
+        (near ? inl(cc, `M${P2(mixp(r, k, 0.35))}q2 1.2 3.4 0.2M${P2(mixp(r, k, 0.7))}q1.6 1 3 0`, cloth, 1, 0.45) : ''),
+      // 팔 감개
+      armDeco: (cc, r, e, h, near) => cc.L(`M${P2(mixp(e, h, 0.4))}L${P2(pol(mixp(e, h, 0.4), 2.6, ang(e, h) + 90))}M${P2(mixp(e, h, 0.65))}L${P2(pol(mixp(e, h, 0.65), 2.4, ang(e, h) + 90))}`, near ? '#e8d8bc' : '#9a907e', 1.4),
+      boot: (cc, a, toe, near) => cc.P(bootD(a, toe, 8.5, 4.2), near ? GL(cc, '#6a4c40', { hi: 0.2 }) : '#3e3030') +
+        (near ? inl(cc, `M${P2(add(a, -2, -1.2))}l4 0`, '#6a4c40', 1, 0.5) : ''),
+      limbRim: (cc, d, near) => (near ? rimL(cc, d, R3_RIM, { k: 1.3, op: 0.5 }) : ''),
     };
     const B = human(c, S, K);
+    const capeD = `M-6-24C-14-20-20-12-${22 + wi(fr) % 2 * 2}-2L-14-4C-12-12-8-18-4-20Z`;
+    const shirtD = 'M-7-26C-4-30 6-30 9-25L10-4L-8-4Z';
+    const skirtD = 'M-9-6L11-6L13 8L4 5L0 10L-5 5L-11 8Z';
     const torso = g(
       // 망토 자락(뒤로 날림)
-      c.P(`M-6-24C-14-20-20-12-${22 + wi(fr) % 2 * 2}-2L-14-4C-12-12-8-18-4-20Z`, c.lin([[0, cloth], [1, clothD]])) +
-      c.P('M-7-26C-4-30 6-30 9-25L10-4L-8-4Z', c.body('#8a8698', 0.3)) +
-      c.P('M-8-24L10-12L10-7L-8-19Z', sash) +
-      c.P('M-9-6L11-6L13 8L4 5L0 10L-5 5L-11 8Z', c.lin([[0, sh(cloth, -0.1)], [1, sh(cloth, -0.35)]])) +
-      c.P('M-9-7L11-7L11-3L-9-3Z', '#4a3632') + c.P('M0-7.6L4-7.6L4-2.4L0-2.4Z', GOLD) +
-      c.Pn('M4-26C8-24 10-18 10-8L6-8C7-16 6-22 4-26Z', '#1c1426', 0.25),
+      c.P(capeD, c.lin([[0, lt(cloth, 0.1)], [1, dk(cloth, 0.4)]])) + inl(c, `M-8-20C-12-15-15-10-${17 + wi(fr) % 2}-4`, cloth, 1.1, 0.45) +
+      c.P(shirtD, G3(c, '#8a8698', { hi: 0.32 })) +
+      c.P('M-8-24L10-12L10-7L-8-19Z', GL(c, sash, { hi: 0.3, lo: 0.4 })) + inl(c, 'M-6-20.4L9-10.6', sash, 0.9, 0.45) +
+      c.P(skirtD, c.lin([[0, dk(cloth, 0.06)], [1, dk(cloth, 0.36)]])) +
+      inl(c, 'M-4-4L-6 5M3-4L5 4M8-4L10 6', cloth, 1.1, 0.48) +
+      c.P('M-9-7L11-7L11-3L-9-3Z', GL(c, '#5a3e34', { hi: 0.25 })) + c.L('M-8-5.2h2M-4-5.2h2M6-5.2h2', '#a07a60', 0.8, ' opacity=".8"') +
+      c.P('M0-7.6L4-7.6L4-2.4L0-2.4Z', G3(c, GOLD, { hi: 0.5 })) + spec(c, 1.2, -6.4, 0.6) +
+      shadeL(c, shirtD, '#2a1a3a', { k: 4, op: 0.35, a: S.lean }) +
+      ao(c, 1, -4, 10, 2.4, 0.45),
       `translate(${P2(S.hip)}) rotate(${S.lean})`
     );
     const hd = S.hurt ? -24 : S.kneel ? 30 : S.slash ? 8 : 0;
+    const hA = S.lean * 0.5 + hd;
+    const hoodD = 'M-8-8C-6-17 6-19 11-12C14-7 14 0 11 5L-5 6C-9 2-10-3-8-8Z';
     const head = g(
       // 두건 꼬리(바람에 날림)
-      c.P(`M-8-4C-16-2-22-6-28-${4 - wi(fr) % 2 * 4}C-22 0-20 4-24 8C-16 5-10 4-6 2Z`, c.lin([[0, cloth], [1, clothD]])) +
-      c.P('M-8-8C-6-17 6-19 11-12C14-7 14 0 11 5L-5 6C-9 2-10-3-8-8Z', c.body(cloth, 0.35)) +
-      c.P('M2-7L13-7.6L13.6-2.4L2-2Z', '#241b2c') +
+      c.P(`M-8-4C-16-2-22-6-28-${4 - wi(fr) % 2 * 4}C-22 0-20 4-24 8C-16 5-10 4-6 2Z`, c.lin([[0, lt(cloth, 0.12)], [1, dk(cloth, 0.38)]])) +
+      inl(c, `M-10-1C-15 0-19-1-23-${2 - wi(fr) % 2 * 2}`, cloth, 1, 0.45) +
+      c.P(hoodD, G3(c, cloth, { hi: 0.4, cx: 0.3, cy: 0.2 })) +
+      shadeL(c, hoodD, dk(cloth, 0.5), { k: 3.2, op: 0.42, a: hA }) + rimL(c, hoodD, R3_RIM, { k: 1.3, op: 0.5, a: hA }) +
+      inl(c, 'M-6-6C-5-11-1-14 3-14M-5 1C-6-2-6-4-5-6', cloth, 1.1, 0.42) +
+      c.P('M2-7L13-7.6L13.6-2.4L2-2Z', '#2a1c26') +
       (S.hurt || S.kneel ? c.L('M5-6l3 2.6M8-6l-3 2.6', '#fff', 1.4) : c.eye(6, -4.8, 2, false) + c.eye(11, -5, 1.8, false)) +
-      c.P('M1-2L13.6-2.4C13 3 9 6 3 6L0 6Z', sh(cloth, -0.12)) + c.L('M3 1C6 2 9 1.6 12 0.6', clothD, 1.2) +
-      c.shine(-3, -12, 4, 1.8, 0.4),
-      `translate(${P2(add(B.neck, 1, -8))}) rotate(${S.lean * 0.5 + hd})`
+      c.P('M1-2L13.6-2.4C13 3 9 6 3 6L0 6Z', GL(c, dk(cloth, 0.12), { hi: 0.1 })) + inl(c, 'M3 1C6 2 9 1.6 12 0.6M3 3.6C6 4.4 8 4 10.4 3', cloth, 1, 0.5) +
+      c.shine(-3, -12, 4, 1.6, 0.4),
+      `translate(${P2(add(B.neck, 1, -8))}) rotate(${hA})`
     );
     const aF = B.arm(B.shF, S.hn[1], false);
     const aN = B.arm(B.shN, S.hn[0], true, S.bend || 1);
@@ -788,10 +981,11 @@
     if (S.hurt) fx = blade([82, 18], 130) + c.L('M70 22l6-4M72 30l7-1', '#fff', 1.8);
     if (S.kneel) fx = blade([62, 87], 4) + c.mist([[40, 50, 2.6], [34, 44, 3]], MISTC, 0.5);
     return c.out(
-      aF.d + fist(c, aF.hand, aF.fa, sh(skin, -0.32)) +
+      aF.d + fist(c, aF.hand, aF.fa, dk(skin, 0.3)) +
       B.leg(B.hipF, S.ft[1], false) +
       torso +
       B.leg(B.hipN, S.ft[0], true) +
+      ao(c, B.neck[0], B.neck[1] - 2, 5, 3, 0.45) +
       head +
       (S.bl != null && S.bl > 90 ? wpn : '') +
       aN.d + fist(c, aN.hand, aN.fa, skin) +
@@ -806,11 +1000,12 @@
    *     죽음: 머리를 맞고 젖혀짐 → 벌렁 나자빠짐 → 큰대자로 누운 채 주머니의 돌이 쏟아짐 --- */
   RG.art._en.MOTION.canyon_slinger = { gait: 'trot', bob: 0.06, tilt: 4, deathFx: 'crumble', deathTime: 0.7 };
   D.canyon_slinger = (fr) => {
-    const c = make(3, { fine: true });
-    const cloth = '#c9a272';
-    const clothD = sh(cloth, -0.28);
+    const c = make(3, FINE);
+    // 4차: 옷은 짙은 황토(그늘은 붉은 보라), 머리띠는 진홍, 큰 머리는 푸른빛 도는 잿빛 + 눈이 가장 밝게, 끈은 꼰 가죽
+    const cloth = '#c08a56';
+    const clothD = dk(cloth, 0.3);
     const skin = '#8f8b9e';
-    const band = '#a3463a';
+    const band = '#b4383a';
     const rope = '#5e3a22';
     const T = {
       walk0: { hip: [50, 66], lean: 4, ft: [[59, 0, 0], [41, 1, 24]], hn: [[64, 60], [40, 60]], sl: 'hang', sw: 14 },
@@ -823,46 +1018,65 @@
       attack: { hip: [52, 66], lean: 12, ft: [[64, 0, 0], [38, 3, 34]], hn: [[78, 44], [36, 60]], sl: 'throw' },
       die0: { hip: [46, 66], lean: -20, ft: [[56, 7, -10], [40, 0, 0]], hn: [[62, 40], [30, 46]], sl: 'drop', hurt: true },
     };
-    const stone = (p, r = 3.6) => c.E(n(p[0]), n(p[1]), r, r * 0.88, c.body('#b8aca4', 0.35)) + c.En(n(p[0] - r * 0.3), n(p[1] - r * 0.3), r * 0.35, r * 0.25, '#ffffff', 0.4);
-    const pouch = (x, y) => c.P(`M${x - 4} ${y - 2}C${x - 5} ${y + 4} ${x + 5} ${y + 4} ${x + 4} ${y - 2}Z`, c.body('#8a6a48', 0.3)) + c.L(`M${x - 4} ${y - 2}L${x + 4} ${y - 2}`, '#5a3e28', 1.6);
-    const headG = (pos, a, hurt, flap = 0) => g(
-      c.P(`M-9-2C-15-${2 + flap * 3} -20 0 -24-${flap * 3}C-20 3-18 6-20 9C-14 6-10 4-8 2Z`, band) +
-      c.E(0, -4, 11, 10.4, c.body(skin, 0.35)) +
-      c.P('M-11-6C-9-17 7-18 11-8C3-11-4-10-11-6Z', band) + c.L('M-10-7C-3-10 4-11 11-8', sh(band, -0.3), 1.4) +
-      c.P('M1-6L12-6L12-0.6L1-0.6Z', '#2b2236') +
-      (hurt ? c.L('M4-5l3 3M7-5l-3 3', '#fff', 1.4) : c.eye(5, -3.3, 2.1, false) + c.eye(10, -3.3, 1.8, false)) +
-      c.L('M4 3q3 1.6 6 0', OL, 1.5) + c.shine(-5, -8, 4, 2, 0.35),
-      `translate(${P2(pos)}) rotate(${n(a)})`
-    );
+    // 돌: 둥근 강돌(왼쪽 위 밝음, 반짝점)
+    const stone = (p, r = 3.6) => c.E(n(p[0]), n(p[1]), r, r * 0.88, G3(c, '#b4a69c', { hi: 0.4, lo: 0.34 })) + c.En(n(p[0] - r * 0.3), n(p[1] - r * 0.3), r * 0.32, r * 0.22, '#ffffff', 0.55) +
+      c.En(n(p[0] + r * 0.2), n(p[1] + r * 0.25), r * 0.18, r * 0.14, dk('#b4a69c', 0.4), 0.8);
+    const leather = '#8a6446';
+    const pouch = (x, y) => c.P(`M${x - 4} ${y - 2}C${x - 5} ${y + 4} ${x + 5} ${y + 4} ${x + 4} ${y - 2}Z`, G3(c, leather, { hi: 0.32 })) +
+      c.L(`M${x - 4} ${y - 2}L${x + 4} ${y - 2}`, dk(leather, 0.4), 1.6) + c.L(`M${x - 2.6} ${y + 0.4}h1M${x - 0.5} ${y + 1}h1M${x + 1.6} ${y + 0.4}h1`, lt(leather, 0.4), 0.8, ' opacity=".8"');
+    // 꼰 끈: 짙은 끈 위에 밝은 점선 꼬임
+    const cord = (d, w = 2) => c.L(d, rope, w) + c.L(d, lt(rope, 0.35), n(w * 0.5), ' stroke-dasharray="1.2 1.6" opacity=".9"');
+    const headG = (pos, a, hurt, flap = 0) => {
+      const skullD = 'M-11-4A11 10.4 0 1 1 11-4A11 10.4 0 1 1-11-4Z';
+      return g(
+        c.P(`M-9-2C-15-${2 + flap * 3} -20 0 -24-${flap * 3}C-20 3-18 6-20 9C-14 6-10 4-8 2Z`, GL(c, band, { hi: 0.2, lo: 0.42 })) +
+        inl(c, `M-11 0C-15-${flap * 2} -18 1 -21 ${n(1 - flap * 2)}`, band, 0.9, 0.5) +
+        c.P(skullD, G3(c, skin, { hi: 0.38, cx: 0.3, cy: 0.22, cool: true })) +
+        shadeL(c, skullD, dk(skin, 0.45, true), { k: 3.6, op: 0.45, a }) + rimL(c, skullD, R3_RIM, { k: 1.3, op: 0.5, a }) +
+        c.P('M-11-6C-9-17 7-18 11-8C3-11-4-10-11-6Z', GL(c, band, { hi: 0.32, lo: 0.32 })) + inl(c, 'M-10-7C-3-10 4-11 11-8', band, 1.3, 0.5) +
+        inl(c, 'M-6-12.6C-4-14 -1-14.6 2-14.6', band, 0.9, 0.4) +
+        c.P('M1-6L12-6L12-0.6L1-0.6Z', '#2b2236') +
+        (hurt ? c.L('M4-5l3 3M7-5l-3 3', '#fff', 1.4) : c.eye(5, -3.3, 2.1, false) + c.eye(10, -3.3, 1.8, false)) +
+        inl(c, 'M4 3q3 1.6 6 0', skin, 1.4, 0.62) + inl(c, 'M-4 4C-2 5.6 0 6 2 5.8', skin, 0.9, 0.35) + c.shine(-5, -8, 4, 1.8, 0.35),
+        `translate(${P2(pos)}) rotate(${n(a)})`
+      );
+    };
     if (fr === 'die1' || fr === 'die2') {
       // 벌렁 나자빠짐(die1: 다리가 들림) → 큰대자로 누움, 돌이 쏟아짐(die2)
       const up = fr === 'die1';
       const hb = up ? [30, 80] : [22, 84];
-      const body = c.P(up ? 'M34 72C38 66 52 66 56 72L58 84L32 84Z' : 'M30 80C34 76 54 76 58 80L58 88.5L30 88.5Z', c.lin([[0, cloth], [1, clothD]]));
+      const bodyD = up ? 'M34 72C38 66 52 66 56 72L58 84L32 84Z' : 'M30 80C34 76 54 76 58 80L58 88.5L30 88.5Z';
+      const body = c.P(bodyD, G3(c, cloth, { hi: 0.3 })) + shadeL(c, bodyD, dk(cloth, 0.5), { k: 3, op: 0.45 }) +
+        inl(c, up ? 'M40 72l-1 8M48 71l1 9' : 'M38 80l-1 6M48 79l1 7', cloth, 1, 0.45);
       const legsD = up
-        ? chain(c, [[54, 78], [64, 64], [72, 60]], [7, 6, 5], clothD) + c.P(bootD([72, 60], -100, 7, 4), '#4a3a36') + chain(c, [[52, 80], [68, 72], [78, 74]], [7, 6, 5], cloth) + c.P(bootD([78, 74], -60, 7, 4), '#5a4640')
-        : chain(c, [[56, 86], [68, 84], [80, 86]], [7, 6, 5], clothD) + c.P(bootD([80, 85.6], -90, 7, 4), '#4a3a36') + chain(c, [[56, 84], [66, 78], [78, 80]], [7, 6, 5], cloth) + c.P(bootD([78, 79.6], -80, 7, 4), '#5a4640');
+        ? chain(c, [[54, 78], [64, 64], [72, 60]], [7, 6, 5], clothD) + c.P(bootD([72, 60], -100, 7, 4), '#4a3a36') + chain(c, [[52, 80], [68, 72], [78, 74]], [7, 6, 5], GL(c, cloth)) + c.P(bootD([78, 74], -60, 7, 4), GL(c, '#6a4c40'))
+        : chain(c, [[56, 86], [68, 84], [80, 86]], [7, 6, 5], clothD) + c.P(bootD([80, 85.6], -90, 7, 4), '#4a3a36') + chain(c, [[56, 84], [66, 78], [78, 80]], [7, 6, 5], GL(c, cloth)) + c.P(bootD([78, 79.6], -80, 7, 4), GL(c, '#6a4c40'));
       return c.out(
         legsD + body +
-        chain(c, [[36, 76], [30, 66], [26, 58]], [5.4, 4.6, 4], skin) + fist(c, [26, 58], -110, skin) +
+        chain(c, [[36, 76], [30, 66], [26, 58]], [5.4, 4.6, 4], GL(c, skin)) + fist(c, [26, 58], -110, skin) +
         headG([hb[0], hb[1] - 6], up ? -72 : -86, true) +
-        (up ? c.L('M20 56l-4-4M26 52l0-6M34 54l3-5', '#fff', 1.6) + stone([66, 50], 3) : pouch(50, 82) + stone([62, 86], 3) + stone([70, 87], 2.6) + stone([42, 87.4], 2.4) + c.L('M28 62C34 68 40 70 46 72', rope, 2) + c.P('M18 60C12 58 8 62 6 66C12 64 16 64 18 62Z', band))
+        (up ? c.L('M20 56l-4-4M26 52l0-6M34 54l3-5', '#fff', 1.6) + stone([66, 50], 3) : pouch(50, 82) + stone([62, 86], 3) + stone([70, 87], 2.6) + stone([42, 87.4], 2.4) + cord('M28 62C34 68 40 70 46 72') + c.P('M18 60C12 58 8 62 6 66C12 64 16 64 18 62Z', GL(c, band)))
       );
     }
     const S = T[fr];
     const K = {
       shN: [4, -18], shF: [-4, -19], neck: [2, -21], thigh: 10, shin: 10, footH: 4.2, upper: 9, fore: 9,
       legW: [8, 6.5, 5.4], armW: [5.6, 4.8, 4.2],
-      legFill: c.lin([[0, sh(cloth, -0.08)], [1, clothD]]), legFillF: c.lin([[0, clothD], [1, sh(cloth, -0.45)]]),
-      armFill: c.lin([[0, skin], [1, sh(skin, -0.25)]]), armFillF: sh(skin, -0.32),
-      boot: (cc, a, toe, near) => cc.P(bootD(a, toe, 7.5, 4), near ? '#5a4640' : '#3e3030'),
+      legFill: GL(c, cloth, { hi: 0.12, lo: 0.36 }), legFillF: c.lin([[0, clothD], [1, dk(cloth, 0.48)]]),
+      armFill: GL(c, skin, { lo: 0.32, cool: true }), armFillF: dk(skin, 0.3, true),
+      legDeco: (cc, r, k, a, near) => (near ? inl(cc, `M${P2(mixp(r, k, 0.5))}q1.6 1 3 0M${P2(mixp(k, a, 0.55))}l-2.6 0.6`, cloth, 1, 0.45) : ''),
+      boot: (cc, a, toe, near) => cc.P(bootD(a, toe, 7.5, 4), near ? GL(cc, '#6a4c40', { hi: 0.2 }) : '#3e3030') + (near ? inl(cc, `M${P2(add(a, -2, -1.2))}l3.6 0`, '#6a4c40', 0.9, 0.5) : ''),
+      limbRim: (cc, d, near) => (near ? rimL(cc, d, R3_RIM, { k: 1.2, op: 0.5 }) : ''),
     };
     const B = human(c, S, K);
+    const vestD = 'M-9-18C-4-23 6-23 10-17L9 4L4 1L0 6L-4 1L-9 4Z';
     const torso = g(
-      c.P('M-7-20C-4-23 5-23 8-19L9-2L-8-2Z', c.body('#8a8698', 0.3)) +
-      c.P('M-9-18C-4-23 6-23 10-17L9 4L4 1L0 6L-4 1L-9 4Z', c.lin([[0, cloth], [1, clothD]])) +
-      c.P('M-9-4L9-4L9-1L-9-1Z', '#4a3632') + pouch(-6, 2) +
-      c.Pn('M4-20C8-18 9-12 9-4L6-4C6-12 6-16 4-20Z', '#1c1426', 0.25),
+      c.P('M-7-20C-4-23 5-23 8-19L9-2L-8-2Z', G3(c, '#8a8698', { cool: true })) +
+      c.P(vestD, G3(c, cloth, { hi: 0.34, cx: 0.3, cy: 0.2 })) +
+      shadeL(c, vestD, dk(cloth, 0.5), { k: 4, op: 0.42, a: S.lean }) + rimL(c, vestD, R3_RIM, { k: 1.4, op: 0.5, a: S.lean }) +
+      inl(c, 'M-3-18L-5 0M4-19L5 0M-7-10C-4-9-1-9 1-10', cloth, 1, 0.45) +
+      c.P('M-9-4L9-4L9-1L-9-1Z', GL(c, '#5a3e34', { hi: 0.25 })) + c.L('M-7-2.6h1.6M-2-2.6h1.6M4-2.6h1.6', '#a07a60', 0.8, ' opacity=".8"') + pouch(-6, 2) +
+      ao(c, 0, -1, 9, 2.2, 0.4),
       `translate(${P2(S.hip)}) rotate(${S.lean})`
     );
     const hd = S.hurt ? -30 : S.sl === 'throw' ? 8 : 0;
@@ -872,26 +1086,28 @@
     const h = aN.hand;
     let sling = '';
     let fx = '';
+    const cradle = (pp, y0, y1) => c.P(`M${P2(add(pp, -3.6, y0))}C${P2(add(pp, -3.6, y1))} ${P2(add(pp, 3.6, y1))} ${P2(add(pp, 3.6, y0))}Z`, GL(c, leather, { hi: 0.25 }));
     if (S.sl === 'hang') {
       const pp = pol(h, 15, 90 + S.sw);
-      sling = c.L(`M${P2(h)}Q${P2(add(mixp(h, pp, 0.5), -2.4, 0))} ${P2(pp)}M${P2(h)}Q${P2(add(mixp(h, pp, 0.5), 2.4, 0))} ${P2(pp)}`, rope, 2) + stone(add(pp, 0, 2), 3.2) + c.P(`M${P2(add(pp, -3.6, 0))}C${P2(add(pp, -3.6, 5))} ${P2(add(pp, 3.6, 5))} ${P2(add(pp, 3.6, 0))}Z`, '#8a6a48');
+      sling = cord(`M${P2(h)}Q${P2(add(mixp(h, pp, 0.5), -2.4, 0))} ${P2(pp)}`) + cord(`M${P2(h)}Q${P2(add(mixp(h, pp, 0.5), 2.4, 0))} ${P2(pp)}`) + stone(add(pp, 0, 2), 3.2) + cradle(pp, 0, 5);
     } else if (S.sl === 'whirl') {
       const st = [h[0] + 22, h[1] - 9];
       sling = `<ellipse cx="${n(h[0] + 2)}" cy="${n(h[1] - 6)}" rx="23" ry="7" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="5 4" opacity=".7"/>` +
-        c.L(`M${P2(h)}L${P2(st)}`, rope, 1.8) + c.L(`M${P2(h)}L${P2(add(st, -1, 3))}`, rope, 1.8) + stone(st, 3.6) +
+        cord(`M${P2(h)}L${P2(st)}`, 1.8) + cord(`M${P2(h)}L${P2(add(st, -1, 3))}`, 1.8) + stone(st, 3.6) +
         c.L(`M${n(h[0] - 18)} ${n(h[1] - 14)}q-4 4-2 9M${n(h[0] - 12)} ${n(h[1] - 13)}q-3 3-1 7`, '#ffffff', 1.4, ' opacity=".7"');
     } else if (S.sl === 'throw') {
       const pp = pol(h, 15, -150);
-      sling = c.L(`M${P2(h)}Q${P2(add(mixp(h, pp, 0.5), 0, -3))} ${P2(pp)}`, rope, 1.8) + c.L(`M${P2(h)}L${P2(pol(h, 12, -120))}`, rope, 1.8) + c.P(`M${P2(add(pp, -3, -1))}C${P2(add(pp, -3, 3))} ${P2(add(pp, 3, 3))} ${P2(add(pp, 3, -1))}Z`, '#8a6a48');
+      sling = cord(`M${P2(h)}Q${P2(add(mixp(h, pp, 0.5), 0, -3))} ${P2(pp)}`, 1.8) + cord(`M${P2(h)}L${P2(pol(h, 12, -120))}`, 1.8) + cradle(pp, -1, 3);
       fx = c.L('M70 30L80 31M72 36L82 35M74 25L82 27', '#ffffff', 1.8, ' opacity=".8"') + stone([92, 30], 3.8);
     } else if (S.sl === 'drop') {
-      sling = c.L(`M${P2(h)}Q${n(h[0] + 8)} ${n(h[1] + 6)} ${n(h[0] + 12)} ${n(h[1] + 16)}`, rope, 1.8) + stone([80, 70], 3) + c.L('M60 18l4-6M66 22l6-3M56 14l0-6', '#fff', 1.6);
+      sling = cord(`M${P2(h)}Q${n(h[0] + 8)} ${n(h[1] + 6)} ${n(h[0] + 12)} ${n(h[1] + 16)}`, 1.8) + stone([80, 70], 3) + c.L('M60 18l4-6M66 22l6-3M56 14l0-6', '#fff', 1.6);
     }
     return c.out(
-      aF.d + fist(c, aF.hand, aF.fa, sh(skin, -0.32)) +
+      aF.d + fist(c, aF.hand, aF.fa, dk(skin, 0.3, true)) +
       B.leg(B.hipF, S.ft[1], false) +
       torso +
       B.leg(B.hipN, S.ft[0], true) +
+      ao(c, B.neck[0], B.neck[1] - 1, 5, 3, 0.45) +
       head +
       (S.sl === 'whirl' ? sling : '') +
       aN.d + fist(c, h, aN.fa, skin) +

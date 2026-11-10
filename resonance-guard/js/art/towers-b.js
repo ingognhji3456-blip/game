@@ -163,11 +163,21 @@
         const cr = o.rough ? Math.min(1.6, (b - a) * 0.25, rh * 0.25) : 0.5;
         const q1 = q(a + cr, b - cr, tp);
         const q2 = q(b - cr, a + cr, bt);
-        groups[fill] = (groups[fill] || '') + `M${f(a + cr)} ${f(yAt(a + cr, tp))}Q${pp(q1)} ${f(b - cr)} ${f(yAt(b - cr, tp))}L${f(b)} ${f(yAt(b, tp) + cr)}L${f(b)} ${f(yAt(b, bt) - cr)}L${f(b - cr)} ${f(yAt(b - cr, bt))}Q${pp(q2)} ${f(a + cr)} ${f(yAt(a + cr, bt))}L${f(a)} ${f(yAt(a, bt) - cr)}L${f(a)} ${f(yAt(a, tp) + cr)}Z`;
-        if (o.bevel !== false && b - a > 4 && rh > 3.2) {
+        if (!bul) {
+          // 줄이 곧으면 짧은 명령으로(SVG 를 가볍게)
+          groups[fill] = (groups[fill] || '') + `M${f(a + cr)} ${f(tp)}H${f(b - cr)}L${f(b)} ${f(tp + cr)}V${f(bt - cr)}L${f(b - cr)} ${f(bt)}H${f(a + cr)}L${f(a)} ${f(bt - cr)}V${f(tp + cr)}Z`;
+        } else {
+          groups[fill] = (groups[fill] || '') + `M${f(a + cr)} ${f(yAt(a + cr, tp))}Q${pp(q1)} ${f(b - cr)} ${f(yAt(b - cr, tp))}L${f(b)} ${f(yAt(b, tp) + cr)}L${f(b)} ${f(yAt(b, bt) - cr)}L${f(b - cr)} ${f(yAt(b - cr, bt))}Q${pp(q2)} ${f(a + cr)} ${f(yAt(a + cr, bt))}L${f(a)} ${f(yAt(a, bt) - cr)}L${f(a)} ${f(yAt(a, tp) + cr)}Z`;
+        }
+        if (o.bevel !== false && b - a > 4.5 && rh > 3.4) {
           // 윗변·왼변의 빛, 아랫변·오른변의 그늘(돌 하나의 세 단계)
-          hi += `M${f(a + 0.35)} ${f(yAt(a, bt) - cr - 0.3)}L${f(a + 0.35)} ${f(yAt(a, tp) + cr)}L${f(a + cr + 0.4)} ${f(yAt(a + cr, tp) + 0.45)}Q${f(q1[0])} ${f(q1[1] + 0.45)} ${f(b - cr - 0.5)} ${f(yAt(b - cr, tp) + 0.45)}`;
-          lo += `M${f(b - 0.35)} ${f(yAt(b, tp) + cr + 0.4)}L${f(b - 0.35)} ${f(yAt(b, bt) - cr)}L${f(b - cr)} ${f(yAt(b - cr, bt) - 0.4)}Q${f(q2[0])} ${f(q2[1] - 0.4)} ${f(a + cr + 0.4)} ${f(yAt(a + cr, bt) - 0.4)}`;
+          if (!bul) {
+            hi += `M${f(a + 0.35)} ${f(bt - cr - 0.3)}V${f(tp + cr)}L${f(a + cr + 0.4)} ${f(tp + 0.45)}H${f(b - cr - 0.5)}`;
+            lo += `M${f(b - 0.35)} ${f(tp + cr + 0.4)}V${f(bt - cr)}L${f(b - cr)} ${f(bt - 0.4)}H${f(a + cr + 0.4)}`;
+          } else {
+            hi += `M${f(a + 0.35)} ${f(yAt(a, bt) - cr - 0.3)}L${f(a + 0.35)} ${f(yAt(a, tp) + cr)}L${f(a + cr + 0.4)} ${f(yAt(a + cr, tp) + 0.45)}Q${f(q1[0])} ${f(q1[1] + 0.45)} ${f(b - cr - 0.5)} ${f(yAt(b - cr, tp) + 0.45)}`;
+            lo += `M${f(b - 0.35)} ${f(yAt(b, tp) + cr + 0.4)}L${f(b - 0.35)} ${f(yAt(b, bt) - cr)}L${f(b - cr)} ${f(yAt(b - cr, bt) - 0.4)}Q${f(q2[0])} ${f(q2[1] - 0.4)} ${f(a + cr + 0.4)} ${f(yAt(a + cr, bt) - 0.4)}`;
+          }
           // 작은 구멍·깨진 자국
           if (b - a > 5.5 && rh > 3.8 && R() < (o.rough ? 0.2 : 0.12)) {
             const px = lerp(a, b, 0.3 + R() * 0.4);
@@ -179,10 +189,10 @@
       y += rh;
       row += 1;
     }
-    let body = c.r(x1 - 3, y1 - 3, x2 - x1 + 6, y2 - y1 + bul + 6, o.mortar || hs(col, -0.5), 0, 0);
+    let body = c.r(x1 - 3, y1 - 3, x2 - x1 + 6, y2 - y1 + bul + 6, o.mortar || hs(col, -0.46), 0, 0);
     Object.keys(groups).forEach((fl) => { body += `<path d="${groups[fl]}" fill="${fl}" stroke="none"/>`; });
     if (hi) body += `<path d="${hi}" fill="none" stroke="${LITC}" stroke-width="${c.sw(0.75)}" opacity="${o.hiA || 0.5}"/>`;
-    if (lo) body += `<path d="${lo}" fill="none" stroke="${hs(col, -0.62)}" stroke-width="${c.sw(0.7)}" opacity="0.55"/>`;
+    if (lo) body += `<path d="${lo}" fill="none" stroke="${hs(col, -0.6)}" stroke-width="${c.sw(0.65)}" opacity="0.4"/>`;
     if (pits) body += `<path d="${pits}" fill="${hs(col, -0.55)}" stroke="${hs(col, 0.25)}" stroke-width="${c.sw(0.35)}" opacity="0.8"/>`;
     if (o.top || o.bot) body += c.r(x1 - 3, y1 - 3, x2 - x1 + 6, y2 - y1 + bul + 6, vshade(c, o.top || 0, o.bot || 0, o.k1 || 0.3, o.k2 || 0.7), 0, 0);
     if (o.over) body += o.over;
@@ -521,16 +531,16 @@
    * 4B 흑요석 검사: 흑요석 가시 막사, 문지기가 검을 세워 경례했다 벰.
    * ================================================================ */
   const GOLEM = {
-    stone: { col: '#a39d90', eye: '#d4ff8a' },
-    granite: { col: '#b9a59c', eye: '#8dffb0' },
-    obsidian: { col: '#5a5272', eye: '#8dffb0' },
+    // 4차: 건물(회녹색 돌)과 구별되게 따뜻한 사암색 몸 + 초록 띠, 밝은 눈
+    stone: { col: '#c4a47c', eye: '#e4ff7a', sash: '#5fae3a' },
+    granite: { col: '#a8705e', eye: '#8dffb0', sash: '#5fae3a' },
+    obsidian: { col: '#66598e', eye: '#8dffb0' },
   };
   /*
    * 돌 골렘(오른쪽을 봄). g = { x, y(발), k, kind, lean, hands:[뒤, 앞], bend:[뒤, 앞], helm }
    * 반환 { back, body, handB, front, H }
    */
   function golemFig(c, g) {
-    const h = c.h;
     const k = g.k || 1;
     const G = GOLEM[g.kind || 'stone'];
     const col = G.col;
@@ -548,40 +558,58 @@
     const [aB, aF] = g.hands;
     const bend = g.bend || [1, 1];
     const obs = g.kind === 'obsidian';
-    const leg = (hp, ft, cc) => limb(c, hp, joint(hp, ft, 4.6 * k, 4.6 * k, -1), ft, 5 * k, cc) + c.r(ft[0] - 3 * k, ft[1] - 2.8 * k, 6.8 * k, 2.8 * k, c.vg(cc, 0.25, -0.25), 1 * k, 2);
+    const ic = inl(col, 0.55);
+    const foot = (ft, cc) => c.r(ft[0] - 3 * k, ft[1] - 2.8 * k, 6.8 * k, 2.8 * k, c.vg(cc, 0.3, -0.3), 1 * k, 2);
+    const leg = (hp, ft, cc) => limb(c, hp, joint(hp, ft, 4.6 * k, 4.6 * k, -1), ft, 5 * k, cc) + foot(ft, cc);
     const arm = (s0, hd, b, cc) => limb(c, s0, joint(s0, hd, 6.2 * k, 6 * k, b), hd, 4.4 * k, cc);
-    const back = arm(sB, aB, bend[0], hs(col, -0.28)) + leg(at(0.5, -3.4), fB, hs(col, -0.22));
+    const back = ao(c, g.x + 0.5, g.y, 9 * k, 1.8 * k, 0.55) + arm(sB, aB, bend[0], hs(col, -0.3)) + leg(at(0.5, -3.4), fB, hs(col, -0.24));
     let body = leg(at(0.5, 3.4), fF, col);
-    const bodyG = c.def(`gol${col}`, (id) => c.rgc(id, [[0, hs(col, obs ? 0.35 : 0.3)], [0.55, col], [1, hs(col, -0.45)]], 0.32, 0.28, 0.85));
+    const bodyG = c.def(`gol${col}`, (id) => c.rgc(id, [[0, hs(col, obs ? 0.4 : 0.34)], [0.5, col], [0.86, hs(col, -0.46)], [1, hs(col, -0.22)]], 0.32, 0.28, 0.85));
     if (obs) {
       body += c.p(poly([at(15, -5.5), at(15.5, 6.5), at(6, 8.5), at(-1, 4.5), at(-1, -4.5), at(7, -8)]), bodyG, 2.8);
-      body += c.p(poly([at(15, -5.5), at(15.5, 6.5), at(9, 1)]), '#c9c0ff', 0, ' opacity="0.45"') + c.ln(`M${pp(at(9, 1))}L${pp(at(0, 2))}`, '#8f86c8', 1, 0.7);
-      body += c.ln(`M${pp(at(14, -4.8))}L${pp(at(7.2, -7.2))}L${pp(at(-0.4, -4))}`, '#b8b0e8', 1.2, 0.8);
+      body += c.p(poly([at(15, -5.5), at(15.5, 6.5), at(9, 1)]), '#d4ccff', 0, ' opacity="0.5"') + c.ln(`M${pp(at(9, 1))}L${pp(at(0, 2))}`, '#9a90d8', 1, 0.75);
+      body += c.ln(`M${pp(at(14, -4.8))}L${pp(at(7.2, -7.2))}L${pp(at(-0.4, -4))}`, '#c8c0f4', 1.2, 0.85);
+      // 흑요석 가슴의 초록 빛 금(눈과 같은 빛)
+      body += c.ln(`M${pp(at(11, -2))}L${pp(at(7.5, 1.2))}L${pp(at(4.5, -0.4))}`, G.eye, 1.1, 0.85);
     } else {
       body += c.e(B[0], B[1], 8.4 * k * (g.kind === 'granite' ? 1.12 : 1), 9 * k, bodyG, 2.8);
-      body += c.ln(`M${pp(at(9, -3))}l${f(2.2 * k)} ${f(2 * k)}M${pp(at(3, 4))}l${f(-1.6 * k)} ${f(2 * k)}`, hs(col, -0.4), 1.1, 0.8);
-      body += c.p(`M${pp(at(1.5, -7.4))}Q${pp(at(-2, 0))} ${pp(at(1.5, 7.4))}Q${pp(at(0.2, 0))} ${pp(at(1.5, -7.4))}Z`, c.vg('#6fae3e', 0.3, -0.25), 1.4);
-      if (g.kind === 'granite') body += [[8, -3], [4, 2], [11, 3], [6, -6]].map(([a, b]) => c.ci(...at(a, b), 0.8 * k, '#6a5a54', 0, ' opacity="0.6"')).join('');
+      // 돌 몸의 금·깨진 자국(안쪽 선은 몸 색의 어두운 변형)
+      body += c.ln(`M${pp(at(9, -3))}l${f(2.2 * k)} ${f(2 * k)}l${f(0.4 * k)} ${f(1.6 * k)}M${pp(at(3, 4))}l${f(-1.6 * k)} ${f(2 * k)}M${pp(at(12.5, 3.5))}l${f(1.6 * k)} ${f(-1 * k)}`, ic, 1, 0.85);
+      body += c.ln(`M${pp(at(13, -6.4))}Q${pp(at(9, -9))} ${pp(at(3, -8.2))}`, LITC, 1, 0.55);
+      if (g.kind === 'granite') body += [[8, -3], [4, 2], [11, 3], [6, -6], [2, -2], [10, -1], [5, 5]].map(([a, b], i) => c.ci(...at(a, b), (i % 2 ? 0.6 : 0.8) * k, i % 2 ? '#f0dcd0' : hs(col, -0.5), 0, ' opacity="0.8"')).join('');
+      // 어깨띠(천): 건물과 구별되는 밝은 초록
+      if (G.sash) body += c.ln(`M${pp(at(13.5, -5.5))}L${pp(at(2.2, 6.2))}`, inl(G.sash, 0.6), 3.8 * k) + c.ln(`M${pp(at(13.5, -5.5))}L${pp(at(2.2, 6.2))}`, G.sash, 2.3 * k) + c.ln(`M${pp(at(13.2, -6.2))}L${pp(at(2, 5.4))}`, hs(G.sash, 0.4), 0.8 * k, 0.8);
+      // 허리 이끼 띠
+      body += c.p(`M${pp(at(1.5, -7.4))}Q${pp(at(-2, 0))} ${pp(at(1.5, 7.4))}Q${pp(at(0.2, 0))} ${pp(at(1.5, -7.4))}Z`, c.vg('#74b23e', 0.3, -0.25), 1.2, ' stroke="#2c4a1c"');
     }
     // 머리 + 이끼 모자 + 빛나는 눈
     if (obs) {
-      body += c.p(poly([[H[0] - 5 * k, H[1] + 4 * k], [H[0] - 5.5 * k, H[1] - 3 * k], [H[0] - 1 * k, H[1] - 7.5 * k], [H[0] + 5 * k, H[1] - 4 * k], [H[0] + 5.2 * k, H[1] + 3 * k], [H[0], H[1] + 5.4 * k]]), bodyG, 2.6) + c.p(poly([[H[0] - 1 * k, H[1] - 7.5 * k], [H[0] + 5 * k, H[1] - 4 * k], [H[0] + 1 * k, H[1] - 2 * k]]), '#c9c0ff', 0, ' opacity="0.5"');
+      body += c.p(poly([[H[0] - 5 * k, H[1] + 4 * k], [H[0] - 5.5 * k, H[1] - 3 * k], [H[0] - 1 * k, H[1] - 7.5 * k], [H[0] + 5 * k, H[1] - 4 * k], [H[0] + 5.2 * k, H[1] + 3 * k], [H[0], H[1] + 5.4 * k]]), bodyG, 2.6) + c.p(poly([[H[0] - 1 * k, H[1] - 7.5 * k], [H[0] + 5 * k, H[1] - 4 * k], [H[0] + 1 * k, H[1] - 2 * k]]), '#d4ccff', 0, ' opacity="0.55"');
     } else {
       body += c.ci(H[0], H[1], 5.8 * k, bodyG, 2.6);
-      body += c.p(`M${f(H[0] - 6 * k)} ${f(H[1] - 1 * k)}Q${f(H[0] - 5 * k)} ${f(H[1] - 7.5 * k)} ${f(H[0] + 0.5 * k)} ${f(H[1] - 6.8 * k)}Q${f(H[0] + 5.5 * k)} ${f(H[1] - 6.4 * k)} ${f(H[0] + 5.8 * k)} ${f(H[1] - 1.6 * k)}Q${f(H[0] + 2 * k)} ${f(H[1] - 3.4 * k)} ${f(H[0] - 1 * k)} ${f(H[1] - 2.4 * k)}Q${f(H[0] - 3.5 * k)} ${f(H[1] - 1.2 * k)} ${f(H[0] - 6 * k)} ${f(H[1] - 1 * k)}Z`, c.vg('#6fae3e', 0.35, -0.2), 1.6);
+      body += c.ln(`M${f(H[0] + 2.6 * k)} ${f(H[1] + 3.8 * k)}h${f(2.2 * k)}`, ic, 0.9, 0.8);
+      body += c.p(`M${f(H[0] - 6 * k)} ${f(H[1] - 1 * k)}Q${f(H[0] - 5 * k)} ${f(H[1] - 7.5 * k)} ${f(H[0] + 0.5 * k)} ${f(H[1] - 6.8 * k)}Q${f(H[0] + 5.5 * k)} ${f(H[1] - 6.4 * k)} ${f(H[0] + 5.8 * k)} ${f(H[1] - 1.6 * k)}Q${f(H[0] + 2 * k)} ${f(H[1] - 3.4 * k)} ${f(H[0] - 1 * k)} ${f(H[1] - 2.4 * k)}Q${f(H[0] - 3.5 * k)} ${f(H[1] - 1.2 * k)} ${f(H[0] - 6 * k)} ${f(H[1] - 1 * k)}Z`, c.vg('#74b23e', 0.38, -0.22), 1.4, ' stroke="#2c4a1c"');
+      body += c.ci(H[0] - 2.4 * k, H[1] - 5 * k, 0.9 * k, '#c4ec86', 0, ' opacity="0.85"');
     }
     if (g.helm) body += g.helm(c, H, k);
-    body += aura(c, H[0] + 3 * k, H[1] + 0.5 * k, 4 * k, 3 * k, G.eye, 0.6) + c.e(H[0] + 1.6 * k, H[1] + 0.6 * k, 0.9 * k, 1.2 * k, G.eye, 0) + c.e(H[0] + 4.1 * k, H[1] + 0.5 * k, 0.8 * k, 1.1 * k, G.eye, 0);
-    const handB = c.ci(aB[0], aB[1], 2.8 * k, c.sg(hs(col, -0.12)), 2.2);
-    const front = arm(sF, aF, bend[1], col) + c.ci(aF[0], aF[1], 3 * k, c.sg(col), 2.2);
+    body += aura(c, H[0] + 3 * k, H[1] + 0.5 * k, 4.4 * k, 3.2 * k, G.eye, 0.7) + c.e(H[0] + 1.6 * k, H[1] + 0.6 * k, 1 * k, 1.3 * k, G.eye, 0) + c.e(H[0] + 4.1 * k, H[1] + 0.5 * k, 0.9 * k, 1.2 * k, G.eye, 0)
+      + c.ci(H[0] + 1.3 * k, H[1] + 0.2 * k, 0.35 * k, '#fff', 0) + c.ci(H[0] + 3.8 * k, H[1] + 0.1 * k, 0.3 * k, '#fff', 0);
+    const handB = c.ci(aB[0], aB[1], 2.8 * k, c.sg(hs(col, -0.14)), 2.2);
+    const front = arm(sF, aF, bend[1], col) + c.ci(aF[0], aF[1], 3 * k, c.sg(col), 2.2) + c.ln(`M${f(aF[0] - 1.6 * k)} ${f(aF[1] - 0.6 * k)}l${f(1.8 * k)} ${f(1.4 * k)}`, ic, 0.8, 0.8);
     return { back, body, handB, front, H, k };
   }
   /** 창: 쥔 곳 hd, 각 ang(위로 -90), 손 위로 up, 아래로 dn */
   function spear(c, hd, ang, up, dn, tip = '#8a8478') {
     const a = pol(hd, -dn, ang);
     const b = pol(hd, up, ang);
-    const t = pol(b, 6, ang);
-    return c.ol(`M${pp(a)}L${pp(b)}`, '#9a6a3a', 2) + c.p(`M${pp(pol(b, 2.4, ang + 90))}Q${pp(pol(pol(b, 3, ang), 2.2, ang + 90))} ${pp(t)}Q${pp(pol(pol(b, 3, ang), 2.2, ang - 90))} ${pp(pol(b, 2.4, ang - 90))}Z`, c.vg(tip, 0.4, -0.2), 1.8);
+    const t = pol(b, 7, ang);
+    const L = pol(b, 2.6, ang + 90);
+    const Rr = pol(b, 2.6, ang - 90);
+    return c.ol(`M${pp(a)}L${pp(b)}`, '#a8723e', 2) + c.ln(`M${pp(pol(a, 0.5, ang - 90))}L${pp(pol(b, 0.5, ang - 90))}`, hs('#a8723e', 0.35), 0.7, 0.8)
+      + c.p(`M${pp(L)}Q${pp(pol(pol(b, 3.4, ang), 2.4, ang + 90))} ${pp(t)}Q${pp(pol(pol(b, 3.4, ang), 2.4, ang - 90))} ${pp(Rr)}Z`, c.vg(tip, 0.45, -0.25), 1.8)
+      + c.ln(`M${pp(pol(b, 0.6, ang + 90))}L${pp(pol(t, 1.2, ang + 180))}`, LITC, 0.8, 0.85)
+      // 자루 감개(창날 아래 가죽끈)
+      + c.ln(`M${pp(pol(b, -1.6, ang))}L${pp(pol(b, 0.2, ang))}`, '#5a3420', 2.6);
   }
   /** 깃발: 장대 아래 (x,y), 높이 ht, wave 0(늘어짐) · 1(날림) · 2(펄럭임) */
   function banner(c, x, y, ht, col, wave, fw = 16, o = {}) {
@@ -593,18 +621,18 @@
     const P = A2.map((p, i) => [x + lerp(A0[i][0], p[0], tt), t + lerp(A0[i][1], p[1], tt)]);
     const d = `M${pp(P[0])}C${pp(P[1])} ${pp(P[2])} ${pp(P[3])}L${pp(P[4])}L${pp(P[5])}C${pp(P[6])} ${pp(P[7])} ${pp(P[8])}Z`;
     let s = beam(c, [x, y], [x, t - 2], 2.2, M.woodD, { grain: false });
-    s += c.p(d, c.def(`ban${col}`, (id) => c.lgc(id, [[0, hs(col, 0.25)], [0.5, col], [1, hs(col, -0.3)]], 'd')), 2.2);
-    // 깃발 무늬(산 모양 — 좌우 대칭)와 주름
+    s += c.p(d, c.def(`ban${col}`, (id) => c.lgc(id, [[0, hs(col, 0.28)], [0.5, col], [1, hs(col, -0.34)]], 'd')), 2.2);
+    // 깃발 무늬(산 모양 — 좌우 대칭)와 주름, 깃 단의 장식선
     const m = mix2(P[0], P[5], 0.5);
     const cc = [lerp(m[0], P[3][0], 0.35), lerp(m[1], P[3][1], 0.35)];
-    if (o.emblem !== false) s += c.p(`M${f(cc[0] - 2.6)} ${f(cc[1] + 2)}L${f(cc[0])} ${f(cc[1] - 2.4)}L${f(cc[0] + 2.6)} ${f(cc[1] + 2)}Z`, o.emblem || '#f4ead0', 1);
-    s += c.ln(`M${pp(mix2(P[1], P[7], 0.5))}L${pp(mix2(P[2], P[6], 0.5))}`, hs(col, -0.35), 0.9, 0.7);
-    s += c.ci(x, t - 3, 2.1, c.sg(M.gold), 1.8);
+    s += c.ln(`M${pp(mix2(P[0], P[1], 0.15))}L${pp(mix2(P[8], P[7], 0.15))}`, hs(col, 0.45), 1, 0.8);
+    if (o.emblem !== false) s += c.p(`M${f(cc[0] - 2.6)} ${f(cc[1] + 2)}L${f(cc[0])} ${f(cc[1] - 2.4)}L${f(cc[0] + 2.6)} ${f(cc[1] + 2)}Z`, o.emblem || '#f4ead0', 0.9, ist(col, 0.7));
+    s += c.ln(`M${pp(mix2(P[1], P[7], 0.5))}L${pp(mix2(P[2], P[6], 0.5))}M${pp(mix2(P[2], P[6], 0.55))}L${pp(mix2(P[3], P[5], 0.5))}`, inl(col, 0.4), 0.8, 0.75);
+    s += c.ci(x, t - 3, 2.1, c.sg(M.gold), 1.8) + spec(c, x - 0.6, t - 3.7, 0.5);
     return s;
   }
   /** 돌 아치 문: 가운데 x, 바닥 yb, 너비 w, 높이 ht, open 0 닫힘 · 1 반쯤 · 2 활짝, o.inside 안쪽 그림, o.portcullis 쇠창살 */
   function gate(c, x, yb, w, ht, open, o = {}) {
-    const h = c.h;
     const r = w / 2;
     const ys = yb - ht + r;
     const st = o.stone || '#b8b2a4';
@@ -612,15 +640,16 @@
     let s = '';
     if (o.arch !== false) {
       const R2 = r + 3.2;
-      s += c.p(`M${f(x - R2)} ${f(yb)}V${f(ys)}A${f(R2)} ${f(R2)} 0 0 1 ${f(x + R2)} ${f(ys)}V${f(yb)}Z`, c.vg(st, 0.25, -0.15), 2.6);
+      s += c.p(`M${f(x - R2)} ${f(yb)}V${f(ys)}A${f(R2)} ${f(R2)} 0 0 1 ${f(x + R2)} ${f(ys)}V${f(yb)}Z`, c.dg(st, 0.3, -0.2), 2.2, ist(st, 0.8));
       let jd = '';
       for (let i = 1; i < 6; i++) { const a = 180 + i * 30; jd += `M${pp(pol([x, ys], r, a))}L${pp(pol([x, ys], R2, a))}`; }
       for (let yy = ys + 4.5; yy < yb - 1; yy += 5) jd += `M${f(x - R2)} ${f(yy)}H${f(x - r)}M${f(x + r)} ${f(yy)}H${f(x + R2)}`;
-      s += c.ln(jd, hs(st, -0.45), 1);
+      s += c.ln(jd, inl(st, 0.5), 0.9);
+      s += c.ln(`M${f(x - R2 + 0.7)} ${f(yb - 1)}V${f(ys)}A${f(R2 - 0.7)} ${f(R2 - 0.7)} 0 0 1 ${f(x - 1)} ${f(ys - R2 + 0.7)}`, LITC, 0.8, 0.55);
       // 이맛돌(쐐기돌)
-      s += c.p(poly([pol([x, ys], r - 0.5, -100), pol([x, ys], R2 + 1.2, -104), pol([x, ys], R2 + 1.2, -76), pol([x, ys], r - 0.5, -80)]), o.key || hs(st, 0.15), 1.6);
+      s += c.p(poly([pol([x, ys], r - 0.5, -100), pol([x, ys], R2 + 1.2, -104), pol([x, ys], R2 + 1.2, -76), pol([x, ys], r - 0.5, -80)]), o.key || hs(st, 0.15), 1.4, ist(o.key || st, 0.8));
     }
-    const inner = open > 0 ? c.def('gateLit', (id) => c.rgc(id, [[0, '#ffcf7a'], [0.35, '#a8602a'], [0.75, '#3a2018'], [1, '#140c0c']], 0.5, 0.95, 0.9)) : c.def('gateIn', (id) => c.rgc(id, [[0, '#2a2018'], [0.7, '#140e10'], [1, '#0a0608']], 0.5, 0.8, 0.8));
+    const inner = open > 0 ? c.def('gateLit', (id) => c.rgc(id, [[0, '#ffd88a'], [0.35, '#b8662a'], [0.75, '#3a2018'], [1, '#140c0c']], 0.5, 0.95, 0.9)) : c.def('gateIn', (id) => c.rgc(id, [[0, '#2a2018'], [0.7, '#140e10'], [1, '#0a0608']], 0.5, 0.8, 0.8));
     s += c.p(d, inner, 0);
     if (open > 0 && o.inside) s += clip(c, d, o.inside);
     const wood = o.wood || M.wood;
@@ -631,25 +660,27 @@
       for (let by2 = ys - r + 3; by2 < yb + 2; by2 += 4) bars += `M${f(x - r)} ${f(by2 - lift)}H${f(x + r)}`;
       let pts = '';
       for (let bx = x - r + 2.2; bx < x + r; bx += 3.4) pts += `M${f(bx - 0.9)} ${f(yb - lift + 1.5)}L${f(bx)} ${f(yb - lift + 3.4)}L${f(bx + 0.9)} ${f(yb - lift + 1.5)}Z`;
-      s += clip(c, d, c.ln(bars, OL, 2.6) + c.ln(bars, M.ironL, 1.3) + c.p(pts, M.iron, 1));
+      s += clip(c, d, c.ln(bars, OL, 2.6) + c.ln(bars, M.ironL, 1.3) + c.ln(bars.replace(/M([\d.]+) /g, (m0, xx) => `M${f(+xx - 0.35)} `), '#dfe6ee', 0.4, 0.7) + c.p(pts, M.iron, 1));
     } else {
       const leafW = [w * 0.5, w * 0.3, w * 0.11][open];
-      const band = (x0, x1) => c.ln(`M${f(x0)} ${f(ys + 1.5)}H${f(x1)}M${f(x0)} ${f(yb - 4.5)}H${f(x1)}`, M.iron, 1.5);
-      const leaf = (x0, x1, sd) => clip(c, d, planks(c, `M${f(x0)} ${f(yb - ht - 2)}H${f(x1)}V${f(yb)}H${f(x0)}Z`, [x0, yb - ht - 2, x1, yb], open === 0 ? wood : hs(wood, -0.25), { pw: open === 0 ? 3 : 2.2, seed: sd, w: open === 0 ? 0 : 1.6 }) + band(x0, x1) + (open === 0 ? '' : ''));
+      const band = (x0, x1) => c.ln(`M${f(x0)} ${f(ys + 1.5)}H${f(x1)}M${f(x0)} ${f(yb - 4.5)}H${f(x1)}`, M.iron, 1.5) + c.ln(`M${f(x0)} ${f(ys + 1)}H${f(x1)}`, M.ironL, 0.5, 0.8);
+      const leaf = (x0, x1, sd) => clip(c, d, planks(c, `M${f(x0)} ${f(yb - ht - 2)}H${f(x1)}V${f(yb)}H${f(x0)}Z`, [x0, yb - ht - 2, x1, yb], open === 0 ? wood : hs(wood, -0.25), { pw: open === 0 ? 3 : 2.2, seed: sd, w: open === 0 ? 0 : 1.4, ol: inl(wood, 0.8) }) + band(x0, x1));
       s += leaf(x - r, x - r + leafW, 3) + leaf(x + r - leafW, x + r, 4);
-      if (open === 0) s += c.ln(`M${f(x)} ${f(ys - r + 1)}V${f(yb)}`, OL, 1.1) + c.ci(x - 1.8, yb - ht * 0.42, 1.2, 'none', 0, ` stroke="${M.iron}" stroke-width="${c.sw(1)}"`) + c.ci(x + 1.8, yb - ht * 0.42, 1.2, 'none', 0, ` stroke="${M.iron}" stroke-width="${c.sw(1)}"`);
+      if (open === 0) s += c.ln(`M${f(x)} ${f(ys - r + 1)}V${f(yb)}`, inl(wood, 0.85), 1.1) + c.ci(x - 1.8, yb - ht * 0.42, 1.2, 'none', 0, ` stroke="${M.iron}" stroke-width="${c.sw(1)}"`) + c.ci(x + 1.8, yb - ht * 0.42, 1.2, 'none', 0, ` stroke="${M.iron}" stroke-width="${c.sw(1)}"`);
       if (open > 0) s += c.p(d, OL, 0, ' opacity="0.12"');
     }
-    s += c.p(d, 'none', 2.4);
+    // 문 위 아치 안쪽 그늘(벽 두께)
+    s += clip(c, d, c.r(x - r, ys - r - 1, w, r * 0.9, '#1c1230', 0, 0, ' opacity="0.3"'));
+    s += c.p(d, 'none', 2.2);
     return s;
   }
   /** 화살 구멍(좁은 창) */
-  const slit = (c, x, y, ht, lit = 0.4) => c.r(x - 1.5, y - ht / 2, 3, ht, lit ? c.vg(c.h.mix('#20161a', '#ffcf6a', lit), 0, -0.3) : '#1a1216', 0.6, 1.8) + c.r(x - 2.6, y + ht / 2, 5.2, 1.6, '#c9c2b4', 0.3, 1.2);
+  const slit = (c, x, y, ht, lit = 0.4) => c.r(x - 1.5, y - ht / 2, 3, ht, lit ? c.vg(H0.mix('#20161a', '#ffcf6a', lit), 0, -0.3) : '#1a1216', 0.6, 1.6) + c.r(x - 2.6, y + ht / 2, 5.2, 1.6, c.vg('#d4ccbc', 0.25, -0.2), 0.3, 1, ist('#c9c2b4', 0.8)) + c.r(x - 2.2, y + ht / 2 + 1.9, 4.4, 1, '#1c1230', 0, 0, ' opacity="0.3"');
   /** 문지기 골렘 자세: 앞손에 창(쉬기: 세워 듦 → aim: 앞으로 기울여 겨눔 → fire: 머리 위로 치켜든 경례), 뒷팔에 둥근 방패 */
   function guardPose(pose, x, y) {
     return by(pose,
       { lean: 0, hB: [x - 7, y - 13], hF: [x + 7.5, y - 12], sa: -90 },
-      { lean: 5, hB: [x - 6.5, y - 14], hF: [x + 10, y - 17], sa: -52 },
+      { lean: 5, hB: [x - 6.5, y - 14], hF: [x + 8.5, y - 17], sa: -60 },
       { lean: -4, hB: [x - 7, y - 14], hF: [x + 6, y - 29], sa: -90 });
   }
   /** 문간에서 걸어 나오는 골렘(머리·어깨) */
@@ -678,7 +709,7 @@
           o += masonry(c, dd, [18, 60, 82, 114], M.rough, { rough: true, round: true, rowH: 6, bw: 8.5, bulge: 6, gap: 0.7, mortar: '#4e463c', seed: 52, bot: 0.4, top: 0.1, k1: 0.15 });
           o += mossPatch(c, 50, 70, 34, 9, 4) + mossPatch(c, 70, 86, 8, 3, 7);
           o += slit(c, 33, 86, 7, 0.5) + slit(c, 67, 86, 7, 0.5);
-          o += gate(c, 50, 106, 15, 22, open, { stone: '#a8a092', inside: emerging(c, 50, 107, 0.62, 'stone') });
+          o += gate(c, 50, 106, 15, 22, open, { stone: '#a8a092', inside: emerging(c, 50, 107, 0.66, 'stone') });
         } else {
           const L3 = L === 3;
           // 둥근 성탑: 다듬은 돌 벽 + 흉벽 + 뒤로 보이는 이끼 돔
@@ -698,27 +729,35 @@
           o += c.r(22, 74, 56, 2.4, OL, 0, 0, ' opacity="0.25"');
           o += slit(c, 31, 86, 8, 0.55) + slit(c, 69, 86, 8, 0.55);
           if (L3) {
+            // 횃불이 벽에 비추는 주황 빛
+            o += castLight(c, cylD(50, 72, 104, 29, 8.7), 36, 86, 11, 13, '#ffa040', 0.55) + castLight(c, cylD(50, 72, 104, 29, 8.7), 64, 86, 11, 13, '#ffa040', 0.5);
             // 횃불 받침
             [[36, 92], [64, 92]].forEach(([x, y]) => {
               o += c.ol(`M${x} ${y}V${y - 6}`, M.iron, 1.4) + c.p(`M${x - 2.4} ${y - 6}H${x + 2.4}L${x + 1.6} ${y - 3.6}H${x - 1.6}Z`, M.iron, 1.2);
               o += aura(c, x, y - 10, 6, 6, '#ffb347', 0.7) + RG.art._tw.flame(c, x, y - 6, 4.4, by(pose, 6, 7, 8));
             });
           }
-          o += gate(c, 50, 106, 18, 26, open, { stone: hs(st, 0.3), key: L3 ? E.color : null, wood: M.wood, inside: emerging(c, 50, 107, 0.72, 'stone') });
+          o += gate(c, 50, 106, 18, 26, open, { stone: hs(st, 0.3), key: L3 ? E.color : null, wood: M.wood, inside: emerging(c, 50, 107, 0.76, 'stone') });
           if (L3) o += crystal(c, 50, 76, 7, 10, E.color, 2) + c.ln('M44.5 93.5H55.5', M.gold, 1.6);
         }
-        // 문지기 골렘: 앞손에 창, 뒷팔에 방패
-        const gk = [0, 0.9, 1, 1][L];
-        const gx = L === 1 ? 76 : 80;
+        // 문이 열리면 안쪽 불빛이 문 앞 바닥에 비침
+        if (open) o += aura(c, 50, 107, 9 + open * 3, 3 + open, '#ffc870', 0.3 + open * 0.15);
+        // 문지기 골렘(4차: 20% 크게, 따뜻한 사암색 + 초록 띠): 앞손에 창, 뒷팔에 방패
+        const gk = [0, 1.1, 1.2, 1.2][L];
+        const gx = L === 1 ? 77 : 80;
         const gy = L === 1 ? 110 : 112;
         const GP = guardPose(pose, gx, gy);
         const sc = (p) => [gx + (p[0] - gx) * gk, gy + (p[1] - gy) * gk];
         const G = golemFig(c, { x: gx, y: gy, k: gk, kind: 'stone', lean: GP.lean, hands: [sc(GP.hB), sc(GP.hF)], bend: [1, pose === 'fire' ? -1 : 1], helm: L === 3 ? (cc, H, k) => cc.p(`M${f(H[0] - 6.2 * k)} ${f(H[1] - 1.2 * k)}Q${f(H[0])} ${f(H[1] - 10.5 * k)} ${f(H[0] + 6.2 * k)} ${f(H[1] - 1.2 * k)}Q${f(H[0])} ${f(H[1] - 3.4 * k)} ${f(H[0] - 6.2 * k)} ${f(H[1] - 1.2 * k)}Z`, cc.vg(M.gold, 0.35, -0.25), 1.8) : null });
         const hb = sc(GP.hB);
-        const shield = c.ci(hb[0] - 1, hb[1], 6 * gk, c.sg('#9a6a3a'), 2.4) + c.ci(hb[0] - 1, hb[1], 3.8 * gk, 'none', 0, ` stroke="#6a4424" stroke-width="${c.sw(1.2)}"`) + c.ci(hb[0] - 1, hb[1], 1.6 * gk, L >= 2 ? E.color : '#c9c2b4', 1.2);
-        const sp = spear(c, sc(GP.hF), GP.sa, 15 * gk, 12 * gk, L === 3 ? '#cfd6de' : '#8a8478');
+        // 둥근 나무 방패: 쇠 테 + 원소색 문양 + 왼쪽 위 반짝
+        const sx = hb[0] - 1;
+        const shield = c.ci(sx, hb[1], 6 * gk, c.sg('#b07a40'), 2.4) + c.ci(sx, hb[1], 5 * gk, 'none', 0, ` stroke="${M.ironL}" stroke-width="${c.sw(1.1)}"`)
+          + c.ln(`M${f(sx - 4.4 * gk)} ${f(hb[1])}H${f(sx + 4.4 * gk)}M${f(sx)} ${f(hb[1] - 4.4 * gk)}V${f(hb[1] + 4.4 * gk)}`, inl('#b07a40', 0.5), 0.8, 0.7)
+          + c.ci(sx, hb[1], 2 * gk, c.sg(L >= 2 ? E.color : '#d8d0c0'), 1.2, ist(E.color, 0.8)) + spec(c, sx - 2.6 * gk, hb[1] - 2.8 * gk, 0.8);
+        const sp = spear(c, sc(GP.hF), GP.sa, 14 * gk, 11 * gk, L === 3 ? '#dfe6ee' : '#a8a498');
         o += G.back + shield + G.body + sp + G.handB + G.front;
-        if (pose === 'fire') o += c.ln(`M${f(gx + 11)} ${f(gy - 34)}l3 -2.4M${f(gx + 12)} ${f(gy - 29)}l3.6 0`, '#fff', 1.5, 0.85);
+        if (pose === 'fire') o += c.ln(`M${f(gx + 10 * gk)} ${f(gy - 33 * gk)}l3 -2.4M${f(gx + 11 * gk)} ${f(gy - 28 * gk)}l3.6 0`, '#fff', 1.5, 0.85);
         return o;
       }
       if (v === 'A') {
@@ -741,27 +780,34 @@
         o += c.p('M50 52C56 54 61 54 63 53V63C63 71 57 76 50 79C43 76 37 71 37 63V53C39 54 44 54 50 52Z', c.vg('#6fae3e', 0.3, -0.25), 2.6);
         o += c.p('M42 70L48 60L51 65L54 62L58 70Z', c.vg(E.light, 0.2, -0.1), 1.6);
         o += gate(c, 50, 100, 20, 22, open, { stone: hs(gs, 0.2), portcullis: true, inside: emerging(c, 50, 101, 0.72, 'granite') });
-        // 문지기: 화강암 골렘. 앞손 방패, 뒷손 철퇴
+        // 문지기(4차: 15% 크게, 분홍빛 화강암 — 회녹색 성벽과 구별): 앞손 방패, 뒷손 철퇴
         const gx = 24;
         const gy = 105;
+        const K = 1.15;
+        const Z = (p) => [gx + (p[0] - gx) * K, gy + (p[1] - gy) * K];
         const GP = by(pose,
           { lean: 0, hB: [gx - 6, gy - 9], hF: [gx + 8, gy - 13], ma: 120 },
           { lean: -8, hB: [gx - 4, gy - 30], hF: [gx + 9, gy - 17], ma: -130 },
           { lean: 8, hB: [gx + 6, gy - 22], hF: [gx + 9.5, gy - 16], ma: -20 });
-        const G = golemFig(c, { x: gx, y: gy, k: 0.95, kind: 'granite', lean: GP.lean, hands: [GP.hB, GP.hF], bend: [1, 1] });
+        const hB = Z(GP.hB);
+        const hF = Z(GP.hF);
+        const G = golemFig(c, { x: gx, y: gy, k: 0.95 * K, kind: 'granite', lean: GP.lean, hands: [hB, hF], bend: [1, 1] });
         const mace = (() => {
-          const e = pol(GP.hB, 9, GP.ma);
+          const e = pol(hB, 9 * K, GP.ma);
           let sp = '';
-          for (let i = 0; i < 6; i++) sp += `M${pp(pol(e, 3.2, i * 60))}L${pp(pol(e, 5.4, i * 60 + 6))}`;
-          return c.ol(`M${pp(pol(GP.hB, -2, GP.ma))}L${pp(e)}`, '#6a4424', 2.2) + c.ln(sp, OL, 2.2) + c.ci(e[0], e[1], 3.8, c.sg('#8a7a72'), 2.2);
+          for (let i = 0; i < 6; i++) sp += `M${pp(pol(e, 3.4 * K, i * 60))}L${pp(pol(e, 5.8 * K, i * 60 + 6))}`;
+          return c.ol(`M${pp(pol(hB, -2, GP.ma))}L${pp(e)}`, '#7a5030', 2.2) + c.ln(sp, OL, 2.4) + c.ln(sp, '#cfc8c0', 1) + c.ci(e[0], e[1], 4 * K, c.sg('#9a8a80'), 2.2) + spec(c, e[0] - 1.4, e[1] - 1.6, 0.9);
         })();
-        const sx = GP.hF[0] + 1;
-        const sy = GP.hF[1];
-        const shield = c.p(`M${f(sx - 6)} ${f(sy - 11)}H${f(sx + 6)}Q${f(sx + 8)} ${f(sy - 11)} ${f(sx + 8)} ${f(sy - 9)}V${f(sy + 6)}Q${f(sx + 8)} ${f(sy + 11)} ${f(sx + 1)} ${f(sy + 14)}Q${f(sx - 6)} ${f(sy + 11)} ${f(sx - 6)} ${f(sy + 6)}Z`, c.cg('#9c8a82'), 2.8)
-          + c.p(`M${f(sx - 6)} ${f(sy - 10)}H${f(sx + 8)}V${f(sy - 7)}C${f(sx + 4)} ${f(sy - 9)} ${f(sx - 2)} ${f(sy - 9)} ${f(sx - 6)} ${f(sy - 7)}Z`, c.vg('#6fae3e', 0.2, -0.2), 1.6)
-          + aura(c, sx + 1, sy + 1, 7, 7, '#8dffb0', pose === 'fire' ? 0.9 : 0.35) + c.p(`M${f(sx + 1)} ${f(sy - 4)}l4 5.5l-4 6.5l-4 -6.5z`, c.sg('#6dff9a'), 1.8)
-          + rivets(c, [[sx - 4, sy - 5], [sx + 6, sy - 5], [sx - 4, sy + 6], [sx + 6, sy + 6]], '#d8d0c8', 0.6);
-        if (pose === 'fire') o += G.back + G.body + shield + G.front + mace + G.handB + c.ln(`M${f(sx + 11)} ${f(sy - 10)}q4 9 0 18M${f(sx + 15)} ${f(sy - 13)}q6 12 0 24`, '#fff', 1.8, 0.85);
+        const sx = hF[0] + 1;
+        const sy = hF[1];
+        const u = (dx, dy) => `${f(sx + dx * K)} ${f(sy + dy * K)}`;
+        const shD = `M${u(-6, -11)}H${f(sx + 6 * K)}Q${u(8, -11)} ${u(8, -9)}V${f(sy + 6 * K)}Q${u(8, 11)} ${u(1, 14)}Q${u(-6, 11)} ${u(-6, 6)}Z`;
+        const shield = c.p(shD, c.cg('#a8968c'), 2.8)
+          + clip(c, shD, c.p(`M${u(-6, -10)}H${f(sx + 8 * K)}V${f(sy - 7 * K)}C${u(4, -9)} ${u(-2, -9)} ${u(-6, -7)}Z`, c.vg('#74b23e', 0.25, -0.2), 1.2, ' stroke="#2c4a1c"'))
+          + c.ln(`M${u(-4.6, 4)}V${f(sy - 6 * K)}`, LITC, 0.9, 0.5)
+          + aura(c, sx + 1, sy + 1, 7 * K, 7 * K, '#8dffb0', pose === 'fire' ? 0.9 : 0.35) + c.p(`M${u(1, -4)}l${f(4 * K)} ${f(5.5 * K)}l${f(-4 * K)} ${f(6.5 * K)}l${f(-4 * K)} ${f(-6.5 * K)}z`, c.sg('#6dff9a'), 1.6, ist('#3a9a5a', 0.7)) + spec(c, sx - 0.4, sy - 0.6, 0.8)
+          + rivets(c, [[sx - 4 * K, sy - 5 * K], [sx + 6 * K, sy - 5 * K], [sx - 4 * K, sy + 6 * K], [sx + 6 * K, sy + 6 * K]], '#e0d8d0', 0.65);
+        if (pose === 'fire') o += G.back + G.body + shield + G.front + mace + G.handB + c.ln(`M${f(sx + 12 * K)} ${f(sy - 10)}q4 9 0 18M${f(sx + 16 * K)} ${f(sy - 13)}q6 12 0 24`, '#fff', 1.8, 0.85);
         else o += G.back + mace + G.handB + G.body + shield + G.front;
         return o;
       }
@@ -779,22 +825,27 @@
       o += sp(50, 4, 56, 16);
       o += gate(c, 50, 100, 18, 24, open, { stone: '#5a5468', key: E.color, wood: '#2e2838', inside: emerging(c, 50, 101, 0.7, 'obsidian') });
       o += c.ol('M38 60L62 84M62 60L38 84', M.silver, 2.2) + c.ol('M41 63L36 58M59 63L64 58', M.gold, 2.4);
-      // 문지기 검사
+      // 문지기 검사(4차: 15% 크게, 밝은 보랏빛 흑요석 + 초록 눈빛)
       const gx = 27;
       const gy = 105;
+      const K = 1.15;
+      const Z = (p) => [gx + (p[0] - gx) * K, gy + (p[1] - gy) * K];
       const GP = by(pose,
         { lean: 0, hB: [gx - 6, gy - 10], hF: [gx + 7, gy - 11], ba: 100 },
         { lean: -3, hB: [gx - 5, gy - 12], hF: [gx + 6, gy - 21], ba: -88 },
         { lean: 10, hB: [gx - 7, gy - 11], hF: [gx + 12, gy - 17], ba: -12 });
-      const G = golemFig(c, { x: gx, y: gy, k: 0.92, kind: 'obsidian', lean: GP.lean, hands: [GP.hB, GP.hF], bend: [1, 1] });
+      const hB = Z(GP.hB);
+      const hF = Z(GP.hF);
+      const G = golemFig(c, { x: gx, y: gy, k: 0.92 * K, kind: 'obsidian', lean: GP.lean, hands: [hB, hF], bend: [1, 1] });
       const blade = (() => {
-        const e = pol(GP.hF, 21, GP.ba);
-        const s0 = pol(GP.hF, 3, GP.ba);
-        return c.p(`M${pp(pol(s0, 1.8, GP.ba + 90))}L${pp(pol(e, 0.8, GP.ba + 90))}L${pp(pol(e, 3, GP.ba))}L${pp(pol(e, 0.8, GP.ba - 90))}L${pp(pol(s0, 1.8, GP.ba - 90))}Z`, c.vg('#3a3450', 0.5, -0.1), 2.2)
-          + c.ln(`M${pp(pol(s0, 0.6, GP.ba + 90))}L${pp(pol(e, 0.2, GP.ba + 90))}`, '#d8d0ff', 1, 0.9)
-          + c.ol(`M${pp(pol(GP.hF, 2.6, GP.ba + 90))}L${pp(pol(GP.hF, 2.6, GP.ba - 90))}`, '#8dffb0', 1.6);
+        const e = pol(hF, 21 * K, GP.ba);
+        const s0 = pol(hF, 3, GP.ba);
+        return c.p(`M${pp(pol(s0, 1.9, GP.ba + 90))}L${pp(pol(e, 0.8, GP.ba + 90))}L${pp(pol(e, 3.2, GP.ba))}L${pp(pol(e, 0.8, GP.ba - 90))}L${pp(pol(s0, 1.9, GP.ba - 90))}Z`, c.vg('#4a4268', 0.55, -0.15), 2.2)
+          + c.ln(`M${pp(pol(s0, 0.6, GP.ba + 90))}L${pp(pol(e, 0.2, GP.ba + 90))}`, '#e8e2ff', 1, 0.95)
+          + c.ln(`M${pp(pol(s0, 0.7, GP.ba - 90))}L${pp(pol(e, 0.3, GP.ba - 90))}`, G.k ? '#8dffb0' : '#8dffb0', 0.6, 0.7)
+          + c.ol(`M${pp(pol(hF, 2.8, GP.ba + 90))}L${pp(pol(hF, 2.8, GP.ba - 90))}`, '#8dffb0', 1.6) + spec(c, ...pol(e, 1, GP.ba), 0.8);
       })();
-      if (pose === 'fire') o += c.p(`M${f(gx + 6)} ${f(gy - 40)}Q${f(gx + 38)} ${f(gy - 30)} ${f(gx + 34)} ${f(gy - 6)}Q${f(gx + 30)} ${f(gy - 26)} ${f(gx + 6)} ${f(gy - 40)}Z`, '#d8d0ff', 0, ' opacity="0.7"');
+      if (pose === 'fire') o += c.p(`M${f(gx + 6)} ${f(gy - 44)}Q${f(gx + 42)} ${f(gy - 32)} ${f(gx + 37)} ${f(gy - 5)}Q${f(gx + 33)} ${f(gy - 28)} ${f(gx + 6)} ${f(gy - 44)}Z`, '#d8d0ff', 0, ' opacity="0.7"');
       o += G.back + G.handB + G.body + blade + G.front;
       return o;
     },

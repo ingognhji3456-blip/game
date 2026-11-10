@@ -28,6 +28,7 @@ const ART = [
   'js/art/heroes.js',
   'js/art/terrain.js',
   'js/art/icons.js',
+  'js/art/scenes.js',
 ];
 
 function loadGame({ quiet = true, extra = [] } = {}) {

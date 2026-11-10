@@ -89,9 +89,9 @@
       if (A.open) {
         const E = pts[1];
         const ang = Math.atan2(H[1] - E[1], H[0] - E[0]) / D2R;
-        return G(c.e(H[0] + 0.8 * k, H[1], 2.5 * k, 1.5 * k, col, 2) + c.e(H[0] - 0.4 * k, H[1] - 1.4 * k, 1.1 * k, 0.8 * k, col, 1.6), `rotate(${f(ang)} ${f(H[0])} ${f(H[1])})`);
+        return G(c.e(H[0] + 0.8 * k, H[1], 2.7 * k, 1.65 * k, col, 2) + c.e(H[0] - 0.4 * k, H[1] - 1.5 * k, 1.2 * k, 0.85 * k, col, 1.6) + c.ln(`M${f(H[0] + 0.4 * k)} ${f(H[1] - 0.2 * k)}h${f(2 * k)}`, c.inkc(col, 0.45), 1, 0.8), `rotate(${f(ang)} ${f(H[0])} ${f(H[1])})`);
       }
-      return c.ci(H[0], H[1], 1.85 * k, col, 2) + c.ln(`M${f(H[0] - 0.9 * k)} ${f(H[1] - 0.2 * k)}h${f(1.4 * k)}`, h.shade(col, -0.35), 1.5, 0.8);
+      return c.ci(H[0], H[1], 2.05 * k, c.sg(col), 2) + c.ln(`M${f(H[0] - 1 * k)} ${f(H[1] - 0.2 * k)}h${f(1.5 * k)}`, c.inkc(col, 0.45), 1.2, 0.85);
     };
     const fp = armPts(Sf, P.far);
     const np = armPts(Sn, P.near);
@@ -127,61 +127,71 @@
     /* 몸통 */
     let body = '';
     body += c.p(TP('M-5 -14.4Q0 -16 4.4 -14.6Q6.2 -12.5 5.8 -9L4.6 -2L5.2 1.8Q0 3.2 -5.2 1.8L-4.7 -2L-5.9 -9Q-6.2 -12.6 -5 -14.4Z'), c.vg(tun, 0.22, -0.22), 2.6);
-    body += c.p(TP('M2.4 -15Q6.2 -12.5 5.8 -9L4.6 -2L5.2 1.8Q3.6 2.5 2 2.6Q3.2 -6 2.4 -15Z'), tunD, 0, ' opacity="0.45"');
-    if (P.chest) body += c.p(TP('M-4.6 -13.6Q0 -15 4.2 -13.8Q5.4 -11 4.9 -7.6Q0 -6.2 -4.9 -7.6Q-5.4 -11 -4.6 -13.6Z'), c.vg(P.chest, 0.35, -0.2), 2)
-      + c.ln(TP('M-3 -9.8Q0 -9 3.2 -9.6'), h.shade(P.chest, -0.35), 1.5, 0.8);
-    if (P.apron) body += c.p(TP('M-3.6 -11.6L3.8 -11.8L5 3.6Q0 5 -4.8 3.6Z'), c.vg(P.apron, 0.2, -0.25), 2.2)
-      + c.ln(TP('M-3.4 -11.4L-1.6 -15.2M3.6 -11.6L2.6 -15.4'), h.shade(P.apron, -0.3), 1.5);
-    else body += c.ln(TP('M-1.6 -15.2L1 -12.6L3.2 -15'), tunD, 1.5) + c.ln(TP('M-2.4 -1Q-1.6 0.8 -2.6 2.2'), tunD, 1.5, 0.7);
-    if (P.belt !== false) body += c.p(TP('M-4.85 -3.4L4.75 -3.4L4.95 -0.9L-5.05 -0.9Z'), P.belt || M.woodD, 1.8) + c.r(W(2.2, -3.4)[0], W(2.2, -3.4)[1], 1.6 * k, 2.4 * k, M.gold, 0.3, 1.4);
+    body += c.p(TP('M2.4 -15Q6.2 -12.5 5.8 -9L4.6 -2L5.2 1.8Q3.6 2.5 2 2.6Q3.2 -6 2.4 -15Z'), c.dk(tun, 0.42), 0, ' opacity="0.5"');
+    body += c.ln(TP('M5.3 -11.6Q5.5 -8.4 4.5 -3.4'), h.mix(tun, '#c4d2f0', 0.55), 1, 0.75);
+    body += c.ln(TP('M-4.2 -13.4Q-4.9 -10 -4.2 -6'), c.lt(tun, 0.5), 1, 0.7);
+    if (P.chest) body += c.p(TP('M-4.6 -13.6Q0 -15 4.2 -13.8Q5.4 -11 4.9 -7.6Q0 -6.2 -4.9 -7.6Q-5.4 -11 -4.6 -13.6Z'), c.vg(P.chest, 0.35, -0.2), 1.6, c.ink(P.chest))
+      + c.ln(TP('M-3 -9.8Q0 -9 3.2 -9.6'), c.inkc(P.chest, 0.4), 1.2, 0.8) + c.ln(TP('M-3.4 -12.6Q-1 -13.6 1.6 -13.4'), c.lt(P.chest, 0.6), 1, 0.8);
+    if (P.apron) body += c.p(TP('M-3.6 -11.6L3.8 -11.8L5 3.6Q0 5 -4.8 3.6Z'), c.vg(P.apron, 0.2, -0.25), 1.6, c.ink(P.apron))
+      + c.ln(TP('M-3.4 -11.4L-1.6 -15.2M3.6 -11.6L2.6 -15.4'), c.inkc(P.apron, 0.45), 1.4) + c.ln(TP('M-1.2 -6Q-0.6 -1 -1.6 3'), c.inkc(P.apron, 0.35), 1, 0.7);
+    else body += c.ln(TP('M-1.6 -15.2L1 -12.6L3.2 -15'), c.inkc(tun, 0.5), 1.3) + c.ln(TP('M-2.4 -1Q-1.6 0.8 -2.6 2.2M1.6 -7.4Q2.4 -5 1.8 -3.6'), c.inkc(tun, 0.4), 1.1, 0.75);
+    if (P.belt !== false) body += c.p(TP('M-4.85 -3.4L4.75 -3.4L4.95 -0.9L-5.05 -0.9Z'), P.belt || M.woodD, 1.4, c.ink(P.belt || M.woodD, 0.5)) + c.r(W(2.2, -3.4)[0], W(2.2, -3.4)[1], 1.6 * k, 2.4 * k, M.gold, 0.3, 1, c.ink(M.gold)) + c.ci(W(2.6, -2.8)[0], W(2.6, -2.8)[1], 0.35 * k, '#fff', 0, ' opacity="0.8"');
     if (P.trim) body += c.ln(TP('M-5 -14.4Q0 -16 4.4 -14.6'), P.trim, 1.8);
     /* 목 + 머리 */
     const HC = W(1.2, -20.4);
-    body += c.p(TP('M-0.4 -17L2.2 -17L2.5 -14.6L-0.7 -14.6Z'), h.shade(skin, -0.2), 1.6);
-    body += c.ci(HC[0], HC[1], 4.6 * k, c.sg(skin), 2.6);
+    body += c.p(TP('M-0.4 -17L2.2 -17L2.5 -14.6L-0.7 -14.6Z'), c.dk(skin, 0.25), 1.2, c.ink(skin));
+    /* 머리(조금 크게 — 작은 크기에서도 얼굴·모자가 읽히게) */
+    const hs = P.hs || 1.1;
+    let head = '';
+    head += c.ci(HC[0], HC[1], 4.6 * k, c.sg(skin), 2.6);
     const gear = P.head || 'hair';
     const gc = P.headCol || '#6a3a24';
     const ear = W(-0.6, -19.8);
-    if (gear !== 'hood' && gear !== 'fur') body += c.e(ear[0], ear[1], 1.1 * k, 1.5 * k, h.shade(skin, -0.1), 1.6);
+    if (gear !== 'hood' && gear !== 'fur') head += c.e(ear[0], ear[1], 1.1 * k, 1.5 * k, c.dk(skin, 0.12), 1.2, c.ink(skin));
     /* 얼굴: 눈(오른쪽을 봄)·코·입 */
     const eye = W(3.7, -20.9);
-    body += c.e(eye[0], eye[1], 0.75 * k, 1.05 * k, '#2a1a2e', 0);
-    if (P.squint) body += c.ln(TP('M2.7 -22L4.6 -21.5'), '#2a1a2e', 1.5);
-    else body += c.ln(TP('M2.6 -22.6Q3.8 -23.3 4.9 -22.6'), h.shade(gc, -0.2), 1.5, 0.9);
-    body += c.p(TP('M5.6 -20.6Q6.6 -19.4 5.7 -18.6Z'), h.shade(skin, -0.12), 1.4);
-    body += c.ln(TP(P.shout ? 'M4.2 -17.6L5.2 -17.2' : 'M3.9 -17.4Q4.6 -17 5.2 -17.4'), '#6a2a2a', 1.5);
-    if (P.beard) body += c.p(TP('M0.2 -18.6Q0.6 -14.4 3.8 -14.4Q6.4 -14.8 6.2 -18.2Q5 -17 3.4 -17.6Q1.8 -17.2 0.2 -18.6Z'), c.vg(P.beard, 0.2, -0.2), 1.8);
+    head += c.e(eye[0], eye[1], 0.75 * k, 1.05 * k, '#2a1a2e', 0) + c.ci(eye[0] + 0.2 * k, eye[1] - 0.4 * k, 0.28 * k, '#ffffff', 0, ' opacity="0.9"');
+    const ck = W(3.4, -18.4);
+    head += c.e(ck[0], ck[1], 1.1 * k, 0.7 * k, '#e8826a', 0, ' opacity="0.45"');
+    if (P.squint) head += c.ln(TP('M2.7 -22L4.6 -21.5'), '#2a1a2e', 1.5);
+    else head += c.ln(TP('M2.6 -22.6Q3.8 -23.3 4.9 -22.6'), h.shade(gc, -0.2), 1.5, 0.9);
+    head += c.p(TP('M5.6 -20.6Q6.6 -19.4 5.7 -18.6Z'), c.dk(skin, 0.1), 1.1, c.ink(skin));
+    head += c.ln(TP(P.shout ? 'M4.2 -17.6L5.2 -17.2' : 'M3.9 -17.4Q4.6 -17 5.2 -17.4'), '#6a2a2a', 1.5);
+    if (P.beard) head += c.p(TP('M0.2 -18.6Q0.6 -14.4 3.8 -14.4Q6.4 -14.8 6.2 -18.2Q5 -17 3.4 -17.6Q1.8 -17.2 0.2 -18.6Z'), c.vg(P.beard, 0.2, -0.2), 1.6, c.ink(P.beard, 0.5)) + c.ln(TP('M2 -16.6Q3 -15.4 4.4 -15.6'), c.lt(P.beard, 0.4), 1, 0.7);
     if (gear === 'hood') {
-      body += c.p(TP('M5.8 -22.4Q5 -26.9 0.8 -26.8Q-4.4 -26.6 -5.4 -21.8Q-6.2 -17.6 -5 -14.8L-1.6 -15.2Q-2.8 -18 -2 -21.2Q0.6 -24.2 5.8 -22.4Z'), c.vg(gc, 0.2, -0.25), 2.4);
-      body += c.p(TP('M-4.2 -25Q-7.6 -25.4 -8.6 -21.6Q-6.6 -22.6 -5.4 -21.6Z'), h.shade(gc, -0.15), 2);
-      body += c.p(TP('M-5.8 -16Q0 -18 5.2 -15.6Q6 -13.2 4.2 -12.2Q0 -13.4 -5.8 -12.4Q-6.6 -14.2 -5.8 -16Z'), c.vg(gc, 0.15, -0.25), 2.2);
+      head += c.p(TP('M5.8 -22.4Q5 -26.9 0.8 -26.8Q-4.4 -26.6 -5.4 -21.8Q-6.2 -17.6 -5 -14.8L-1.6 -15.2Q-2.8 -18 -2 -21.2Q0.6 -24.2 5.8 -22.4Z'), c.vg(gc, 0.2, -0.25), 2.4);
+      head += c.p(TP('M-4.2 -25Q-7.6 -25.4 -8.6 -21.6Q-6.6 -22.6 -5.4 -21.6Z'), h.shade(gc, -0.15), 2);
+      head += c.p(TP('M-5.8 -16Q0 -18 5.2 -15.6Q6 -13.2 4.2 -12.2Q0 -13.4 -5.8 -12.4Q-6.6 -14.2 -5.8 -16Z'), c.vg(gc, 0.15, -0.25), 2.2);
     } else if (gear === 'helm') {
-      body += c.p(TP('M-3.8 -21.2Q-3.8 -26.4 1.4 -26.4Q6.6 -26.4 6.4 -21.2Z'), c.vg(gc, 0.45, -0.2), 2.4);
-      body += c.p(TP('M-4.4 -21.8L6.8 -21.8L6.8 -20.2L-4.4 -20.2Z'), h.shade(gc, -0.15), 1.8);
-      body += c.p(TP('M4.9 -20.6L6 -20.6L5.8 -17.8L5.1 -17.8Z'), h.shade(gc, -0.1), 1.4);
-      body += c.ln(TP('M-1.8 -24.4Q0 -25.6 2.2 -25.6'), '#fff', 1.5, 0.6);
-      if (P.plume) body += c.p(TP('M0.4 -26Q-3 -30.4 -8.4 -28.6Q-5.2 -27.6 -4.2 -25.4Z'), c.vg(P.plume, 0.2, -0.2), 1.8);
+      head += c.p(TP('M-3.8 -22.4Q-3.8 -27.6 1.4 -27.6Q6.6 -27.6 6.4 -22.4Z'), c.vg(gc, 0.45, -0.2), 2.4);
+      head += c.p(TP('M-4.4 -23.1L6.8 -23.1L6.8 -21.6L-4.4 -21.6Z'), c.dk(gc, 0.15), 1.8);
+      head += c.p(TP('M5 -21.8L6.1 -21.8L5.9 -19L5.2 -19Z'), c.dk(gc, 0.1), 1.1, c.ink(gc));
+      head += c.ci(...W(-2.6, -22.35), 0.45 * k, c.lt(gc, 0.6), 0) + c.ci(...W(1.2, -22.35), 0.45 * k, c.lt(gc, 0.6), 0);
+      head += c.ln(TP('M-1.8 -25.6Q0 -26.8 2.2 -26.8'), '#fff', 1.5, 0.6);
+      if (P.plume) head += c.p(TP('M0.4 -27.2Q-3 -31.6 -8.4 -29.8Q-5.2 -28.8 -4.2 -26.6Z'), c.vg(P.plume, 0.2, -0.2), 1.8);
     } else if (gear === 'cap') {
-      body += c.p(TP('M-3.9 -21Q-3.6 -25.9 1.3 -25.8Q5.8 -25.6 6 -22L7.8 -21.2L-3.9 -20.6Z'), c.vg(gc, 0.25, -0.25), 2.2);
-      body += c.ln(TP('M-2 -24.4Q0.6 -25.2 3.4 -24.6'), h.shade(gc, 0.3), 1.5, 0.7);
+      head += c.p(TP('M-3.9 -21.8Q-3.6 -26.7 1.3 -26.6Q5.8 -26.4 6 -22.8L7.8 -22L-3.9 -21.4Z'), c.vg(gc, 0.25, -0.25), 2.2);
+      head += c.ln(TP('M-2 -25.2Q0.6 -26 3.4 -25.4'), c.lt(gc, 0.4), 1.2, 0.7);
     } else if (gear === 'goggles') {
-      body += c.p(TP('M-3.9 -21Q-3.6 -25.9 1.3 -25.8Q5.8 -25.6 6 -21.4L-3.9 -20.6Z'), c.vg(gc, 0.25, -0.25), 2.2);
-      body += c.ln(TP('M-4 -22.4L5.6 -23.4'), '#3a2a24', 1.8);
+      head += c.p(TP('M-3.9 -21Q-3.6 -25.9 1.3 -25.8Q5.8 -25.6 6 -21.4L-3.9 -20.6Z'), c.vg(gc, 0.25, -0.25), 2.2);
+      head += c.ln(TP('M-4 -22.4L5.6 -23.4'), '#3a2a24', 1.8);
       const g1 = W(4.3, -23.6);
-      body += c.ci(g1[0], g1[1], 1.7 * k, c.sg('#ffd27a'), 1.8);
+      head += c.ci(g1[0], g1[1], 1.7 * k, c.sg('#ffd27a'), 1.6) + c.ci(g1[0] - 0.5 * k, g1[1] - 0.5 * k, 0.45 * k, '#ffffff', 0);
     } else if (gear === 'fur') {
-      body += c.p(TP('M-4.4 -21.6Q-4.6 -28.6 1.2 -28.4Q6.8 -28.2 6.4 -21.6Z'), c.vg(gc, 0.25, -0.25), 2.4);
-      body += c.p(TP('M-5.6 -22.6Q-5.8 -20.4 -4.6 -19.6Q1 -20.8 6.8 -19.8Q7.8 -21 7.2 -22.8Q1 -24 -5.6 -22.6Z'), c.vg(P.furCol || '#f2ece0', 0.2, -0.2), 2);
-      body += c.p(TP('M-4.8 -20Q-6 -16.6 -4.4 -14.8L-1.8 -15.4Q-2.4 -17.6 -2 -20Z'), c.vg(P.furCol || '#f2ece0', 0.2, -0.2), 1.8);
+      head += c.p(TP('M-4.4 -23.4Q-4.6 -29.8 1.2 -29.6Q6.8 -29.4 6.4 -23.4Z'), c.vg(gc, 0.25, -0.25), 2.4);
+      head += c.p(TP('M-5.6 -24.4Q-5.8 -22.4 -4.6 -21.7Q1 -22.7 6.8 -21.9Q7.8 -23 7.2 -24.6Q1 -25.8 -5.6 -24.4Z'), c.vg(P.furCol || '#f2ece0', 0.2, -0.2), 2);
+      head += c.p(TP('M-4.8 -21.8Q-6 -17 -4.4 -14.8L-1.8 -15.4Q-2.4 -18 -2 -21.6Z'), c.vg(P.furCol || '#f2ece0', 0.2, -0.2), 1.4, c.ink(P.furCol || '#f2ece0', 0.45));
+      head += c.ln(TP('M-3.6 -24.2L-3.2 -22.8M-0.8 -24.6L-0.6 -23M2.2 -24.6L2.2 -23M5 -24.2L4.8 -22.8'), c.inkc(P.furCol || '#f2ece0', 0.3), 0.9, 0.8);
     } else if (gear === 'band') {
-      body += c.p(TP('M-3.8 -19.4Q-4.8 -25.8 1.2 -25.8Q5.8 -25.8 6 -22.6Q3 -23.2 0.4 -22.6Q-1.4 -21.6 -1.6 -18.6Z'), c.vg(gc, 0.2, -0.25), 2.2);
-      body += c.p(TP('M-4.2 -22.6L5.8 -23.4L5.9 -21.8L-4.1 -21Z'), P.bandCol || '#c23a22', 1.6) + c.p(TP('M-4 -22Q-6.6 -21.4 -7.4 -18.8Q-5.6 -19.6 -4.2 -20.8Z'), P.bandCol || '#c23a22', 1.6);
+      head += c.p(TP('M-3.8 -19.4Q-4.8 -25.8 1.2 -25.8Q5.8 -25.8 6 -22.6Q3 -23.2 0.4 -22.6Q-1.4 -21.6 -1.6 -18.6Z'), c.vg(gc, 0.2, -0.25), 2.2);
+      head += c.p(TP('M-4.2 -23.5L5.8 -24.3L5.9 -22.8L-4.1 -22Z'), P.bandCol || '#c23a22', 1.2, c.ink(P.bandCol || '#c23a22')) + c.p(TP('M-4 -22.9Q-6.6 -22.3 -7.4 -19.7Q-5.6 -20.5 -4.2 -21.7Z'), P.bandCol || '#c23a22', 1.6);
     } else if (gear === 'bald') {
-      body += c.ln(TP('M-2 -23.6Q0.6 -25 3 -24.6'), '#fff', 1.5, 0.5);
-      body += c.p(TP('M-3.8 -19.2Q-4.6 -22.4 -2.8 -23.4Q-2 -21.2 -1.6 -18.6Z'), c.vg(gc, 0.2, -0.2), 1.6);
+      head += c.ln(TP('M-2 -23.6Q0.6 -25 3 -24.6'), '#fff', 1.5, 0.5);
+      head += c.p(TP('M-3.8 -19.2Q-4.6 -22.4 -2.8 -23.4Q-2 -21.2 -1.6 -18.6Z'), c.vg(gc, 0.2, -0.2), 1.6);
     } else {
-      body += c.p(TP('M-3.8 -19.4Q-4.8 -25.8 1.2 -25.8Q5.8 -25.8 6 -22.4Q3 -23.4 0.4 -22.6Q-1.4 -21.6 -1.6 -18.6Z'), c.vg(gc, 0.2, -0.25), 2.2);
+      head += c.p(TP('M-3.8 -19.4Q-4.8 -25.8 1.2 -25.8Q5.8 -25.8 6 -22.4Q3 -23.4 0.4 -22.6Q-1.4 -21.6 -1.6 -18.6Z'), c.vg(gc, 0.2, -0.25), 2.2);
     }
+    body += hs === 1 ? head : G(head, `matrix(${hs} 0 0 ${hs} ${f(HC[0] * (1 - hs))} ${f(HC[1] * (1 - hs))})`);
     const out = { back, legs, farArm, farHand, body, nearArm, nearHand, fh: fp[2], nh: np[2], fe: fp[1], ne: np[1], W, k, head: HC };
     out.draw = (o = {}) => back + legs + farArm + (o.far || '') + farHand + body + (o.mid || '') + nearArm + (o.near || '') + nearHand + (o.front || '');
     return out;
@@ -334,7 +344,9 @@
   }
   /** 밧줄 감개 — (x,y)에 너비 w, 높이 ht */
   function lash(c, x, y, w = 6, ht = 4) {
-    return c.r(x - w / 2, y - ht / 2, w, ht, M.rope, 1, 1.6) + c.ln(`M${f(x - w / 2 + 1)} ${f(y - ht / 2 + 0.6)}L${f(x + w / 2 - 1)} ${f(y + ht / 2 - 0.6)}`, c.h.shade(M.rope, -0.35), 1.5);
+    let d = '';
+    for (let t = 0.25; t < 1; t += 0.25) d += `M${f(x - w / 2 + w * t - 0.8)} ${f(y - ht / 2 + 0.4)}L${f(x - w / 2 + w * t + 0.8)} ${f(y + ht / 2 - 0.4)}`;
+    return c.r(x - w / 2, y - ht / 2, w, ht, c.vg(M.rope, 0.3, -0.25), 1, 1.6) + c.ln(d, c.inkc(M.rope, 0.45), 1, 0.9) + c.ln(`M${f(x - w / 2 + 1)} ${f(y - ht / 2 + 0.8)}H${f(x + w / 2 - 1)}`, c.lt(M.rope, 0.5), 0.8, 0.8);
   }
   /** 널빤지 판(난간·벽): 세로 널(vert) 또는 가로 널 + 나뭇결 + 못 */
   function planks(c, x, y, w, ht, col, o = {}) {
@@ -401,17 +413,45 @@
     s += c.ln(sc, OLC, 2.2) + c.ln(`M${f(x - r * 0.55)} ${f(y - ht * 0.25)}L${f(x - 1.2)} ${f(y - ht + 3)}`, h.shade(col, 0.4), 1.6, 0.7);
     return s;
   }
-  /** 불 켜진 아치 창 — 가운데 x, 아래 yb, 너비 w, 높이 ht (창턱 그늘 포함) */
+  /** 불 켜진 아치 창 — 가운데 x, 아래 yb, 너비 w, 높이 ht (창턱 그늘 포함)
+   *  창틀은 벽 안쪽 부품이라 진한 윤곽색 대신 돌 색의 어두운 변형, 둘레 벽에 불빛이 번짐 */
   function litWindow(c, x, yb, w, ht, glow = '#ffc65a', o = {}) {
-    const h = c.h;
-    let s = c.p(`M${f(x - w / 2 - 1.4)} ${f(yb + 1)}V${f(yb - ht + w / 2)}Q${f(x)} ${f(yb - ht - w * 0.32 - 1.6)} ${f(x + w / 2 + 1.4)} ${f(yb - ht + w / 2)}V${f(yb + 1)}Z`, h.shade(o.frame || '#7a6a60', -0.1), 2.2);
-    s += c.p(`M${f(x - w / 2)} ${f(yb)}V${f(yb - ht + w / 2)}Q${f(x)} ${f(yb - ht - w * 0.25)} ${f(x + w / 2)} ${f(yb - ht + w / 2)}V${f(yb)}Z`, c.vg(glow, 0.35, -0.3), 1.8);
-    if (o.bars !== false) s += c.ln(`M${f(x)} ${f(yb - ht - w * 0.1)}V${f(yb)}M${f(x - w / 2)} ${f(yb - ht * 0.45)}H${f(x + w / 2)}`, h.shade(glow, -0.6), 1.5, 0.8);
-    s += c.r(x - w / 2 - 2, yb, w + 4, 2.2, h.shade(o.frame || '#7a6a60', 0.15), 0.6, 1.6) + c.r(x - w / 2 - 1, yb + 2.2, w + 2, 1.8, '#1c1426', 0, 0, ' opacity="0.3"');
+    const fr = o.frame || '#7a6a60';
+    let s = aura(c, x, yb - ht * 0.45, w * 1.25, ht * 0.85, glow, 0.38);
+    s += c.p(`M${f(x - w / 2 - 1.4)} ${f(yb + 1)}V${f(yb - ht + w / 2)}Q${f(x)} ${f(yb - ht - w * 0.32 - 1.6)} ${f(x + w / 2 + 1.4)} ${f(yb - ht + w / 2)}V${f(yb + 1)}Z`, c.vg(fr, 0.15, -0.2), 1.8, c.ink(fr, 0.65));
+    s += c.p(`M${f(x - w / 2)} ${f(yb)}V${f(yb - ht + w / 2)}Q${f(x)} ${f(yb - ht - w * 0.25)} ${f(x + w / 2)} ${f(yb - ht + w / 2)}V${f(yb)}Z`, c.vg(c.h.mix(glow, '#fff6d0', 0.35), 0.3, -0.35), 1.4, c.ink(fr, 0.75));
+    /* 안쪽 위 그늘(창 깊이) */
+    s += c.p(`M${f(x - w / 2)} ${f(yb - ht + w / 2)}Q${f(x)} ${f(yb - ht - w * 0.25)} ${f(x + w / 2)} ${f(yb - ht + w / 2)}V${f(yb - ht + w / 2 + 2)}Q${f(x)} ${f(yb - ht - w * 0.25 + 2.4)} ${f(x - w / 2)} ${f(yb - ht + w / 2 + 2)}Z`, c.dk(glow, 0.55), 0, ' opacity="0.55"');
+    if (o.bars !== false) s += c.ln(`M${f(x)} ${f(yb - ht - w * 0.1)}V${f(yb)}M${f(x - w / 2)} ${f(yb - ht * 0.45)}H${f(x + w / 2)}`, c.dk(glow, 0.65), 1.3, 0.85);
+    s += c.r(x - w / 2 - 2, yb, w + 4, 2.2, c.vg(c.lt(fr, 0.3), 0.3, -0.2), 0.6, 1.3, c.ink(fr, 0.65)) + c.r(x - w / 2 - 1, yb + 2.2, w + 2, 1.8, '#1c1426', 0, 0, ' opacity="0.3"');
+    return s;
+  }
+  /** 처마 등불(걸이 끝 (x,y)에 매달림) — 쇠 뚜껑·유리·불꽃 + 둘레에 따뜻한 빛 */
+  function lantern(c, x, y, k = 1) {
+    const P = (a, b) => `${f(x + a * k)} ${f(y + b * k)}`;
+    let s = aura(c, x, y + 6 * k, 10 * k, 10 * k, '#ffb347', 0.5);
+    s += c.p(`M${P(-3.2, 2.6)}L${P(3.2, 2.6)}L${P(2.5, 10)}L${P(-2.5, 10)}Z`, c.vg('#ffe08a', 0.45, -0.2), 1.8);
+    s += c.e(x, y + 6.8 * k, 1.1 * k, 2 * k, '#fff6c8', 0);
+    s += c.ln(`M${P(-1.1, 2.8)}L${P(-0.9, 9.8)}M${P(1.1, 2.8)}L${P(0.9, 9.8)}`, c.inkc(M.iron, 0.3), 1, 0.85);
+    s += c.p(`M${P(-4.2, 3)}L${P(0, -0.6)}L${P(4.2, 3)}Z`, c.vg(M.iron, 0.4, -0.25), 1.8) + c.r(x - 3 * k, y + 9.6 * k, 6 * k, 1.8 * k, M.iron, 0.5, 1.4);
+    s += c.ci(x - 1.4 * k, y + 1.7 * k, 0.45 * k, '#ffffff', 0, ' opacity="0.7"');
     return s;
   }
   /** 받침 위 탑 발치의 접지 그늘(받침 윗면에만) */
   const footShade = (c, x, y, rx, ry, a = 0.28) => c.e(x, y, rx, ry, '#1c1426', 0, ` opacity="${a}"`);
+  /** 원기둥을 도는 금속 띠(안쪽 부품: 진한 윤곽 대신 띠 색의 어두운 변형) + 윗모서리 반짝 띠 + 리벳 */
+  function bandI(c, cx, y1, y2, rx, ry, col, o = {}) {
+    let s = band(c, cx, y1, y2, rx, ry, c.cg(col), 1.6) ;
+    s = s.replace('/>', `${c.ink(col, 0.62)}/>`);
+    s += c.ln(ring(cx, y1 + 0.8, rx * 0.97, ry * 0.97), c.lt(col, 0.65), 0.9, 0.85);
+    if (o.rivets !== false && rx > 8) {
+      [-60, -30, 0, 30, 60].forEach((dg) => {
+        const a = dg * D2R;
+        s += c.ci(cx + rx * Math.sin(a), (y1 + y2) / 2 + ry * Math.cos(a), Math.min(0.9, (y2 - y1) * 0.22), dg < 20 ? c.lt(col, 0.6) : c.dk(col, 0.3), 0);
+      });
+    }
+    return s;
+  }
 
   /* =========================================================
    * 효과
@@ -457,7 +497,7 @@
     const A = ARCHER[pose];
     const P = man(c, {
       x, y, k, lean: A.lean, far: A.far, near: A.near,
-      tunic: G0.tunic || '#8f5a36', head: G0.head || 'hood', headCol: G0.headCol || '#c23a22', chest: G0.chest, trim: G0.trim,
+      tunic: G0.tunic || '#f2dca6', head: G0.head || 'hood', headCol: G0.headCol || '#e8402a', chest: G0.chest, trim: G0.trim,
       bracer: G0.bracer, cape: G0.cape, quiver: G0.quiver || M.wood, fletch: '#e0442a', plume: G0.plume, squint: pose === 'aim',
       glove: G0.glove,
     });
@@ -474,6 +514,7 @@
       const tip = [gx + 6.2 * k * (G0.long ? 1.25 : 1), gy - 0.25 * k];
       const bw = bowArt(c, gx, gy, hh, { ...bowOpt, st: 'draw', nock });
       const ar = arrowArt(c, nock[0], nock[1], tip[0], tip[1], { fire: true, k: k * 0.8 });
+      c.tip = tip;
       return { pre: P.back + P.farArm + P.body, post: bw + P.farHand + ar + P.nearArm + P.nearHand, tip };
     }
     const bw = bowArt(c, gx, gy, hh, { ...bowOpt, st: 'snap', ang: A.bow });
@@ -535,7 +576,7 @@
         o += planks(c, 18, 66, 64, 6, M.plank, { n: 1, nails: false }) + c.r(19, 72, 62, 2.6, '#1c1426', 0, 0, ' opacity="0.3"');
         /* 뒤 난간 */
         o += beam(c, 33, 66, 33, 38, 3.6, lgD) + beam(c, 67, 66, 67, 38, 3.6, lgD) + beam(c, 31, 42, 69, 42, 3, lgD, { light: false });
-        const A = archer(c, 48, 50, 1.5, pose);
+        const A = archer(c, 47, 51, 1.78, pose, { chest: '#a8502e' });
         o += A.pre;
         /* 앞 난간(가로 널) + 모서리 기둥 */
         o += planks(c, 21, 44, 58, 22, M.plank, { n: 3, under: true });
@@ -551,19 +592,19 @@
         o += stoneWall(c, 50, 76, 104, 23, 28, st, { ch: 7, moss: true, seed: 4 });
         o += litWindow(c, 50, 97, 8, 11, '#ffb347', { frame: h.shade(st, -0.2) });
         /* 뒤 기둥 + 뒤 난간 */
-        o += beam(c, 30, 74, 30, 18, 3.6, h.shade(M.wood, -0.3)) + beam(c, 70, 74, 70, 18, 3.6, h.shade(M.wood, -0.3));
+        o += beam(c, 30, 74, 30, 15, 3.6, h.shade(M.wood, -0.3)) + beam(c, 70, 74, 70, 15, 3.6, h.shade(M.wood, -0.3));
         o += beam(c, 29, 52, 71, 52, 3, h.shade(M.wood, -0.3), { light: false });
-        const A = archer(c, 45, 59.5, 1.15, pose, { chest: '#8a5a34', bracer: '#5a3020' });
+        const A = archer(c, 45, 62, 1.32, pose, { chest: '#9a5a30', bracer: '#5a3020' });
         o += A.pre;
         o += planks(c, 21, 54, 58, 19, M.plank, { n: 3, under: true });
         o += c.r(19, 72, 62, 4.4, c.vg(h.shade(M.wood, -0.1), 0.2, -0.3), 1, 2.4) + c.ln('M24 74.2H76', h.shade(M.wood, -0.45), 1.5);
-        o += beam(c, 22, 77, 22, 19, 4.6, M.wood) + beam(c, 78, 77, 78, 19, 4.6, M.wood);
+        o += beam(c, 22, 77, 22, 16, 4.6, M.wood) + beam(c, 78, 77, 78, 16, 4.6, M.wood);
         o += A.post;
         /* 지붕 + 처마 밑 그늘 + 등불 */
-        o += c.e(50, 20.5, 33, 6, '#1c1426', 0, ' opacity="0.3"');
-        o += tileCone(c, 50, 18, 72, 17, red, { rows: 3, scallops: 9, kE: 0.2 });
-        o += c.ci(50, 1.4, 2.4, M.gold, 2);
-        o += c.ol('M16 23V27', M.iron, 1.6) + c.p('M12.6 27H19.4L18.6 34H13.4Z', c.vg('#ffc65a', 0.3, -0.2), 2) + c.r(12, 26, 8, 2, M.iron, 0.5, 1.4);
+        o += c.e(50, 17.5, 33, 6, '#1c1426', 0, ' opacity="0.3"');
+        o += tileCone(c, 50, 15, 72, 17, red, { rows: 3, scallops: 9, kE: 0.2 });
+        o += c.ci(50, -1.6, 2.4, M.gold, 2);
+        o += c.ol('M16 20V24', M.iron, 1.6) + lantern(c, 16, 24);
         return o;
       }
       if (v === 3) {
@@ -572,11 +613,11 @@
         o += footShade(c, 50, 104, 31, 8.5);
         o += flag(c, 70, 30, 26, '#e0442a', 1, 14);
         o += stoneWall(c, 50, 48, 104, 26, 30, st, { ch: 7, moss: true, seed: 9 });
-        o += band(c, 50, 66, 69.5, 27.6, 8.3, c.vg(M.gold, 0.35, -0.25));
+        o += bandI(c, 50, 66, 69.5, 27.6, 8.3, M.gold);
         o += litWindow(c, 50, 92, 9, 13, '#ffb347', { frame: h.shade(st, -0.2) });
         o += c.r(34, 78, 3.4, 8, '#2c2024', 1, 1.6) + c.r(62.6, 78, 3.4, 8, '#2c2024', 1, 1.6);
         o += parapet(c, 50, 40, 30.5, st, 'back');
-        const A = archer(c, 45, 50, 1.18, pose, { head: 'helm', headCol: '#9aa3ae', chest: '#8a5a34', bracer: '#5a3020', cape: '#b8402a', bowTrim: M.gold, recurve: true });
+        const A = archer(c, 45, 51, 1.38, pose, { head: 'helm', headCol: '#b4bcc8', chest: '#9a5a30', bracer: '#5a3020', cape: '#d8402a', bowTrim: M.gold, recurve: true });
         o += A.pre;
         o += parapet(c, 50, 40, 30.5, st, 'front');
         o += A.post;
@@ -591,19 +632,19 @@
         o += footShade(c, 50, 99, 24, 6.5);
         /* 몸통(아래) */
         o += stoneWall(c, 50, 66, 99, 17, 22, dst, { ch: 6.5, bw: 10, seed: 11, moss: true });
-        o += band(c, 50, 80, 83, 19.8, 5.9, c.vg(M.gold, 0.35, -0.25));
+        o += bandI(c, 50, 80, 83, 19.8, 5.9, M.gold);
         o += litWindow(c, 50, 99, 8, 9, '#ffb347', { frame: h.shade(dst, -0.2), bars: false });
         o += c.r(48, 70, 4, 7, '#2c2024', 1.5, 1.6);
         /* 발코니 위로 솟은 가는 첨탑 + 화살 구멍 */
         o += stoneWall(c, 50, 30, 62, 9, 11, dst, { ch: 6, bw: 8, seed: 12 });
         o += c.r(48, 34, 4, 8, '#2c2024', 1.5, 1.6);
-        o += band(c, 50, 30, 33, 9.6, 2.9, c.vg(M.gold, 0.35, -0.25), 2);
+        o += bandI(c, 50, 30, 33, 9.6, 2.9, M.gold);
         o += tileCone(c, 50, 31, 26, 27, '#c8462c', { rows: 3, scallops: 6 });
         o += c.ol('M50 4.5V1', M.gold, 1.6) + c.ci(50, 3, 2.2, M.gold, 1.8);
         /* 발코니 바닥 + 돌 까치발 */
         o += c.p('M29 66L35 74H39L36 65Z', c.vg(dst, 0.2, -0.3), 2) + c.p('M71 66L65 74H61L64 65Z', c.vg(dst, 0.2, -0.3), 2);
         o += c.e(50, 60, 23, 6.8, c.vg(h.shade(dst, -0.25), 0, -0.2), 2.4);
-        const A = archer(c, 45, 58, 1.02, pose, { tunic: '#5a2a22', headCol: '#a8281a', chest: '#3a2a28', bracer: '#2a1a1a', cape: '#8a2a1a', long: 1.5, bowCol: '#4a2a1a', bowTrim: M.gold, recurve: true, trim: M.gold });
+        const A = archer(c, 45, 58, 1.2, pose, { tunic: '#f0d49a', headCol: '#c8281a', chest: '#4a2a28', bracer: '#2a1a1a', cape: '#a02418', long: 1.4, bowCol: '#4a2a1a', bowTrim: M.gold, recurve: true, trim: M.gold });
         o += A.pre;
         o += cyl(c, 50, 60, 67, 23, 6.8, c.cg(M.bronze), null);
         o += c.ln('M30 63.4V69M38 65V71.6M50 65.6V72.4M62 65V71.6M70 63.4V69', h.shade(M.bronze, -0.4), 1.5);
@@ -621,7 +662,8 @@
       o += litWindow(c, 25, 90, 7, 8, '#ffb347', { frame: h.shade(bst, -0.2) }) + litWindow(c, 75, 90, 7, 8, '#ffb347', { frame: h.shade(bst, -0.2) });
       /* 2층 마루 + 뒤 기둥 */
       o += beam(c, 10, 70, 10, 24, 4, h.shade(M.wood, -0.3)) + beam(c, 90, 70, 90, 24, 4, h.shade(M.wood, -0.3)) + beam(c, 8, 48, 92, 48, 3, h.shade(M.wood, -0.3), { light: false });
-      const As = [archer(c, 17, 58.5, 0.88, pose), archer(c, 44, 58, 0.92, pose, { head: 'helm', headCol: '#9aa3ae', chest: '#8a5a34', cape: '#b8402a' }), archer(c, 71, 58.5, 0.88, pose, { trail: 0.7 })];
+      const As = [archer(c, 16, 59, 1.02, pose, { chest: '#a8502e' }), archer(c, 44, 58.5, 1.06, pose, { head: 'helm', headCol: '#b4bcc8', chest: '#9a5a30', cape: '#d8402a' }), archer(c, 71, 59, 1.02, pose, { trail: 0.6, chest: '#a8502e' })];
+      if (As[1].tip) c.tip = As[1].tip;
       o += As.map((a) => a.pre).join('');
       o += planks(c, 6, 54, 88, 15, M.plank, { n: 2, under: true });
       o += c.ln('M20 55V68M35 55V68M50 55V68M65 55V68M80 55V68', h.shade(M.plank, -0.4), 1.5);
@@ -635,7 +677,7 @@
       o += c.ln('M20 22L27 4M35 24L39 3M50 25V3M65 24L61 3M80 22L73 4', h.shade(red, -0.4), 1.5, 0.7);
       o += c.ln('M2 23Q50 29 98 23', OLC, 2.4);
       o += c.ol('M17 3H83', h.shade(red, -0.2), 2.4);
-      o += c.ol('M7 24V28M93 24V28', M.iron, 1.4) + c.p('M3.6 28H10.4L9.6 35H4.4Z', c.vg('#ffc65a', 0.3, -0.2), 2) + c.p('M89.6 28H96.4L95.6 35H90.4Z', c.vg('#ffc65a', 0.3, -0.2), 2);
+      o += c.ol('M7 24V27M93 24V27', M.iron, 1.4) + lantern(c, 7, 27, 0.95) + lantern(c, 93, 27, 0.95);
       return o;
     },
   };
@@ -658,7 +700,7 @@
     const t = y - L;
     let b = c.ci(x, y, r * 1.12, c.sg(col), 3);
     b += frus(c, x, t + 4, y, r * 0.86, r, c.cg(col), null);
-    (o.bands || [0.45]).forEach((k) => { b += band(c, x, y - L * k - 2, y - L * k + 2, r * (0.9 + 0.1 * (1 - k)), r * 0.3, c.vg(o.trim || h.shade(col, 0.25), 0.3, -0.3), 2); });
+    (o.bands || [0.45]).forEach((k) => { b += bandI(c, x, y - L * k - 2, y - L * k + 2, r * (0.9 + 0.1 * (1 - k)), r * 0.3, o.trim || h.shade(col, 0.25)); });
     b += c.ln(`M${f(x - r * 0.62)} ${f(y - L * 0.2)}L${f(x - r * 0.55)} ${f(t + 8)}`, '#ffffff', 1.6, 0.35);
     b += c.ci(x - r * 0.45, y - r * 0.72, r * 0.16, '#2a1610', 1.5);
     if (o.dragon) {
@@ -703,7 +745,7 @@
     const legs = pose === 'fire' ? { near: [x - 4.4 * k, gy], far: [x + 3.4 * k, gy] } : pose === 'aim' ? { near: [x - 4 * k, gy], far: [x + 5.6 * k, gy] } : { near: [x - 2.6 * k, gy], far: [x + 3.2 * k, gy] };
     const P = man(c, {
       x, y, k, lean: A.lean, far: A.far, near: A.near, legs: G0.legs === false ? null : legs,
-      tunic: G0.tunic || '#b8643c', head: G0.head || 'cap', headCol: G0.headCol || '#5a3a24', apron: G0.apron, glove: G0.glove || '#7a5a3a',
+      tunic: G0.tunic || '#f8873a', head: G0.head || 'cap', headCol: G0.headCol || '#5a3a24', apron: G0.apron, chest: G0.chest, glove: G0.glove || '#6a4630',
       pants: '#4a3a34', boot: '#3a2a24', beard: G0.beard, shout: pose === 'fire', squint: pose !== 'idle',
     });
     let pole = '';
@@ -749,7 +791,7 @@
         /* 포 받침 볼(앞판) + 축 */
         o += c.p('M50 104L53 86Q61 80 69 86L72 104Z', c.vg(M.wood, 0.25, -0.25), 2.6) + c.ln('M55 92H67M54.4 98H67.6', h.shade(M.wood, -0.4), 1.5);
         o += c.ci(61, 88 + rec, 3.2, c.sg(M.ironL), 2) + c.ci(61, 88 + rec, 1.1, OLC, 0);
-        const G1 = gunner(c, 29, 90.5, 106, 1.2, pose, {}, g.hole);
+        const G1 = gunner(c, 28, 88, 106, 1.4, pose, {}, g.hole);
         o += G1.s;
         o += shells(c, 84, 104, 0.9);
         o += sandbag(c, 18, 106, 0.85) + sandbag(c, 70, 110, 0.85);
@@ -769,10 +811,10 @@
         o += g.s;
         o += c.p('M47 98L50 84Q58 78 66 84L69 98Z', c.vg(L3 ? h.shade(M.wood, -0.1) : M.wood, 0.25, -0.25), 2.6) + c.ln('M51 90H65', h.shade(M.wood, -0.4), 1.5);
         o += c.ci(58, 86 + rec, 3.2, c.sg(L3 ? M.gold : M.ironL), 2) + c.ci(58, 86 + rec, 1.1, OLC, 0);
-        const G1 = gunner(c, 28, 90, 106, 1.1, pose, L3 ? { head: 'helm', headCol: '#8a929e', apron: '#6a4a30', beard: '#6a3a24' } : { head: 'goggles', headCol: '#5a3a24', apron: '#6a4a30' }, g.hole);
+        const G1 = gunner(c, 27, 88, 106, 1.3, pose, L3 ? { head: 'helm', headCol: '#a8b0bc', chest: '#9a5a30', beard: '#7a3a20' } : { head: 'goggles', headCol: '#5a3a24' }, g.hole);
         o += G1.s;
         o += ringWall(c, 50, 86, 104, 38, 5, st, 'front', { seed: L3 ? 37 : 33, moss: !L3 });
-        if (L3) o += band(c, 50, 92, 95.5, 38, 11.4, c.vg(M.gold, 0.35, -0.25));
+        if (L3) o += bandI(c, 50, 92, 95.5, 38, 11.4, M.gold);
         if (pose === 'aim') o += spark(c, g.hole[0], g.hole[1] - 1, 5, '#ffd94a', 1.4) + embers(c, [[g.hole[0] + 4, g.hole[1] - 6, 1.6], [g.hole[0] - 3, g.hole[1] - 7, 1.3]]);
         if (pose === 'fire') o += mortarBlast(c, g, 1.05) + smoke(c, 70, 90, 4.5, '#cfc6be', 0.55);
         return o;
@@ -833,10 +875,10 @@
     const A = pose === 'idle'
       ? { near: { e: [-4.8, -7], h: [-2, -3] }, far: { e: [6.4, -7.6], h: [9.4, -5.4] }, lean: 2 }
       : { near: { e: [2.6, -10.6], h: [8, -11.6] }, far: { e: [6.2, -11.4], h: [11.6, -12.2] }, lean: -14 };
-    const k = 1.05;
+    const k = 1.25;
     const P = man(c, {
-      x: 38, y: 92, k, lean: A.lean, far: A.far, near: A.near, legs: pose === 'idle' ? { near: [35, 107], far: [42, 107] } : { near: [32, 107], far: [44, 107] },
-      tunic: '#b8643c', head: 'band', headCol: '#4a2a1a', apron: '#7a4a2a', glove: '#7a5a3a', pants: '#4a3a34', boot: '#3a2a24', squint: pose !== 'idle', shout: pose === 'fire',
+      x: 37, y: 90, k, lean: A.lean, far: A.far, near: A.near, legs: pose === 'idle' ? { near: [34, 107], far: [42, 107] } : { near: [31, 107], far: [44, 107] },
+      tunic: '#f8873a', head: 'band', headCol: '#4a2a1a', bandCol: '#ffd04a', glove: '#6a4630', pants: '#4a3a34', boot: '#3a2a24', squint: pose !== 'idle', shout: pose === 'fire',
     });
     const rope = pose === 'idle' ? `M${P2(P.fh)}Q${f(P.fh[0] + 10)} ${f(P.fh[1] + 10)} ${f(pv[0] - 6)} ${f(pv[1] + 2)}` : `M${P2(P.nh)}L${P2(P.fh)}L${f(pv[0] - 6)} ${f(pv[1] + 2)}`;
     o += P.draw({ far: c.ol(rope, M.rope, 1.4) });
@@ -866,7 +908,7 @@
     o += cyl(c, 58, 72, 99, 26, 7.8, c.cg(iron), null);
     o += c.ln([-60, -30, 0, 30, 60].map((d) => vseam(58, 74, 98, 26, 7.8, d + (pose === 'idle' ? 0 : 15))).join(''), h.shade(iron, -0.45), 1.6);
     o += [-70, -35, 0, 35, 70].map((d) => { const a = (d + (pose === 'idle' ? 0 : 15)) * D2R; return c.ci(58 + 26 * Math.sin(a), 77 + 7.8 * Math.cos(a), 1.2, M.ironL, 0); }).join('');
-    o += band(c, 58, 86, 90, 26, 7.8, c.vg(M.gold, 0.35, -0.25));
+    o += bandI(c, 58, 86, 90, 26, 7.8, M.gold);
     o += c.e(58, 72, 26, 7.8, c.vg(h.shade(iron, 0.3), 0.2, -0.05), 2.6) + c.e(58, 72, 18, 5.4, '#2c2430', 0);
     /* 포신 셋(뒤 → 앞) */
     const gs = [-24, 24, 0].map((d, i) => mortarGun(c, 57 + d * 0.3, 78 + rec + (i === 2 ? 2 : 0), i === 2 ? 42 : 36, i === 2 ? 10.5 : 9, base + d * 0.75, { bands: [0.35, 0.7], trim: M.gold, hot: pose !== 'idle' }));
@@ -882,18 +924,18 @@
     o += c.ol(`M${f(cx)} ${f(cy)}L${f(hx)} ${f(hy)}`, M.iron, 2) + c.ci(hx, hy, 2.2, M.wood, 1.6);
     o += c.ol('M37 82H40', M.iron, 2.2);
     /* 포수(왼쪽): 손잡이를 쥠, fire는 귀를 막음 */
-    const k = 1;
+    const k = 1.2;
     const A = pose === 'fire' ? GUNNER.fire : null;
-    const hand = rotP([hx, hy], [16, 92], 0);
-    const toL = (p) => [(p[0] - 16) / k, (p[1] - 92) / k];
+    const hand = rotP([hx, hy], [15, 90], 0);
+    const toL = (p) => [(p[0] - 15) / k, (p[1] - 90) / k];
     const leanG = pose === 'aim' ? 8 : 0;
-    const Pl = (p) => toL(rotP(p, [16, 92], -leanG));
+    const Pl = (p) => toL(rotP(p, [15, 90], -leanG));
     const P = man(c, {
-      x: 16, y: 92, k, lean: A ? A.lean : leanG,
+      x: 15, y: 90, k, lean: A ? A.lean : leanG,
       far: A ? A.far : { e: Pl([hand[0] - 3, hand[1] + 6]), h: Pl(hand) },
       near: A ? A.near : { e: Pl([hand[0] - 9, hand[1] + 4]), h: Pl([hand[0] - 2, hand[1] + 1]) },
-      legs: { near: [12, 106], far: [21, 106] },
-      tunic: '#b8643c', head: 'goggles', headCol: '#5a3a24', apron: '#6a4a30', glove: '#7a5a3a', pants: '#4a3a34', boot: '#3a2a24', squint: pose !== 'idle', shout: pose === 'fire',
+      legs: { near: [11, 106], far: [21, 106] },
+      tunic: '#f8873a', head: 'goggles', headCol: '#5a3a24', glove: '#6a4630', pants: '#4a3a34', boot: '#3a2a24', squint: pose !== 'idle', shout: pose === 'fire',
     });
     o += P.draw();
     if (pose === 'aim') o += gs.map((g) => spark(c, g.hole[0], g.hole[1] - 1, 3.6, '#ffd94a', 1.5)).join('');
@@ -960,7 +1002,7 @@
     const P = man(c, {
       x, y, k, lean: A.lean, near: A.near, far: A.far,
       legs: pose === 'fire' ? { near: [x - 3.4 * k, gy], far: [x + 5 * k, gy] } : { near: [x - 3 * k, gy], far: [x + 3.6 * k, gy] },
-      tunic: G0.tunic || '#c8b89a', sleeve: G0.tunic || '#c8b89a', fore: M.skin, glove: G0.glove || '#6a4a30', apron: G0.apron || '#7a4a2a',
+      tunic: G0.tunic || '#f6eedc', sleeve: G0.tunic || '#f6eedc', fore: M.skin, glove: G0.glove || '#6a4a30', apron: G0.apron || '#8a4a26',
       head: G0.head || 'bald', headCol: G0.headCol || '#6a3a24', beard: G0.beard || '#6a3a24', bandCol: G0.bandCol, pants: '#4a3a34', boot: '#3a2a24',
       squint: pose !== 'idle', shout: pose === 'fire', belt: '#4a2a1a',
     });
@@ -1064,7 +1106,7 @@
         o += c.r(50, 76, 8, 8, c.vg('#ffc65a', 0.3, -0.3), 1, 2) + c.ln('M54 76V84M50 80H58', M.woodD, 1.5);
         /* 물통 */
         o += cyl(c, 18, 98, 108, 6, 2, c.cg(M.wood), '#5a8ab0', 2.2) + c.ln(ring(18, 102, 6, 2), M.iron, 1.5);
-        o += smith(c, 42, 93, 108, 1.2, pose, 64, 92);
+        o += smith(c, 41, 90.5, 108, 1.4, pose, 64, 92);
         return o;
       }
       if (v === 2 || v === 3) {
@@ -1081,7 +1123,7 @@
           o += c.r(16, 66, 4.4, 38, c.vg(M.gold, 0.35, -0.25), 1, 2.2) + c.r(67.6, 66, 4.4, 38, c.vg(M.gold, 0.35, -0.25), 1, 2.2);
           o += c.ol('M44 44V50', M.iron, 1.6) + c.ci(44, 56, 6.5, c.vg(M.wood, 0.3, -0.2), 2.4) + c.p('M40.6 52.6H47.4V56H45.2V60.4H42.8V56H40.6Z', M.iron, 1.4);
         }
-        o += smith(c, 44, 93, 108, 1.12, pose, 66, 91, L3 ? { head: 'band', headCol: '#6a3a24', bandCol: '#c23a22', apron: '#5a3420', glove: '#4a2a1a', hs: 1.05, hamCol: '#7a8290' } : { head: 'band', headCol: '#6a3a24', bandCol: '#c23a22' });
+        o += smith(c, 43, 91, 108, 1.32, pose, 66, 91, L3 ? { head: 'band', headCol: '#6a3a24', bandCol: '#c23a22', apron: '#5a3420', glove: '#4a2a1a', hs: 1.05, hamCol: '#7a8290' } : { head: 'band', headCol: '#6a3a24', bandCol: '#c23a22' });
         if (L3) o += c.r(64, 101, 4, 4, M.gold, 0.5, 1.4);
         return o;
       }
@@ -1125,15 +1167,15 @@
     const top = by - 3 - open * 15;
     const hEnd = [lx - 6, top - 6 - open * 6];
     /* 일꾼: 풀무 뒤 왼쪽에서 손잡이를 잡음 */
-    const k = 1;
-    const hip = [12, 90];
+    const k = 1.18;
+    const hip = [12, 88.5];
     const lean = pose === 'aim' ? -6 : pose === 'fire' ? 18 : 6;
     const toL = (p) => { const q = rotP(p, hip, -lean); return [(q[0] - hip[0]) / k, (q[1] - hip[1]) / k]; };
     const P = man(c, {
       x: hip[0], y: hip[1], k, lean, legs: { near: [8, 104], far: [16.5, 104] },
       near: { e: toL([hEnd[0] - 7, hEnd[1] + (pose === 'aim' ? 5 : -2)]), h: toL([hEnd[0] - 1.5, hEnd[1] + 0.8]) },
       far: { e: toL([hEnd[0] + 1, hEnd[1] + (pose === 'aim' ? 8 : 3)]), h: toL([hEnd[0] + 1.6, hEnd[1] - 0.4]) },
-      tunic: '#c8b89a', fore: M.skin, glove: '#6a4a30', apron: '#7a4a2a', head: 'goggles', headCol: '#5a3a24', beard: '#6a3a24', pants: '#4a3a34', boot: '#3a2a24', squint: pose !== 'idle', shout: roar,
+      tunic: '#f6eedc', fore: M.skin, glove: '#6a4a30', apron: '#8a4a26', head: 'goggles', headCol: '#5a3a24', beard: '#6a3a24', pants: '#4a3a34', boot: '#3a2a24', squint: pose !== 'idle', shout: roar,
     });
     o += P.draw();
     o += c.ol(`M${rx} ${by - 3}L52 ${by - 6}`, M.iron, 2.6);
@@ -1182,8 +1224,8 @@
     if (pose !== 'idle') o += motion(c, `M${wx - 12} ${wy - 6}A13 13 0 0 1 ${wx - 4} ${wy - 12.6}M${wx + 12} ${wy + 6}A13 13 0 0 1 ${wx + 4} ${wy + 12.6}`, '#fff', 1.8, 0.8);
     o += c.p(`M${wx - 8} ${wy + 9}H${wx + 8}L${wx + 6} ${wy + 14}H${wx - 6}Z`, c.vg(M.wood, 0.2, -0.2), 2) + c.e(wx, wy + 9.4, 7, 1.4, '#5a8ab0', 0);
     /* 무기장 */
-    const k = 1.05;
-    const hip = [48, 92];
+    const k = 1.2;
+    const hip = [47, 90];
     const lean = pose === 'fire' ? 10 : pose === 'aim' ? -3 : 0;
     const toL = (p) => { const q = rotP(p, hip, -lean); return [(q[0] - hip[0]) / k, (q[1] - hip[1]) / k]; };
     let grip;
@@ -1195,7 +1237,7 @@
       x: hip[0], y: hip[1], k, lean, legs: pose === 'fire' ? { near: [44, 107], far: [54, 107] } : { near: [45, 107], far: [52, 107] },
       near: { e: toL([grip[0] - 8, grip[1] + (pose === 'aim' ? 3 : -1)]), h: toL([grip[0] - 2.5, grip[1] + 1]) },
       far: { e: toL([grip[0] + 1, grip[1] + 7]), h: toL([grip[0] + 1, grip[1]]) },
-      tunic: '#7a3a2a', sleeve: '#7a3a2a', fore: '#7a3a2a', glove: '#3a2a24', chest: M.ironL, head: 'helm', headCol: '#9aa3ae', plume: '#e0442a', beard: '#4a2a1a',
+      tunic: '#d8442c', sleeve: '#d8442c', fore: '#d8442c', glove: '#3a2a24', chest: '#c4ccd8', head: 'helm', headCol: '#b4bcc8', plume: '#ffd04a', beard: '#4a2a1a',
       pants: '#3a2a34', boot: '#2a1a24', squint: pose !== 'idle',
     });
     /* 칼: 손잡이(쥔 곳 아래로) + 날 */
@@ -1306,7 +1348,7 @@
         o += footShade(c, 50, 104, 22, 6);
         if (L3) o += burstRing(c, 50, 44, 36, 10, E.light, 2, pose === 'aim' ? 0.95 : 0.6);
         o += stoneWall(c, 50, 72, 104, 12, 18, st, { ch: 6.4, bw: 8, seed: L3 ? 85 : 83, moss: !L3 });
-        if (L3) o += band(c, 50, 88, 92, 16, 4.8, c.vg(M.silver, 0.35, -0.25));
+        if (L3) o += bandI(c, 50, 88, 92, 16, 4.8, M.silver);
         o += cyl(c, 50, 66, 73, 16, 4.8, c.cg(L3 ? M.silver : h.shade(st, 0.1)), c.vg(h.shade(st, 0.25)));
         o += c.ln([-50, -20, 10, 40].map((d) => vseam(50, 67.5, 72, 16, 4.8, d)).join(''), h.shade(L3 ? M.silver : st, -0.4), 1.5);
         o += snowCap(c, 44, 66, 9, 2.4);
@@ -1351,7 +1393,7 @@
       /* 받침(돌 쌓기 + 은 띠) */
       o += stoneWall(c, 50, 76, 99, 27, 29, STONE.frost, { ch: 6, bw: 11, seed: 91 });
       o += c.e(50, 76, 27, 8.1, c.vg(h.shade(STONE.frost, 0.25), 0.2, -0.05), 2.6);
-      o += band(c, 50, 86, 90, 27.6, 8.3, c.vg(M.silver, 0.35, -0.25));
+      o += bandI(c, 50, 86, 90, 27.6, 8.3, M.silver);
       o += snowCap(c, 40, 76, 10, 2.6);
       /* 장전틀(축 52,74에서 기울임): 은 틀 + 고드름 셋(가운데 큰 것은 fire에서 날아감) */
       const px = 52;
@@ -1484,7 +1526,7 @@
     const legs = pose === 'aim' ? { near: [x - 5 * k, gy], far: [x + 4 * k, gy] } : { near: [x - 3 * k, gy], far: [x + 3.6 * k, gy] };
     const P = man(c, {
       x, y, k, lean, near, far, legs,
-      tunic: G0.tunic || '#4a6a8a', sleeve: G0.tunic || '#4a6a8a', head: G0.head || 'fur', headCol: G0.headCol || '#7a5a3a', furCol: G0.fur || '#f2ece0',
+      tunic: G0.tunic || '#eca43a', sleeve: G0.tunic || '#eca43a', head: G0.head || 'fur', headCol: G0.headCol || '#d0402e', furCol: G0.fur || '#f6f0e4',
       chest: G0.chest, glove: G0.glove || '#5a3a24', pants: G0.pants || '#3a3a4a', boot: G0.boot || '#4a3424', belt: '#3a2a24', cape: G0.cape, plume: G0.plume,
       squint: pose !== 'idle', beard: G0.beard,
     });
@@ -1511,7 +1553,7 @@
         const elev = pose === 'idle' ? 6 : 16;
         const B = ballistaArt(c, { px: 48 + rec, py: 74, elev, state, H: 20, L: 0.9, winchA: pose === 'aim' ? 100 : 0 });
         o += tripod(c, 48, 74, 106, M.wood);
-        const P = crossbowman(c, 17, 92, 107, 1.12, pose, B);
+        const P = crossbowman(c, 16, 90.5, 107, 1.32, pose, B);
         o += P.back + P.legs + P.farArm + P.farHand + P.body;
         o += pivotFork(c, 48 + rec, 74) + B.s;
         o += P.nearArm + P.nearHand;
@@ -1526,12 +1568,12 @@
         if (L3) o += flag(c, 9, 100, 36, E.color, -1, 9);
         o += stoneWall(c, 50, 82, 104, 18, 21, st, { ch: 6.6, bw: 10, seed: L3 ? 105 : 103, moss: !L3 });
         o += c.e(50, 82, 18, 5.4, c.vg(h.shade(st, 0.25), 0.2, -0.05), 2.6);
-        if (L3) o += band(c, 50, 90, 93.5, 19.4, 5.8, c.vg(M.silver, 0.35, -0.25));
+        if (L3) o += bandI(c, 50, 90, 93.5, 19.4, 5.8, M.silver);
         o += snowCap(c, 43, 81.6, 9, 2.4);
         o += c.p('M45 82L46 72H54L55 82Z', c.vg(M.iron, 0.3, -0.25), 2.2);
         const elev = pose === 'idle' ? 6 : 17;
         const B = ballistaArt(c, { px: 50 + rec, py: 70, elev, state, H: L3 ? 24 : 22, L: 0.9, fitCol: L3 ? M.silver : M.iron, bowCol: L3 ? '#5a4a5a' : M.woodD, tipCrystal: L3, winchA: pose === 'aim' ? 100 : 0 });
-        const P = crossbowman(c, 17, 90, 107, 1.08, pose, B, L3 ? { head: 'helm', headCol: '#c9d4de', chest: M.silver, tunic: '#3a5a7a', cape: '#2a4a6a' } : { head: 'fur', headCol: '#5a7a9a', chest: '#8a6a4a' });
+        const P = crossbowman(c, 16, 89, 107, 1.28, pose, B, L3 ? { head: 'helm', headCol: '#d4dce6', chest: M.silver, tunic: '#d84a32', cape: '#a02a24' } : { head: 'fur', chest: '#8a5a3a' });
         o += P.back + P.legs + P.farArm + P.farHand + P.body;
         o += pivotFork(c, 50 + rec, 70, L3 ? M.silver : M.iron) + B.s;
         o += P.nearArm + P.nearHand;
@@ -1543,13 +1585,13 @@
         o += footShade(c, 54, 99, 26, 6);
         o += stoneWall(c, 54, 74, 99, 15, 19, STONE.frost, { ch: 6, bw: 9, seed: 111 });
         o += c.e(54, 74, 15, 4.5, c.vg(h.shade(STONE.frost, 0.25), 0.2, -0.05), 2.4);
-        o += band(c, 54, 84, 87, 16.6, 5, c.vg(M.silver, 0.35, -0.25));
+        o += bandI(c, 54, 84, 87, 16.6, 5, M.silver);
         /* 높은 쇠 기둥 + 계단 */
         o += beam(c, 48, 74, 51, 50, 4, h.shade(M.silver, -0.2)) + beam(c, 60, 74, 57, 50, 4, M.silver) + beam(c, 49, 62, 59, 62, 2.6, M.silver, { light: false });
         o += c.p('M18 99V93H30V87H40V99Z', c.vg(h.shade(STONE.frost, -0.05), 0.2, -0.2), 2.4) + c.ln('M18 93H30M30 87H40', h.shade(STONE.frost, 0.35), 1.5);
         const elev = pose === 'idle' ? 18 : 34;
         const B = ballistaArt(c, { px: 54 + rec * 0.6, py: 50 - rec * 0.4, elev, state, H: 22, L: 0.9, arms: 2, fitCol: M.silver, bowCol: '#4a5a6a', head: 'drill', tipCrystal: true, winchA: pose === 'aim' ? 100 : 0 });
-        const P = crossbowman(c, 27, 72, 87, 1.05, pose, B, { head: 'helm', headCol: '#c9d4de', plume: E.color, chest: M.silver, tunic: '#2a4a6a', cape: '#1f5f8a', glove: '#9aa3ae', boot: '#5a6470' });
+        const P = crossbowman(c, 26, 70.5, 87, 1.22, pose, B, { head: 'helm', headCol: '#d4dce6', plume: E.color, chest: M.silver, tunic: '#d84a32', cape: '#9a2a24', glove: '#9aa3ae', boot: '#5a6470' });
         o += P.back + P.legs + P.farArm + P.farHand + P.body;
         o += pivotFork(c, 54 + rec * 0.6, 50 - rec * 0.4, M.silver) + B.s;
         o += P.nearArm + P.nearHand;
@@ -1560,12 +1602,12 @@
       o += footShade(c, 52, 99, 34, 8);
       o += stoneWall(c, 52, 80, 99, 30, 32, STONE.frost, { ch: 6.4, bw: 12, seed: 121 });
       o += c.e(52, 80, 30, 9, c.vg(h.shade(STONE.frost, 0.25), 0.2, -0.05), 2.6);
-      o += band(c, 52, 88, 92, 31, 9.3, c.vg(M.silver, 0.35, -0.25));
+      o += bandI(c, 52, 88, 92, 31, 9.3, M.silver);
       o += crystal(c, 26, 88, 10, 15, E.light, 2.2) + crystal(c, 80, 88, 10, 15, E.light, 2.2);
       o += c.p('M46 80L47 68H59L60 80Z', c.vg(M.iron, 0.3, -0.25), 2.4);
       const elev = pose === 'idle' ? 2 : 10;
       const B = ballistaArt(c, { px: 53 + rec, py: 66, elev, state, H: 30, L: 0.88, arms: 2, fitCol: M.iron, stockCol: h.shade(M.wood, -0.1), bowCol: '#3a4a5a', head: 'block', winchA: pose === 'aim' ? 100 : 0 });
-      const P = crossbowman(c, 17, 88, 104, 1.22, pose, B, { head: 'fur', headCol: '#5a3a24', fur: '#e8e0d0', tunic: '#5a4a3a', chest: '#7a5a3a', beard: '#8a5a34', glove: '#3a2a24' });
+      const P = crossbowman(c, 16, 86, 104, 1.38, pose, B, { head: 'fur', headCol: '#8a3a24', fur: '#f2ece0', tunic: '#d8742c', chest: '#7a4a2a', beard: '#9a5a2c', glove: '#3a2a24' });
       o += P.back + P.legs + P.farArm + P.farHand + P.body;
       o += pivotFork(c, 53 + rec, 66) + B.s;
       o += P.nearArm + P.nearHand;
@@ -1641,7 +1683,7 @@
     }[pose];
     return man(c, {
       x, y, k, lean: A.lean, near: A.near, far: A.far, legs: { near: A.legs[0], far: A.legs[1] },
-      tunic: G0.tunic || '#5a7aa0', head: G0.head || 'fur', headCol: G0.headCol || '#3a5a7a', furCol: '#f2ece0', glove: G0.glove || '#8a3a2a',
+      tunic: G0.tunic || '#d83c34', head: G0.head || 'fur', headCol: G0.headCol || '#d83c34', furCol: '#f6f0e4', glove: G0.glove || '#5a3424',
       pants: '#3a3a4a', boot: '#4a3424', belt: '#3a2a24', trim: G0.trim || '#f2ece0', cape: G0.cape, chest: G0.chest, squint: pose !== 'idle', shout: pose === 'fire',
     });
   }
@@ -1676,7 +1718,7 @@
         o += snowGable(c, 24, 88, 22, 41, '#8a5a34');
         const B = swingBell(c, 56, 52, 30, 34, E.color, ang, pose, { lever: 10 });
         o += B.s;
-        const P = ringer(c, 20, 92, 107, 1.12, pose);
+        const P = ringer(c, 19, 90.5, 107, 1.32, pose);
         o += ringerRope(c, P, B.lever, 107);
         if (pose === 'fire') o += ringOut(c, B.center[0], B.center[1], 16, E.light);
         if (pose === 'aim') o += motion(c, `M${f(B.mouth[0] + 16)} ${f(B.mouth[1] - 10)}Q${f(B.mouth[0] + 20)} ${f(B.mouth[1])} ${f(B.mouth[0] + 14)} ${f(B.mouth[1] + 6)}`, '#ffffff', 1.8, 0.7);
@@ -1696,7 +1738,7 @@
         o += B.s;
         o += snowGable(c, 15, 89, L3 ? 12 : 15, 40, '#6f8fb0');
         if (L3) o += icicleRow(c, 17, 87, 44, 9, 8, E.light) + crystal(c, 52, 7, 9, 13, E.color, 2.2);
-        const P = ringer(c, 22, 91, 107, 1.08, pose, L3 ? { tunic: '#3a5a8a', headCol: '#2a4a6a', chest: M.silver, cape: '#2a4a6a' } : {});
+        const P = ringer(c, 21, 89.5, 107, 1.28, pose, L3 ? { tunic: '#c8302a', headCol: '#c8302a', chest: M.silver, cape: '#7a2420' } : {});
         o += ringerRope(c, P, B.lever, 107);
         if (pose === 'fire') o += ringOut(c, B.center[0], B.center[1], L3 ? 19 : 17, E.light);
         if (pose === 'aim') o += motion(c, `M${f(B.mouth[0] + 17)} ${f(B.mouth[1] - 12)}Q${f(B.mouth[0] + 21)} ${f(B.mouth[1])} ${f(B.mouth[0] + 15)} ${f(B.mouth[1] + 6)}`, '#ffffff', 1.8, 0.7);
@@ -1715,7 +1757,7 @@
         const B = swingBell(c, 50, 25, 40, 52, h.mix(E.color, '#ffffff', 0.3), angA, pose, { lever: 6, yoke: M.silver, frost: true });
         o += B.s;
         o += icicleRow(c, 26, 74, 19, 8, 6, '#ffffff');
-        const P = ringer(c, 12, 88, 104, 1, pose, { tunic: '#2a4a7a', headCol: '#e8eef6', head: 'hood', glove: '#9ab0c8', trim: E.light });
+        const P = ringer(c, 12, 86.5, 104, 1.18, pose, { tunic: '#c8302a', headCol: '#c8302a', head: 'hood', glove: '#5a3424', trim: '#f6f0e4' });
         o += ringerRope(c, P, B.lever, 104);
         if (pose === 'fire') o += soundRings(c, B.center[0], B.center[1], [28, 38, 48], '#ffffff', 3, 0.7) + frostMotes(c, [[20, 30, 2.6], [82, 28, 2.6], [88, 70, 2.4], [16, 74, 2.4]]);
         if (pose === 'aim') o += c.ln('M36 28Q50 22 64 28', '#ffffff', 2, 0.8);
@@ -1737,7 +1779,7 @@
       const small = (x, y) => swingBell(c, x, y, 11, 13, E.color, sAng * 0.8, pose).s;
       o += c.ol('M14 66V70M88 66V70M24 45V49M78 45V49', M.silver, 1.4) + small(14, 70) + small(88, 70) + small(24, 49) + small(78, 49);
       o += crystal(c, 51, 6, 8, 11, E.color, 2.2);
-      const P = ringer(c, 22, 92, 107, 1.0, pose, { tunic: '#3a5a8a', headCol: '#2a4a6a' });
+      const P = ringer(c, 21, 90, 107, 1.2, pose, {});
       o += ringerRope(c, P, B.lever, 107);
       if (pose === 'fire') {
         /* 서리 장막: 땅을 따라 퍼지는 반투명 안개 */
@@ -1820,45 +1862,78 @@
       const E = c.E;
       const st = STONE.storm;
       const glow = pose === 'aim' ? 1 : 0;
+      /* 자세에 따른 모양 바뀜(32px에서도 읽히게): aim 은 팔·갈퀴가 펼쳐지고 꼭대기가 늘어나며 단자 사이에 번개가 이어짐 */
+      const lift = pose === 'aim' ? 6 : 0;
       if (v === 1) {
-        /* 나무 기둥(쐐기 버팀) + 구리 코일 + 땅에 박은 접지줄 */
+        /* 나무 기둥(쐐기 버팀) + 구리 코일 + 땅에 박은 접지줄 + 꼭대기 구리 수염(aim: 활짝 펼침) */
         let o = plat(c, 1);
         o += footShade(c, 50, 104, 16, 4);
         o += beam(c, 34, 106, 46, 82, 3.6, h.shade(M.wood, -0.2)) + beam(c, 66, 106, 54, 82, 3.6, M.wood);
         o += c.r(44, 36, 12, 70, c.cg(M.wood), 2, 3);
-        o += c.ln('M47 42Q48 60 47 80M53 50Q52 70 53 98', h.shade(M.wood, -0.35), 1.5, 0.8);
+        o += c.ln('M47 42Q48 60 47 80M53 50Q52 70 53 98', c.inkc(M.wood, 0.45), 1.3, 0.8) + c.e(48, 66, 1.2, 2, c.dk(M.wood, 0.4), 0);
         o += lash(c, 50, 84, 14, 4);
-        o += coilWind(c, 50, 50, 78, 9.5, 5, glow);
+        /* 코일: aim 에서 위로 뛰어오름 */
+        const cy = pose === 'aim' ? -5 : 0;
+        o += coilWind(c, 50, 50 + cy, 78 + cy, 9.5, 5, glow);
         o += c.ol('M56 92Q66 100 72 106', COPPER, 1.6) + c.p('M70 104L76 104L73 110Z', M.iron, 1.4);
-        o += c.ol('M50 36V22', M.ironL, 2.6);
-        o += rodTip(c, 50, 19, 4.4, pose);
-        if (pose === 'aim') o += zapArc(c, 41, 76, 43, 58, { n: 4, j: 2.5, w: 1.6, seed: 11 }) + zapArc(c, 59, 70, 57, 54, { n: 4, j: 2.5, w: 1.6, seed: 13 });
+        const top = 19 - lift;
+        o += c.ol(`M50 36V${top + 3}`, M.ironL, 2.6);
+        /* 구리 수염 셋: idle 공을 감싸 오므림 · aim 활짝 · fire 반쯤 */
+        const sp = pose === 'aim' ? 52 : pose === 'fire' ? 30 : 10;
+        const base = [50, top + 6];
+        const tips = [-90 - sp, -90 + sp, -90].map((d) => [base[0] + Math.cos(d * D2R) * 13, base[1] + Math.sin(d * D2R) * 13]);
+        o += c.ol(tips.slice(0, 2).map((t) => `M${P2(base)}Q${f((base[0] + t[0]) / 2)} ${f(Math.min(base[1], t[1]) - 2)} ${P2(t)}`).join(''), COPPER, 1.8);
+        o += tips.slice(0, 2).map((t) => c.ci(t[0], t[1], 1.8, c.sg(COPPER), 1.4)).join('');
+        o += rodTip(c, 50, top, 4.4, pose);
+        if (pose === 'aim') {
+          o += tips.slice(0, 2).map((t, i) => zapArc(c, t[0], t[1], 50 + (i ? 3 : -3), top, { n: 3, j: 1.8, w: 1.8, seed: 15 + i })).join('');
+          o += zapArc(c, 41, 72 + cy, 43, 54 + cy, { n: 4, j: 2.5, w: 1.6, seed: 11 }) + zapArc(c, 59, 66 + cy, 57, 50 + cy, { n: 4, j: 2.5, w: 1.6, seed: 13 });
+          c.tip = [50, top];
+        }
         if (pose === 'fire') o += zapArc(c, 52, 16, 86, 2, { n: 7, j: 4, w: 2.8, seed: 21, branch: [10, 12] });
         return o;
       }
       if (v === 2 || v === 3) {
-        /* 돌 받침(돌 쌓기) + 쇠 막대 + 가로대 애자 + 코일, Lv3는 금 왕관과 공 */
+        /* 돌 받침(돌 쌓기) + 쇠 막대 + 경첩 팔(끝에 사기 애자) + 코일, Lv3는 금 갈퀴와 원소 공
+         * idle: 팔이 아래로 접힘 · aim: 팔이 Y자로 번쩍 들리고 애자에서 꼭대기 공으로 번개가 이어짐, 꼭대기 막대가 늘어남 · fire: 팔이 반쯤 내려오며 벼락 */
         const L3 = v === 3;
         let o = plat(c, v, { stone: st });
         o += footShade(c, 50, 104, 20, 5);
         o += stoneWall(c, 50, 72, 104, 12, 18, st, { ch: 6.4, bw: 8, seed: L3 ? 153 : 151, moss: !L3 });
         o += c.e(50, 72, 12, 3.6, c.vg(h.shade(st, 0.25), 0.2, -0.05), 2.4);
-        if (L3) o += band(c, 50, 88, 92, 16, 4.8, c.vg(M.gold, 0.35, -0.25));
-        o += c.r(45.5, L3 ? 24 : 28, 9, 46, c.cg(M.iron), 2, 2.8);
-        o += c.ln(`M47.5 ${L3 ? 30 : 34}V68`, '#ffffff', 1.5, 0.35);
-        o += beam(c, 26, 46, 74, 46, 3, M.iron, { light: false });
-        o += insulator(c, 30, 40, 9) + insulator(c, 70, 40, 9);
-        o += c.ol('M30 44Q40 52 46 56M70 44Q60 52 54 56', COPPER, 1.4);
-        o += coilWind(c, 50, L3 ? 50 : 52, 70, L3 ? 10 : 8.5, L3 ? 6 : 5, glow);
-        if (pose === 'aim') o += zapArc(c, 30, 38, 30, 28, { n: 3, j: 2, w: 1.5, seed: 31 }) + zapArc(c, 70, 38, 70, 28, { n: 3, j: 2, w: 1.5, seed: 33 });
+        if (L3) o += bandI(c, 50, 88, 92, 16, 4.8, M.gold);
+        const rTop = L3 ? 26 : 30;
+        o += c.r(45.5, rTop, 9, 74 - rTop, c.cg(M.iron), 2, 2.8);
+        o += c.ln(`M47.5 ${rTop + 6}V68`, '#ffffff', 1.5, 0.35) + c.ci(48, 64, 0.8, c.lt(M.iron, 0.6), 0) + c.ci(48, 40, 0.8, c.lt(M.iron, 0.6), 0);
+        o += coilWind(c, 50, L3 ? 52 : 54, 70, L3 ? 10 : 8.5, L3 ? 6 : 5, glow);
+        /* 경첩 팔 */
+        const ang = pose === 'aim' ? 44 : pose === 'fire' ? 18 : -14;
+        const AL = 22;
+        const piv = [[45, 47], [55, 47]];
+        const tipA = piv.map((p0, i) => { const sx = i ? 1 : -1; return [p0[0] + sx * Math.cos(ang * D2R) * AL, p0[1] - Math.sin(ang * D2R) * AL]; });
+        tipA.forEach((t, i) => {
+          const p0 = piv[i];
+          o += c.ol(`M${P2(p0)}L${P2(t)}`, M.iron, 2.6) + c.ln(`M${P2(lerp(p0, t, 0.15))}L${P2(lerp(p0, t, 0.85))}`, c.lt(M.iron, 0.5), 0.9, 0.7);
+          o += c.ol(`M${f(t[0])} ${f(t[1] + 1)}Q${f((t[0] + 50) / 2)} ${f(Math.max(t[1], 56) + 8)} ${f(50 + (i ? 6 : -6))} ${L3 ? 54 : 56}`, COPPER, 1.3);
+          o += insulator(c, t[0], t[1] - 3.4, 8);
+        });
+        o += c.r(42.5, 44, 15, 6.4, c.vg(M.iron, 0.35, -0.3), 1.5, 2.2) + c.ci(45, 47, 1.3, c.sg(M.ironL), 1.2) + c.ci(55, 47, 1.3, c.sg(M.ironL), 1.2);
+        /* 꼭대기(늘어나는 막대) */
+        const top = (L3 ? 15 : 17) - lift;
+        o += c.ol(`M50 ${rTop}V${top + 3}`, M.ironL, 2.4) + (lift ? c.r(47.6, rTop - 3, 4.8, 3, c.vg(M.iron, 0.3, -0.3), 0.8, 1.4) : '');
         if (L3) {
-          o += c.ol('M44 26Q38 18 43 10M56 26Q62 18 57 10', M.gold, 2.4);
-          o += rodTip(c, 50, 15, 6.5, pose, { col: E.color });
-        } else {
-          o += c.ol('M50 28V20', M.ironL, 2.4);
-          o += rodTip(c, 50, 17, 4.4, pose);
+          const gs = pose === 'aim' ? 11 : pose === 'fire' ? 6 : 0;
+          o += c.ol(`M44 ${top + 11}Q${38 - gs} ${top + 3} ${43 - gs} ${top - 5}M56 ${top + 11}Q${62 + gs} ${top + 3} ${57 + gs} ${top - 5}`, M.gold, 2.4);
+          o += c.ci(43 - gs, top - 5, 1.6, c.sg(M.gold), 1.3) + c.ci(57 + gs, top - 5, 1.6, c.sg(M.gold), 1.3);
+          o += rodTip(c, 50, top, 6.5, pose, { col: E.color });
+          if (pose === 'aim') o += zapArc(c, 43 - gs, top - 5, 45, top - 1, { n: 2, j: 1.5, w: 1.6, seed: 39 }) + zapArc(c, 57 + gs, top - 5, 55, top - 1, { n: 2, j: 1.5, w: 1.6, seed: 41 });
+        } else o += rodTip(c, 50, top, 4.4, pose);
+        if (pose === 'aim') {
+          o += tipA.map((t, i) => zapArc(c, t[0], t[1] - 6, 50 + (i ? 4 : -4), top + 2, { n: 4, j: 2.4, w: 2.2, seed: 31 + i * 2 })).join('');
+          o += tipA.map((t) => spark(c, t[0], t[1] - 6, 3.6, '#ffffff', 1.2)).join('');
+          c.tip = [50, top];
         }
-        if (pose === 'fire') o += zapArc(c, 53, L3 ? 11 : 14, 90, L3 ? 0 : 2, { n: 7, j: 4, w: 3, seed: L3 ? 37 : 35, branch: [8, 14] });
+        if (pose === 'fire') o += zapArc(c, 53, top - 3, 90, L3 ? 0 : 2, { n: 7, j: 4, w: 3, seed: L3 ? 37 : 35, branch: [8, 14] });
         return o;
       }
       if (v === 'A') {
@@ -1868,7 +1943,7 @@
         o += aura(c, 50, 22, 42, 22, E.color, pose === 'idle' ? 0.35 : 0.6);
         o += stoneWall(c, 50, 64, 99, 13, 21, STONE.storm, { ch: 6.4, bw: 8, seed: 161 });
         o += c.e(50, 64, 13, 3.9, c.vg(h.shade(STONE.storm, 0.25), 0.2, -0.05), 2.4);
-        o += band(c, 50, 80, 84, 17, 5, c.vg(M.gold, 0.35, -0.25));
+        o += bandI(c, 50, 80, 84, 17, 5, M.gold);
         o += c.ol('M46 64Q30 52 20 28M54 64Q70 52 80 28', M.iron, 3.6);
         o += insulator(c, 28, 46, 8) + insulator(c, 72, 46, 8);
         o += c.r(46, 20, 8, 46, c.cg(M.iron), 2, 2.8);
@@ -2012,7 +2087,7 @@
         } else {
           o += stoneWall(c, 47, 78, 104, 19, 20, st, { ch: 6.5, bw: 9, seed: L3 ? 175 : 173, moss: !L3 });
           o += c.e(47, 78, 19, 5.7, c.vg(h.shade(st, 0.25), 0.2, -0.05), 2.4);
-          if (L3) o += band(c, 47, 82, 85.5, 19.4, 5.8, c.vg(M.gold, 0.35, -0.25));
+          if (L3) o += bandI(c, 47, 82, 85.5, 19.4, 5.8, M.gold);
         }
         /* 풀무(포신 뒤) + 크랭크 막대(날개 축 → 풀무) */
         const bw = bellowsBox(c, 46, L1 ? 79 : 75, 15, open);
@@ -2032,7 +2107,7 @@
         o += footShade(c, 50, 99, 24, 6);
         o += aura(c, 50, 30, 42, 32, E.color, pose === 'idle' ? 0.3 : 0.55);
         o += stoneWall(c, 50, 60, 99, 15, 22, STONE.storm, { ch: 6.5, bw: 9, seed: 181 });
-        o += band(c, 50, 66, 69, 16.6, 5, c.vg(M.gold, 0.35, -0.25));
+        o += bandI(c, 50, 66, 69, 16.6, 5, M.gold);
         o += litWindow(c, 50, 90, 7, 9, E.light, { frame: h.shade(STONE.storm, -0.25) });
         o += c.e(50, 60, 15, 4.5, c.vg(h.shade(STONE.storm, 0.2)), 2.4);
         /* 깔때기: idle 넓고 느슨 · aim 좁고 빠름 · fire 회오리를 내보냄 */
@@ -2065,7 +2140,7 @@
       o += wing(-1) + wing(1);
       o += stoneWall(c, 50, 74, 99, 24, 25, STONE.storm, { ch: 6.2, bw: 10, seed: 191 });
       o += c.e(50, 74, 24, 7.2, c.vg(h.shade(STONE.storm, 0.25), 0.2, -0.05), 2.4);
-      o += band(c, 50, 84, 88, 24.6, 7.4, c.vg(M.gold, 0.35, -0.25));
+      o += bandI(c, 50, 84, 88, 24.6, 7.4, M.gold);
       o += c.p('M34 76Q34 58 50 56Q66 58 66 76Q50 82 34 76Z', c.vg(M.iron, 0.35, -0.25), 3) + c.ln('M38 66Q50 62 62 66', '#ffffff', 1.5, 0.5);
       const by = pose === 'fire' ? 3 : 0;
       o += cyl(c, 43, 29 + by, 64, 6, 2, c.cg(M.bronze), null) + cyl(c, 57, 29 + by, 64, 6, 2, c.cg(M.bronze), null);
@@ -2149,7 +2224,7 @@
         o += flywheel(c, 82, 72, 11, spin, rot);
         o += stoneWall(c, 50, 90, 104, 24, 25, st, { ch: 7, bw: 10, seed: L3 ? 205 : 203 });
         o += c.e(50, 90, 24, 7, c.vg(h.shade(st, 0.25), 0.2, -0.05), 2.4);
-        if (L3) o += band(c, 50, 93, 97, 24.4, 7.3, c.vg(M.gold, 0.35, -0.25));
+        if (L3) o += bandI(c, 50, 93, 97, 24.4, 7.3, M.gold);
         o += c.ol('M82 72L70 90', '#5a3a24', 1.4);
         const side = L3
           ? (x) => capRing(c, x, 90, 7) + glassTube(c, x, 64, 88, 6, k * 0.8) + capRing(c, x, 63, 7) + c.ol(`M${x} 60V55`, COPPER, 1.8) + c.ci(x, 54, 2.6, c.sg(COPPER), 1.8)
