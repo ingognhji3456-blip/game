@@ -732,6 +732,7 @@
       const j0 = Math.max(0, Math.floor((y0 - 90 - G.y0) / GS));
       const j1 = Math.min(G.ny - 1, Math.ceil((y1 + 90 - G.y0) / GS));
       const ph = rnd(cp.c0, cp.r0, seed) * 6.283;
+      seed += ((cp.c0 * 7 + cp.r0 * 13) % 41) * 2; // 덩어리마다 다른 굽이
       for (let j = j0; j <= j1; j++) {
         const y = G.y0 + j * GS;
         for (let i = i0; i <= i1; i++) {
@@ -843,10 +844,53 @@
     const onOpen = (c, r) => !!(openSet && openSet[r * cols + c]);
     const rubbleSet = setOf((k, c, r) => (k === K.ROCK || k === K.PILLAR) && !inCliff(c, r));
     const anyCliff = cliffSet.some((v) => v);
-    if (waterSet) F.water = sdField(waterSet, 13, 14, 70, 401, 4, 14);
+    /* 작은 물웅덩이(상자에 꽉 찬 4칸 이하·다리 없음, 가장자리는 2칸 이하) = 둥글고 불규칙한 웅덩이(4차).
+     * 나머지 물은 거리장. 어느 칸이 물인지는 그대로이고 그림 모양만 바뀜 */
+    const rectOk = (cp) => cp.n === (cp.c1 - cp.c0 + 1) * (cp.r1 - cp.r0 + 1);
+    const pools = [];
+    if (waterSet) {
+      const wc = comps((c, r) => waterSet[r * cols + c] === 1);
+      const big = new Uint8Array(cols * rows);
+      let anyBig = false;
+      for (const cp of wc) {
+        if (cp.n <= 4 && rectOk(cp) && (!cp.edge || cp.n <= 2) && !cp.cells.some(([c, r]) => bridgeAt(c, r))) pools.push(cp);
+        else { for (const [c, r] of cp.cells) big[r * cols + c] = 1; anyBig = true; }
+      }
+      const A = anyBig ? sdField(big, 13, 15, 72, 401, 4.5, 14) : new Float32Array(G.N).fill(-99);
+      for (const cp of pools) blobInto(A, cp, 3, 2.25, 0.11, 4101);
+      F.water = pools.length ? addNoise(A, 2.5, 26, 409, 1.8, 8) : A;
+    }
     if (lavaSet) F.lava = sdField(lavaSet, 10, 22, 40, 421, 7, 10);
     if (openSet) F.open = sdField(openSet, 8, 10, 60, 441, 3.5, 12);
-    if (buildSet) F.build = sdField(buildSet, 8, 12, 45, 461, 4, 10);
+    /* 건설지 속 작은 구멍(웅덩이·바위·나무 1~4칸, 둘레 절반 이상이 건설지): 축대가 구멍 둘레까지 감싸고
+     * 구멍만 둥글게 파임(4차) → 네모난 구멍이 사라짐. 탑을 세울 수 있는 칸은 그대로 */
+    if (buildSet) {
+      const obst = (c, r) => { const k = kAt(c, r); return (k === K.WATER || k === K.ROCK || k === K.PILLAR || k === K.TREE || k === K.LAVA) && !inCliff(c, r) && !bridgeAt(c, r) && !isAir(c, r); };
+      const holes = comps(obst).filter((cp) => {
+        if (cp.edge || cp.n > 4 || !rectOk(cp)) return false;
+        let nb = 0;
+        let nbB = 0;
+        for (let c = cp.c0; c <= cp.c1; c++) for (const r of [cp.r0 - 1, cp.r1 + 1]) { nb++; if (kAt(c, r) === K.BUILD) nbB++; }
+        for (let r = cp.r0; r <= cp.r1; r++) for (const c of [cp.c0 - 1, cp.c1 + 1]) { nb++; if (kAt(c, r) === K.BUILD) nbB++; }
+        return nbB * 2 >= nb;
+      });
+      const ext = buildSet.slice();
+      for (const cp of holes) for (const [c, r] of cp.cells) ext[r * cols + c] = 1;
+      F.build = sdField(ext, 8, 12, 45, 461, 4, 10);
+      if (holes.length) {
+        const HB = new Float32Array(G.N).fill(-99);
+        const HW_ = new Float32Array(G.N).fill(-99);
+        for (const cp of holes) {
+          const wet = cp.cells.some(([c, r]) => kAt(c, r) === K.WATER);
+          blobInto(wet ? HW_ : HB, cp, 3, 2.25, 0.11, 4101); // 물이면 웅덩이와 같은 모양
+        }
+        const B = F.build;
+        for (let k = 0; k < G.N; k++) {
+          const v = Math.max(HB[k] + 6, HW_[k] + 10); // 구멍 테두리 = 웅덩이 둘레 + 물가 폭
+          if (-v < B[k]) B[k] = -v;
+        }
+      }
+    }
     if (treeSet) F.tree = sdField(treeSet, 10, 14, 60, 481, 5, 12);
     if (rubbleSet) F.rubble = sdField(rubbleSet, 10, 11, 35, 501, 4);
     if (anyCliff) F.cliff = sdField(cliffSet, 6, 7, 45, 521, 3, 9);
