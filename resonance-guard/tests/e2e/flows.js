@@ -2,12 +2,14 @@
 
 /*
  * 입력 방식별 한 판 + 이어하기 (QUALITY.md §5)
- *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|mouse|resume|gacha]
+ *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|mouse|resume|world|gacha]
  *
  * - keyboard: 숫자(탑 고르기)·방향키·Enter·U·Space·F만으로 1-1을 깬다 (마우스·터치 없음)
  * - touch:    휴대폰 가로(터치 에뮬레이션)에서 탑 목록 탭 → 칸 탭, 탑 끌어다 놓기만으로 1-1을 깬다
  * - mouse:    탑 고르고 놓기의 세부 동작 (누르기·끌어다 놓기·Shift 이어 짓기·취소·못 짓는 칸·빈 칸 안내)
  * - resume:   판 도중 새로고침 → 타이틀의 "이어하기" → 같은 틱·같은 상태 해시
+ * - world:    타이틀 "월드 지도" → 지역 고르기(펼침 패널): 접힌 패널 첫 누름은 펼치기만, 두 번째에 들어감,
+ *             잠긴 지역은 안 들어감, 방향키·Enter로도, 지역 지도에서 "지역 고르기"로 돌아옴
  * - gacha:    타이틀 → 탑 뽑기 → 1회 뽑기(카드 뒤집기) → 확인 → 공명석이 줄고 탑이 늘거나 강화됨,
  *             뽑은 탑이 출정 준비 "내 탑"과 전투 탑 목록에 나옴, 공명석이 모자라면 버튼이 꺼짐
  *
@@ -318,6 +320,41 @@ async function resumeRun(browser) {
   return { name: '판 도중 새로고침 → 이어하기', ok, detail: `버튼 "${label.trim()}", 저장 틱 ${before.tick} → 이어서 ${after.tick}, 재현 상태와 해시 ${after.hash === after.ref ? '같음' : '다름'}, 탑 ${after.towers}개`, errors };
 }
 
+async function worldRun(browser) {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await page.goto(URL);
+  await page.evaluate(() => { const st = { result: 'win', lives: 12, task: { done: true }, wave: { index: 8 } }; for (const id of ['1-1', '1-2', '1-3', '1-4', '1-5', '1-6', '2-1']) RG.progress.record(id, 'normal', st); RG.ui.show('title', {}); });
+  await page.waitForSelector('#screen-title.active .title-menu .btn-big');
+  await page.click('#screen-title .title-menu .btn-big:not(.btn-primary), #screen-title .title-menu .btn-primary');
+  await page.waitForSelector('#screen-world.active .rg-panel');
+  const st = () => page.evaluate(() => ({ view: document.querySelector('.rg-select') ? 'regions' : 'stages', on: (document.querySelector('.rg-panel.on') || { dataset: {} }).dataset.r, nodes: document.querySelectorAll('.map-node').length, title: (document.querySelector('.wm-title b') || {}).textContent }));
+  const s0 = await st();
+  await page.click('.rg-panel[data-r="1"]');
+  await page.waitForTimeout(700);
+  const s1 = await st();                        // 펼치기만
+  await page.click('.rg-panel[data-r="3"]');    // 잠긴 지역: 펼쳐지지만
+  await page.waitForTimeout(600);
+  await page.click('.rg-panel[data-r="3"] .rg-go', { force: true });
+  await page.waitForTimeout(700);
+  const s2 = await st();                        // 들어가지 않음
+  await page.focus('.rg-panel[data-r="3"]');
+  await page.keyboard.press('ArrowLeft');
+  await page.waitForTimeout(300);
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(900);
+  const s3 = await st();                        // 2지역 지도
+  await page.click('.wm-all');
+  await page.waitForTimeout(700);
+  const s4 = await st();                        // 지역 고르기로, 2지역이 펼쳐진 채
+  await ctx.close();
+  const ok = s0.view === 'regions' && s0.on === '2' && s1.view === 'regions' && s1.on === '1' && s2.view === 'regions' && s3.view === 'stages' && s3.nodes > 0 && s3.title === '서리 고개' && s4.view === 'regions' && s4.on === '2';
+  return { name: '지역 고르기', ok, detail: `처음 펼친 지역 ${s0.on} → 접힌 1지역 누름: ${s1.view}/${s1.on} → 잠긴 3지역 들어가기: ${s2.view} → ←·Enter: ${s3.view} "${s3.title}" 메달 ${s3.nodes}개 → 지역 고르기: ${s4.view}/${s4.on}`, errors };
+}
+
 async function gachaRun(browser) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const page = await ctx.newPage();
@@ -353,7 +390,7 @@ async function gachaRun(browser) {
 
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
-  const runs = { keyboard: keyboardRun, touch: touchRun, mouse: mouseRun, resume: resumeRun, gacha: gachaRun };
+  const runs = { keyboard: keyboardRun, touch: touchRun, mouse: mouseRun, resume: resumeRun, world: worldRun, gacha: gachaRun };
   let fail = 0;
   for (const [k, fn] of Object.entries(runs)) {
     if (only && only !== k) continue;

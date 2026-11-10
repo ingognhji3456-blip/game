@@ -59,6 +59,9 @@ async function run() {
     await page.goto(URL);
     await page.waitForTimeout(500);
     await shot(page, dir, '01-title'); await checkLayout(page, `${sizeName}/title`, issues);
+    await page.evaluate(() => RG.ui.show('world', { view: 'regions' }));
+    await page.waitForTimeout(700);
+    await shot(page, dir, '02a-regions'); await checkLayout(page, `${sizeName}/regions`, issues);
     await page.evaluate(() => RG.ui.show('world', {}));
     await shot(page, dir, '02-world'); await checkLayout(page, `${sizeName}/world`, issues);
     await page.evaluate(() => RG.ui.show('brief', { mapId: '1-1' }));

@@ -40,7 +40,7 @@
       if (run && D().maps.concat(D().endless).some((m) => m.id === run.mapId)) {
         menu.appendChild(el('button', { class: 'btn btn-primary btn-big', onclick: go(() => UI.show('game', { resume: run })) }, [`이어하기 — ${run.mapId} 웨이브 ${run.wave}`]));
       }
-      menu.appendChild(el('button', { class: `btn btn-big ${run ? '' : 'btn-primary'}`, onclick: go(() => UI.show('world', {})) }, [has ? '월드 지도' : '시작하기']));
+      menu.appendChild(el('button', { class: `btn btn-big ${run ? '' : 'btn-primary'}`, onclick: go(() => UI.show('world', has ? { view: 'regions' } : {})) }, [has ? '월드 지도' : '시작하기']));
       menu.appendChild(el('div', { class: 'title-row' }, [
         el('button', { class: `btn btn-gacha ${canPull() ? 'ready' : ''}`, onclick: go(() => UI.show('gacha', { back: { screen: 'title' } })) }, [UI.icon('crystal', 'tiny'), '탑 뽑기']),
         el('button', { class: 'btn', onclick: go(() => UI.show('heroes', {})) }, ['수호대']),
@@ -138,16 +138,118 @@
    * ===================================================== */
   let worldRegion = null;
   let worldFitBound = false;
+  let worldView = 'stages';     // 'regions' = 지역 고르기(펼침 패널), 'stages' = 한 지역의 그림 지도
+  let regionPick = null;        // 지역 고르기에서 펼쳐진 지역
+  const regionArt = {};         // 지역 그림 SVG (한 번만 만듦)
+  const artOf = (r) => regionArt[r] || (regionArt[r] = RG.art.regionMap ? RG.art.regionMap(r) : RG.art.regionBanner(r));
+  /** 지역 요약: 열림, 별, 클리어 수, 보스, 다음 맵 */
+  function regionInfo(r) {
+    const maps = D().maps.filter((m) => m.region === r);
+    const open = maps.length > 0 && P().mapUnlocked(maps[0].id);
+    const stars = maps.reduce((s, m) => s + P().mapStars(m.id), 0);
+    const cleared = maps.filter((m) => P().mapRec(m.id).cleared).length;
+    const bossMap = maps.find((m) => m.boss);
+    const boss = Object.keys(D().enemies).find((k) => D().enemies[k].boss && D().enemies[k].region === r && (!bossMap || (bossMap.waves || []).join(' ').includes(k))) || Object.keys(D().enemies).find((k) => D().enemies[k].boss && D().enemies[k].region === r);
+    return { maps, open, stars, maxStars: maps.length * 5, cleared, boss, bossDown: !!(bossMap && P().mapRec(bossMap.id).cleared), front: maps.some((m) => m.id === P().frontier()) };
+  }
+
+  /* 지역 고르기: 다섯 지역이 나란히 선 패널. 고른 지역이 크게 펼쳐지며 그림·진행·보스가 보이고, 한 번 더 누르면 들어감 */
+  function regionSelect(sec, head) {
+    const front = D().maps.find((m) => m.id === P().frontier());
+    if (!regionPick) regionPick = worldRegion || (front ? front.region : 1);
+    const wrap = el('div', { class: 'rg-select', role: 'listbox', 'aria-label': '지역 고르기' });
+    const panels = [];
+    let entering = false;
+    const enter = (r) => {
+      const info = regionInfo(r);
+      if (!info.open) { UI.toast(info.maps.length ? '앞 지역을 먼저 지켜 내야 합니다' : '아직 갈 수 없는 지역입니다', 'warn'); UI.sfx('error'); return; }
+      if (entering) return;
+      entering = true;
+      worldRegion = r; worldView = 'stages';
+      UI.sfx('click');
+      // 고른 패널이 화면 가득 펼쳐지며 그 지역 그림 지도로 들어감(다른 패널은 접혀 사라짐)
+      const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduce) { UI.show('world', {}); return; }
+      wrap.classList.add('entering');
+      panels[r - 1].classList.add('zooming');
+      setTimeout(() => { if (document.body.dataset.screen === 'world') UI.show('world', {}); }, 460);
+    };
+    const pick = (r, focus) => {
+      if (regionPick === r) return;
+      regionPick = r;
+      UI.sfx('hover');
+      panels.forEach((pn) => { const on = +pn.dataset.r === r; pn.classList.toggle('on', on); pn.setAttribute('aria-selected', on ? 'true' : 'false'); });
+      if (focus) panels[r - 1].focus();
+    };
+    for (const reg of D().regions) {
+      const info = regionInfo(reg.id);
+      const on = reg.id === regionPick;
+      const dots = el('div', { class: 'rg-dots' }, info.maps.map((m) => {
+        const rec = P().mapRec(m.id);
+        const st = P().mapUnlocked(m.id) ? (rec.cleared ? 'clear' : 'open') : 'lock';
+        return el('span', { class: `rg-dot ${st} ${m.id === P().frontier() ? 'front' : ''} ${m.boss ? 'boss' : ''}`, title: `${m.id} ${m.name}` }, [el('b', { text: m.id.split('-')[1] }), rec.cleared ? el('i', { text: '★'.repeat(rec.stars || 0) }) : null]);
+      }));
+      const pct = info.maxStars ? Math.round((info.stars / info.maxStars) * 100) : 0;
+      const pn = el('div', {
+        class: `rg-panel theme-${reg.theme} ${on ? 'on' : ''} ${info.open ? '' : 'locked'} ${info.front ? 'front' : ''}`,
+        role: 'option', tabindex: '0', 'aria-selected': on ? 'true' : 'false', 'aria-label': `${reg.id}. ${reg.name}${info.open ? ` 별 ${info.stars}/${info.maxStars}` : ' 잠김'}`,
+        dataset: { r: String(reg.id) },
+      }, [
+        UI.svgImg(artOf(reg.id), 'rg-art', ''),
+        el('div', { class: 'rg-shade' }),
+        el('div', { class: 'rg-fog' }),
+        // 접힌 모양: 세로 이름
+        el('div', { class: 'rg-spine' }, [
+          el('span', { class: 'rg-num', text: String(reg.id) }),
+          el('b', { class: 'rg-vname', text: reg.name }),
+          info.open ? el('span', { class: 'rg-vstar' }, [UI.icon('star', 'tiny'), String(info.stars)]) : UI.icon('lock', 'rg-vlock'),
+        ]),
+        // 펼친 모양
+        el('div', { class: 'rg-body' }, [
+          el('div', { class: 'rg-top' }, [
+            el('span', { class: 'rg-kicker', text: `제${reg.id}지역${info.front ? ' · 지금 지키는 곳' : info.cleared === info.maps.length && info.maps.length ? ' · 모두 지켜 냄' : ''}` }),
+            el('h3', { class: 'rg-name', text: reg.name }),
+            el('p', { class: 'rg-desc', text: reg.desc }),
+          ]),
+          info.open ? dots : el('p', { class: 'rg-lockmsg' }, [UI.icon('lock', 'tiny'), ' 앞 지역의 보스를 쓰러뜨리면 열립니다']),
+          el('div', { class: 'rg-foot' }, [
+            el('div', { class: 'rg-stats' }, [
+              el('div', { class: 'rg-bar' }, [el('i', { style: `width:${pct}%` })]),
+              el('span', {}, [UI.icon('star', 'tiny'), el('b', { text: `${info.stars}` }), ` / ${info.maxStars}`, el('span', { class: 'dim', text: ` · 클리어 ${info.cleared}/${info.maps.length}` })]),
+            ]),
+            info.boss ? el('div', { class: `rg-boss ${info.bossDown ? 'down' : ''}` }, [UI.enemyImg(info.boss, 'rg-boss-img'), el('span', {}, [el('small', { text: info.bossDown ? '쓰러뜨린 보스' : '지역 보스' }), el('b', { text: info.open ? D().enemies[info.boss].name : '???' })])]) : null,
+            el('button', { class: `btn btn-primary rg-go ${info.open ? '' : 'disabled'}`, tabindex: '-1', onclick: (e) => { e.stopPropagation(); enter(reg.id); } }, [info.open ? '들어가기 ▶' : '잠김']),
+          ]),
+        ]),
+      ]);
+      // 누르는 순간(포커스로 펼쳐지기 전)에 이미 펼쳐져 있었는지 기억 — 접힌 패널은 첫 누름에 펼치기만
+      pn.addEventListener('pointerdown', () => { pn._wasOn = regionPick === reg.id; });
+      pn.addEventListener('click', () => { const was = pn._wasOn != null ? pn._wasOn : regionPick === reg.id; pn._wasOn = null; if (was) enter(reg.id); else pick(reg.id); });
+      pn.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { pick(Math.min(5, reg.id + 1), true); e.preventDefault(); }
+        else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { pick(Math.max(1, reg.id - 1), true); e.preventDefault(); }
+        else if (e.key === 'Enter' || e.key === ' ') { if (regionPick === reg.id) enter(reg.id); else pick(reg.id); e.preventDefault(); }
+      });
+      pn.addEventListener('focus', () => pick(reg.id));
+      panels.push(pn);
+      wrap.appendChild(pn);
+    }
+    sec.append(head, el('div', { class: 'rg-board' }, [wrap]));
+    requestAnimationFrame(() => { if (UI.keyboardUser && UI.keyboardUser()) panels[regionPick - 1].focus(); });
+  }
+
   UI.register('world', {
     enter(sec, data) {
       UI.music('worldmap');
       sec.innerHTML = '';
       const front = P().frontier();
       const frontMap = D().maps.find((m) => m.id === front);
-      if (data.region) worldRegion = data.region;
+      if (data.region) { worldRegion = data.region; worldView = 'stages'; }
+      if (data.view) worldView = data.view;
       if (!worldRegion) worldRegion = frontMap ? frontMap.region : 1;
+      if (worldView === 'regions' && !data.keepPick) regionPick = null;
       const head = el('header', { class: 'top-bar' }, [
-        el('button', { class: 'icon-btn', title: '타이틀', onclick: () => UI.show('title', {}) }, [UI.icon('back')]),
+        el('button', { class: 'icon-btn', title: worldView === 'regions' ? '타이틀' : '지역 고르기', 'aria-label': worldView === 'regions' ? '타이틀' : '지역 고르기', onclick: () => (worldView === 'regions' ? UI.show('title', {}) : UI.show('world', { view: 'regions' })) }, [UI.icon('back')]),
         el('h2', { text: '월드 지도' }),
         el('div', { class: 'top-stars' }, [UI.icon('star'), el('b', { text: String(P().starsTotal()) }), el('small', { text: ' / 150' })]),
         el('div', { class: 'top-actions' }, [
@@ -158,16 +260,17 @@
           el('button', { class: 'icon-btn', title: '설정', onclick: openSettings }, [UI.icon('settings')]),
         ]),
       ]);
-      const tabs = el('nav', { class: 'region-tabs' });
-      for (const reg of D().regions) {
-        const maps = D().maps.filter((m) => m.region === reg.id);
-        const open = maps.length && P().mapUnlocked(maps[0].id);
-        const got = maps.reduce((s, m) => s + P().mapStars(m.id), 0);
-        tabs.appendChild(el('button', {
-          class: `region-tab ${reg.id === worldRegion ? 'on' : ''} ${open ? '' : 'locked'}`,
-          onclick: () => { if (!open) { UI.toast(maps.length ? '앞 지역을 먼저 지켜 내야 합니다' : '아직 갈 수 없는 지역입니다', 'warn'); return; } worldRegion = reg.id; UI.sfx('click'); UI.show('world', {}); },
-        }, [el('b', { text: `${reg.id}. ${reg.name}` }), el('small', { text: maps.length ? `★ ${got}/${maps.length * 5}` : '잠김' })]));
-      }
+      if (worldView === 'regions') { regionSelect(sec, head); return; }
+      // 한 지역 보기: 위쪽 탭 대신 "지역 고르기"로 돌아가는 단추 + 이전·다음 지역
+      const go = (r) => { const info = regionInfo(r); if (!info.open) { UI.toast('앞 지역을 먼저 지켜 내야 합니다', 'warn'); return; } worldRegion = r; UI.sfx('click'); UI.show('world', {}); };
+      const cur = regionInfo(worldRegion);
+      const curReg = D().regions.find((r) => r.id === worldRegion);
+      const tabs = el('nav', { class: 'wm-nav' }, [
+        el('button', { class: 'btn wm-all', onclick: () => { regionPick = worldRegion; UI.show('world', { view: 'regions', keepPick: true }); } }, [UI.icon('map', 'tiny'), '지역 고르기']),
+        el('button', { class: 'icon-btn wm-step', 'aria-label': '이전 지역', disabled: worldRegion <= 1, onclick: () => go(worldRegion - 1) }, ['◀']),
+        el('div', { class: `wm-title theme-${curReg.theme}` }, [el('span', { class: 'rg-num', text: String(worldRegion) }), el('b', { text: curReg.name }), el('span', { class: 'wm-stars' }, [UI.icon('star', 'tiny'), `${cur.stars}/${cur.maxStars}`])]),
+        el('button', { class: 'icon-btn wm-step', 'aria-label': '다음 지역', disabled: worldRegion >= D().regions.length || !regionInfo(worldRegion + 1).open, onclick: () => go(worldRegion + 1) }, ['▶']),
+      ]);
       const reg = D().regions.find((r) => r.id === worldRegion);
       const maps = D().maps.filter((m) => m.region === worldRegion);
       const board = el('div', { class: `region-board theme-${reg.theme}` });
