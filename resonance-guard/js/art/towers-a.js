@@ -12,7 +12,7 @@
  *  - 빛은 늘 왼쪽 위. 처마·난간 아래와 땅에 닿는 곳은 짙게. 땅 그림자는 그리지 않음(렌더러 몫).
  * ========================================================= */
 (() => {
-  const { f, M, STONE, poly, cyl, frus, ring, band, vseam, flame, crystal, orb, aura, spark, bolt, flag, plat, shard, fine, rn: rnS, roundPoly, toneAt, masonryCyl, flagTop, gem, metalBand } = RG.art._tw;
+  const { f, M, STONE, poly, cyl, frus, ring, band, vseam, flame, crystal, orb, aura, spark, bolt, flag, plat, shard, fine, rn: rnS, roundPoly, toneAt, masonry, flagTop, gem, metalBand } = RG.art._tw;
   const T = RG.art._tw.T;
   const OLC = RG.art._tw.OL;
 
@@ -249,57 +249,12 @@
   /* =========================================================
    * 건물 재료
    * ========================================================= */
-  /** 돌을 쌓은 원기둥·원뿔대 벽: 위 yt(반지름 rt) ~ 아래 yb(반지름 rb). 돌 한 줄 높이 ch */
+  /** 돌을 쌓은 원기둥·원뿔대 벽: 위 yt(반지름 rt) ~ 아래 yb(반지름 rb). 돌 한 줄 높이 ch
+   *  돌 하나하나(자리에 따른 밝기 + 색 흔들림 + 모서리 빛·그늘), 줄눈은 돌 색의 어두운 변형 — towers.js masonry */
   function stoneWall(c, cx, yt, yb, rt, rb, col, o = {}) {
-    const h = c.h;
     const kE = o.kE || 0.3;
-    const ch = o.ch || 7;
-    const seed = o.seed || 1;
-    let s = o.noBody ? '' : rt === rb ? cyl(c, cx, yt, yb, rb, rb * kE, c.cg(col), o.top || null) : frus(c, cx, yt, yb, rt, rb, c.cg(col), o.top || null, 3, kE);
-    const rAt = (y) => rt + (rb - rt) * ((y - yt) / (yb - yt));
-    const n = Math.max(1, Math.round((yb - yt) / ch));
-    const dy = (yb - yt) / n;
-    let mortar = '';
-    let tint = '';
-    let hi = '';
-    for (let i = 0; i < n; i++) {
-      const y1 = yt + i * dy;
-      const y2 = y1 + dy;
-      const r1 = rAt(y1);
-      const r2 = rAt(y2);
-      if (i > 0) mortar += ring(cx, y1, r1, r1 * kE);
-      const bw = (o.bw || 13) / ((r1 + r2) / 2);
-      const off = (i % 2 ? 0.5 : 0) + rnd(seed + i) * 0.3;
-      const angs = [];
-      for (let a = -1.5 + off * bw; a < 1.5; a += bw * (0.8 + rnd(seed * 7 + i * 3 + a) * 0.45)) angs.push(a);
-      angs.forEach((a, j) => {
-        if (Math.abs(a) < 1.38) {
-          const x1 = cx + r1 * Math.sin(a);
-          const x2 = cx + r2 * Math.sin(a);
-          mortar += `M${f(x1)} ${f(y1 + r1 * kE * Math.cos(a))}L${f(x2)} ${f(y2 + r2 * kE * Math.cos(a))}`;
-        }
-        const b = angs[j + 1];
-        if (b == null) return;
-        const am = Math.max(-1.45, Math.min(1.45, a));
-        const bm = Math.max(-1.45, Math.min(1.45, b));
-        if (bm - am < 0.08) return;
-        const q = rnd(seed * 13 + i * 5 + j);
-        const pt = (aa, yy, rr) => [cx + rr * Math.sin(aa), yy + rr * kE * Math.cos(aa)];
-        const mid = (am + bm) / 2;
-        if (q > 0.62) tint += c.p(poly([pt(am, y1, r1), pt(mid, y1, r1), pt(bm, y1, r1), pt(bm, y2, r2), pt(mid, y2, r2), pt(am, y2, r2)]), q > 0.82 ? '#ffffff' : '#000000', 0, ` opacity="${q > 0.82 ? 0.14 : 0.12}"`);
-        if (q < 0.5 && mid < 0.6) {
-          const p1 = pt(am + 0.04, y1 + 1.2, r1);
-          const p2 = pt(bm - 0.04, y1 + 1.2, r1);
-          hi += `M${P2(p1)}L${P2(pt(mid, y1 + 1.2, r1))}L${P2(p2)}`;
-        }
-      });
-    }
-    s += tint;
-    if (hi) s += c.ln(hi, h.shade(col, 0.45), 1.5, 0.55);
-    s += c.ln(mortar, h.shade(col, -0.42), 1.5, 0.85);
-    /* 아래쪽 접지 그늘 + 이끼 */
-    s += c.p(`M${f(cx - rb)} ${f(yb - 5)}A${f(rb)} ${f(rb * kE)} 0 0 0 ${f(cx + rb)} ${f(yb - 5)}V${f(yb)}A${f(rb)} ${f(rb * kE)} 0 0 1 ${f(cx - rb)} ${f(yb)}Z`, '#1c1426', 0, ' opacity="0.22"');
-    if (o.moss) s += c.p(`M${f(cx - rb * 0.95)} ${f(yb + rb * kE * 0.3)}Q${f(cx - rb * 0.9)} ${f(yb - 6)} ${f(cx - rb * 0.72)} ${f(yb - 3)}Q${f(cx - rb * 0.6)} ${f(yb - 7)} ${f(cx - rb * 0.48)} ${f(yb + rb * kE * 0.8)}Q${f(cx - rb * 0.75)} ${f(yb + rb * kE * 0.85)} ${f(cx - rb * 0.95)} ${f(yb + rb * kE * 0.3)}Z`, c.vg('#6f9a4a', 0.25, -0.2), 1.6);
+    let s = masonry(c, cx, yt, yb, rt, rb, kE, col, { ch: o.ch || 7, bw: o.bw || 13, seed: o.seed || 1, moss: o.moss, rough: o.rough });
+    if (o.top) s += c.e(cx, yt, rt, rt * kE, o.top, 3);
     return s;
   }
   /** 둥근 돌담(포대·우물 같은 고리 벽): part 'back' = 담 윗면 + 안쪽 바닥(먼저), 'front' = 앞 담(안의 것을 가림) */
@@ -309,46 +264,61 @@
     const ry = rx * kE;
     const ri = rx - th;
     const riy = ri * kE;
-    if (part === 'back') return c.e(cx, yt, rx, ry, c.vg(h.shade(col, 0.25), 0.2, -0.05), 2.6) + c.e(cx, yt, ri, riy, c.vg(o.floor || h.shade(col, -0.5), -0.1, 0.15), 2.2);
-    let s = c.p(`M${f(cx - ri)} ${f(yt)}A${f(ri)} ${f(riy)} 0 0 0 ${f(cx + ri)} ${f(yt)}H${f(cx + rx)}V${f(yb)}A${f(rx)} ${f(ry)} 0 0 1 ${f(cx - rx)} ${f(yb)}V${f(yt)}Z`, c.cg(col), 3);
-    s += stoneWall(c, cx, yt, yb, rx, rx, col, { noBody: true, ch: o.ch || 6, bw: o.bw || 12, seed: o.seed || 31, kE, moss: o.moss });
-    s += c.p(`M${f(cx - rx)} ${f(yt)}A${f(rx)} ${f(ry)} 0 0 0 ${f(cx + rx)} ${f(yt)}H${f(cx + ri)}A${f(ri)} ${f(riy)} 0 0 1 ${f(cx - ri)} ${f(yt)}Z`, c.vg(h.shade(col, 0.28), 0.2, -0.1), 2.2);
+    if (part === 'back') {
+      return c.e(cx, yt, rx, ry, c.vg(h.shade(col, 0.25), 0.2, -0.05), 2.6)
+        + c.e(cx, yt, ri, riy, c.vg(o.floor || c.dk(col, 0.55), -0.1, 0.15), 2.2, c.ink(col))
+        /* 안쪽 담 그늘(앞 담 안쪽 면이 아니라 뒤 담 안쪽 면) */
+        + c.p(`M${f(cx - ri)} ${f(yt)}A${f(ri)} ${f(riy)} 0 0 1 ${f(cx + ri)} ${f(yt)}A${f(ri)} ${f(riy * 0.55)} 0 0 0 ${f(cx - ri)} ${f(yt)}Z`, c.dk(col, 0.35), 0);
+    }
+    let s = masonry(c, cx, yt, yb, rx, rx, kE, col, { ch: o.ch || 6, bw: o.bw || 12, seed: o.seed || 31, moss: o.moss });
+    s += c.p(`M${f(cx - rx)} ${f(yt)}A${f(rx)} ${f(ry)} 0 0 0 ${f(cx + rx)} ${f(yt)}H${f(cx + ri)}A${f(ri)} ${f(riy)} 0 0 1 ${f(cx - ri)} ${f(yt)}Z`, c.vg(h.shade(col, 0.3), 0.2, -0.1), 2.2);
+    s += c.ln(`M${f(cx - ri * 0.7)} ${f(yt + riy * 0.72 + 1)}A${f(ri)} ${f(riy)} 0 0 0 ${f(cx + ri * 0.2)} ${f(yt + riy + 1)}`, c.lt(col, 0.6), 1, 0.7);
     return s;
   }
-  /** 돌을 쌓은 평평한 벽(사각형): 줄마다 엇갈린 돌 */
+  /** 돌을 쌓은 평평한 벽(사각형): 줄마다 엇갈린 돌 하나하나(색 흔들림 + 윗·왼 모서리 빛, 아래·오른 모서리 그늘)
+   *  o.fill 이 있으면 원기둥처럼 좌우 명암을 크게(둥근 벽), 없으면 은은하게(평평한 벽). ow 0 = 외곽선 없음 */
   function stoneRect(c, x, y, w, ht, col, o = {}) {
     const h = c.h;
     const ch = o.ch || 7;
     const seed = o.seed || 3;
-    let s = c.r(x, y, w, ht, o.fill || c.cg(col), o.rx || 0, o.ow == null ? 3 : o.ow);
     const n = Math.max(1, Math.round(ht / ch));
     const dy = ht / n;
-    let mortar = '';
-    let tint = '';
+    const g = 0.5;
+    const round = o.fill && o.fill !== 'none';
+    let s = c.r(x, y, w, ht, o.mortar || c.dk(col, 0.55), o.rx || 0, 0);
     let hi = '';
+    let lo = '';
     for (let i = 0; i < n; i++) {
       const y1 = y + i * dy;
-      if (i > 0) mortar += `M${f(x + 1)} ${f(y1)}H${f(x + w - 1)}`;
       const bw = o.bw || 11;
       let xx = x + (i % 2 ? bw * 0.5 : 0) + rnd(seed + i) * 3;
       const xs = [x];
       while (xx < x + w - 3) { if (xx > x + 3) xs.push(xx); xx += bw * (0.8 + rnd(seed * 3 + i + xx) * 0.4); }
       xs.push(x + w);
-      xs.forEach((a, j) => {
-        if (j > 0 && j < xs.length - 1) mortar += `M${f(a)} ${f(y1 + 0.5)}V${f(y1 + dy - 0.5)}`;
-        const b = xs[j + 1];
-        if (b == null) return;
-        const q = rnd(seed * 11 + i * 7 + j);
-        if (b - a < 5) return;
-        if (q > 0.64) tint += c.r(a + 0.6, y1 + 0.6, b - a - 1.2, dy - 1.2, q > 0.84 ? '#ffffff' : '#000000', 0.8, 0, ` opacity="${q > 0.84 ? 0.14 : 0.12}"`);
-        if (q < 0.45 && b < x + w - 4) hi += `M${f(a + 1.2)} ${f(y1 + 1.3)}H${f(b - 1.2)}`;
-      });
+      for (let j = 0; j < xs.length - 1; j++) {
+        const a = xs[j] + (j ? g : 0);
+        const b = xs[j + 1] - (j < xs.length - 2 ? g : 0);
+        const t = y1 + (i ? g : 0);
+        const bt = y1 + dy - (i < n - 1 ? g : 0);
+        if (b - a < 0.8) continue;
+        const u = ((a + b) / 2 - x) / w;
+        const tone = toneAt(h, col, round ? u : 0.28 + u * 0.4);
+        const fill = tintStoneA(h, tone, rnd(seed * 11 + i * 7 + j));
+        s += c.r(a, t, b - a, bt - t, fill, Math.min(0.8, (b - a) * 0.2), 0);
+        if (b - a > 2.2) {
+          if (u < 0.85) hi += `M${f(a + 0.5)} ${f(bt - 0.6)}V${f(t + 0.55)}H${f(b - 0.6)}`;
+          lo += `M${f(a + 0.6)} ${f(bt - 0.5)}H${f(b - 0.5)}V${f(t + 0.7)}`;
+        }
+      }
     }
-    s += tint;
-    if (hi) s += c.ln(hi, h.shade(col, 0.45), 1.5, 0.5);
-    s += c.ln(mortar, h.shade(col, -0.42), 1.5, 0.85);
+    if (hi) s += c.ln(hi, c.lt(col, 0.5), 1, 0.7);
+    if (lo) s += c.ln(lo, c.dk(col, 0.5), 1, 0.55);
+    if (o.ow !== 0) s += c.r(x, y, w, ht, 'none', o.rx || 0, o.ow == null ? 3 : o.ow);
     return s;
   }
+  /** 돌 색 흔들림(푸른·누런·보랏빛) */
+  const TINT_A = ['#9aa8c8', '#c8b07a', '#a08ab0', '#ffffff', '#3a2a40'];
+  const tintStoneA = (h, col, q) => (q < 0.5 ? col : h.mix(col, TINT_A[Math.floor((q - 0.5) * 10) % 5], q > 0.9 ? 0.1 : 0.16));
   /** 통나무·들보 (x1,y1)→(x2,y2), 굵기 w(틀 좌표). end: 잘린 끝 나이테 */
   function beam(c, x1, y1, x2, y2, w, col, o = {}) {
     const h = c.h;

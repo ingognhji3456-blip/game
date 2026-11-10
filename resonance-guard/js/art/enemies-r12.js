@@ -179,8 +179,8 @@
     if (rimC) {
       const gid = H.uid('er');
       const [x1, y1, x2, y2] = shadowDir(f);
-      s += `<linearGradient id="${gid}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"><stop offset="0" stop-color="${rimC}" stop-opacity="0"/><stop offset=".58" stop-color="${rimC}" stop-opacity="0"/><stop offset="1" stop-color="${rimC}" stop-opacity="${o.rimOp != null ? o.rimOp : 0.85}"/></linearGradient>` +
-        `<path d="${d}"${f ? ` transform="${f.t}"` : ''} fill="none" stroke="url(#${gid})" stroke-width="${n((o.rw || 1.5) * 2)}"/>`;
+      s += `<linearGradient id="${gid}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"><stop offset="0" stop-color="${rimC}" stop-opacity="0"/><stop offset=".6" stop-color="${rimC}" stop-opacity="0"/><stop offset="1" stop-color="${rimC}" stop-opacity="${o.rimOp != null ? o.rimOp : 0.6}"/></linearGradient>` +
+        `<path d="${d}"${f ? ` transform="${f.t}"` : ''} fill="none" stroke="url(#${gid})" stroke-width="${n((o.rw || 1.3) * 2)}"/>`;
     }
     return `${s}</g>`;
   }
@@ -235,11 +235,12 @@
   /* ---------- 01 안개 쥐: 종종 뛰는 네발(대각선 짝) · 앞니로 물어뜯기 · 죽으면 뒤집혀 발랑 ---------- */
   MOTION.mist_rat = { gait: 'scuttle', bob: 0.03, tilt: 2, sway: 0, squash: 0.04, deathFx: 'mist', deathTime: 0.6 };
   D.mist_rat = (fr) => {
-    const c = make(3.2, { fine: true });
+    const c = make(3.2);
     const G = 90 - c.ow / 2;
-    const fur = GREY;
-    const furD = sh(GREY, -0.32);
-    const pink = '#d9a3b5';
+    const fur = '#948da8';           // 안개 빛이 도는 보랏빛 잿색
+    const furD = hs(fur, -0.3);
+    const belly = '#d9d1df';
+    const pink = '#e09ab4';
     // f: 몸 [dx, dy, 회전, 기준x, 기준y, sx, sy] · h 머리 · jaw 입 · ear 귀 · tl 꼬리끝 · 발: [x, 들림] 또는 {L:[몸 좌표 손목], T:[몸 좌표 발끝]}
     const P = {
       walk0: { f: [0, 0, 0], h: 0, jaw: 3, ear: 0, tl: [0, 0], nf: [75, 0], ff: [61, 0.6], nh: [31, 0.6], fh: [41, 0] },
@@ -270,7 +271,8 @@
       if (Array.isArray(q)) { W = [q[0] - 1, G - 2.4 - q[1]]; Tp = [q[0] + 3, G - 1.8 - q[1] + (q[1] > 2 ? 1.5 : 0)]; } else { W = F(q.L); Tp = F(q.T); }
       const E = ik(S, W, 7, 6.6, -F.flip);
       return blob(c, [...seg2(S, E, W, 3.3 * r, 2.5 * r, 2.1 * r), cap(W, 2.3 * r, Tp, 1.7 * r)], legG(c, col)) +
-        c.L(`M${pt(Tp)}l1.6 1.2M${pt(add(Tp, [-0.6, 0.4]))}l0.6 1.8`, '#f4eef6', 1.5);
+        c.Pn(cap(W, 1.5 * r, Tp, 1.1 * r), pink, 0.55) +
+        c.L(`M${pt(Tp)}l1.6 1.2M${pt(add(Tp, [-0.6, 0.4]))}l0.6 1.8`, '#f4eef6', 1.5, ' opacity=".9"');
     };
     // 뒷다리: 엉덩이 → 무릎(앞으로) → 발뒤꿈치 → 긴 발
     const hindLeg = (h0, q, col, r = 1) => {
@@ -283,41 +285,53 @@
       } else { J = F(q.L); Tp = F(q.T); }
       const K = ik(Hh, J, 8, 6.2, F.flip);
       return blob(c, [cap(Hh, 6.2 * r, K, 3.4 * r), cap(K, 3.4 * r, J, 2.2 * r), cap(J, 2.3 * r, Tp, 1.8 * r)], legG(c, col, 0.1)) +
-        c.L(`M${pt(Tp)}l1.8 0.8`, '#f4eef6', 1.5);
+        c.Pn(cap(J, 1.4 * r, Tp, 1.1 * r), pink, 0.5) +
+        // 넓적다리 털결
+        strokes(c, [[Hh[0] - 2, Hh[1] - 2, 120, 3.4], [Hh[0] + 2, Hh[1] + 1, 110, 3]], hs(col, 0.25), 1.1, 0.8) +
+        c.L(`M${pt(Tp)}l1.8 0.8`, '#f4eef6', 1.5, ' opacity=".9"');
     };
 
     // 꼬리: 엉덩이에서 뒤로 휘어 올라가 끝에서 안개로 흩어짐
     const tb = F([20, 72]);
     const tip = p.tailW ? p.tailW[3] : add(F([6, 50]), p.tl);
     const tailPts = p.tailW ? bez(F([20, 72]), ...p.tailW.slice(1), 12) : bez(tb, add(F([8, 78]), [p.tl[0] * 0.3, 0]), add(F([0, 62]), [p.tl[0] * 0.6, p.tl[1] * 0.5]), tip, 12);
-    let s = c.P(taper(tailPts, 3, 1.3), legG(c, sh(GREY, -0.08), 0.15, -0.25)) +
-      c.L(`M${pt(tailPts[3])}l1.5 1.5M${pt(tailPts[6])}l1.5 1M${pt(tailPts[9])}l1.4 0.4`, sh(GREY, -0.35), 1.5) +
+    const tailC = '#b49aae';
+    let s = c.P(taper(tailPts, 3, 1.3), legG(c, tailC, 0.2, -0.3)) +
+      c.L([2, 4, 6, 8, 10].map((i) => { const a = angOf(tailPts[i - 1], tailPts[i + 1]) + 90; const r = 3 - 1.7 * (i / 12); return `M${pt(pol(tailPts[i], r * 0.9, a))}L${pt(pol(tailPts[i], -r * 0.9, a))}`; }).join(''), ink(tailC, 0.35), 0.9) +
       c.mist([[tip[0], tip[1], 4.6], [tip[0] - 4, tip[1] - 5, 3.6], [tip[0] + 4, tip[1] - 6, 2.8], [tip[0] + 1, tip[1] - 11, 2]], MISTC, p.gone ? 0.5 : 0.88);
 
     s += hindLeg([33, 73], p.fh, furD, 0.92) + frontLeg([61, 71], p.ff, furD, 0.92);
 
     // 몸통 + 배 + 털결
+    // 등 털 끝(실루엣에 붙는 짧은 털뭉치)
+    s += F.g(c.P('M22 66L17.5 63.5L21 69Z', fur) + c.P('M28 59.5L24.5 55.5L30.5 58Z', fur) + c.P('M36 56L33.5 51.5L39 55Z', fur) + c.P('M45 54.6L44 50L48.5 54.8Z', fur));
     s += F.g(c.P(bodyD, lit(c, fur, F)));
     const bc = F([45, 70]);
-    s += form(c, bodyD, F, [bc[0], bc[1], 27, 15], 0.3, 0.2);
+    s += form(c, bodyD, F, [bc[0], bc[1], 27, 15], 0.3, 0.2, { ao: [[...F([66, 66]), 6, 5, 0.45], [...F([36, 76]), 7, 4, 0.3]] });
     s += F.g(
-      c.Pn('M26 78C34 83 54 84 66 78C60 82 36 85 26 78Z', GREY_L, 0.6) +
-      c.L('M30 58l-2.5-3M38 55.5l-1.5-3.2M46 55l-0.5-3.4M24 63l-3-2', sh(GREY, -0.3), 1.6) +
-      c.shine(36, 60, 9, 3.4, 0.4)
+      c.Pn('M24 77C34 84 56 85 68 77C62 83 34 86 24 77Z', belly, 0.75) +
+      // 털결: 밝은 면의 짧은 결, 그늘 쪽 진한 결, 넓적다리 근육 선
+      strokes(c, [[30, 60, 200, 4], [37, 57.5, 195, 4.2], [44, 57, 190, 4], [51, 58, 185, 3.6], [26, 65, 210, 3.4]], hs(fur, 0.42), 1.2, 0.85) +
+      strokes(c, [[34, 70, 160, 3.4], [42, 72, 165, 3.6], [52, 73, 170, 3.4], [60, 70, 175, 3], [24, 72, 150, 3]], ink(fur, 0.3), 1.1, 0.7) +
+      c.L('M23 72Q27 64 36 64', ink(fur, 0.32), 1.1, ' opacity=".8"') +
+      c.shine(36, 60, 8, 2.6, 0.35)
     );
 
     // 머리: 아래턱(경첩) → 입속 → 머리뼈 → 코·눈·수염·앞니
     const jawT = `rotate(${p.jaw} 79 69)`;
     s += HF.g(
-      c.P('M64 60C61 54 63 48 66 46C69 47 71 51 71 55Z', sh(fur, -0.25)) + // 먼 쪽 귀
-      (p.jaw > 8 ? c.P('M76 66L93 67L90 74L78 73Z', '#3a1e2e') + c.P('M90 70.5L93.4 70.2L92.6 73L90.6 73.2Z', '#fffbe8') : '') +
-      g(c.P('M77 68L92 69C92.5 72 89 74.5 85 74.5L79 73.5C77 72.5 76 70.5 77 68Z', sh(fur, -0.12)) +
-        c.P('M89.5 69.2L92.5 69.4L92 73.2L90 73.4Z', '#fffbe8'), jawT) +
+      c.P('M64 60C61 54 63 48 66 46C69 47 71 51 71 55Z', hs(fur, -0.25)) + c.Pn('M65.5 56C64 52 65 49 66.5 48C68 50 69 52 69 54Z', pink, 0.5) + // 먼 쪽 귀
+      (p.jaw > 8 ? c.P('M76 66L93 67L90 74L78 73Z', '#4a1f36') + c.Pn('M79 71L89 71.6L88 73L80 72.6Z', '#c0607e', 0.8) + c.P('M90 70.5L93.4 70.2L92.6 73L90.6 73.2Z', '#fff4d6') : '') +
+      g(c.P('M77 68L92 69C92.5 72 89 74.5 85 74.5L79 73.5C77 72.5 76 70.5 77 68Z', lit(c, hs(fur, -0.08), HF, 0.2)) +
+        c.P('M89.5 69.2L92.5 69.4L92 73.2L90 73.4Z', '#fff4d6'), jawT) +
       c.P('M64 66C62 57 69 51 77 52C84 53 90 58 95 65C96 68 94 70 91 70L80 71C72 72 66 71 64 66Z', lit(c, fur, HF, 0.45)) +
-      c.Pn('M66 67C72 70 84 70 92 69C86 72 72 73 66 67Z', OL, 0.18) +
-      g(c.E(70, 53, 7.2, 7.8, lit(c, fur, HF)) + c.En(70.6, 54, 4.2, 5, pink), `rotate(${p.ear} 70 60)`) +
-      c.E(95.4, 65.3, 2.5, 2.1, pink) +
-      c.L('M88 66l9-3.5M88.5 67.5l9.5 0.5', '#e9e4f2', 1.5, ' opacity=".85"') +
+      c.Pn('M66 67C72 70 84 70 92 69C86 72 72 73 66 67Z', SHADE, 0.3) +
+      c.Pn('M72 66C78 68.5 86 68.5 92 67.5C86 70.5 76 70.5 72 66Z', belly, 0.5) +
+      strokes(c, [[73, 55, 200, 3.2], [79, 55.5, 195, 3], [85, 58, 190, 2.6]], hs(fur, 0.45), 1, 0.8) +
+      strokes(c, [[66, 64, 150, 2.6], [69, 66.5, 160, 2.4]], ink(fur, 0.3), 1, 0.7) +
+      g(c.E(70, 53, 7.2, 7.8, lit(c, fur, HF)) + c.En(70.6, 54, 4.2, 5, c.rad([[0, '#f6c4d4'], [1, '#c87896']], 0.4, 0.4, 0.7)) + c.L('M68 50.5Q69.5 48 72 48.4', hs(fur, 0.5), 1, ' opacity=".8"'), `rotate(${p.ear} 70 60)`) +
+      c.E(95.4, 65.3, 2.5, 2.1, c.rad([[0, '#ffd2e0'], [1, '#c4708e']], 0.35, 0.3, 0.75)) + c.En(94.8, 64.5, 0.7, 0.5, '#fff', 0.9) +
+      c.L('M88 66l9-3.5M88.5 67.5l9.5 0.5', '#ece6f4', 1.2, ' opacity=".85"') +
       (p.dead ? deadEye(c, 83, 60.5, 3) : c.eye(83, 60, p.hurt ? 4 : 3.5))
     );
     if (p.bite) s += hitStar(c, 97, 74, 5) + c.L('M93 79l5 3M95 76l5 0', '#fff', 2, ' opacity=".9"');
@@ -335,10 +349,11 @@
   D.ash_boar = (fr) => {
     const c = make(3);
     const G = 90 - c.ow / 2;
-    const fur = '#8b817d';
-    const furD = sh(fur, -0.32);
-    const hoofC = '#3d3540';
-    const stone = c.lin([[0, '#ece8de'], [1, '#9c978c']], 'h');
+    const fur = '#8f7f7a';            // 잿빛 갈색 털
+    const furD = hs(fur, -0.3);
+    const hoofC = '#3d3448';
+    const snout = '#c49a9a';
+    const stone = c.lin([[0, '#fffaee'], [0.55, '#e4dac4'], [1, '#a2967e']], 'h');
     // f 몸 · h 머리 · jaw 입 · mh 갈기 높이 · 발 [x, 들림] 또는 {L:[몸 좌표 발목], T:[몸 좌표 발굽 끝]}
     const P = {
       walk0: { f: [0, 0, 0], h: 0, jaw: 2, mh: 1, nf: [70, 0], ff: [55, 0.6], nh: [24, 0.6], fh: [32, 0] },
@@ -362,7 +377,7 @@
     const bodyD = 'M14 62C12 50 20 43 32 43C42 39 54 37 63 41C72 45 75 55 73 65C71 74 63 79 51 79L31 79C20 78 15 71 14 62Z';
 
     // 발굽: 발목 W에서 아래로, 갈라진 굽
-    const hoof = (W, a) => g(c.P('M-3.4 0L3.4 0L4.4 4.6L-3.8 4.6Z', hoofC) + c.L('M0.6 1.4L0.8 4.4', sh(hoofC, 0.35), 1.5), `translate(${pt(W)}) rotate(${n(a)})`);
+    const hoof = (W, a) => g(c.P('M-3.4 0L3.4 0L4.4 4.6L-3.8 4.6Z', c.lin([[0, '#6a5e70'], [1, hoofC]])) + c.L('M0.6 1.4L0.8 4.4', ink(hoofC, -0.0), 1.2) + c.Pn('M-2.6 0.8L-1.4 0.8L-1.8 3.6L-2.9 3.6Z', '#fff', 0.35), `translate(${pt(W)}) rotate(${n(a)})`);
     const footAt = (q) => {
       if (Array.isArray(q)) {
         const lifted = q[1] > 1.5;
@@ -376,7 +391,8 @@
       const S = F(root);
       const { W, a } = footAt(q);
       const E = ik(S, W, 8.5, 8, -1);
-      return blob(c, seg2(S, E, W, 4.8 * r, 3.6 * r, 3 * r), legG(c, col)) + hoof(W, a);
+      return blob(c, seg2(S, E, W, 4.8 * r, 3.6 * r, 3 * r), legG(c, col)) +
+        strokes(c, [[S[0] - 1, S[1] + 2, 100, 4], [S[0] + 2, S[1] + 1, 95, 3.4], [E[0] - 1, E[1] + 1, 90, 3]], ink(col, 0.3), 1.1, 0.7) + hoof(W, a);
     };
     const hindLeg = (root, q, col, r = 1) => {
       const Hh = F(root);
@@ -384,7 +400,8 @@
       const J = add(W, Array.isArray(q) ? [-3, -6.5] : [0, 0]);
       const K = ik(Hh, Array.isArray(q) ? J : W, 9.5, 7.5, 1);
       const parts = Array.isArray(q) ? [cap(Hh, 7.5 * r, K, 4.2 * r), cap(K, 4.2 * r, J, 3.1 * r), cap(J, 3.1 * r, W, 2.9 * r)] : [cap(Hh, 7.5 * r, K, 4.2 * r), cap(K, 4.2 * r, W, 3 * r)];
-      return blob(c, parts, legG(c, col, 0.05)) + hoof(W, a);
+      return blob(c, parts, legG(c, col, 0.05)) +
+        strokes(c, [[Hh[0] - 3, Hh[1] - 1, 115, 4.4], [Hh[0] + 1, Hh[1] + 2, 105, 4], [Hh[0] - 1, Hh[1] - 4, 130, 3.4]], hs(col, 0.25), 1.2, 0.7) + hoof(W, a);
     };
     // 갈기: 목덜미에서 등 가운데까지 뾰족한 털뭉치, mh로 곤두섬
     const maneD = (() => {
@@ -397,6 +414,17 @@
       }
       return `${d}L66 47C50 42 34 46 24 51Z`;
     })();
+    // 갈기 털 가닥(안쪽 선): 털뭉치마다 밑동에서 끝 쪽으로
+    const maneStr = (() => {
+      const base = bez([22, 47], [32, 40], [50, 34], [68, 42], 6);
+      let d = '';
+      for (let i = 0; i < base.length - 1; i++) {
+        const m = lerp(base[i], base[i + 1], 0.5);
+        const hgt = (5 + Math.sin((i / 5) * Math.PI) * 8) * p.mh;
+        d += `M${pt([m[0] + 1.5, m[1] + 2])}Q${pt([m[0], m[1] - hgt * 0.4])} ${pt([m[0] - 3 * p.mh, m[1] - hgt * 0.75])}`;
+      }
+      return d;
+    })();
 
     let s = '';
     // 꼬리(짧고 꼬불)
@@ -406,25 +434,33 @@
     // 몸통
     s += F.g(c.P(bodyD, lit(c, fur, F, 0.38)));
     const bc = F([44, 60]);
-    s += form(c, bodyD, F, [bc[0], bc[1], 30, 18], 0.34, 0.16);
+    s += form(c, bodyD, F, [bc[0], bc[1], 30, 18], 0.34, 0.16, { ao: [[...F([64, 64]), 7, 8, 0.4], [...F([30, 66]), 8, 7, 0.35]] });
     s += F.g(
-      c.Pn('M22 74C32 79 52 80 66 74C60 79 34 81 22 74Z', sh(fur, 0.3), 0.45) +
-      c.L('M30 52l-2 4M38 49l-1.5 4.5M46 47l-1 4.5M26 60l-2.5 2.5M56 48l0 4', sh(fur, -0.35), 1.6) +
+      c.Pn('M22 74C32 79 52 80 66 74C60 79 34 81 22 74Z', hs(fur, 0.35), 0.5) +
+      // 뻣뻣한 털: 밝은 면 결 + 그늘 쪽 진한 결 + 어깨·엉덩이 근육 선
+      strokes(c, [[24, 54, 215, 5], [30, 50, 210, 5.4], [37, 48, 205, 5.6], [44, 47, 200, 5], [52, 48, 195, 4.6], [20, 60, 225, 4.2]], hs(fur, 0.4), 1.4, 0.8) +
+      strokes(c, [[26, 68, 150, 4.6], [36, 72, 160, 5], [46, 74, 165, 5], [56, 72, 170, 4.6], [64, 68, 175, 4], [32, 60, 155, 4], [50, 64, 165, 4.4]], ink(fur, 0.32), 1.3, 0.75) +
+      c.L('M22 66Q24 56 34 54M56 50Q66 52 68 64', ink(fur, 0.32), 1.3, ' opacity=".7"') +
       c.mist(p.gone ? [] : [[30, 40 - 4 * p.mh, 2.6], [44, 34 - 6 * p.mh, 3], [58, 35 - 5 * p.mh, 2.4]], MISTC, 0.7) +
-      c.P(maneD, c.lin([[0, '#f6f4fc', p.gone ? 0.6 : 1], [1, '#a9a3c0', p.gone ? 0.6 : 1]]), ' stroke-width="2.4"') +
+      c.P(maneD, c.lin([[0, '#f8f4fc', p.gone ? 0.6 : 1], [0.6, '#c4bcd6', p.gone ? 0.6 : 1], [1, '#8a82a6', p.gone ? 0.6 : 1]])) +
+      (p.gone ? '' : c.L(maneStr, '#7e7698', 1, ' opacity=".7"')) +
       c.shine(34, 52, 10, 4, 0.3)
     );
     // 머리
     s += HF.g(
-      c.P('M64 46L59 33L69 42Z', sh(fur, -0.3)) +
-      (p.jaw > 6 ? c.P('M73 69L92 70L89 77L75 76Z', '#3a1e2e') : '') +
-      g(c.P('M72 71L90 73C89 77 84 79 78 78L71 76Z', sh(fur, -0.1)), `rotate(${p.jaw} 76 73)`) +
+      c.P('M64 46L59 33L69 42Z', hs(fur, -0.3)) +
+      (p.jaw > 6 ? c.P('M73 69L92 70L89 77L75 76Z', '#4a1f36') + c.Pn('M76 74L88 74.6L87 76.4L77 76Z', '#c0607e', 0.8) : '') +
+      g(c.P('M72 71L90 73C89 77 84 79 78 78L71 76Z', lit(c, hs(fur, -0.08), HF, 0.2)), `rotate(${p.jaw} 76 73)`) +
       c.P('M60 50C66 43 77 45 83 53L91 61C95 64 95 71 91 74L80 75C69 77 61 71 59 62Z', lit(c, fur, HF, 0.36)) +
-      c.Pn('M62 64C68 72 80 74 90 72C84 76 68 77 62 64Z', OL, 0.2) +
-      c.E(93, 67.5, 3.4, 5.4, '#b9a2a2') + c.En(93.6, 65.6, 1, 1.4, OL) + c.En(93.6, 70.2, 1, 1.4, OL) +
-      c.P('M66 46L62 31L73 41Z', lit(c, fur, HF)) + c.Pn('M66.5 43L64 35L70 41Z', '#c9a6a6', 0.8) +
-      c.L('M71 51.5Q76 49 81 52', OL, 2) +
-      g(c.P('M79 77C82 71 85 63 84 54C90 58 92 69 88 78Z', stone) + c.L('M85 62l2 1.2M86 69l2 0.8', '#7d7870', 1.5), `rotate(${p.jaw} 76 73)`) +
+      c.Pn('M62 64C68 72 80 74 90 72C84 76 68 77 62 64Z', SHADE, 0.3) +
+      // 주둥이 주름·볼 털
+      c.L('M83 56Q86 61 85 67M79 59Q80 63 79 67', ink(fur, 0.3), 1.1, ' opacity=".75"') +
+      strokes(c, [[64, 60, 150, 4], [67, 64, 155, 3.6], [62, 55, 165, 3.6]], ink(fur, 0.3), 1.1, 0.7) +
+      strokes(c, [[66, 50, 215, 3.6], [72, 48, 205, 3.4]], hs(fur, 0.42), 1.1, 0.8) +
+      c.E(93, 67.5, 3.4, 5.4, c.rad([[0, '#ecc6c2'], [1, '#a8787c']], 0.35, 0.3, 0.8)) + c.En(93.6, 65.6, 1, 1.4, '#3a1e2e') + c.En(93.6, 70.2, 1, 1.4, '#3a1e2e') + c.En(92.2, 64, 0.9, 0.6, '#fff', 0.8) +
+      c.P('M66 46L62 31L73 41Z', lit(c, fur, HF)) + c.Pn('M66.5 43L64 35L70 41Z', c.lin([[0, '#e8b6b6'], [1, '#a87a80']]), 0.85) +
+      c.L('M71 51.5Q76 49 81 52', '#2c1e34', 2) +
+      g(c.P('M79 77C82 71 85 63 84 54C90 58 92 69 88 78Z', stone) + c.L('M85 62l2 1.2M86 69l2 0.8', '#8e8270', 1.1) + c.Pn('M85 57C87 60 88 66 87 72L86 72C86.5 66 86 61 85 57Z', '#fff', 0.8), `rotate(${p.jaw} 76 73)`) +
       (p.dead ? deadEye(c, 76.5, 55.5, 2.8) : c.eye(76.5, 55.5, p.hurt ? 3.6 : 3))
     );
     s += hindLeg([31, 66], p.nh, fur) + frontLeg([63, 68], p.nf, fur);
@@ -441,9 +477,10 @@
   MOTION.mist_crow = { gait: 'fly', bob: 0.05, hover: 0.45, tilt: 5, sway: 0, squash: 0, deathFx: 'feathers', deathTime: 0.8 };
   D.mist_crow = (fr) => {
     const c = make(3.3);
-    const crow = '#4c4858';
-    const crowL = sh(crow, 0.14);
-    const beakG = c.lin([[0, '#ddd5b6'], [1, '#8f8770']]);
+    const crow = '#4a4560';            // 푸른 보랏빛이 도는 검은 깃
+    const crowL = hs(crow, 0.14);
+    const sheen = '#8a9ce0';           // 깃의 윤기(푸른 보라)
+    const beakG = c.lin([[0, '#f2e8c4'], [0.6, '#c8b98e'], [1, '#857652']]);
     // f 몸 · h 머리 · beak 부리 벌림 · wn/wf 날개 [각도, 펼침] (각도+ = 위로) · tal 발톱 'tuck'|'fwd'|'strike'|'up'
     const P = {
       walk0: { f: [0, 3, 0], h: 0, beak: 0, wn: [62, 0.88], wf: [76, 0.8], tal: 'tuck' },
@@ -465,13 +502,20 @@
     const F = frame(...p.f.slice(0, 3), p.f[3] ?? 52, p.f[4] ?? 56);
     const HF = sub(F, p.h, 70, 52);
     const wingD = 'M0 0C-8-10-24-14-40-12L-34-6L-43-2L-34 2L-41 7L-30 8L-32 13L-19 10C-10 9-4 6 0 0Z';
+    // 덮깃(어깨 쪽 비늘 같은 깃)과 칼깃(끝의 긴 깃) 사이 경계
+    const covD = 'M0 0C-6-8-16-11-24-10C-22-6-23-2-20 1C-22 4-18 7-14 8C-8 7-3 4 0 0Z';
     const wing = (sp, a, k, sy, col, far) => {
       const S = F(sp);
       const rot = a + F.rot;
       const t = `translate(${pt(S)}) rotate(${n(rot)}) scale(${n(k)} ${n(sy ?? 1)})`;
       return `<g transform="${t}">` +
         c.P(wingD, far ? col : c.body(col, 0.32, -0.35, ...litC({ rot, sx: 1, sy: 1 }))) +
-        c.L('M-8-3L-30-8M-10 2L-30 3M-8 5L-24 10', far ? sh(col, -0.2) : sh(col, 0.25), 1.5, ' opacity=".8"') +
+        // 칼깃 사이 선(그 자리 색의 어두운 변형)과 깃대
+        c.L('M-22-9L-38-11M-22-4L-41-3M-21 1L-39 5M-19 5L-31 10', ink(col, 0.35), 1, ' opacity=".9"') +
+        c.L('M-16-8L-34-9M-16-2L-36-2M-15 3L-33 5', far ? hs(col, 0.08) : hs(col, 0.3), 0.9, ' opacity=".7"') +
+        (far ? '' : c.P(covD, c.body(hs(col, 0.05), 0.35, -0.2, ...litC({ rot, sx: 1, sy: 1 }))) +
+          c.L('M-6-5Q-9-1-7 3M-13-7Q-16-2-14 4M-19-8Q-21-3-19 3', ink(col, 0.3), 0.9, ' opacity=".85"') +
+          c.Pn('M-3-3C-8-8-15-9-21-8C-15-7-9-5-4-1Z', sheen, 0.35)) +
         c.mist([[-44, -6, 4.2], [-46, 2, 3.6], [-42, 9, 3.2], [-51, -1, 2.4]], MISTC, p.gone ? 0.45 : 0.8) +
         '</g>';
     };
@@ -485,27 +529,32 @@
       else ft = F([48, 68]);
       const a = angOf(hip, ft);
       const toes = [-35, 0, 35].map((da) => `M${pt(ft)}L${pt(pol(ft, 4.2, a + da))}`).join('') + `M${pt(ft)}L${pt(pol(ft, 3.4, a + 180 - 20))}`;
-      return c.limb(`M${pt(hip)}L${pt(ft)}`, 2.2, '#3a3440') + c.L(toes, '#d9d2b8', 1.8);
+      return c.limb(`M${pt(hip)}L${pt(ft)}`, 2.2, '#4a4252') + c.L(toes, '#e2d6ae', 1.8);
     };
 
     let s = '';
     if (p.wf) s += wing([62, 48], p.wf[0], p.wf[1], p.wf[2], sh(crow, -0.32), true);
     s += talons();
     // 꼬리 깃
-    s += F.g(c.P('M31 60L8 51L12 57L5 61L11 65L7 72L33 66Z', lit(c, sh(crow, -0.08), F, 0.25)) + c.L('M28 62L12 58M28 64L12 66', sh(crow, 0.2), 1.5, ' opacity=".7"'));
+    s += F.g(c.P('M31 60L8 51L12 57L5 61L11 65L7 72L33 66Z', lit(c, hs(crow, -0.08), F, 0.25)) + c.L('M28 62L12 58M28 64L12 66', ink(crow, 0.35), 1, ' opacity=".9"') + c.L('M27 61L14 56M27 65L14 69', hs(crow, 0.25), 0.9, ' opacity=".6"'));
     // 몸
     const bodyD = 'M21 61C27 48 45 43 60 44C72 45 79 49 83 54C78 62 66 66 54 66C42 68 28 67 21 61Z';
     s += F.g(c.P(bodyD, lit(c, crow, F, 0.35, -0.38)));
     const bc = F([52, 56]);
     s += form(c, bodyD, F, [bc[0], bc[1], 28, 11], 0.32, 0.12);
-    s += F.g(c.L('M40 50q4 2 8 0M50 48q4 2 8 0M34 56q4 2 8 0', crowL, 1.5, ' opacity=".7"'));
+    // 몸 깃: 비늘처럼 겹친 작은 호 + 등의 푸른 윤기
+    s += F.g(c.L('M40 50q4 2.6 8 0M50 48q4 2.6 8 0M34 56q4 2.6 8 0M44 55q4 2.6 8 0M56 53q4 2.6 8 0M28 60q3 2 6 0', ink(crow, 0.3), 1, ' opacity=".9"') +
+      c.L('M41 49.4q3.4 1.6 6.6 0M51 47.4q3.4 1.6 6.6 0M35 55.4q3.4 1.6 6.6 0', hs(crow, 0.35), 0.9, ' opacity=".7"') +
+      c.Pn('M30 54C38 47 52 45 64 46C54 48 42 50 30 54Z', sheen, 0.4));
     // 머리 + 부리
     s += HF.g(
       g(c.P('M85 49L96 48.5L85.5 53Z', beakG), `rotate(${p.beak} 85 49)`) +
       c.E(74, 46, 13, 12, lit(c, crow, HF, 0.36)) +
       c.P('M64 38L60 32L67 36L66 30L71 35Z', crow, ' stroke-width="2"') +
-      c.P('M84 41L98 47.5L85 50Z', beakG) + c.L('M86 44.5l5 2', '#7a735e', 1.5) +
-      c.Pn('M66 52C72 57 80 57 85 52C82 58 70 59 66 52Z', OL, 0.22) +
+      c.Pn('M66 40C70 36 77 35 82 38C77 37 71 38 66 42Z', sheen, 0.45) +
+      c.L('M66 50q3-2 5 1M70 54q3-2 5 1', ink(crow, 0.3), 0.9, ' opacity=".8"') +
+      c.P('M84 41L98 47.5L85 50Z', beakG) + c.L('M86 44.5l5 2', '#857652', 1.1) + c.Pn('M86 42.4L93 45.4L86.4 44Z', '#fff', 0.7) +
+      c.Pn('M66 52C72 57 80 57 85 52C82 58 70 59 66 52Z', SHADE, 0.3) +
       (p.dead ? deadEye(c, 78, 44.5, 3) : c.eye(78, 44, p.hurt ? 4.4 : 3.6))
     );
     s += wing([58, 50], p.wn[0], p.wn[1], p.wn[2], crowL, false);
