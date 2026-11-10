@@ -719,4 +719,202 @@
     s += `<path d="${sparkle(24, 23, 4)}" fill="#ffffff"/>`;
     return B.svg(64, 64, s);
   };
+
+  /* =====================================================
+   * 월드 지도 — 지역마다 한 장의 그림 지도(위에서 내려다봄, 빛은 왼쪽 위)
+   *   RG.art.REGION_NODES[r]  맵 6개 + 무한 맵 1개 자리 (viewBox 1600×900 좌표)
+   *   RG.art.regionMap(r)     그 지역 그림 (길·지형·꾸밈)
+   * ===================================================== */
+  const MW = 1600;
+  const MH = 900;
+  const BASE_NODES = [[180, 690], [440, 560], [700, 690], [960, 545], [1210, 660], [1430, 450], [1180, 250]];
+  RG.art.REGION_NODES = {};
+  for (let r = 1; r <= 5; r++) {
+    // 지역마다 조금씩 다르게: 짝수 지역은 위아래를 뒤집고, 살짝 흔듦
+    const R = prng(`nodes-${r}`);
+    RG.art.REGION_NODES[r] = BASE_NODES.map(([x, y], i) => {
+      let yy = r % 2 === 0 ? MH - y + 20 : y;
+      if (i === 6) yy = r % 2 === 0 ? 640 : 250;
+      return [Math.round(x + (R() - 0.5) * 50), Math.round(yy + (R() - 0.5) * 50)];
+    });
+  }
+  const PAL = {
+    1: { g0: '#7fb24e', g1: '#5f9a3c', g2: '#a8cf66', road: '#d9b47a', roadD: '#9c7442', edge: '#3f6a2a', water: '#3f8fd0', waterL: '#8fd0f0' },
+    2: { g0: '#e6eef8', g1: '#c4d4ea', g2: '#ffffff', road: '#c9b89c', roadD: '#8a7a64', edge: '#7d8fb0', water: '#5d9ad6', waterL: '#cdeaff' },
+    3: { g0: '#d98a52', g1: '#b8653a', g2: '#f0b277', road: '#f3d8a0', roadD: '#a8703c', edge: '#7a3a22', water: '#ff7a2a', waterL: '#ffd27a' },
+    4: { g0: '#7fae8e', g1: '#5e8e78', g2: '#a8cfa0', road: '#ead7a4', roadD: '#9a8458', edge: '#355e5a', water: '#2a6aa8', waterL: '#8fd8f0' },
+    5: { g0: '#7a6e9a', g1: '#5c5280', g2: '#a597c8', road: '#e8c66a', roadD: '#8a6a2a', edge: '#2e2648', water: '#3a2a6a', waterL: '#c9a6ff' },
+  };
+
+  function nearRoad(samples, x, y, d) {
+    const d2 = d * d;
+    for (const [px, py] of samples) { const dx = px - x; const dy = py - y; if (dx * dx + dy * dy < d2) return true; }
+    return false;
+  }
+
+  /** 위에서 본 둥근 나무 (그림자 → 몸통 → 밝은 면) */
+  function treeTop(x, y, r, col, R) {
+    let s = fill(ell(x + r * 0.35, y + r * 0.45, r * 1.05, r * 0.7), '#1a1030', 0.28);
+    const pts = crownCircles(x, y, r, R, 5);
+    s += pts.map(([cx, cy, rr]) => fill(circ(cx, cy, rr), col, 1, ol(2.2, shade(col, -0.55)))).join('');
+    s += pts.map(([cx, cy, rr]) => fill(circ(cx - rr * 0.25, cy - rr * 0.3, rr * 0.5), shade(col, 0.28), 0.8)).join('');
+    return s;
+  }
+  function pineTop(x, y, hh, col, R, snow) {
+    let s = fill(ell(x + hh * 0.25, y + 2, hh * 0.36, hh * 0.12), '#1a1030', 0.3);
+    s += fill(pinePath(x, y, hh, R), col, 1, ol(2, shade(col, -0.55)));
+    s += fill(`M${f(x)} ${f(y - hh)}L${f(x - hh * 0.2)} ${f(y - hh * 0.45)}L${f(x)} ${f(y - hh * 0.55)}Z`, shade(col, 0.3), 0.7);
+    if (snow) s += fill(`M${f(x)} ${f(y - hh)}L${f(x + hh * 0.13)} ${f(y - hh * 0.74)}Q${f(x)} ${f(y - hh * 0.8)} ${f(x - hh * 0.13)} ${f(y - hh * 0.74)}Z`, '#ffffff', 0.95);
+    return s;
+  }
+  /** 산(위에서 비스듬히): 왼쪽 빛 면·오른쪽 그늘 면·눈 */
+  function peak(x, y, w, hh, col, snow, R) {
+    const top = [x + (R() - 0.5) * w * 0.15, y - hh];
+    let s = fill(`M${f(x - w * 0.55)} ${f(y)}L${f(top[0])} ${f(top[1])}L${f(x + w * 0.7)} ${f(y + 4)}Z`, '#1a1030', 0.25, ` transform="translate(${f(w * 0.18)} 6)"`);
+    s += fill(`M${f(x - w * 0.5)} ${f(y)}L${f(top[0])} ${f(top[1])}L${f(x + w * 0.5)} ${f(y)}Z`, shade(col, -0.25), 1, ol(2.6, shade(col, -0.6)));
+    s += fill(`M${f(x - w * 0.5)} ${f(y)}L${f(top[0])} ${f(top[1])}L${f(top[0] + w * 0.06)} ${f(y - hh * 0.35)}L${f(x - w * 0.05)} ${f(y)}Z`, shade(col, 0.18));
+    if (snow) s += fill(`M${f(top[0])} ${f(top[1])}L${f(top[0] - w * 0.17)} ${f(top[1] + hh * 0.34)}L${f(top[0] - w * 0.06)} ${f(top[1] + hh * 0.28)}L${f(top[0])} ${f(top[1] + hh * 0.4)}L${f(top[0] + w * 0.08)} ${f(top[1] + hh * 0.3)}L${f(top[0] + w * 0.17)} ${f(top[1] + hh * 0.34)}Z`, '#ffffff', 0.96, ol(1.4, '#9fb4d8'));
+    return s;
+  }
+  /** 평평한 꼭대기 바위 언덕(메사) */
+  function mesa(x, y, w, hh, col, R) {
+    const topY = y - hh;
+    const tw = w * (0.7 + R() * 0.15);
+    let s = fill(ell(x + w * 0.25, y + 6, w * 0.6, w * 0.16), '#1a0a10', 0.3);
+    s += fill(`M${f(x - w / 2)} ${f(y)}L${f(x - tw / 2)} ${f(topY + 8)}L${f(x + tw / 2)} ${f(topY + 8)}L${f(x + w / 2)} ${f(y)}Q${f(x)} ${f(y + w * 0.1)} ${f(x - w / 2)} ${f(y)}Z`, shade(col, -0.3), 1, ol(2.6, shade(col, -0.65)));
+    for (let i = 1; i < 4; i++) s += line(`M${f(x - w / 2 + (w - tw) / 2 * (i / 4) )} ${f(y - (y - topY - 8) * (i / 4))}Q${f(x)} ${f(y - (y - topY - 8) * (i / 4) + 6)} ${f(x + w / 2 - (w - tw) / 2 * (i / 4))} ${f(y - (y - topY - 8) * (i / 4))}`, shade(col, -0.5), 1.6, 0.6);
+    s += fill(ell(x, topY + 8, tw / 2, tw * 0.16), shade(col, 0.12), 1, ol(2.4, shade(col, -0.6)));
+    s += fill(ell(x - tw * 0.12, topY + 6, tw * 0.28, tw * 0.07), shade(col, 0.32), 0.7);
+    return s;
+  }
+  function house2(x, y, w, roof, R) {
+    const hh = w * 0.55;
+    let s = fill(`M${f(x - w / 2 + 6)} ${f(y + 4)}h${f(w)}l8 6h${f(-w)}Z`, '#1a1030', 0.3);
+    s += fill(`M${f(x - w / 2)} ${f(y)}V${f(y - hh * 0.55)}H${f(x + w / 2)}V${f(y)}Z`, '#e9dcc2', 1, ol(2, '#5a4636'));
+    s += fill(`M${f(x - w / 2 - 4)} ${f(y - hh * 0.5)}L${f(x)} ${f(y - hh * 1.2)}L${f(x + w / 2 + 4)} ${f(y - hh * 0.5)}Z`, roof, 1, ol(2, shade(roof, -0.55)));
+    s += fill(`M${f(x - w / 2 - 4)} ${f(y - hh * 0.5)}L${f(x)} ${f(y - hh * 1.2)}L${f(x - 2)} ${f(y - hh * 0.5)}Z`, shade(roof, 0.22), 0.8);
+    s += `<rect x="${f(x - w * 0.12)}" y="${f(y - hh * 0.4)}" width="${f(w * 0.24)}" height="${f(hh * 0.25)}" fill="#ffd57a" stroke="#5a4636" stroke-width="1.4"/>`;
+    return s;
+  }
+  function ruinWall(x, y, w, col, R) {
+    let s = fill(`M${f(x - w / 2 + 6)} ${f(y + 3)}h${f(w)}l6 8h${f(-w)}Z`, '#0e0820', 0.35);
+    let d = `M${f(x - w / 2)} ${f(y)}`;
+    const n = 5;
+    for (let i = 0; i <= n; i++) d += `L${f(x - w / 2 + (w * i) / n)} ${f(y - 18 - R() * 26)}`;
+    d += `L${f(x + w / 2)} ${f(y)}Z`;
+    s += fill(d, col, 1, ol(2.4, shade(col, -0.6)));
+    for (let i = 0; i < 3; i++) s += line(`M${f(x - w / 2 + 4)} ${f(y - 8 - i * 9)}H${f(x + w / 2 - 4)}`, shade(col, -0.35), 1.3, 0.6);
+    s += fill(`M${f(x - w / 2)} ${f(y)}L${f(x - w / 2)} ${f(y - 20)}L${f(x - w / 2 + 8)} ${f(y - 22)}L${f(x - w / 2 + 8)} ${f(y)}Z`, shade(col, 0.25), 0.7);
+    return s;
+  }
+
+  RG.art.regionMap = function regionMap(r) {
+    r = Math.max(1, Math.min(5, Number(r) || 1));
+    const B = bag();
+    const R = prng(`region-map-${r}`);
+    const P = PAL[r];
+    const nodes = RG.art.REGION_NODES[r];
+    const roadPts = nodes.slice(0, 6);
+    const start = [-40, roadPts[0][1] + (r % 2 ? 40 : -40)];
+    const pts = [start, ...roadPts];
+    const samples = sampleSmooth(pts, 24);
+    const side = smooth([roadPts[4], [(roadPts[4][0] + nodes[6][0]) / 2 + 60, (roadPts[4][1] + nodes[6][1]) / 2], nodes[6]]);
+    const sideS = sampleSmooth([roadPts[4], [(roadPts[4][0] + nodes[6][0]) / 2 + 60, (roadPts[4][1] + nodes[6][1]) / 2], nodes[6]], 16);
+    const allS = samples.concat(sideS);
+    let s = '';
+    // 바탕: 지역 색 + 빛(왼쪽 위 밝게, 오른쪽 아래 어둡게)
+    s += `<rect width="${MW}" height="${MH}" fill="${B.lgu(0, 0, MW, MH, [[0, P.g2], [0.45, P.g0], [1, P.g1]])}"/>`;
+    // 땅 얼룩(색 변화)
+    for (let i = 0; i < 70; i++) {
+      const x = R() * MW; const y = R() * MH; const rx = 40 + R() * 140;
+      s += fill(blob(x, y, rx, rx * (0.4 + R() * 0.4), R, 9, 0.25), R() < 0.5 ? P.g2 : P.g1, 0.16 + R() * 0.14);
+    }
+    let deco = '';
+    const place = (n, min, fn, area = [0, 0, MW, MH]) => {
+      let k = 0; let tries = 0;
+      while (k < n && tries < n * 30) {
+        tries++;
+        const x = area[0] + R() * (area[2] - area[0]); const y = area[1] + R() * (area[3] - area[1]);
+        if (nearRoad(allS, x, y, min) || nodes.some(([nx, ny]) => Math.hypot(nx - x, ny - y) < min + 30)) continue;
+        deco += fn(x, y); k++;
+      }
+    };
+    const items = [];
+    const add = (y, svg) => items.push([y, svg]);
+    if (r === 1) {
+      // 밭(조각보) + 강 + 숲 + 마을 + 풍차
+      const fieldCols = ['#c8d86a', '#e6c860', '#9cc858', '#d8b45a', '#b4d06e'];
+      for (let i = 0; i < 26; i++) {
+        const x = R() * MW; const y = R() * MH;
+        if (nearRoad(allS, x, y, 110)) continue;
+        const w = 70 + R() * 90; const hh = 40 + R() * 50; const a = (R() - 0.5) * 30;
+        const c = fieldCols[i % fieldCols.length];
+        let g = fill(`M${f(x - w / 2)} ${f(y - hh / 2)}h${f(w)}v${f(hh)}h${f(-w)}Z`, c, 0.95, ol(2, shade(c, -0.45)));
+        for (let j = 1; j < 5; j++) g += line(`M${f(x - w / 2 + 4)} ${f(y - hh / 2 + (hh * j) / 5)}h${f(w - 8)}`, shade(c, -0.25), 1.6, 0.6);
+        s += `<g transform="rotate(${f(a)} ${f(x)} ${f(y)})">${g}</g>`;
+      }
+      const river = smooth([[1650, 80], [1300, 150], [1050, 90], [800, 210], [560, 140], [300, 260], [-50, 200]]);
+      s += line(river, '#2a5a88', 64, 1) + line(river, P.water, 54) + line(river, P.waterL, 14, 0.5, ` stroke-dasharray="40 60"`);
+      place(60, 70, (x, y) => { add(y, treeTop(x, y, 16 + R() * 12, R() < 0.5 ? '#3f8a3a' : '#4f9a40', R)); return ''; });
+      place(5, 100, (x, y) => { for (let j = 0; j < 3; j++) add(y + j * 4, house2(x + j * 48 - 48, y + (j % 2) * 14, 42, ['#c8543a', '#d8743a', '#b84a3a'][j], R)); return ''; }, [200, 300, 1500, 880]);
+      // 풍차
+      place(2, 110, (x, y) => { add(y, `${fill(ell(x + 14, y + 4, 26, 8), '#1a1030', 0.3)}${fill(`M${f(x - 14)} ${f(y)}L${f(x - 9)} ${f(y - 54)}H${f(x + 9)}L${f(x + 14)} ${f(y)}Z`, '#efe2c8', 1, ol(2.2, '#5a4636'))}${fill(`M${f(x - 12)} ${f(y - 52)}L${f(x)} ${f(y - 70)}L${f(x + 12)} ${f(y - 52)}Z`, '#b84a3a', 1, ol(2, '#5a2214'))}${[20, 110, 200, 290].map((a) => line(`M${f(x)} ${f(y - 56)}l${f(Math.cos(a * Math.PI / 180) * 42)} ${f(Math.sin(a * Math.PI / 180) * 42)}`, '#7a5a3a', 5) + line(`M${f(x)} ${f(y - 56)}l${f(Math.cos(a * Math.PI / 180) * 42)} ${f(Math.sin(a * Math.PI / 180) * 42)}`, '#f6efe0', 2.4)).join('')}<circle cx="${f(x)}" cy="${f(y - 56)}" r="4" fill="#5a3a24"/>`); return ''; }, [100, 300, 1500, 860]);
+    } else if (r === 2) {
+      const lake = blob(1250, 160, 220, 90, R, 11, 0.2);
+      s += fill(lake, '#7a9cc8', 1, ol(4, '#4e6a98')) + fill(lake, P.waterL, 0.85, ' transform="translate(-8 -8) scale(0.98)" transform-origin="1250 160"');
+      for (let i = 0; i < 8; i++) s += line(`M${f(1100 + R() * 300)} ${f(110 + R() * 100)}l${f(30 + R() * 40)} ${f((R() - 0.5) * 30)}`, '#ffffff', 2, 0.7);
+      place(16, 120, (x, y) => { add(y, peak(x, y, 120 + R() * 90, 110 + R() * 80, '#8a9ec4', true, R)); return ''; }, [0, 0, MW, 520]);
+      place(70, 60, (x, y) => { add(y, pineTop(x, y, 34 + R() * 20, '#2f6a5a', R, true)); return ''; });
+      for (let i = 0; i < 60; i++) s += fill(circ(R() * MW, R() * MH, 1.5 + R() * 2.5), '#ffffff', 0.8);
+    } else if (r === 3) {
+      const crack = smooth([[-40, 120], [300, 200], [620, 130], [900, 260], [1250, 190], [1650, 300]]);
+      s += line(crack, '#3a1208', 46) + line(crack, P.water, 26) + line(crack, P.waterL, 8, 0.9);
+      s += `<path d="${crack}" fill="none" stroke="#ffb040" stroke-width="70" stroke-opacity="0.25" filter="${B.blur(14)}"/>`;
+      place(12, 120, (x, y) => { add(y, mesa(x, y, 130 + R() * 90, 60 + R() * 50, '#c8603a', R)); return ''; });
+      place(40, 50, (x, y) => { add(y, fill(ell(x, y, 14 + R() * 10, 8 + R() * 5), '#9a4a2a', 1, ol(2, '#5a2214')) + fill(ell(x - 4, y - 3, 6, 3), '#e08a5a', 0.8)); return ''; });
+      for (let i = 0; i < 14; i++) { const x = R() * MW; const y = 500 + R() * 400; if (nearRoad(allS, x, y, 80)) continue; s += line(`M${f(x - 60)} ${f(y)}q60 -20 120 0`, '#f6c890', 4, 0.6); }
+    } else if (r === 4) {
+      // 바다(오른쪽 아래), 모래 띠, 절벽, 등대, 난파선
+      const coast = smooth([[1650, 300], [1500, 360], [1470, 520], [1330, 640], [1150, 740], [900, 800], [620, 860], [300, 930]]);
+      const sea = `${coast}L1650 950L1650 380Z`;
+      s += fill(sea, P.water, 1);
+      s += `<path d="${coast}" fill="none" stroke="#f0e2b0" stroke-width="40"/>`;
+      s += `<path d="${coast}" fill="none" stroke="${P.waterL}" stroke-width="10" stroke-dasharray="30 26" transform="translate(16 18)" opacity="0.85"/>`;
+      for (let i = 0; i < 40; i++) { const x = 1000 + R() * 620; const y = 520 + R() * 400; if (y < 900 - (x - 300) * 0.48) continue; s += line(`M${f(x)} ${f(y)}q10 -8 20 0q10 8 20 0`, '#cfefff', 2.2, 0.75); }
+      // 작은 섬 둘 + 난파선
+      for (const [ix, iy, ir] of [[1560, 700, 46], [1420, 850, 34]]) s += fill(blob(ix, iy, ir, ir * 0.6, R, 9, 0.2), '#f0e2b0', 1, ol(2.4, '#9a8458')) + fill(blob(ix - 4, iy - 4, ir * 0.62, ir * 0.36, R, 8, 0.2), '#5e9a6a', 1, ol(1.8, '#2e5a3a'));
+      s += `<g transform="translate(1290 800) rotate(-14)">${fill('M-40 0Q0 18 40 0L32 -10H-32Z', '#6a4a2e', 1, ol(2.4, '#2a1a10'))}${line('M-6 -10V-56', '#4a3020', 4)}${fill('M-4 -54L22 -40L-4 -30Z', '#e6dcc4', 0.9, ol(1.6, '#5a4a3a'))}</g>`;
+      place(14, 90, (x, y) => { add(y, mesa(x, y, 100 + R() * 70, 40 + R() * 30, '#6a8a80', R)); return ''; }, [0, 0, 1300, 600]);
+      place(40, 60, (x, y) => { add(y, treeTop(x, y, 13 + R() * 8, '#2f7a5a', R)); return ''; }, [0, 0, 1300, 750]);
+      add(470, `<g>${fill(ell(1505, 470, 30, 10), '#1a1030', 0.3)}${fill('M1490 470L1494 380L1516 380L1520 470Z', '#f4efe4', 1, ol(2.4, '#5a4a4a'))}${fill('M1494 410h22v14h-22Z', '#c84a3a')}${fill('M1488 380h34l-6 -18h-22Z', '#3a3a5a', 1, ol(2, '#1a1030'))}<circle cx="1505" cy="372" r="8" fill="#fff3c4"/><path d="M1505 372L1640 330L1640 410Z" fill="#fff3c4" opacity="0.35"/></g>`);
+    } else {
+      // 보랏빛 폐허: 깨진 담, 기둥, 금빛 균열, 가운데 깨진 대종
+      // 금빛 균열 그물 + 보랏빛 안개
+      const veins = [[[-40, 300], [400, 260], [800, 380], [1200, 300], [1650, 420]], [[300, -20], [360, 200], [300, 420], [420, 640], [380, 920]], [[1050, -20], [1000, 220], [1120, 470], [1060, 700], [1140, 920]], [[-40, 760], [300, 820], [700, 780], [1000, 860]]];
+      const vb = B.blur(10);
+      for (const v of veins) { const d = smooth(v); s += `<path d="${d}" fill="none" stroke="#ffd27a" stroke-width="26" stroke-opacity="0.22" filter="${vb}"/>` + line(d, '#3a2a10', 7, 0.7) + line(d, '#ffe9a0', 3, 0.95); }
+      const fogB = B.blur(26);
+      for (let i = 0; i < 9; i++) s += fill(blob(R() * MW, R() * MH, 120 + R() * 120, 50 + R() * 40, R), '#c8a6ff', 0.16, ` filter="${fogB}"`);
+      place(22, 90, (x, y) => { add(y, ruinWall(x, y, 90 + R() * 80, '#8e82b4', R)); return ''; });
+      place(26, 60, (x, y) => { add(y, `${fill(ell(x + 8, y + 2, 14, 5), '#0e0820', 0.35)}${fill(`M${f(x - 8)} ${f(y)}V${f(y - 40 - R() * 20)}h16V${f(y)}Z`, '#b7aedb', 1, ol(2, '#3a2e5a'))}${fill(`M${f(x - 8)} ${f(y - 2)}V${f(y - 38)}h5V${f(y - 2)}Z`, '#e4defa', 0.7)}`); return ''; });
+      const bx = nodes[6][0] + 150; const by = nodes[6][1] + 40;
+      add(by, `<g>${fill(ell(bx + 20, by + 8, 90, 20), '#0e0820', 0.4)}${fill(`M${bx - 70} ${by}Q${bx - 64} ${by - 110} ${bx} ${by - 118}Q${bx + 64} ${by - 110} ${bx + 70} ${by}Z`, B.lgu(bx - 70, 0, bx + 70, 0, [[0, '#f6d27a'], [0.5, '#c8902e'], [1, '#7a4e18']]), 1, ol(3.4, '#3a2208'))}${line(`M${bx - 10} ${by - 112}L${bx + 6} ${by - 70}L${bx - 8} ${by - 40}L${bx + 10} ${by}`, '#2a1406', 4)}${line(`M${bx - 10} ${by - 112}L${bx + 6} ${by - 70}L${bx - 8} ${by - 40}L${bx + 10} ${by}`, '#d8b4ff', 2)}${fill(ell(bx, by, 70, 14), '#5a3a14', 1, ol(3, '#3a2208'))}</g>`);
+      for (let i = 0; i < 70; i++) s += fill(sparkle(R() * MW, R() * MH, 2 + R() * 5), i % 3 ? '#e4d0ff' : '#ffe9a0', 0.75);
+    }
+    // 꾸밈은 아래쪽(y가 큰) 것이 앞에
+    items.sort((a, b) => a[0] - b[0]);
+    // 길: 그늘 → 테두리 → 흙 → 가운데 밝은 길 → 점선 바퀴 자국
+    const road = smooth(pts);
+    const roadLayer = (d, wd) => line(d, '#1a1030', wd + 18, 0.22, ' transform="translate(6 8)"') + line(d, P.edge, wd + 10) + line(d, P.roadD, wd + 4) + line(d, P.road, wd) + line(d, shade(P.road, 0.25), wd * 0.35, 0.7) + line(d, P.roadD, 2.2, 0.55, ' stroke-dasharray="8 14"');
+    s += roadLayer(road, 34);
+    s += line(side, P.edge, 22, 0.9, ' stroke-dasharray="2 20"') + line(side, P.road, 10, 0.9, ' stroke-dasharray="18 14"');
+    // 나무·산 등은 길 위에
+    s += deco + items.map((x) => x[1]).join('');
+    // 노드 자리 받침(밝은 원판) — 메달은 화면(DOM)이 그림
+    for (const [x, y] of nodes) s += fill(ell(x + 6, y + 10, 52, 20), '#1a1030', 0.3) + fill(ell(x, y + 4, 48, 18), shade(P.road, 0.15), 1, ol(3, P.roadD));
+    // 가장자리 어둡게 + 빛
+    s += `<rect width="${MW}" height="${MH}" fill="${B.rgu(MW / 2, MH / 2, MW * 0.7, [[0.6, '#000000', 0], [1, '#0c0618', 0.55]], 0.7)}"/>`;
+    s += `<rect width="${MW}" height="${MH}" fill="${B.lgu(0, 0, MW, MH, [[0, '#fff6d0', 0.18], [0.5, '#fff6d0', 0], [1, '#20103a', 0.18]])}"/>`;
+    return B.svg(MW, MH, s);
+  };
 })();
