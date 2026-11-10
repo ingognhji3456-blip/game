@@ -18,10 +18,11 @@
       sec.innerHTML = '';
       const run = RG.save.get(RG.save.KEYS.run, null);
       const has = P().hasSave() || !!run;
-      const bg = el('div', { class: 'title-bg' }, [UI.svgImg(RG.art.regionBanner ? RG.art.regionBanner(1) : RG.art.icon('light'), 'title-banner')]);
+      const bg = titleScene();
       const logo = el('div', { class: 'logo' }, [
-        el('div', { class: 'logo-orbs' }, D().elementOrder.map((e) => UI.icon(e, 'logo-orb'))),
-        el('h1', { text: '공명 수호대' }),
+        el('div', { class: 'logo-orbs' }, D().elementOrder.map((e) => (RG.art.elementGem ? UI.svgImg(RG.art.elementGem(e), 'logo-orb', D().elements[e].name) : UI.icon(e, 'logo-orb')))),
+        el('h1', { 'data-text': '공명 수호대', text: '공명 수호대' }),
+        RG.art.logoFlourish ? UI.svgImg(RG.art.logoFlourish(), 'logo-flourish', '') : null,
         el('p', { class: 'logo-sub', text: '여섯 원소의 울림으로 등불을 지켜라' }),
       ]);
       const menu = el('div', { class: 'title-menu' });
@@ -40,6 +41,53 @@
       sec.append(bg, el('div', { class: 'title-wrap' }, [logo, menu]), el('div', { class: 'title-foot', text: '설치 없이 브라우저에서 · 그림과 소리는 모두 코드로 만들었습니다' }));
     },
   });
+
+  /**
+   * 타이틀 풍경: 하늘 → 먼 산 → 언덕(+울림등 빛줄기) → 마을 → 앞 나무, 구름과 반딧불.
+   * 층마다 다른 속도로 천천히 흔들리고(시차), 마우스를 움직이면 층이 조금씩 따라 움직임.
+   * 화면이 가려지면(display:none) CSS 움직임은 멈춤. 움직임 줄이기 설정이면 거의 멈춤(css).
+   */
+  let sceneCache = null;
+  function titleScene() {
+    if (!RG.art.titleLayer) return el('div', { class: 'title-bg' }, [UI.svgImg(RG.art.regionBanner(1), 'title-banner')]);
+    if (!sceneCache) {
+      sceneCache = {};
+      for (const n of ['sky', 'far', 'mid', 'village', 'front']) sceneCache[n] = RG.art.titleLayer(n);
+      sceneCache.rays = RG.art.titleRays();
+      sceneCache.clouds = [0, 1, 2, 3].map((i) => RG.art.titleCloud(i));
+    }
+    const [lx, ly] = RG.art.TITLE.lantern;
+    const W = RG.art.TITLE.w;
+    const H = RG.art.TITLE.h;
+    const layer = (n) => el('div', { class: `ts-layer ts-${n}` }, [UI.svgImg(sceneCache[n], 'ts-img', '')]);
+    const rays = el('div', { class: 'ts-rays', style: `left:${(lx / W) * 100}%;top:${(ly / H) * 100}%` }, [UI.svgImg(sceneCache.rays, 'ts-img', '')]);
+    const clouds = el('div', { class: 'ts-clouds' }, sceneCache.clouds.map((svg, i) => UI.svgImg(svg, `ts-cloud ts-cloud-${i}`, '')));
+    // 반딧불·불씨: 위치는 고정 시드(늘 같은 자리), 깜빡임만 CSS
+    let seed = 11;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    const motes = el('div', { class: 'ts-motes' });
+    for (let i = 0; i < 26; i++) {
+      const cols = ['#fff1a8', '#ffd27a', '#ffb7e0', '#b8e8ff', '#c8ffb0'];
+      motes.appendChild(el('i', { style: `left:${f1(4 + rnd() * 92)}%;top:${f1(52 + rnd() * 44)}%;--c:${cols[i % cols.length]};--d:${f1(5 + rnd() * 7)}s;--dl:${f1(-rnd() * 10)}s;--dx:${f1(-30 + rnd() * 60)}px;--dy:${f1(-20 - rnd() * 50)}px` }));
+    }
+    const scene = el('div', { class: 'title-scene' }, [layer('sky'), clouds, layer('far'), layer('mid'), rays, layer('village'), motes, layer('front')]);
+    const bg = el('div', { class: 'title-bg' }, [scene, el('div', { class: 'title-vignette' })]);
+    // 마우스 시차 (손가락 화면은 생략) — 화면에 한 번만 붙임
+    requestAnimationFrame(() => {
+      const s0 = document.getElementById('screen-title');
+      if (!s0 || s0.dataset.parallax) return;
+      s0.dataset.parallax = '1';
+      s0.addEventListener('pointermove', (e) => {
+        if (e.pointerType !== 'mouse') return;
+        const sc = s0.querySelector('.title-scene');
+        if (!sc) return;
+        sc.style.setProperty('--px', f1(e.clientX / window.innerWidth - 0.5));
+        sc.style.setProperty('--py', f1(e.clientY / window.innerHeight - 0.5));
+      });
+    });
+    return bg;
+  }
+  const f1 = (v) => Math.round(v * 100) / 100;
 
   function credits() {
     UI.modal(el('div', { class: 'credits' }, [

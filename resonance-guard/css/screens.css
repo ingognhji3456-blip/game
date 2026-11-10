@@ -2,23 +2,88 @@
  * 메뉴 화면 — 타이틀, 월드 지도, 준비, 결과, 이야기, 도감, 수호대, 기술 나무
  * ========================================================= */
 
-/* 타이틀 */
-#screen-title { background: #120e18; }
+/* 타이틀 — 층을 겹친 해 질 녘 풍경 (그림: js/art/scenes.js) */
+#screen-title { background: #1a1230; }
 .title-bg { position: absolute; inset: 0; overflow: hidden; }
-.title-banner { position: absolute; inset: -4%; width: 108%; height: 108%; object-fit: cover; filter: brightness(0.55) saturate(1.1); animation: drift 30s ease-in-out infinite alternate; }
-@keyframes drift { from { transform: scale(1.02) translateX(-1%); } to { transform: scale(1.08) translateX(1%); } }
-.title-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(14px, 4vh, 34px); padding: 16px; }
-.logo { text-align: center; }
-.logo h1 { font-size: clamp(2.4rem, 8vw, 4.6rem); color: #fff4d6; text-shadow: 0 3px 0 #6b3d14, 0 0 30px #ffcf7aa0, 0 6px 18px #000; letter-spacing: 0.04em; }
-.logo-sub { color: #f1e3c4; font-weight: 600; text-shadow: 0 2px 4px #000; }
-.logo-orbs { display: flex; gap: 10px; justify-content: center; margin-bottom: 6px; }
-.logo-orb { width: clamp(26px, 5vw, 38px); height: clamp(26px, 5vw, 38px); animation: orb 3s ease-in-out infinite; }
+.title-banner { position: absolute; inset: -4%; width: 108%; height: 108%; object-fit: cover; filter: brightness(0.55) saturate(1.1); }
+/* 화면을 덮도록(가로·세로 중 큰 쪽에 맞춤) 16:10 장면을 가운데에 */
+.title-scene { --px: 0; --py: 0; position: absolute; left: 50%; top: 50%; width: max(100vw, 160vh); height: max(62.5vw, 100vh); transform: translate(-50%, -50%); }
+.ts-layer, .ts-clouds, .ts-motes { position: absolute; inset: -2%; }
+.ts-img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; user-select: none; }
+.ts-sky { inset: -3%; }
+.ts-far { transform: translate(calc(var(--px) * -6px), calc(var(--py) * -4px)); animation: ts-sway 26s ease-in-out infinite alternate; --sw: 4px; }
+.ts-mid { transform: translate(calc(var(--px) * -12px), calc(var(--py) * -6px)); animation: ts-sway 22s ease-in-out infinite alternate; --sw: 6px; }
+.ts-village { transform: translate(calc(var(--px) * -18px), calc(var(--py) * -8px)); }
+.ts-front { inset: -4%; transform: translate(calc(var(--px) * -34px), calc(var(--py) * -14px)); animation: ts-sway 18s ease-in-out infinite alternate; --sw: 10px; }
+.ts-far, .ts-mid, .ts-front { transition: transform 0.4s ease-out; }
+@keyframes ts-sway { from { translate: calc(var(--sw) * -1) 0; } to { translate: var(--sw) 0; } }
+/* 울림등 빛줄기: 천천히 돌고 숨 쉬듯 밝아짐 */
+.ts-rays { position: absolute; width: 62.5%; aspect-ratio: 1; transform: translate(-50%, -50%); mix-blend-mode: screen; opacity: 0.9; pointer-events: none; }
+.ts-rays .ts-img { animation: ts-rays 60s linear infinite, ts-breathe 5s ease-in-out infinite; }
+@keyframes ts-rays { to { rotate: 360deg; } }
+@keyframes ts-breathe { 0%, 100% { opacity: 0.75; scale: 0.97; } 50% { opacity: 1; scale: 1.03; } }
+/* 구름: 아주 느리게 옆으로 흐름 */
+.ts-cloud { position: absolute; width: 26%; height: auto; pointer-events: none; opacity: 0.95; animation: ts-cloud linear infinite; }
+.ts-cloud-0 { left: 4%; top: 6%; animation-duration: 140s; }
+.ts-cloud-1 { left: 38%; top: 13%; width: 21%; animation-duration: 170s; animation-delay: -60s; }
+.ts-cloud-2 { left: 68%; top: 9%; width: 18%; animation-duration: 120s; animation-delay: -30s; }
+.ts-cloud-3 { left: 82%; top: 24%; width: 14%; opacity: 0.7; animation-duration: 200s; animation-delay: -110s; }
+@keyframes ts-cloud { 0% { translate: -6vw 0; } 50% { translate: 6vw -0.6vh; } 100% { translate: -6vw 0; } }
+/* 반딧불·불씨 */
+.ts-motes i { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: var(--c); box-shadow: 0 0 6px 2px var(--c), 0 0 16px 4px color-mix(in srgb, var(--c) 45%, transparent); opacity: 0; animation: ts-mote var(--d) ease-in-out var(--dl) infinite; }
+@keyframes ts-mote { 0% { opacity: 0; transform: translate(0, 0) scale(0.6); } 20% { opacity: 0.95; } 60% { opacity: 0.7; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1); } }
+/* 글자가 읽히도록 위·아래를 살짝 어둡게 */
+.title-vignette { position: absolute; inset: 0; pointer-events: none; background:
+  linear-gradient(180deg, #0c0818b0 0%, #0c081800 32%, #0c081800 58%, #0c0818c8 100%),
+  radial-gradient(ellipse at 50% 60%, transparent 55%, #08051090 100%); }
+
+.title-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 12px; padding: calc(clamp(14px, 5vh, 54px) + var(--safe-t)) 16px calc(clamp(30px, 6vh, 64px) + var(--safe-b)); }
+.logo { text-align: center; display: flex; flex-direction: column; align-items: center; }
+.logo h1 {
+  position: relative; margin: 0; font-size: clamp(2.6rem, 8.4vw, 5.4rem); font-weight: 900; letter-spacing: 0.06em; line-height: 1.08;
+  /* 아래 층: 굵은 진한 윤곽 / 위 층(::after): 금빛 그라데이션 글자 */
+  color: #2a1406; -webkit-text-stroke: 0.14em #2a1406; paint-order: stroke fill;
+  filter: drop-shadow(0 3px 0 #4a2208) drop-shadow(0 0 22px #ffb85a90) drop-shadow(0 10px 18px #000c);
+  animation: logo-glow 4s ease-in-out infinite;
+}
+.logo h1::after {
+  content: attr(data-text); position: absolute; inset: 0; -webkit-text-stroke: 0;
+  background: linear-gradient(180deg, #fffdf0 0%, #ffeab0 34%, #f6c060 58%, #d8862e 82%, #b4601c 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+@keyframes logo-glow { 0%, 100% { filter: drop-shadow(0 3px 0 #4a2208) drop-shadow(0 0 16px #ffb85a80) drop-shadow(0 10px 18px #000c); } 50% { filter: drop-shadow(0 3px 0 #4a2208) drop-shadow(0 0 30px #ffcf7ad0) drop-shadow(0 10px 18px #000c); } }
+.logo-flourish { width: min(560px, 80vw); height: auto; margin-top: -2px; filter: drop-shadow(0 2px 3px #000a); }
+.logo-sub { margin: 4px 0 0; color: #fff1d6; font-weight: 700; letter-spacing: 0.08em; font-size: clamp(0.85rem, 1.9vw, 1.1rem); text-shadow: 0 0 10px #ff9a5a80, 0 2px 4px #000; }
+.logo-orbs { display: flex; gap: clamp(6px, 1.4vw, 14px); justify-content: center; margin-bottom: 4px; }
+.logo-orb { width: clamp(30px, 5vw, 48px); height: clamp(30px, 5vw, 48px); filter: drop-shadow(0 3px 4px #000a); animation: orb 3.2s ease-in-out infinite; }
 .logo-orb:nth-child(2) { animation-delay: 0.3s; } .logo-orb:nth-child(3) { animation-delay: 0.6s; } .logo-orb:nth-child(4) { animation-delay: 0.9s; } .logo-orb:nth-child(5) { animation-delay: 1.2s; } .logo-orb:nth-child(6) { animation-delay: 1.5s; }
 @keyframes orb { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-.title-menu { display: flex; flex-direction: column; gap: 10px; align-items: center; width: min(420px, 92vw); }
+
+/* 메뉴: 반투명 유리 판 위 금빛 버튼 */
+.title-menu { display: flex; flex-direction: column; gap: 10px; align-items: center; width: min(440px, 92vw); padding: 14px 16px 12px; border-radius: 18px;
+  background: linear-gradient(180deg, #2a1d40b8, #150e22d8); border: 1px solid #ffdf9a40; box-shadow: 0 0 0 1px #0008, 0 14px 40px #000a, inset 0 1px 0 #ffffff1c; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .title-menu > .btn-big { width: 100%; }
+.title-menu .btn-primary { position: relative; overflow: hidden; background: linear-gradient(180deg, #fff0bc 0%, #f6cf78 40%, #d98f32 100%); border-color: #fff2c4; box-shadow: 0 0 0 2px #6a3a10, 0 6px 0 #5a2e0c, 0 0 24px #ffbf5a80; color: #3a1e06; font-weight: 900; letter-spacing: 0.04em; }
+.title-menu .btn-primary::after { content: ''; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%; background: linear-gradient(100deg, transparent, #ffffffa0, transparent); transform: skewX(-20deg); animation: btn-shine 3.6s ease-in-out infinite; }
+@keyframes btn-shine { 0%, 60% { left: -60%; } 100% { left: 130%; } }
+.title-menu .btn-big:not(.btn-primary) { background: linear-gradient(180deg, #4a3870, #2c2046); border-color: #b49ae0; box-shadow: 0 0 0 2px #120a20, 0 5px 0 #120a20; }
 .title-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-.title-foot { position: absolute; bottom: calc(8px + var(--safe-b)); left: 0; right: 0; text-align: center; font-size: 0.75rem; color: #d8c9b4a0; }
+.title-row .btn { min-height: 42px; background: linear-gradient(180deg, #3e2f5c, #251b3a); border-color: #6d5a92; box-shadow: 0 3px 0 #0d0816; }
+.title-row .btn:hover, .title-menu .btn-big:not(.btn-primary):hover { border-color: var(--gold2); box-shadow: 0 0 14px #ffd27a66, 0 3px 0 #0d0816; }
+.title-menu .btn:focus-visible { outline: 3px solid #fff2c4; outline-offset: 2px; }
+.title-foot { position: absolute; bottom: calc(6px + var(--safe-b)); left: 0; right: 0; text-align: center; font-size: 0.72rem; color: #e8dccaa0; text-shadow: 0 1px 2px #000; }
+@media (max-height: 460px) {
+  .title-wrap { padding-top: calc(8px + var(--safe-t)); padding-bottom: calc(18px + var(--safe-b)); }
+  .logo h1 { font-size: clamp(2rem, 7vh, 3rem); }
+  .logo-orb { width: 26px; height: 26px; }
+  .logo-flourish { width: min(360px, 60vw); }
+  .logo-sub { font-size: 0.78rem; }
+  .title-menu { padding: 8px 12px; gap: 6px; }
+  .title-menu .btn-big { min-height: 44px; padding: 0.4em 1.2em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ts-far, .ts-mid, .ts-front, .ts-cloud, .ts-rays .ts-img, .ts-motes i, .logo h1, .logo-orb, .title-menu .btn-primary::after { animation: none !important; }
+  .ts-motes i { opacity: 0.6; }
+}
 .credits p { margin: 6px 0; }
 
 /* 월드 지도 */
