@@ -225,30 +225,117 @@ button { font-family: var(--font); color: inherit; }
 .logo-orb:nth-child(2) { animation-delay: 0.3s; } .logo-orb:nth-child(3) { animation-delay: 0.6s; } .logo-orb:nth-child(4) { animation-delay: 0.9s; } .logo-orb:nth-child(5) { animation-delay: 1.2s; } .logo-orb:nth-child(6) { animation-delay: 1.5s; }
 @keyframes orb { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 
-/* 메뉴: 반투명 유리 판 위 금빛 버튼 */
-.title-menu { display: flex; flex-direction: column; gap: 10px; align-items: center; width: min(440px, 92vw); padding: 14px 16px 12px; border-radius: 18px;
-  background: linear-gradient(180deg, #2a1d40b8, #150e22d8); border: 1px solid #ffdf9a40; box-shadow: 0 0 0 1px #0008, 0 14px 40px #000a, inset 0 1px 0 #ffffff1c; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-.title-menu > .btn-big { width: 100%; }
-.title-menu .btn-primary { position: relative; overflow: hidden; background: linear-gradient(180deg, #fff0bc 0%, #f6cf78 40%, #d98f32 100%); border-color: #fff2c4; box-shadow: 0 0 0 2px #6a3a10, 0 6px 0 #5a2e0c, 0 0 24px #ffbf5a80; color: #3a1e06; font-weight: 900; letter-spacing: 0.04em; }
-.title-menu .btn-primary::after { content: ''; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%; background: linear-gradient(100deg, transparent, #ffffffa0, transparent); transform: skewX(-20deg); animation: btn-shine 3.6s ease-in-out infinite; }
+/* 로비 메뉴 (2026-11-10 개편) — 아래쪽 카드 줄: 가운데 금빛 모험 카드 + 양옆 그림 카드 4장.
+   흐림(backdrop-filter)은 움직이는 풍경 위에서 휴대폰에 매 프레임 비용이 커서 쓰지 않고, 진한 판으로 글자를 읽히게 함 */
+.title-menu { display: grid; grid-template-columns: 1fr 1fr minmax(0, 2.3fr) 1fr 1fr; gap: clamp(8px, 1.2vw, 14px); align-items: stretch; width: min(1120px, 96vw); }
+.tm-tile, .tm-card { position: relative; overflow: hidden; margin: 0; color: #fff6e6; text-align: center; font: inherit; cursor: pointer; transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease, filter 0.14s; }
+/* 그림 카드 */
+.tm-tile { --tc: #b49ae0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: clamp(128px, 21vh, 176px); padding: 12px 8px 12px; border-radius: 18px;
+  background: radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--tc) 42%, transparent) 0%, transparent 62%), linear-gradient(180deg, color-mix(in srgb, var(--tc) 26%, #2a1c44) 0%, #1a1128 70%, #120c1e 100%);
+  border: 2px solid color-mix(in srgb, var(--tc) 72%, #ffffff 8%);
+  box-shadow: 0 0 0 2px #0a0612, 0 6px 0 #0a0612, 0 12px 26px #000b, inset 0 1px 0 #ffffff30, inset 0 -18px 30px #00000040; }
+.tm-tile::before { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 30%, #ffffff1c 46%, transparent 60%); transform: translateX(-120%); transition: transform 0.5s ease; pointer-events: none; }
+.tm-tile:hover, .tm-tile:focus-visible { transform: translateY(-4px); border-color: color-mix(in srgb, var(--tc) 50%, #fff); box-shadow: 0 0 0 2px #0a0612, 0 10px 0 #0a0612, 0 0 26px color-mix(in srgb, var(--tc) 60%, transparent), 0 16px 30px #000b, inset 0 1px 0 #ffffff40; }
+.tm-tile:hover::before, .tm-tile:focus-visible::before { transform: translateX(120%); }
+.tm-tile:active, .tm-card:active { transform: translateY(2px); }
+/* 아이콘 메달: 카드 색으로 빛나는 동그라미 */
+.tm-medal { position: relative; display: grid; place-items: center; flex: none; width: clamp(54px, 8.4vh, 74px); height: clamp(54px, 8.4vh, 74px); border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--tc) 55%, #fff 20%) 0%, color-mix(in srgb, var(--tc) 70%, #1a1028) 58%, #120a1e 100%);
+  border: 2px solid color-mix(in srgb, var(--tc) 40%, #fff6dc); box-shadow: 0 0 0 3px #0a0612, 0 0 22px color-mix(in srgb, var(--tc) 70%, transparent), inset 0 2px 6px #ffffff50, inset 0 -6px 10px #0006; }
+.tm-medal::after { content: ''; position: absolute; inset: -7px; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 70%, color-mix(in srgb, var(--tc) 60%, #fff) 82%, transparent 94%); -webkit-mask: radial-gradient(circle, transparent 62%, #000 64%, #000 70%, transparent 72%); mask: radial-gradient(circle, transparent 62%, #000 64%, #000 70%, transparent 72%); animation: tm-orbit 5s linear infinite; opacity: 0.8; pointer-events: none; }
+@keyframes tm-orbit { to { rotate: 360deg; } }
+.tm-ico { width: 64%; height: 64%; filter: drop-shadow(0 2px 2px #0008); }
+.tm-portrait { width: 92%; height: 92%; border-radius: 50%; object-fit: cover; object-position: 50% 20%; }
+.tm-label { font-size: clamp(1rem, 2.2vh, 1.25rem); font-weight: 900; letter-spacing: 0.04em; text-shadow: 0 2px 0 #0008, 0 0 10px color-mix(in srgb, var(--tc) 50%, transparent); margin-top: 4px; }
+.tm-sub { font-size: clamp(0.72rem, 1.55vh, 0.86rem); font-weight: 700; color: #eadff8; opacity: 0.92; line-height: 1.25; text-shadow: 0 1px 2px #000; }
+.tm-badge { position: absolute; top: 8px; right: 8px; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 900; color: #3a1e06; background: linear-gradient(180deg, #fff3c4, #f4c25a); border: 1px solid #fff6d8; box-shadow: 0 0 0 2px #5a2e0c, 0 0 12px #ffcf6a99; animation: tm-badge 1.8s ease-in-out infinite; }
+@keyframes tm-badge { 50% { transform: scale(1.08); } }
+.tm-gacha.ready .tm-medal { box-shadow: 0 0 0 3px #0a0612, 0 0 30px #c99cff, inset 0 2px 6px #ffffff50, inset 0 -6px 10px #0006; }
+/* 가운데 모험 카드 */
+.tm-main { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.tm-card { flex: 1; display: flex; align-items: center; gap: 14px; padding: 12px 18px; border-radius: 20px; text-align: left; }
+.tm-card.btn-big { width: 100%; min-height: 0; }
+.tm-hero { --tc: #ffc85a; min-height: clamp(128px, 21vh, 176px); color: #fff8e8;
+  background: linear-gradient(180deg, #5a3a14, #2a1708) !important; border: 3px solid #ffe6a0 !important;
+  box-shadow: 0 0 0 3px #4a2408, 0 7px 0 #3a1c06, 0 0 34px #ffb84a90, 0 16px 34px #000c !important; }
+.tm-banner { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.95; pointer-events: none; z-index: 0; }
+.tm-hero::before { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(90deg, #26120ae8 0%, #26120ad0 44%, #26120a60 74%, #26120a10 100%), linear-gradient(0deg, #26120aa0, transparent 55%), radial-gradient(120% 90% at 18% 50%, #ffb84a30, transparent 60%); pointer-events: none; }
+.tm-hero::after { content: ''; position: absolute; z-index: 3; top: 0; bottom: 0; width: 34%; left: -50%; background: linear-gradient(100deg, transparent, #fff6d070, transparent); transform: skewX(-20deg); animation: btn-shine 4.2s ease-in-out infinite; pointer-events: none; }
 @keyframes btn-shine { 0%, 60% { left: -60%; } 100% { left: 130%; } }
-.title-menu .btn-big:not(.btn-primary) { background: linear-gradient(180deg, #4a3870, #2c2046); border-color: #b49ae0; box-shadow: 0 0 0 2px #120a20, 0 5px 0 #120a20; }
-.title-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-.title-row .btn { min-height: 42px; background: linear-gradient(180deg, #3e2f5c, #251b3a); border-color: #6d5a92; box-shadow: 0 3px 0 #0d0816; }
-.title-row .btn:hover, .title-menu .btn-big:not(.btn-primary):hover { border-color: var(--gold2); box-shadow: 0 0 14px #ffd27a66, 0 3px 0 #0d0816; }
-.title-menu .btn:focus-visible { outline: 3px solid #fff2c4; outline-offset: 2px; }
-.title-foot { position: absolute; bottom: calc(6px + var(--safe-b)); left: 0; right: 0; text-align: center; font-size: 0.72rem; color: #e8dccaa0; text-shadow: 0 1px 2px #000; }
+.tm-card > * { position: relative; z-index: 2; }
+.tm-card > .tm-banner { position: absolute; z-index: 0; }
+.tm-hero .tm-medal { --tc: #ffc85a; }
+.tm-medal-big { width: clamp(60px, 9.6vh, 84px); height: clamp(60px, 9.6vh, 84px); }
+.tm-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tm-kicker { font-size: 0.74rem; font-weight: 900; letter-spacing: 0.18em; color: #ffd98a; text-shadow: 0 1px 2px #000; }
+.tm-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: clamp(1.15rem, 3vh, 1.65rem); font-weight: 900; letter-spacing: 0.03em; line-height: 1.15; color: #fff3cf; text-shadow: 0 2px 0 #3a1c06, 0 0 14px #ffb84a90; }
+.tm-hero .tm-sub { color: #ffeccb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tm-prog { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+.tm-bar { flex: 1; min-width: 60px; max-width: 220px; height: 9px; border-radius: 99px; background: #1a0c04c0; border: 1px solid #ffe2a060; overflow: hidden; }
+.tm-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ffd56a, #fff1b8); box-shadow: 0 0 8px #ffd56a; }
+.tm-go { margin-left: auto; flex: none; align-self: center; padding: 6px 14px 6px 16px; border-radius: 999px; font-weight: 900; font-size: clamp(0.85rem, 1.9vh, 1.05rem); color: #3a1e06; background: linear-gradient(180deg, #fff3c4, #f6c860 55%, #e09a3c); border: 2px solid #fff6d8; box-shadow: 0 0 0 2px #5a2e0c, 0 4px 0 #5a2e0c, 0 0 18px #ffcf6aa0; white-space: nowrap; }
+.tm-map-small .tm-go { display: none; }
+.tm-stars { display: inline-flex; align-items: center; gap: 3px; font-weight: 900; font-size: 0.86rem; color: #fff1c8; text-shadow: 0 1px 2px #000; white-space: nowrap; }
+.tm-hero:hover, .tm-hero:focus-visible { transform: translateY(-3px); filter: brightness(1.08); }
+/* 이어할 판이 있을 때 지도 카드 (금빛 카드 아래 작은 보조) */
+.tm-map-small { --tc: #b49ae0; flex: none; min-height: 56px; padding: 6px 14px; background: linear-gradient(180deg, #45336a, #261a3e) !important; border: 2px solid #b49ae0 !important; box-shadow: 0 0 0 2px #0a0612, 0 5px 0 #0a0612 !important; }
+.tm-map-small .tm-medal { width: 40px; height: 40px; }
+.tm-map-small .tm-medal::after { display: none; }
+.tm-map-small .tm-title { font-size: 1.05rem; text-shadow: 0 1px 2px #000; color: #fff; }
+.tm-map-small .tm-sub { font-size: 0.76rem; }
+.tm-map-small .tm-prog { display: none; }
+.tm-card:focus-visible, .tm-tile:focus-visible { outline: 3px solid #fff2c4; outline-offset: 3px; }
+/* 오른쪽 위: 설정·만든 이 */
+.title-corner { position: absolute; top: calc(10px + var(--safe-t)); right: calc(12px + var(--safe-r, 0px)); display: flex; gap: 8px; z-index: 2; }
+.tc-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 4px 14px 4px 8px; border-radius: 999px; background: linear-gradient(180deg, #3e2f5ce8, #1e1530e8); border: 2px solid #8d78b8; box-shadow: 0 3px 0 #0a0612, 0 6px 14px #0008; color: #fff3e0; font-weight: 800; }
+.tc-btn:hover { border-color: var(--gold2); box-shadow: 0 0 14px #ffd27a66, 0 3px 0 #0a0612; }
+.tc-ico { width: 26px; height: 26px; }
+.title-foot { position: absolute; bottom: calc(4px + var(--safe-b)); left: 0; right: 0; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 0 12px; font-size: 0.72rem; color: #e8dccaa0; text-shadow: 0 1px 2px #000; pointer-events: none; }
+.title-foot > * { pointer-events: auto; }
+.tf-reset { position: absolute; left: calc(10px + var(--safe-l, 0px)); bottom: 0; min-height: 30px; padding: 2px 10px; font-size: 0.74rem; color: #d8cbe8b0; }
+.title-wrap { padding-bottom: calc(clamp(26px, 4.5vh, 48px) + var(--safe-b)); }
+/* 휴대폰 가로 (낮은 화면): 로고를 줄이고 카드를 낮게, 설명 줄은 한 줄로 */
 @media (max-height: 460px) {
-  .title-wrap { padding-top: calc(8px + var(--safe-t)); padding-bottom: calc(18px + var(--safe-b)); }
-  .logo h1 { font-size: clamp(2rem, 7vh, 3rem); }
-  .logo-orb { width: 26px; height: 26px; }
-  .logo-flourish { width: min(360px, 60vw); }
-  .logo-sub { font-size: 0.78rem; }
-  .title-menu { padding: 8px 12px; gap: 6px; }
-  .title-menu .btn-big { min-height: 44px; padding: 0.4em 1.2em; }
+  .title-wrap { padding-top: calc(6px + var(--safe-t)); padding-bottom: calc(20px + var(--safe-b)); gap: 6px; }
+  .logo h1 { font-size: clamp(1.8rem, 9vh, 2.7rem); }
+  .logo-orb { width: 22px; height: 22px; }
+  .logo-orbs { margin-bottom: 0; }
+  .logo-flourish { width: min(300px, 50vw); margin-top: -4px; }
+  .logo-sub { font-size: 0.74rem; margin-top: 0; }
+  .title-menu { width: min(820px, 98vw); gap: 7px; }
+  .tm-tile { min-height: 116px; padding: 8px 4px; gap: 2px; border-radius: 14px; }
+  .tm-medal { width: 46px; height: 46px; }
+  .tm-medal-big { width: 56px; height: 56px; }
+  .tm-label { font-size: 0.95rem; margin-top: 2px; }
+  .tm-sub { font-size: 0.68rem; }
+  .tm-hero { min-height: 116px; }
+  .tm-card { padding: 8px 12px; gap: 10px; border-radius: 16px; }
+  .tm-title { font-size: 1.08rem; }
+  .tm-bar { height: 7px; }
+  .tm-map-small { min-height: 44px; padding: 3px 10px; }
+  .tm-map-small .tm-medal { width: 32px; height: 32px; }
+  .tm-map-small .tm-sub { display: none; }
+  .tm-go { display: none; }
+  .tm-badge { top: 5px; right: 5px; font-size: 0.64rem; padding: 1px 6px; }
+  .tc-btn { min-height: 40px; padding: 2px 10px 2px 6px; }
+  .tc-btn span { display: none; }
+  .tc-btn { padding: 2px 6px; min-width: 42px; justify-content: center; }
+  .title-foot .tf-note { display: none; }
+  .tf-reset { position: fixed; top: calc(10px + var(--safe-t)); bottom: auto; left: calc(10px + var(--safe-l, 0px)); min-height: 40px; }
+}
+/* 휴대폰 세로 (좁은 화면): 큰 모험 카드를 맨 위 한 줄, 그 아래 2×2 카드 */
+@media (max-width: 640px) and (min-height: 461px) {
+  .title-wrap { justify-content: flex-start; gap: clamp(10px, 3vh, 28px); padding-top: calc(54px + var(--safe-t)); }
+  .title-menu { grid-template-columns: 1fr 1fr; width: min(440px, 94vw); margin-top: auto; }
+  .tm-main { grid-column: 1 / -1; order: -1; }
+  .tm-tile { min-height: 132px; }
+  .tm-hero { min-height: 116px; }
+  .title-corner { left: 12px; right: 12px; justify-content: flex-end; }
+  .title-foot .tf-note { display: none; }
+  .tf-reset { position: fixed; top: calc(10px + var(--safe-t)); bottom: auto; left: calc(10px + var(--safe-l, 0px)); min-height: 40px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .ts-far, .ts-mid, .ts-front, .ts-cloud, .ts-rays .ts-img, .ts-motes i, .logo h1, .logo-orb, .title-menu .btn-primary::after { animation: none !important; }
+  .ts-far, .ts-mid, .ts-front, .ts-cloud, .ts-rays .ts-img, .ts-motes i, .logo h1, .logo-orb, .tm-medal::after, .tm-badge, .tm-hero::after { animation: none !important; }
   .ts-motes i { opacity: 0.6; }
 }
 .credits p { margin: 6px 0; }
@@ -4219,10 +4306,19 @@ RG.bosses = (() => {
 RG.sim = (() => {
   const DT = 1 / 30;
   const U = () => RG.util;
-  const D = () => RG.data;
+  // 데이터 참조는 판을 만들 때 한 번 잡아 둠 (매 틱 수만 번 부르므로 전역 RG를 찾는 비용이 큼)
+  let DATA = null;
+  const D = () => DATA || RG.data;
 
   /* ---------------- 도우미 ---------------- */
   const d2 = (ax, ay, bx, by) => (ax - bx) * (ax - bx) + (ay - by) * (ay - by);
+  /** 배열에서 조건에 맞는 것만 남김(제자리, 순서 유지) */
+  function compact(arr, keep) {
+    let j = 0;
+    for (let i = 0; i < arr.length; i++) { const v = arr[i]; if (keep(v)) { if (j !== i) arr[j] = v; j++; } }
+    if (j !== arr.length) arr.length = j;
+    return arr;
+  }
   const dist = (ax, ay, bx, by) => Math.sqrt(d2(ax, ay, bx, by));
 
   /** 선분(ax,ay)-(bx,by)과 점의 거리 */
@@ -4254,6 +4350,7 @@ RG.sim = (() => {
    * 생성
    * ===================================================== */
   function create(opts) {
+    DATA = RG.data;
     const o = Object.assign({ mode: 'normal', heroId: null, skills: [], seed: 1 }, opts);
     const def = findMapDef(o.mapId);
     if (!def) throw new Error(`맵 없음: ${o.mapId}`);
@@ -4436,6 +4533,7 @@ RG.sim = (() => {
     /** 장판(공허 구슬 등) 감속 중 가장 센 것 */
     function zoneSlowOf(e) {
       let best = 0;
+      if (!st.zones.length) return 0;
       for (const z of st.zones) {
         if (!z.slowPct || st.time > z.until) continue;
         if (z.kind !== 'void' && e.flying) continue;
@@ -4885,39 +4983,63 @@ RG.sim = (() => {
       return !e.dead && !e.flying && !e.burrowed && !ed.traits.unstoppable && !(isHardCC(e) && e.ccKind === 'lift');
     }
 
+    // 붙잡기 계산에 매 틱 쓰는 배열은 다시 씀 (적 수백 × 병사 수십을 매 틱 훑으므로 새 배열을 만들면 쓰레기가 많음)
+    const freeEnemies = [];
+    const candE = [];
+    const candD = [];
+    const blockRank = (u) => (u.kind === 'hero' ? 0 : u.kind === 'wall' ? 1 : 2);
     function resolveBlocking() {
-      // 정리
+      // 정리 (제자리에서 걸러 냄 — 순서·부작용은 예전 filter와 같음)
       for (const u of st.units) {
-        if (!u.blocking.length) continue;
-        u.blocking = u.blocking.filter((id) => {
+        const bl = u.blocking;
+        if (!bl.length) continue;
+        let j = 0;
+        for (let i = 0; i < bl.length; i++) {
+          const id = bl[i];
           const e = enemyById(id);
           const ok = e && !e.dead && e.blockedBy === u.id && canBeBlocked(e) && d2(e.x, e.y, u.x, u.y) < 2.6;
           if (!ok && e && e.blockedBy === u.id) e.blockedBy = null;
-          return ok;
-        });
+          if (ok) bl[j++] = id;
+        }
+        bl.length = j;
       }
       // 배정: 영웅 → 벽 → 병사
       const building = new Set(st.towers.filter((t) => t.building).map((t) => t.id)); // 짓는 중인 병영의 병사는 아직 싸우지 않음
       const blockers = st.units.filter((u) => !u.dead && u.block > 0 && !(u.kind === 'hero' && u.path.length) && !(u.kind === 'soldier' && building.has(u.owner)));
-      blockers.sort((a, b) => (a.kind === 'hero' ? 0 : a.kind === 'wall' ? 1 : 2) - (b.kind === 'hero' ? 0 : b.kind === 'wall' ? 1 : 2));
+      if (!blockers.length) return;
+      blockers.sort((a, b) => blockRank(a) - blockRank(b));
+      // 붙잡을 수 있는 적은 이 틱 동안 바뀌지 않으므로 한 번만 골라 둠(순서 그대로). 배정되면 blockedBy로 건너뜀 → 예전과 같은 후보
+      freeEnemies.length = 0;
+      for (let i = 0; i < st.enemies.length; i++) { const e = st.enemies[i]; if (!e.blockedBy && canBeBlocked(e)) freeEnemies.push(e); }
       for (const u of blockers) {
         if (u.blocking.length >= u.block) continue;
         const ax = u.kind === 'soldier' ? u.homeX : u.x;
         const ay = u.kind === 'soldier' ? u.homeY : u.y;
         const R = u.kind === 'soldier' ? (u.taunt || 0.9) : u.kind === 'wall' ? 0.75 : 0.95;
-        const cands = [];
-        for (const e of st.enemies) {
-          if (e.blockedBy || !canBeBlocked(e)) continue;
+        const R2 = R * R;
+        candE.length = 0; candD.length = 0;
+        for (let i = 0; i < freeEnemies.length; i++) {
+          const e = freeEnemies[i];
+          if (e.blockedBy) continue;
+          const dx = e.x - ax;
+          if (dx > R + 1e-6 || dx < -R - 1e-6) continue; // 확실히 먼 적만 (경계는 아래 정확한 계산에 맡김)
           const dd = d2(e.x, e.y, ax, ay);
-          if (dd <= R * R) cands.push([dd, e]);
+          if (dd <= R2) {
+            // 가까운 순(같으면 id 작은 순)으로 끼워 넣기 — 후보는 보통 몇 마리뿐
+            let k = candE.length;
+            candE.push(e); candD.push(dd);
+            while (k > 0 && (candD[k - 1] > dd || (candD[k - 1] === dd && candE[k - 1].id > e.id))) { candE[k] = candE[k - 1]; candD[k] = candD[k - 1]; k--; }
+            candE[k] = e; candD[k] = dd;
+          }
         }
-        cands.sort((a, b) => a[0] - b[0] || a[1].id - b[1].id);
-        for (const [, e] of cands) {
+        for (let i = 0; i < candE.length; i++) {
           if (u.blocking.length >= u.block) break;
+          const e = candE[i];
           e.blockedBy = u.id;
           u.blocking.push(e.id);
         }
       }
+      candE.length = 0; freeEnemies.length = 0;
     }
 
     /* =====================================================
@@ -4929,43 +5051,72 @@ RG.sim = (() => {
       ev('towerDisabled', { towerId: t.id, dur, reason });
     }
 
-    function towerTargets(t, n, range, opt = {}) {
+    /**
+     * 사거리 안 표적 n개 (표적 방식에 따른 순서, 같으면 id가 작은 적).
+     * n이 1이면(대부분의 탑) 한 번 훑으며 가장 좋은 적만 고름 — 배열·정렬 없이 (적이 수백일 때 매 틱 비용이 큼). 결과는 정렬과 같음.
+     */
+    const NO_OPT = Object.freeze({});
+    function towerTargets(t, n, range, opt = NO_OPT) {
       const c = t.calc;
-      const out = [];
       const r2 = range * range;
       const min2 = c.minRange ? c.minRange * c.minRange : 0;
+      const mode = t.targetMode;
+      const tg = c.targets;
+      const tx = t.x;
+      const ty = t.y;
+      const keyOf = (e, dd) => (mode === 'last' ? -e.prog : mode === 'strong' ? -(e.hp + e.shield) : mode === 'weak' ? e.hp + e.shield : mode === 'close' ? dd : e.prog);
+      if (n === 1) {
+        let best = null;
+        let bk = 0;
+        for (const e of st.enemies) {
+          if (!targetable(e)) continue;
+          if (tg === 'ground' && e.flying) continue;
+          if (tg === 'air' && !e.flying) continue;
+          const dx = tx - e.x;
+          const dy = ty - e.y;
+          const dd = dx * dx + dy * dy;
+          if (dd > r2 || dd < min2) continue;
+          if (!opt.anyElement && !attackable(e, c.element)) continue;
+          if (opt.exclude && opt.exclude.has(e.id)) continue;
+          const k = keyOf(e, dd);
+          if (best === null || k < bk || (k === bk && e.id < best.id)) { best = e; bk = k; }
+        }
+        return best ? [best] : [];
+      }
+      const out = [];
       for (const e of st.enemies) {
         if (!targetable(e)) continue;
-        if (c.targets === 'ground' && e.flying) continue;
-        if (c.targets === 'air' && !e.flying) continue;
-        if (!opt.anyElement && !attackable(e, c.element)) continue;
-        const dd = d2(t.x, t.y, e.x, e.y);
+        if (tg === 'ground' && e.flying) continue;
+        if (tg === 'air' && !e.flying) continue;
+        const dx = tx - e.x;
+        const dy = ty - e.y;
+        const dd = dx * dx + dy * dy;
         if (dd > r2 || dd < min2) continue;
+        if (!opt.anyElement && !attackable(e, c.element)) continue;
         if (opt.exclude && opt.exclude.has(e.id)) continue;
-        out.push([dd, e]);
+        out.push({ k: keyOf(e, dd), e });
       }
-      const mode = t.targetMode;
-      const key = (p) => {
-        const e = p[1];
-        if (mode === 'last') return -e.prog;
-        if (mode === 'strong') return -(e.hp + e.shield);
-        if (mode === 'weak') return e.hp + e.shield;
-        if (mode === 'close') return p[0];
-        return e.prog;
-      };
-      out.sort((a, b) => key(a) - key(b) || a[1].id - b[1].id);
-      return out.slice(0, n).map((p) => p[1]);
+      out.sort((a, b) => a.k - b.k || a.e.id - b.e.id);
+      const res = [];
+      for (let i = 0; i < out.length && i < n; i++) res.push(out[i].e);
+      return res;
     }
 
     function enemiesInRadius(x, y, radius, filter) {
       const out = [];
       const r2 = radius * radius;
+      const far = radius + 1.5; // 몸 크기 보정(size×0.3)보다 넉넉한 거리 — 이보다 멀면 바로 건너뜀(결과는 같음)
       for (const e of st.enemies) {
+        const dx = x - e.x;
+        if (dx > far || dx < -far) continue;
+        const dy = y - e.y;
+        if (dy > far || dy < -far) continue;
         if (e.dead || e.burrowed) continue;
         if (filter === 'ground' && e.flying) continue;
         if (filter === 'air' && !e.flying) continue;
         const rr = radius + e.size * 0.3;
-        if (d2(x, y, e.x, e.y) <= Math.max(r2, rr * rr) && d2(x, y, e.x, e.y) <= rr * rr) out.push(e);
+        const dd = d2(x, y, e.x, e.y);
+        if (dd <= Math.max(r2, rr * rr) && dd <= rr * rr) out.push(e);
       }
       return out;
     }
@@ -5677,7 +5828,7 @@ RG.sim = (() => {
       st.time = st.tick * DT;
       const time = st.time;
 
-      for (const e of st.enemies) { e.px = e.x; e.py = e.y; }
+      for (let i = 0; i < st.enemies.length; i++) { const e = st.enemies[i]; e.px = e.x; e.py = e.y; }
       for (const u of st.units) { u.px = u.x; u.py = u.y; }
       for (const p of st.projectiles) { p.px = p.x; p.py = p.y; }
 
@@ -5708,190 +5859,53 @@ RG.sim = (() => {
       statsDirty = false;
       const silencers = [];
       const dampeners = [];
-      for (const e of st.enemies) {
+      const ens = st.enemies;
+      for (let i = 0; i < ens.length; i++) {
+        const e = ens[i];
         if (e.dead) continue;
         const tr = D().enemies[e.type].traits;
-        if (tr.silence) silencers.push([e, tr.silence.radius]);
-        if (tr.dampen) dampeners.push([e, tr.dampen.radius]);
+        if (tr.silence) silencers.push(e, tr.silence.radius);
+        if (tr.dampen) dampeners.push(e, tr.dampen.radius);
       }
       const freezeLinks = time < st.linksFrozenUntil;
       for (const t of st.towers) {
         if (t.building && time >= t.buildUntil) { t.building = false; changed = true; }
         let sil = false;
-        for (const [e, R] of silencers) if (d2(e.x, e.y, t.x, t.y) <= R * R) { sil = true; break; }
+        for (let i = 0; i < silencers.length; i += 2) { const e = silencers[i]; const R = silencers[i + 1]; if (d2(e.x, e.y, t.x, t.y) <= R * R) { sil = true; break; } }
         const dis = sil || time < t.disabledUntil;
         let dmp = freezeLinks;
-        if (!dmp) for (const [e, R] of dampeners) if (d2(e.x, e.y, t.x, t.y) <= R * R) { dmp = true; break; }
+        if (!dmp) for (let i = 0; i < dampeners.length; i += 2) { const e = dampeners[i]; const R = dampeners[i + 1]; if (d2(e.x, e.y, t.x, t.y) <= R * R) { dmp = true; break; } }
         if (dis !== t.disabled || dmp !== t.dampened) { t.disabled = dis; t.dampened = dmp; t.silenced = sil; changed = true; }
       }
       if (changed) RG.stats.computeAll(game);
 
       /* --- 탐지 --- */
       const detectors = [];
-      for (const t of st.towers) if (t.calc && t.calc.detect && !t.disabled && !t.building) detectors.push([t.x, t.y, t.calc.detect]);
-      if (st.hero && !st.hero.dead && D().heroes[st.hero.heroId].passive.detect) detectors.push([st.hero.x, st.hero.y, D().heroes[st.hero.heroId].passive.detect]);
-      for (const e of st.enemies) {
+      for (const t of st.towers) if (t.calc && t.calc.detect && !t.disabled && !t.building) detectors.push(t.x, t.y, t.calc.detect);
+      if (st.hero && !st.hero.dead && D().heroes[st.hero.heroId].passive.detect) detectors.push(st.hero.x, st.hero.y, D().heroes[st.hero.heroId].passive.detect);
+      for (let k = 0; k < ens.length; k++) {
+        const e = ens[k];
         if (!e.stealth) { e.revealed = true; continue; }
         let rev = time < e.st.blindUntil;
-        if (!rev) for (const [x, y, R] of detectors) if (d2(x, y, e.x, e.y) <= R * R) { rev = true; break; }
+        if (!rev) for (let i = 0; i < detectors.length; i += 3) { const R = detectors[i + 2]; if (d2(detectors[i], detectors[i + 1], e.x, e.y) <= R * R) { rev = true; break; } }
         e.revealed = rev;
       }
 
       /* --- 적 --- */
-      for (const e of st.enemies) {
-        if (e.dead) continue;
-        const ed = D().enemies[e.type];
-        const tr = ed.traits;
-        e.pushRes = Math.max(0, e.pushRes - rules.push.decay * DT);
-        const healBlocked = time < e.st.purifyUntil || time < e.st.haltUntil;
-        const healMul = time < e.st.stillUntil ? 0.5 : 1;
-        // 재생
-        if (tr.regen && !healBlocked && time - e.lastHurt >= rules.regenDelay && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * tr.regen * healMul * DT);
-        // 보호막 재생
-        if (tr.shield && !healBlocked && time - e.lastHurt >= tr.shield.delay && e.shield < e.maxShield) e.shield = Math.min(e.maxShield, e.shield + e.maxShield * tr.shield.rate * DT);
-        // 치유사
-        if (tr.healer && canAct(e) && !e.burrowed) {
-          e.healCd -= DT;
-          if (e.healCd <= 0) {
-            e.healCd = tr.healer.every;
-            let any = false;
-            for (const o3 of st.enemies) {
-              if (o3.dead || d2(o3.x, o3.y, e.x, e.y) > tr.healer.radius ** 2) continue;
-              if (time < o3.st.purifyUntil || time < o3.st.haltUntil) continue;
-              const m = time < o3.st.stillUntil ? 0.5 : 1;
-              const before = o3.hp;
-              o3.hp = Math.min(o3.maxHp, o3.hp + o3.maxHp * tr.healer.pct * m);
-              if (o3.hp > before) any = true;
-            }
-            e.castAnim = 0.45;
-            if (any) ev('enemyHeal', { x: e.x, y: e.y, radius: tr.healer.radius });
-          }
-        }
-        // 보호막 부여
-        if (tr.shielder && canAct(e) && !e.burrowed) {
-          e.shieldCd -= DT;
-          if (e.shieldCd <= 0) {
-            e.shieldCd = tr.shielder.every;
-            for (const o3 of st.enemies) {
-              if (o3.dead || o3 === e || d2(o3.x, o3.y, e.x, e.y) > tr.shielder.radius ** 2) continue;
-              if (time < o3.st.purifyUntil) continue;
-              const amt = o3.maxHp * tr.shielder.pct;
-              if (amt > o3.shield) { o3.shield = amt; o3.maxShield = Math.max(o3.maxShield, amt); }
-            }
-            e.castAnim = 0.45;
-            ev('enemyShield', { x: e.x, y: e.y, radius: tr.shielder.radius });
-          }
-        }
-        // 굴착
-        if (tr.burrow) {
-          e.burrowT += DT;
-          if (!e.burrowed && e.burrowT >= tr.burrow.every) { e.burrowed = true; e.burrowT = 0; releaseEnemy(e); ev('burrow', { enemyId: e.id, x: e.x, y: e.y }); } else if (e.burrowed && e.burrowT >= tr.burrow.dur) { e.burrowed = false; e.burrowT = 0; ev('unburrow', { enemyId: e.id, x: e.x, y: e.y }); }
-        }
-        // 보스
-        if (e.boss && RG.bosses) RG.bosses.update(game, e, api);
-        if (e.dead) continue;
-        // 이동
-        if (e.blockedBy || !canMove(e)) { updateProg(e); continue; }
-        const sp = enemySpeed(e) * DT;
-        e.walkT += sp;
-        moveGround(e, sp); // 비행 적도 길을 따라감(붙잡히지 않을 뿐)
-        if (!e.dead) updateProg(e);
-      }
+      // 구간마다 작은 함수로 (큰 함수 하나면 최적화가 자꾸 풀려 느린 길로 돌았음 — 결과는 같음)
+      for (let i = 0; i < st.enemies.length; i++) stepEnemy(st.enemies[i], time);
 
       /* --- 붙잡기 --- */
       resolveBlocking();
 
       /* --- 적의 공격 --- */
-      for (const e of st.enemies) {
-        // 그림용 타이머 (규칙에는 쓰지 않음)
-        if (e.attackAnim) e.attackAnim = Math.max(0, e.attackAnim - DT);
-        if (e.castAnim) e.castAnim = Math.max(0, e.castAnim - DT);
-        e.aiming = false;
-        if (e.dead || !canAct(e) || e.burrowed) continue;
-        const ed = D().enemies[e.type];
-        if (e.blockedBy && ed.melee) {
-          if (e.meleeCd <= 0.4) e.aiming = true; // 휘두르기 직전 (그림용)
-          e.meleeCd -= DT;
-          if (e.meleeCd <= 0) {
-            e.meleeCd = ed.melee.interval;
-            const u = unitById(e.blockedBy);
-            if (u && !u.dead) { hurtUnit(u, ed.melee.damage, e); e.attackAnim = 0.25; e.dir = u.x > e.x ? 1 : -1; }
-          }
-        }
-        if (ed.traits.ranged && time >= e.st.blindUntil) {
-          e.rangedCd -= DT;
-          // 던지기 직전 자세 (그림용): 곧 쏠 때 사거리 안에 상대가 있으면
-          if (e.rangedCd <= 0.45 && e.rangedCd > 0) {
-            const R2 = ed.traits.ranged.range ** 2;
-            for (const u of st.units) if (!u.dead && u.kind !== 'drone' && u.kind !== 'wall' && d2(u.x, u.y, e.x, e.y) <= R2) { e.aiming = true; break; }
-          }
-          if (e.rangedCd <= 0) {
-            const R = ed.traits.ranged.range;
-            let best = null;
-            let bd = R * R;
-            for (const u of st.units) {
-              if (u.dead || u.kind === 'drone' || u.kind === 'wall') continue;
-              const dd = d2(u.x, u.y, e.x, e.y);
-              if (dd <= bd) { bd = dd; best = u; }
-            }
-            if (best) {
-              e.rangedCd = ed.traits.ranged.interval;
-              e.attackAnim = 0.3; e.dir = best.x > e.x ? 1 : -1;
-              hurtUnit(best, ed.traits.ranged.damage, e);
-              ev('enemyShot', { enemyId: e.id, x: e.x, y: e.y, tx: best.x, ty: best.y });
-            } else e.rangedCd = 0.2;
-          }
-        }
-      }
+      for (let i = 0; i < st.enemies.length; i++) stepEnemyAttack(st.enemies[i], time);
 
       /* --- 유닛 --- */
       updateUnits(time);
 
       /* --- 탑 공격 --- */
-      for (const t of st.towers) {
-        t.anim = Math.max(0, t.anim - DT);
-        const c = t.calc;
-        if (!c || t.disabled || t.building) continue;
-        if (c.role === 'barracks') {
-          for (const id of t.soldiers) {
-            const s = unitById(id);
-            if (s && s.dead && !s.remove && time >= s.respawnAt) {
-              s.dead = false; s.hp = s.maxHp; s.x = t.x; s.y = t.y; s.px = s.x; s.py = s.y;
-              ev('unitSpawn', { unitId: s.id });
-            }
-          }
-          continue;
-        }
-        if (c.discharge) {
-          t.dischargeCd = (t.dischargeCd || 0) - DT;
-          if (t.dischargeCd <= 0) {
-            const list = enemiesInRadius(t.x, t.y, c.discharge.radius);
-            if (list.length) {
-              t.dischargeCd = c.discharge.every;
-              for (const e of list) damage(e, c.discharge.damage, 'storm', { tower: t, calc: c }, { secondary: true, area: true });
-              ev('pulse', { towerId: t.id, x: t.x, y: t.y, radius: c.discharge.radius, element: 'storm' });
-            }
-          }
-        }
-        if (c.kind === 'none') continue;
-        if (c.kind === 'beam') { updateTowerBeams(t); continue; }
-        if (c.cyclone) {
-          t.cycloneCd = (t.cycloneCd == null ? c.cyclone.every * 0.5 : t.cycloneCd) - DT;
-          if (t.cycloneCd <= 0) {
-            const tg = towerTargets(t, 1, c.range, {});
-            const g = tg.find((e) => !e.flying);
-            if (g) {
-              t.cycloneCd = c.cyclone.every;
-              for (const e of enemiesInRadius(g.x, g.y, c.cyclone.radius, 'ground')) { push(e, c.cyclone.dist); hardCC(e, 'lift', c.cyclone.lift); }
-              ev('cyclone', { towerId: t.id, x: g.x, y: g.y, radius: c.cyclone.radius });
-            }
-          }
-        }
-        t.cd -= DT;
-        if (t.cd <= 0) {
-          if (fireTower(t)) { t.cd += c.interval; t.anim = 0.25; } else t.cd = 0;
-        }
-      }
+      for (const t of st.towers) stepTower(t, time);
 
       /* --- 투사체 --- */
       updateProjectiles();
@@ -5900,12 +5914,14 @@ RG.sim = (() => {
       for (const z of st.zones) {
         if (time > z.until) continue;
         const filter = z.kind === 'void' ? null : 'ground';
-        for (const e of enemiesInRadius(z.x, z.y, z.radius, filter)) {
-          damage(e, z.dps * DT, z.element, z.src, { dot: true, area: true, quiet: true });
+        const list = enemiesInRadius(z.x, z.y, z.radius, filter);
+        for (let i = 0; i < list.length; i++) {
+          const e = list[i];
+          damage(e, z.dps * DT, z.element, z.src, ZONE_HIT);
           if (z.meltArmor && !e.dead) addShred(e, 'melt', z.meltArmor, z.meltArmor, 0.4);
         }
       }
-      st.zones = st.zones.filter((z) => time <= z.until);
+      if (st.zones.length) compact(st.zones, (z) => time <= z.until);
 
       /* --- 덫 --- */
       for (let i = st.traps.length - 1; i >= 0; i--) {
@@ -5937,27 +5953,24 @@ RG.sim = (() => {
       }
 
       /* --- 지속 피해 --- */
-      for (const e of st.enemies) {
+      for (let k = 0; k < st.enemies.length; k++) {
+        const e = st.enemies[k];
         if (e.dead) continue;
-        for (const list of [e.st.burns, e.st.bleeds]) {
-          for (let i = list.length - 1; i >= 0; i--) {
-            const b = list[i];
-            if (time > b.until) { list.splice(i, 1); continue; }
-            damage(e, b.dps * DT, b.element, b.src, { dot: true, quiet: true });
-            if (e.dead) break;
-          }
-          if (e.dead) break;
-        }
+        const burns = e.st.burns; // 둘 다 먼저 잡아 둠 (불사 부활 때 목록이 새로 바뀌어도 예전처럼)
+        const bleeds = e.st.bleeds;
+        if (burns.length && tickDots(e, burns, time)) continue;
+        if (bleeds.length) tickDots(e, bleeds, time);
       }
 
       /* --- 정리 --- */
-      st.enemies = st.enemies.filter((e) => !e.dead);
-      st.units = st.units.filter((u) => !u.remove);
+      // 죽은 적·지운 유닛은 자리에서 당겨 지움(순서 그대로) — 매 틱 새 배열을 만들지 않아 쓰레기 수거가 줄어듦
+      compact(st.enemies, (e) => !e.dead);
+      compact(st.units, (u) => !u.remove);
       if (st.warnings.length > 20) st.warnings.splice(0, st.warnings.length - 20);
 
       /* --- 공명 과제 --- */
       if (st.task && !st.task.done && st.wave.started && st.tick % 10 === 0) checkTask(false); // 첫 웨이브 전엔 세지 않음 (지었다 100% 환불로 공짜 별 방지)
-      for (const t of st.towers) for (const id of (t.calc ? t.calc.resIds : [])) st.stats.resonanceSeen[id] = true;
+      for (const t of st.towers) { const ids = t.calc && t.calc.resIds; if (ids) for (let i = 0; i < ids.length; i++) st.stats.resonanceSeen[ids[i]] = true; }
 
       /* --- 결과 --- */
       if (st.lives <= 0) { st.result = 'lose'; ev('lose', {}); return; }
@@ -5969,6 +5982,170 @@ RG.sim = (() => {
         return;
       }
       if (st.tick > st.maxTicks) { st.result = 'lose'; st.timeout = true; ev('lose', { timeout: true }); }
+    }
+
+    // 매 틱 수백 번 쓰는 피해 옵션은 하나를 같이 씀 (damage는 옵션을 읽기만 함)
+    const DOT_HIT = Object.freeze({ dot: true, quiet: true });
+    const ZONE_HIT = Object.freeze({ dot: true, area: true, quiet: true });
+    /** 화상·출혈 목록 하나 처리 — 적이 죽으면 true */
+    function tickDots(e, list, time) {
+      for (let i = list.length - 1; i >= 0; i--) {
+        const b = list[i];
+        if (time > b.until) { list.splice(i, 1); continue; }
+        damage(e, b.dps * DT, b.element, b.src, DOT_HIT);
+        if (e.dead) return true;
+      }
+      return false;
+    }
+
+    /** 적 하나의 한 틱: 재생·보호막·치유·굴착·보스·이동 */
+    function stepEnemy(e, time) {
+      if (e.dead) return;
+      const ed = D().enemies[e.type];
+      const tr = ed.traits;
+      e.pushRes = Math.max(0, e.pushRes - rules.push.decay * DT);
+      const healBlocked = time < e.st.purifyUntil || time < e.st.haltUntil;
+      const healMul = time < e.st.stillUntil ? 0.5 : 1;
+      // 재생
+      if (tr.regen && !healBlocked && time - e.lastHurt >= rules.regenDelay && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * tr.regen * healMul * DT);
+      // 보호막 재생
+      if (tr.shield && !healBlocked && time - e.lastHurt >= tr.shield.delay && e.shield < e.maxShield) e.shield = Math.min(e.maxShield, e.shield + e.maxShield * tr.shield.rate * DT);
+      // 치유사
+      if (tr.healer && canAct(e) && !e.burrowed) {
+        e.healCd -= DT;
+        if (e.healCd <= 0) {
+          e.healCd = tr.healer.every;
+          let any = false;
+          for (const o3 of st.enemies) {
+            if (o3.dead || d2(o3.x, o3.y, e.x, e.y) > tr.healer.radius ** 2) continue;
+            if (time < o3.st.purifyUntil || time < o3.st.haltUntil) continue;
+            const m = time < o3.st.stillUntil ? 0.5 : 1;
+            const before = o3.hp;
+            o3.hp = Math.min(o3.maxHp, o3.hp + o3.maxHp * tr.healer.pct * m);
+            if (o3.hp > before) any = true;
+          }
+          e.castAnim = 0.45;
+          if (any) ev('enemyHeal', { x: e.x, y: e.y, radius: tr.healer.radius });
+        }
+      }
+      // 보호막 부여
+      if (tr.shielder && canAct(e) && !e.burrowed) {
+        e.shieldCd -= DT;
+        if (e.shieldCd <= 0) {
+          e.shieldCd = tr.shielder.every;
+          for (const o3 of st.enemies) {
+            if (o3.dead || o3 === e || d2(o3.x, o3.y, e.x, e.y) > tr.shielder.radius ** 2) continue;
+            if (time < o3.st.purifyUntil) continue;
+            const amt = o3.maxHp * tr.shielder.pct;
+            if (amt > o3.shield) { o3.shield = amt; o3.maxShield = Math.max(o3.maxShield, amt); }
+          }
+          e.castAnim = 0.45;
+          ev('enemyShield', { x: e.x, y: e.y, radius: tr.shielder.radius });
+        }
+      }
+      // 굴착
+      if (tr.burrow) {
+        e.burrowT += DT;
+        if (!e.burrowed && e.burrowT >= tr.burrow.every) { e.burrowed = true; e.burrowT = 0; releaseEnemy(e); ev('burrow', { enemyId: e.id, x: e.x, y: e.y }); } else if (e.burrowed && e.burrowT >= tr.burrow.dur) { e.burrowed = false; e.burrowT = 0; ev('unburrow', { enemyId: e.id, x: e.x, y: e.y }); }
+      }
+      // 보스
+      if (e.boss && RG.bosses) RG.bosses.update(game, e, api);
+      if (e.dead) return;
+      // 이동
+      if (e.blockedBy || !canMove(e)) { updateProg(e); return; }
+      const sp = enemySpeed(e) * DT;
+      e.walkT += sp;
+      moveGround(e, sp); // 비행 적도 길을 따라감(붙잡히지 않을 뿐)
+      if (!e.dead) updateProg(e);
+    }
+
+    /** 적 하나의 공격 (붙잡은 병사 근접·원거리) */
+    function stepEnemyAttack(e, time) {
+      // 그림용 타이머 (규칙에는 쓰지 않음)
+      if (e.attackAnim) e.attackAnim = Math.max(0, e.attackAnim - DT);
+      if (e.castAnim) e.castAnim = Math.max(0, e.castAnim - DT);
+      e.aiming = false;
+      if (e.dead || !canAct(e) || e.burrowed) return;
+      const ed = D().enemies[e.type];
+      if (e.blockedBy && ed.melee) {
+        if (e.meleeCd <= 0.4) e.aiming = true; // 휘두르기 직전 (그림용)
+        e.meleeCd -= DT;
+        if (e.meleeCd <= 0) {
+          e.meleeCd = ed.melee.interval;
+          const u = unitById(e.blockedBy);
+          if (u && !u.dead) { hurtUnit(u, ed.melee.damage, e); e.attackAnim = 0.25; e.dir = u.x > e.x ? 1 : -1; }
+        }
+      }
+      if (ed.traits.ranged && time >= e.st.blindUntil) {
+        e.rangedCd -= DT;
+        // 던지기 직전 자세 (그림용): 곧 쏠 때 사거리 안에 상대가 있으면
+        if (e.rangedCd <= 0.45 && e.rangedCd > 0) {
+          const R2 = ed.traits.ranged.range ** 2;
+          for (const u of st.units) if (!u.dead && u.kind !== 'drone' && u.kind !== 'wall' && d2(u.x, u.y, e.x, e.y) <= R2) { e.aiming = true; break; }
+        }
+        if (e.rangedCd <= 0) {
+          const R = ed.traits.ranged.range;
+          let best = null;
+          let bd = R * R;
+          for (const u of st.units) {
+            if (u.dead || u.kind === 'drone' || u.kind === 'wall') continue;
+            const dd = d2(u.x, u.y, e.x, e.y);
+            if (dd <= bd) { bd = dd; best = u; }
+          }
+          if (best) {
+            e.rangedCd = ed.traits.ranged.interval;
+            e.attackAnim = 0.3; e.dir = best.x > e.x ? 1 : -1;
+            hurtUnit(best, ed.traits.ranged.damage, e);
+            ev('enemyShot', { enemyId: e.id, x: e.x, y: e.y, tx: best.x, ty: best.y });
+          } else e.rangedCd = 0.2;
+        }
+      }
+    }
+
+    /** 탑 하나의 공격 한 틱 */
+    function stepTower(t, time) {
+      t.anim = Math.max(0, t.anim - DT);
+      const c = t.calc;
+      if (!c || t.disabled || t.building) return;
+      if (c.role === 'barracks') {
+        for (const id of t.soldiers) {
+          const s = unitById(id);
+          if (s && s.dead && !s.remove && time >= s.respawnAt) {
+            s.dead = false; s.hp = s.maxHp; s.x = t.x; s.y = t.y; s.px = s.x; s.py = s.y;
+            ev('unitSpawn', { unitId: s.id });
+          }
+        }
+        return;
+      }
+      if (c.discharge) {
+        t.dischargeCd = (t.dischargeCd || 0) - DT;
+        if (t.dischargeCd <= 0) {
+          const list = enemiesInRadius(t.x, t.y, c.discharge.radius);
+          if (list.length) {
+            t.dischargeCd = c.discharge.every;
+            for (const e of list) damage(e, c.discharge.damage, 'storm', { tower: t, calc: c }, { secondary: true, area: true });
+            ev('pulse', { towerId: t.id, x: t.x, y: t.y, radius: c.discharge.radius, element: 'storm' });
+          }
+        }
+      }
+      if (c.kind === 'none') return;
+      if (c.kind === 'beam') { updateTowerBeams(t); return; }
+      if (c.cyclone) {
+        t.cycloneCd = (t.cycloneCd == null ? c.cyclone.every * 0.5 : t.cycloneCd) - DT;
+        if (t.cycloneCd <= 0) {
+          const tg = towerTargets(t, 1, c.range, {});
+          const g = tg.find((e) => !e.flying);
+          if (g) {
+            t.cycloneCd = c.cyclone.every;
+            for (const e of enemiesInRadius(g.x, g.y, c.cyclone.radius, 'ground')) { push(e, c.cyclone.dist); hardCC(e, 'lift', c.cyclone.lift); }
+            ev('cyclone', { towerId: t.id, x: g.x, y: g.y, radius: c.cyclone.radius });
+          }
+        }
+      }
+      t.cd -= DT;
+      if (t.cd <= 0) {
+        if (fireTower(t)) { t.cd += c.interval; t.anim = 0.25; } else t.cd = 0;
+      }
     }
 
     function updateProjectiles() {
@@ -25887,8 +26064,12 @@ RG.fx = (() => {
 
   const rnd = Math.random;   // 연출 전용(시뮬레이션과 무관)
 
+  // 화면에 적이 아주 많을 때(렌더러가 알려 줌) 조각·글자 수를 줄여 느린 기기에서도 매끄럽게
+  let lite = false;
+  function setLite(v) { lite = !!v; }
   function burst(x, y, color, n, speed = 2.2, life = 0.5, size = 0.06, gravity = 0) {
-    for (let i = 0; i < n && parts.length < MAX_PARTS; i++) {
+    const cap = lite ? 160 : MAX_PARTS; // 적이 아주 많으면 조각 수를 줄임(그래도 화면은 충분히 붐빔)
+    for (let i = 0; i < n && parts.length < cap; i++) {
       const a = rnd() * Math.PI * 2;
       const s = speed * (0.3 + rnd() * 0.7);
       parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - speed * 0.3, life, max: life, size: size * (0.6 + rnd() * 0.8), color, g: gravity });
@@ -26055,6 +26236,12 @@ RG.fx = (() => {
     }
   }
 
+  const TIMED = [rings, bolts, texts, areas];
+  // 조각 묶음: 색마다 투명도 7단계 칸을 한 번 만들어 두고 매 프레임 다시 씀 (문자열 키·배열을 새로 만들지 않음)
+  const pBuckets = new Map();
+  const pOrder = [];
+  let pFrame = 0;
+  const fontCache = new Map();
   function addShake(v) { if (settings.shake) shake = Math.min(1, shake + v); }
 
   function update(dt) {
@@ -26067,7 +26254,8 @@ RG.fx = (() => {
       p.y += p.vy * dt;
       p.vx *= 0.96; p.vy *= 0.96;
     }
-    for (const list of [rings, bolts, texts, areas]) {
+    for (let k = 0; k < TIMED.length; k++) {
+      const list = TIMED[k];
       for (let i = list.length - 1; i >= 0; i--) { list[i].life -= dt; if (list[i].life <= 0) list.splice(i, 1); }
     }
     for (const t of texts) t.y -= dt * (t.big ? 0.9 : 1.2);
@@ -26123,12 +26311,31 @@ RG.fx = (() => {
       ctx.lineWidth = Math.max(1, b.w * T * 0.35);
       ctx.stroke();
     }
-    for (const p of parts) {
-      ctx.globalAlpha = Math.min(1, p.life / p.max * 1.5);
-      ctx.fillStyle = p.color;
-      const s = Math.max(1.2, p.size * T);
-      ctx.fillRect(X(p.x) - s / 2, Y(p.y) - s / 2, s, s);
+    // 조각: 같은 색·비슷한 투명도(6단계)끼리 한 경로로 모아 한 번에 칠함 (조각마다 칠하면 수백 번)
+    pFrame++;
+    pOrder.length = 0;
+    if (pBuckets.size > 64) pBuckets.clear();
+    for (let i = 0; i < parts.length; i++) {
+      const p = parts[i];
+      const a = Math.min(1, p.life / p.max * 1.5);
+      const q = Math.max(1, Math.round(a * 6));
+      let bs = pBuckets.get(p.color);
+      if (!bs) { bs = []; for (let j = 0; j <= 6; j++) bs.push({ color: p.color, a: j / 6, list: [], f: 0 }); pBuckets.set(p.color, bs); }
+      const g = bs[q];
+      if (g.f !== pFrame) { g.f = pFrame; g.list.length = 0; pOrder.push(g); } // 처음 나온 순서대로 칠함 (예전과 같은 순서)
+      g.list.push(p);
     }
+    for (let k = 0; k < pOrder.length; k++) {
+      const g = pOrder[k];
+      ctx.globalAlpha = g.a;
+      ctx.fillStyle = g.color;
+      ctx.beginPath();
+      const l = g.list;
+      for (let i = 0; i < l.length; i++) { const p = l[i]; const s = Math.max(1.2, p.size * T); ctx.rect(X(p.x) - s / 2, Y(p.y) - s / 2, s, s); }
+      ctx.fill();
+      l.length = 0;
+    }
+    pOrder.length = 0;
     ctx.restore();
   }
 
@@ -26136,11 +26343,15 @@ RG.fx = (() => {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    for (const t of texts) {
+    const from = lite ? Math.max(0, texts.length - 24) : 0; // 적이 아주 많으면 최근 글자만
+    for (let i = from; i < texts.length; i++) {
+      const t = texts[i];
       const a = Math.min(1, t.life / t.max * 2);
       ctx.globalAlpha = a;
       const fs = Math.round(Math.max(11, T * (t.big ? 0.42 : 0.3)));
-      ctx.font = `800 ${fs}px system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`;
+      let font = fontCache.get(fs);
+      if (!font) { font = `800 ${fs}px system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`; fontCache.set(fs, font); }
+      if (ctx.font !== font) ctx.font = font;
       ctx.lineWidth = Math.max(2.5, fs * 0.22);
       ctx.strokeStyle = 'rgba(20,14,30,0.9)';
       ctx.strokeText(t.str, X(t.x), Y(t.y));
@@ -26152,7 +26363,7 @@ RG.fx = (() => {
 
   function clear() { parts.length = 0; rings.length = 0; bolts.length = 0; texts.length = 0; areas.length = 0; shake = 0; }
 
-  return { onEvents, update, draw, drawUnder, drawTexts, shakeOffset, clear, settings, burst, ring, text, colorOf, lightOf };
+  return { onEvents, update, draw, drawUnder, drawTexts, shakeOffset, clear, settings, burst, ring, text, colorOf, lightOf, setLite };
 })();
 
 </script>
@@ -26176,6 +26387,17 @@ RG.render = (() => {
   let bg = null;         // 바탕 오프스크린 캔버스
   let bgFor = '';
   let time = 0;
+  let backdrop = null;    // 맵 바깥 바탕 (화면 크기, 한 번 그려 둠)
+  let baseFrame = null;   // 바깥 바탕 + 테두리 + 맵 층을 합친 한 장 (흔들림 없을 때)
+  /** 맵 테두리: 바깥 그늘 띠 + 금빛 선 */
+  function drawFrameBorder(c) {
+    c.strokeStyle = 'rgba(0,0,0,0.45)';
+    c.lineWidth = 4;
+    c.strokeRect(X(0) - 2, Y(0) - 2, game.map.cols * T + 4, game.map.rows * T + 4);
+    c.strokeStyle = 'rgba(233,196,122,0.55)';
+    c.lineWidth = 2;
+    c.strokeRect(X(0) - 3, Y(0) - 3, game.map.cols * T + 6, game.map.rows * T + 6);
+  }
   let shadeLayer = null;  // 바탕 + 탑 그림자 (탑이 바뀔 때만 다시 그림)
   let shadeFor = '';
   let shadeBaked = false; // 이번 프레임에 탑 그림자를 층에서 그렸는지
@@ -26198,11 +26420,13 @@ RG.render = (() => {
 
   function attach(cv, g) {
     canvas = cv;
-    ctx = canvas.getContext('2d');
+    // 불투명 캔버스: 브라우저가 매 프레임 캔버스를 뒤 배경과 섞지 않아도 됨(느린 기기에서 이득)
+    ctx = canvas.getContext('2d', { alpha: false });
+    trackTransform(ctx);
     game = g;
     corpses = [];
     projStart.clear();
-    dprCap = 2; perfT = 0; perfN = 0; perfSlow = 0; perfLast = 0; perfWin = 0;
+    dprCap = 2; perfT = 0; perfN = 0; perfSlow = 0; perfLast = 0; perfWin = 0; perfRaised = false; perfNoRaise = false;
     shadeFor = '';
     ambientFor = '';
     bg = null;
@@ -26220,6 +26444,7 @@ RG.render = (() => {
     H = Math.max(80, rect.height);
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
+    if (ctx && ctx._xf) ctx._xf.reset(); // 크기를 바꾸면 캔버스 상태(변환·저장 더미)가 처음으로 돌아감
     canvas.style.width = `${W}px`;
     canvas.style.height = `${H}px`;
     const m = game.map;
@@ -26236,6 +26461,27 @@ RG.render = (() => {
     bgFor = key;
     const w = Math.round(m.cols * T * dpr);
     const h = Math.round(m.rows * T * dpr);
+    // 화질만 낮아졌으면(같은 맵·같은 칸 크기) 이미 그린 바탕을 줄여 씀 — 큰 맵 SVG를 다시 그리는 것은 느린 기기에서 몇 초 걸림
+    if (bg && bg._map === m.id && bg._T === T && bg.width >= w) {
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      const c2 = cv.getContext('2d');
+      c2.imageSmoothingQuality = 'high';
+      c2.drawImage(bg, 0, 0, w, h);
+      cv._map = m.id; cv._T = T; cv._full = bg._full || bg;
+      bg = cv;
+      return;
+    }
+    // 화질이 다시 올라가면 가장 선명했던 바탕이 있으면 그것을 씀
+    if (bg && bg._full && bg._full._map === m.id && bg._full._T === T && bg._full.width >= w) {
+      const full = bg._full;
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(full, 0, 0, w, h);
+      cv._map = m.id; cv._T = T; cv._full = full;
+      bg = cv;
+      return;
+    }
     let svg = null;
     try { svg = RG.art.mapBackground ? RG.art.mapBackground(m) : null; } catch (e) { svg = null; }
     if (!svg) { bg = null; return; }
@@ -26245,6 +26491,7 @@ RG.render = (() => {
       const cv = document.createElement('canvas');
       cv.width = w; cv.height = h;
       cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      cv._map = m.id; cv._T = T;
       bg = cv;
     };
     img.src = RG.art.sprites.dataUrl(RG.art.sprites.sized(svg, w, h));
@@ -26255,22 +26502,165 @@ RG.render = (() => {
   const tileSize = () => T;
 
   /* ---------------- 그리기 도우미 ---------------- */
-  function sprite(key, cx, cy, w, h, ax, ay, flip, alpha) {
+  /*
+   * 화면 크기로 줄여 둔 그림: 168px 그림을 매 프레임 30px로 줄여 그리면 느린 기기에서 비용이 큼.
+   * 그림·표시 크기(화면 배율 포함)마다 한 번만 고품질로 줄여 두고, 그 뒤엔 같은 크기로 그대로 찍음.
+   */
+  function fitted(s, w, h, flip) {
+    const pw = Math.max(1, Math.round(w * dpr));
+    const ph = Math.max(1, Math.round(h * dpr));
+    if (pw * 1.3 >= s.canvas.width) return s.canvas; // 거의 같은 크기면 그대로
+    let m = s._fit;
+    if (!m) { m = new Map(); s._fit = m; }
+    const k = (pw * 4096 + ph) * 2 + (flip ? 1 : 0); // 좌우 반전본도 따로 (그릴 때 뒤집으면 느린 길로 그려짐)
+    let cv = m.get(k);
+    if (!cv) {
+      if (m.size > 6) m.clear(); // 크기가 자주 바뀌면(창 크기·화질) 오래된 것은 버림
+      cv = document.createElement('canvas');
+      cv.width = pw; cv.height = ph;
+      const c2 = cv.getContext('2d');
+      c2.imageSmoothingQuality = 'high'; // 고품질 축소 한 번 (임시 캔버스를 만들지 않음 — 시작 직후 수백 장을 만들 때 가벼움)
+      if (flip) { c2.translate(pw, 0); c2.scale(-1, 1); }
+      c2.drawImage(s.canvas, 0, 0, pw, ph);
+      cv = cropOpaque(cv);
+      m.set(k, cv);
+    }
+    return cv;
+  }
+  /*
+   * 투명한 여백 잘라내기: 그림 캔버스는 동작(점프·기울기)을 위해 둘레에 여백이 넉넉한데,
+   * 여백도 매 프레임 한 화소씩 섞어 칠하므로 적 300마리면 칠할 화소의 절반 가까이가 빈 곳이었음.
+   * 줄인 그림을 한 번 읽어 불투명한 부분만 남기고, 잘라낸 위치(_ox,_oy)만큼 옮겨 찍음 — 화면 결과는 같음.
+   */
+  function cropOpaque(cv) {
+    const w = cv.width;
+    const h = cv.height;
+    cv._ox = 0; cv._oy = 0; cv._fw = w; cv._fh = h;
+    let d;
+    try { d = cv.getContext('2d').getImageData(0, 0, w, h).data; } catch (e) { return cv; } // 읽을 수 없는 그림이면 그대로
+    let y0 = 0;
+    let y1 = h - 1;
+    const rowEmpty = (y) => { for (let i = y * w * 4 + 3, e = i + w * 4; i < e; i += 4) if (d[i]) return false; return true; };
+    while (y0 <= y1 && rowEmpty(y0)) y0++;
+    if (y0 > y1) return cv; // 다 투명(아직 그려지지 않음 등) — 그대로
+    while (y1 > y0 && rowEmpty(y1)) y1--;
+    let x0 = w;
+    let x1 = -1;
+    for (let y = y0; y <= y1; y++) {
+      const row = y * w * 4 + 3;
+      for (let x = 0; x < x0; x++) if (d[row + x * 4]) { x0 = x; break; }
+      for (let x = w - 1; x > x1; x--) if (d[row + x * 4]) { x1 = x; break; }
+    }
+    const cw = x1 - x0 + 1;
+    const ch = y1 - y0 + 1;
+    if (cw * ch > w * h * 0.85) return cv; // 거의 꽉 찬 그림은 그대로
+    const out = document.createElement('canvas');
+    out.width = cw; out.height = ch;
+    out.getContext('2d').drawImage(cv, x0, y0, cw, ch, 0, 0, cw, ch);
+    out._ox = x0; out._oy = y0; out._fw = w; out._fh = h;
+    return out;
+  }
+  /*
+   * 발밑 그늘을 함께 구운 그림 (적이 아주 많을 때): 그늘을 따로 칠하면 적 300마리면 타원 300개를
+   * 경로로 만들고 칠해야 해서 비쌌음. 그림 한 장에 그늘을 먼저 깔고 그 위에 몸을 그려 두면 찍기 한 번으로 끝.
+   * sh = [그늘 가운데 x, y (그림 칸 왼쪽 위 기준, CSS 화소), 너비, 높이, 진하기]
+   */
+  function fittedSh(s, w, h, flip, sh) {
+    const pw = Math.max(1, Math.round(w * dpr));
+    const ph = Math.max(1, Math.round(h * dpr));
+    const gx = Math.round(sh[0] * dpr);
+    const gy = Math.round(sh[1] * dpr);
+    const gw = Math.max(4, Math.round(sh[2] * dpr));
+    const gh = Math.max(2, Math.round(sh[3] * dpr));
+    let m = s._fit;
+    if (!m) { m = new Map(); s._fit = m; }
+    const k = -((((pw * 4096 + ph) * 2 + (flip ? 1 : 0)) * 512 + (gy & 511)) * 4 + (sh[4] > 0.4 ? 1 : 0)) - 1; // 음수: 그늘 없는 그림과 겹치지 않게
+    let cv = m.get(k);
+    if (!cv) {
+      if (m.size > 6) m.clear();
+      cv = document.createElement('canvas');
+      cv.width = Math.max(pw, gx + (gw >> 1) + 2);
+      cv.height = Math.max(ph, gy + (gh >> 1) + 2);
+      const c2 = cv.getContext('2d');
+      c2.imageSmoothingQuality = 'high';
+      c2.globalAlpha = sh[4];
+      c2.drawImage(blob(), gx - gw / 2, gy - gh / 2, gw, gh);
+      c2.globalAlpha = 1;
+      if (flip) { c2.translate(pw, 0); c2.scale(-1, 1); }
+      c2.drawImage(s.canvas, 0, 0, pw, ph);
+      cv = cropOpaque(cv);
+      m.set(k, cv);
+    }
+    return cv;
+  }
+  function sprite(key, cx, cy, w, h, ax, ay, flip, alpha, sh) {
     const s = RG.art.sprites.get(key);
     if (!s) return false;
+    const plain = plainTransform();
+    if (sh && !plain) shadowAt(cx - w * ax + sh[0], cy - h * ay + sh[1], sh[2], sh[3], sh[4]); // 구운 그림을 못 쓰면 그늘만 따로
+    const img = plain ? (sh ? fittedSh(s, w, h, flip, sh) : fitted(s, w, h, flip)) : fitted(s, w, h, false);
     const a0 = ctx.globalAlpha;
     if (alpha != null && alpha !== 1) ctx.globalAlpha = a0 * alpha;
-    if (flip) {
+    if (img !== s.canvas && plain) {
+      // 줄여 둔 그림(반전본 포함): 정수 화소 위치에 원래 크기 그대로 찍음 — 늘이기·반 화소·뒤집기 없이 가장 빠른 길
+      const x0 = (Math.round((cx - w * ax) * dpr) + img._ox) / dpr;
+      const y0 = (Math.round((cy - h * ay) * dpr) + img._oy) / dpr;
+      ctx.drawImage(img, x0, y0, img.width / dpr, img.height / dpr);
+    } else if (img !== s.canvas) {
+      // 회전·눌림 중: 잘라낸 그림을 원래 칸(w×h) 안의 제자리에 늘여 그림
+      const kx = w / img._fw;
+      const ky = h / img._fh;
+      ctx.save();
+      ctx.translate(cx, cy);
+      if (flip) ctx.scale(-1, 1);
+      ctx.drawImage(img, -w * ax + img._ox * kx, -h * ay + img._oy * ky, img.width * kx, img.height * ky);
+      ctx.restore();
+    } else if (flip) {
       ctx.save();
       ctx.translate(cx, cy);
       ctx.scale(-1, 1);
-      ctx.drawImage(s.canvas, -w * ax, -h * ay, w, h);
+      ctx.drawImage(img, -w * ax, -h * ay, w, h);
       ctx.restore();
     } else {
-      ctx.drawImage(s.canvas, cx - w * ax, cy - h * ay, w, h);
+      ctx.drawImage(img, cx - w * ax, cy - h * ay, w, h);
     }
     ctx.globalAlpha = a0;
     return true;
+  }
+  /*
+   * 화면 캔버스의 변환을 따라 적어 둠: 그림마다 getTransform()을 부르면 매번 새 행렬 객체가 생겨
+   * (적 300마리면 프레임마다 수백 개) 쓰레기 수거가 잦아짐. 배율·이동만 있는 동안은 직접 셈하고,
+   * 회전·기울임 등 모르는 변환이 끼면 예전처럼 getTransform으로 확인.
+   */
+  function trackTransform(c) {
+    if (c._xf) return;
+    const P = CanvasRenderingContext2D.prototype;
+    const xf = {
+      plain: true, s: 1, e: 0, f: 0, unknown: false, stack: [],
+      reset() { this.plain = true; this.s = 1; this.e = 0; this.f = 0; this.unknown = false; this.stack.length = 0; },
+    };
+    c._xf = xf;
+    c.save = function () { xf.stack.push(xf.plain, xf.s, xf.e, xf.f, xf.unknown); return P.save.call(this); };
+    c.restore = function () {
+      if (xf.stack.length) { xf.unknown = xf.stack.pop(); xf.f = xf.stack.pop(); xf.e = xf.stack.pop(); xf.s = xf.stack.pop(); xf.plain = xf.stack.pop(); }
+      return P.restore.call(this);
+    };
+    c.setTransform = function (a, b, cc, d, e, f) {
+      if (arguments.length >= 6) { xf.unknown = false; xf.plain = b === 0 && cc === 0 && a === d; xf.s = a; xf.e = e; xf.f = f; } else xf.unknown = true;
+      return P.setTransform.apply(this, arguments);
+    };
+    c.resetTransform = function () { xf.unknown = false; xf.plain = true; xf.s = 1; xf.e = 0; xf.f = 0; return P.resetTransform.call(this); };
+    c.translate = function (x, y) { if (xf.plain) { xf.e += x * xf.s; xf.f += y * xf.s; } return P.translate.call(this, x, y); };
+    c.scale = function (x, y) { if (x !== 1 || y !== 1) xf.plain = false; return P.scale.call(this, x, y); };
+    c.rotate = function (r) { if (r !== 0) xf.plain = false; return P.rotate.call(this, r); };
+    c.transform = function () { xf.unknown = true; return P.transform.apply(this, arguments); };
+  }
+  /** 지금 변환이 화면 배율·이동뿐인가(흔들림 이동은 정수 화소로) — 회전·눌림이 있으면 일반 그리기 */
+  function plainTransform() {
+    const xf = ctx._xf;
+    if (xf && !xf.unknown) return xf.plain && Math.abs(xf.s - dpr) < 1e-6 && Math.abs(xf.e - Math.round(xf.e)) < 1e-3 && Math.abs(xf.f - Math.round(xf.f)) < 1e-3;
+    const t = ctx.getTransform();
+    return t.b === 0 && t.c === 0 && Math.abs(t.a - dpr) < 1e-6 && Math.abs(t.d - dpr) < 1e-6 && Math.abs(t.e - Math.round(t.e)) < 1e-3 && Math.abs(t.f - Math.round(t.f)) < 1e-3;
   }
 
   /* ---------------- 그림자 (빛은 늘 왼쪽 위) ---------------- */
@@ -26286,6 +26676,13 @@ RG.render = (() => {
     c2.fillStyle = g;
     c2.save(); c2.scale(1, 0.5); c2.beginPath(); c2.arc(64, 64, 64, 0, Math.PI * 2); c2.fill(); c2.restore();
     return blobCanvas;
+  }
+  /** 화면 좌표(CSS 화소)에 그늘 하나 — 가운데·너비·높이·진하기 */
+  function shadowAt(x, y, w, h, a) {
+    const a0 = ctx.globalAlpha;
+    ctx.globalAlpha = a0 * a;
+    ctx.drawImage(blob(), x - w / 2, y - h / 2, w, h);
+    ctx.globalAlpha = a0;
   }
   function shadow(x, y, rx, ry, a = 0.32) {
     const a0 = ctx.globalAlpha;
@@ -26328,14 +26725,73 @@ RG.render = (() => {
   }
   let shadowsOn = true;
 
+  // 체력 막대 모으기: 항목 객체를 모아 두고 다시 씀 (매 프레임 수백 개를 새로 만들지 않음)
+  let barOn = false; // 모으는 중인가 (frame에서 켜고 flushBars에서 끔)
+  const barPool = [];
+  let barN = 0;
   function bar(cx, top, w, ratio, color, shieldRatio, elite) {
+    if (barOn) {
+      let b = barPool[barN];
+      if (!b) { b = { x: 0, y: 0, w: 0, ratio: 0, color: '', shieldRatio: 0, elite: false }; barPool[barN] = b; }
+      b.x = Math.round(cx - w / 2); b.y = Math.round(top); b.w = w; b.ratio = ratio; b.color = color; b.shieldRatio = shieldRatio; b.elite = !!elite;
+      barN++;
+      return;
+    }
+    drawBar(cx, top, w, ratio, color, shieldRatio, elite);
+  }
+  const barCols = [];
+  /** 모은 체력 막대를 한꺼번에: 테두리 한 경로, 빈 칸 한 경로, 채운 칸은 색마다 한 경로 (막대마다 칠하면 수백 번) */
+  function flushBars() {
+    const n = barN;
+    barOn = false;
+    barN = 0;
+    if (!n) return;
+    const q = barPool;
+    const h = Math.max(3, Math.round(T * 0.09));
+    ctx.fillStyle = 'rgba(15,10,25,0.85)';
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) { const b = q[i]; ctx.rect(b.x - 1, b.y - 1, b.w + 2, h + 2); }
+    ctx.fill();
+    if (!manyEnemies) {
+      ctx.fillStyle = '#3a2a33';
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) { const b = q[i]; ctx.rect(b.x, b.y, b.w, h); }
+      ctx.fill();
+    }
+    // 색 종류는 몇 가지뿐 — 처음 나온 순서대로 색마다 한 경로
+    barCols.length = 0;
+    for (let i = 0; i < n; i++) if (barCols.indexOf(q[i].color) < 0) barCols.push(q[i].color);
+    for (let c = 0; c < barCols.length; c++) {
+      const col = barCols[c];
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) { const b = q[i]; if (b.color === col) ctx.rect(b.x, b.y, Math.max(0, b.w * b.ratio), h); }
+      ctx.fill();
+    }
+    let anyShield = false;
+    let anyElite = false;
+    for (let i = 0; i < n; i++) { if (q[i].shieldRatio > 0) anyShield = true; if (q[i].elite) anyElite = true; }
+    if (anyShield) {
+      ctx.fillStyle = 'rgba(190,232,255,0.9)';
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) { const b = q[i]; if (b.shieldRatio > 0) ctx.rect(b.x, b.y, Math.max(0, b.w * Math.min(1, b.shieldRatio)), Math.max(2, h * 0.5)); }
+      ctx.fill();
+    }
+    if (anyElite) {
+      ctx.fillStyle = '#ffd34d';
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) { const b = q[i]; if (!b.elite) continue; const x = b.x; const y = b.y; ctx.moveTo(x - 6, y - 1); ctx.lineTo(x - 2, y + h / 2); ctx.lineTo(x - 6, y + h + 1); ctx.closePath(); }
+      ctx.fill();
+    }
+    for (let i = 0; i < n; i++) q[i].color = '';
+  }
+  function drawBar(cx, top, w, ratio, color, shieldRatio, elite) {
     const h = Math.max(3, Math.round(T * 0.09));
     const x = Math.round(cx - w / 2);
     const y = Math.round(top);
     ctx.fillStyle = 'rgba(15,10,25,0.85)';
     ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
-    ctx.fillStyle = '#3a2a33';
-    ctx.fillRect(x, y, w, h);
+    if (!manyEnemies) { ctx.fillStyle = '#3a2a33'; ctx.fillRect(x, y, w, h); }
     ctx.fillStyle = color;
     ctx.fillRect(x, y, Math.max(0, w * ratio), h);
     if (shieldRatio > 0) {
@@ -26362,7 +26818,7 @@ RG.render = (() => {
     const m = game.map;
     const A = RG.art.sprites;
     let key = `${bgFor}|${shadowsOn ? 1 : 0}`;
-    for (const t of st.towers) key += `|${t.id}:${t.type}:${t.level}:${t.branch || ''}:${t.building ? 1 : 0}:${A.get(A.towerKey(t.type, t.level, t.branch, 'idle')) ? 1 : 0}`;
+    for (const t of st.towers) key += `|${t.id}:${t.type}:${t.level}:${t.branch || ''}:${t.building ? 1 : 0}:${A.get(A.towerKey(t.type, t.level, t.branch, 'idle')) ? 1 : 0}:${t.links.join('.')}`;
     if (key === shadeFor && shadeLayer) return shadeLayer;
     shadeFor = key;
     if (!shadeLayer || shadeLayer.width !== bg.width || shadeLayer.height !== bg.height) {
@@ -26381,6 +26837,9 @@ RG.render = (() => {
     try {
       for (const t of st.towers) shadow(t.x, t.r + 0.8, 0.36, 0.12, 0.28);
       for (const t of st.towers) castShadow(A.towerKey(t.type, t.level, t.branch, 'idle'), X(t.x), Y(t.r + 0.82), T, T * 1.3, 0.5, 112 / 130, false, t.building ? 0.2 : 0.42);
+      const L = m.lantern;
+      castShadow(A.lanternKey(1), X(L.x), Y(L.r + 0.82), T, T * 1.3, 0.5, 112 / 130, false, 0.42);
+      bakeLinks(c2);
       // 빛 고르기: 왼쪽 위(빛이 오는 쪽)는 따뜻하게 살짝 밝게, 오른쪽 아래는 푸른 보랏빛으로 살짝 어둡게, 가장자리는 어둡게.
       // 매 프레임이 아니라 이 층에 한 번 구워 둠 (그리기 비용 없음)
       const W2 = m.cols * T;
@@ -26402,9 +26861,10 @@ RG.render = (() => {
     return shadeLayer;
   }
 
-  function drawBackground() {
+  function drawBackground(already) {
     const m = game.map;
     shadeBaked = false;
+    if (already) { shadeBaked = true; return; } // 바탕 한 장(baseFrame)으로 이미 그림
     if (bg) {
       const layer = towerShadeLayer();
       ctx.drawImage(layer || bg, X(0), Y(0), m.cols * T, m.rows * T);
@@ -26565,39 +27025,52 @@ RG.render = (() => {
   }
 
   /* ---------------- 공명 선 ---------------- */
-  function drawLinks() {
+  /** 공명 선 목록 [탑, 이웃] (같은 짝은 한 번) */
+  function linkPairs() {
     const st = game.state;
     const byId = new Map(st.towers.map((t) => [t.id, t]));
-    ctx.save();
-    ctx.lineCap = 'round';
-    for (const t of st.towers) {
-      for (const id of t.links) {
-        if (id < t.id) continue;
-        const n = byId.get(id);
-        if (!n) continue;
-        const ax = X(t.x);
-        const ay = Y(t.y + 0.15);
-        const bx = X(n.x);
-        const by = Y(n.y + 0.15);
-        const g = ctx.createLinearGradient(ax, ay, bx, by);
-        g.addColorStop(0, elColor(RG.data.towers[t.type].element));
-        g.addColorStop(1, elColor(RG.data.towers[n.type].element));
-        const pulse = 0.5 + 0.5 * Math.sin(time * 3 + (t.id + n.id) * 0.7);
-        ctx.globalAlpha = 0.35 + 0.35 * pulse;
-        ctx.strokeStyle = g;
-        ctx.lineWidth = Math.max(2, T * 0.09);
-        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
-        ctx.globalAlpha = 0.6 + 0.4 * pulse;
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = Math.max(1, T * 0.025);
-        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
-        // 흐르는 빛 구슬
-        const k = (time * 0.7 + (t.id * 0.13)) % 1;
-        ctx.fillStyle = '#ffffff';
-        ctx.globalAlpha = 0.9;
-        ctx.beginPath(); ctx.arc(lerp(ax, bx, k), lerp(ay, by, k), Math.max(1.5, T * 0.05), 0, Math.PI * 2); ctx.fill();
-      }
+    const out = [];
+    for (const t of st.towers) for (const id of t.links) { if (id < t.id) continue; const n = byId.get(id); if (n) out.push([t, n]); }
+    return out;
+  }
+  /** 공명 선(움직이지 않는 부분): 탑 그림자 층에 함께 구워 둠 — 탑이 바뀔 때만 다시 그림 */
+  function bakeLinks(c) {
+    c.save();
+    c.lineCap = 'round';
+    for (const [t, n] of linkPairs()) {
+      const ax = X(t.x); const ay = Y(t.y + 0.15); const bx = X(n.x); const by = Y(n.y + 0.15);
+      const g = c.createLinearGradient(ax, ay, bx, by);
+      g.addColorStop(0, elColor(RG.data.towers[t.type].element));
+      g.addColorStop(1, elColor(RG.data.towers[n.type].element));
+      c.globalAlpha = 0.55;
+      c.strokeStyle = g;
+      c.lineWidth = Math.max(2, T * 0.09);
+      c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.stroke();
+      c.globalAlpha = 0.8;
+      c.strokeStyle = '#ffffff';
+      c.lineWidth = Math.max(1, T * 0.025);
+      c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.stroke();
     }
+    c.restore();
+  }
+  /** 공명 선 위를 흐르는 빛 구슬: 모든 구슬을 한 경로로 모아 한 번에 칠함 (층이 없으면 선도 여기서) */
+  function drawLinks() {
+    if (!shadeBaked) bakeLinks(ctx);
+    const pairs = linkPairs();
+    if (!pairs.length) return;
+    const r = Math.max(1.5, T * 0.05);
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath();
+    for (const [t, n] of pairs) {
+      const k = (time * 0.7 + (t.id * 0.13)) % 1;
+      const x = lerp(X(t.x), X(n.x), k);
+      const y = lerp(Y(t.y + 0.15), Y(n.y + 0.15), k);
+      ctx.moveTo(x + r, y);
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+    }
+    ctx.fill();
     ctx.restore();
   }
 
@@ -26832,7 +27305,7 @@ RG.render = (() => {
     ctx.fillStyle = glow;
     ctx.beginPath(); ctx.arc(cx, baseY - T * 0.7, T * (0.6 + ratio * 0.9), 0, Math.PI * 2); ctx.fill();
     ctx.restore();
-    castShadow(RG.art.sprites.lanternKey(ratio), cx, baseY, T, T * 1.3, 0.5, 112 / 130, false, 0.42);
+    if (!shadeBaked) castShadow(RG.art.sprites.lanternKey(ratio), cx, baseY, T, T * 1.3, 0.5, 112 / 130, false, 0.42);
     sprite(RG.art.sprites.lanternKey(ratio), cx, baseY, T, T * 1.3, 0.5, 112 / 130, false);
   }
 
@@ -26872,10 +27345,24 @@ RG.render = (() => {
   }
 
   /* ---------------- 적 ---------------- */
+  const NO_MOTION = Object.freeze({});
+  const shSpec = [0, 0, 0, 0, 0];
+  /** 적이 아주 많을 때 이 적의 그늘을 그림에 구워 넣는가 (큰 적·보스는 드리운 그림자, 깡충 뛰는 적·띄워진 적은 따로 칠함) */
+  function bakesShadow(e) {
+    if (!manyEnemies || e.burrowed) return false;
+    const ed = RG.data.enemies[e.type];
+    if (ed.boss || ed.size >= 1.4) return false;
+    const mo = RG.art.ENEMY_MOTION && RG.art.ENEMY_MOTION[e.type];
+    if (mo && mo.hop) return false;
+    if (game.state.time < e.ccUntil && e.ccKind === 'lift') return false;
+    return true;
+  }
+  // 매 프레임 적마다 부르므로 같은 점 객체를 다시 씀 — 받은 쪽은 바로 읽고 넘김(보관하지 않음)
+  const ePt = { x: 0, y: 0 };
   function enemyScreen(e, alpha) {
-    const x = lerp(e.px, e.x, alpha);
-    const y = lerp(e.py, e.y, alpha);
-    return { x, y };
+    ePt.x = lerp(e.px, e.x, alpha);
+    ePt.y = lerp(e.py, e.y, alpha);
+    return ePt;
   }
 
   function drawEnemy(e, alpha) {
@@ -26899,7 +27386,7 @@ RG.render = (() => {
     const moving = !e.blockedBy && !(st.time < e.ccUntil) ;
     const frame = enemyFrame(e, moving);
     // 몬스터별 움직임 (그림 파일의 MOTION, docs/design/animation.md §2.5)
-    const mo = (RG.art.ENEMY_MOTION && RG.art.ENEMY_MOTION[e.type]) || {};
+    const mo = (RG.art.ENEMY_MOTION && RG.art.ENEMY_MOTION[e.type]) || NO_MOTION;
     const stride = 0.45 + e.size * 0.55;
     const ph = e.flying ? time * 5 + e.id : (e.walkT / stride) * Math.PI * 2;
     let lift = 0;
@@ -26925,14 +27412,25 @@ RG.render = (() => {
     const k0 = ekey(e.type, frame);
     const key = RG.art.sprites.get(k0) ? k0 : poseSprite(k0, ekey(e.type, 'walk0'), () => RG.art.enemy(e.type, frame), big, big);
     if (!manyEnemies || ed.boss || ed.size >= 1.4) castShadow(key, cx + dx, groundY, size, size, 0.5, 0.9, flip, (e.flying ? 0.16 : 0.32) * alphaS, lift);
-    const motion = rot || sxk !== 1 || syk !== 1 || dx;
+    const motion = !manyEnemies && (rot || sxk !== 1 || syk !== 1 || dx); // 적이 아주 많으면 변형 생략(성능), 튀기기는 유지
     if (motion) { ctx.save(); ctx.translate(cx + dx, cy); ctx.rotate(rot); ctx.scale(sxk, syk); ctx.translate(-cx, -cy); }
-    const ok = sprite(key, cx, cy, size, size, 0.5, 0.9, flip, alphaS);
+    let sh = null;
+    if (bakesShadow(e)) {
+      // 그늘을 구워 넣은 그림으로 (그늘 위치는 쉬는 높이 기준 — 걸음 튀기기 1~2화소만큼은 몸과 같이 움직임)
+      const lift0 = e.flying ? T * (mo.hover != null ? mo.hover : 0.42) : 0;
+      sh = shSpec;
+      sh[0] = size * 0.5 + T * 0.03;
+      sh[1] = size * 0.9 + lift0 + T * 0.01;
+      sh[2] = Math.max(4, e.size * 0.32 * T * 2.2);
+      sh[3] = Math.max(2, e.size * 0.11 * T * 2.2);
+      sh[4] = e.flying ? 0.36 : 0.58;
+    }
+    const ok = sprite(key, cx, cy, size, size, 0.5, 0.9, flip, alphaS, sh);
     if (!ok) {
       ctx.fillStyle = '#9a94a8';
       ctx.beginPath(); ctx.arc(cx, cy - size * 0.4, size * 0.35, 0, Math.PI * 2); ctx.fill();
     }
-    if (hurt && ok) {
+    if (hurt && ok && !manyEnemies) {
       ctx.save();
       ctx.globalAlpha = 0.45 * alphaS;
       ctx.globalCompositeOperation = 'lighter';
@@ -26985,7 +27483,7 @@ RG.render = (() => {
       ctx.beginPath(); ctx.ellipse(cx, Y(y) + 1, size * 0.36, size * 0.12, 0, 0, Math.PI * 2); ctx.stroke();
       ctx.restore();
     }
-    if (e.st.burns.length && Math.random() < 0.3) RG.fx.burst(x + (Math.random() - 0.5) * e.size * 0.6, y - e.size * 0.5, RG.fx.colorOf(e.st.burns[0].element), 1, 0.5, 0.45, 0.05, -1.6);
+    if (e.st.burns.length && Math.random() < (manyEnemies ? 0.08 : 0.3)) RG.fx.burst(x + (Math.random() - 0.5) * e.size * 0.6, y - e.size * 0.5, RG.fx.colorOf(e.st.burns[0].element), 1, 0.5, 0.45, 0.05, -1.6);
     if (e.st.curse && st.time < e.st.curse.until) icon('curse', cx + size * 0.38, top + 2, Math.max(10, T * 0.26));
     // 체력 막대
     const showBar = e.hp < e.maxHp || e.shield > 0 || ed.elite || ed.boss || overlay.selectedEnemy === e.id;
@@ -27048,7 +27546,7 @@ RG.render = (() => {
       const bob = walking ? Math.abs(Math.sin(time * 10 + u.id)) * T * 0.03 : 0;
       const look = u.look || 'stone_soldier';
       const uk = poseSprite(RG.art.sprites.unitKey(look, pose), RG.art.sprites.unitKey(look, 'idle'), () => RG.art.unit(look, pose), 128, 128);
-      castShadow(uk, cx, cy, size, size, 0.5, 0.9, flip, 0.3, bob);
+      if (!manyEnemies) castShadow(uk, cx, cy, size, size, 0.5, 0.9, flip, 0.3, bob);
       sprite(uk, cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
       if (u.hp < u.maxHp) bar(cx, cy - size * 1.0, Math.max(14, T * 0.5), u.hp / u.maxHp, '#b8e986', 0, false);
       return;
@@ -27103,6 +27601,8 @@ RG.render = (() => {
       const live = new Set(st.projectiles.map((q) => q.id));
       for (const id of projStart.keys()) if (!live.has(id)) projStart.delete(id);
     }
+    const arrows = [];
+    const arrowHeads = new Map();
     for (const p of st.projectiles) {
       let x = lerp(p.px, p.x, alpha);
       let y = lerp(p.py, p.y, alpha);
@@ -27126,12 +27626,12 @@ RG.render = (() => {
       const dy = p.y - p.py;
       const L = Math.hypot(dx, dy) || 1;
       if (p.kind === 'arrow' || (p.kind === 'heroShot' && (p.heroId === 'sio'))) {
+        // 화살은 모아 두었다가 끝에 한 번에 그림(자루 한 경로, 촉은 색마다 한 경로)
         const len = T * 0.36;
-        ctx.strokeStyle = '#5a3d22';
-        ctx.lineWidth = Math.max(1.5, T * 0.04);
-        ctx.beginPath(); ctx.moveTo(sx - (dx / L) * len, sy - (dy / L) * len); ctx.lineTo(sx, sy); ctx.stroke();
-        ctx.fillStyle = col;
-        ctx.beginPath(); ctx.arc(sx, sy, Math.max(2, T * 0.06), 0, Math.PI * 2); ctx.fill();
+        arrows.push(sx - (dx / L) * len, sy - (dy / L) * len, sx, sy);
+        let hl = arrowHeads.get(col);
+        if (!hl) { hl = []; arrowHeads.set(col, hl); }
+        hl.push(sx, sy);
         continue;
       }
       if (p.kind === 'gust') {
@@ -27159,6 +27659,20 @@ RG.render = (() => {
       ctx.lineWidth = Math.max(1, T * 0.05);
       ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx - (dx / L) * T * 0.3, sy - (dy / L) * T * 0.3); ctx.stroke();
       ctx.globalAlpha = 1;
+    }
+    if (arrows.length) {
+      ctx.strokeStyle = '#5a3d22';
+      ctx.lineWidth = Math.max(1.5, T * 0.04);
+      ctx.beginPath();
+      for (let i = 0; i < arrows.length; i += 4) { ctx.moveTo(arrows[i], arrows[i + 1]); ctx.lineTo(arrows[i + 2], arrows[i + 3]); }
+      ctx.stroke();
+      const hr = Math.max(2, T * 0.06);
+      for (const [col, hl] of arrowHeads) {
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        for (let i = 0; i < hl.length; i += 2) { ctx.moveTo(hl[i] + hr, hl[i + 1]); ctx.arc(hl[i], hl[i + 1], hr, 0, Math.PI * 2); }
+        ctx.fill();
+      }
     }
     // 광선
     ctx.globalCompositeOperation = 'lighter';
@@ -27315,6 +27829,8 @@ RG.render = (() => {
 
   /* ---------------- 한 프레임 ---------------- */
   let perfWin = 0;
+  let perfRaised = false; // 이 판에서 화질을 다시 높인 적이 있는가
+  let perfNoRaise = false; // 높였다가 다시 느려짐 → 이 판에서는 더 높이지 않음
   function watchSpeed() {
     const now = performance.now();
     const gap = perfLast ? (now - perfLast) / 1000 : 0;
@@ -27325,44 +27841,91 @@ RG.render = (() => {
     perfN++;
     perfWin += gap;
     if (gap > 1 / 30) perfSlow++;
-    // 2초마다(높인 뒤 되돌리기는 6초마다) 판단 — 프레임 수가 아니라 시간으로 재야 아주 느릴 때도 빨리 반응함
+    // 2초마다 판단 — 프레임 수가 아니라 시간으로 재야 아주 느릴 때도 빨리 반응함.
+    // 화질을 바꿀 때마다 그림 캐시를 모두 다시 만들어 잠깐 멈추므로: 아주 느리면(평균 24fps 미만) 한 번에 가장 낮게,
+    // 다시 높이는 것은 오래(20초) 부드러울 때만, 높였다가 다시 느려진 판에서는 더 높이지 않음(오르내림 반복 방지).
     if (perfWin >= 2 && perfN >= 12 && perfSlow / perfN > 0.6 && dprCap > 1 && (window.devicePixelRatio || 1) > 1) {
-      dprCap = Math.max(1, dprCap - 0.5);
+      const avg = perfWin / perfN;
+      dprCap = avg > 1 / 24 ? 1 : Math.max(1, dprCap - 0.5);
+      if (perfRaised) perfNoRaise = true;
       resize();
       perfN = 0; perfSlow = 0; perfWin = 0;
-    } else if (dprCap < 2 && perfWin >= 6) {
-      if (perfSlow / perfN < 0.03) { dprCap = Math.min(2, dprCap + 0.5); resize(); }
+    } else if (dprCap < 2 && !perfNoRaise && perfWin >= 20) {
+      if (perfSlow / perfN < 0.03) { dprCap = Math.min(2, dprCap + 0.5); perfRaised = true; resize(); }
       perfN = 0; perfSlow = 0; perfWin = 0;
-    } else if (dprCap >= 2 && perfWin >= 2) {
+    } else if ((dprCap >= 2 || perfNoRaise) && perfWin >= 2) {
       perfN = 0; perfSlow = 0; perfWin = 0;
+    } else if (dprCap < 2 && perfWin >= 2 && perfSlow / perfN > 0.1) {
+      perfN = 0; perfSlow = 0; perfWin = 0; // 아직 부드럽지 않음 — 높이기 판단은 처음부터 다시
     }
   }
 
+  // 그릴 것 목록 (y 순서) — 항목 객체를 모아 두고 다시 씀
+  const dlPool = [];
+  const dlOrder = [];
+  const flyQ = [];
+  let dlN = 0;
+  function dlAdd(y, k, o) {
+    let it = dlPool[dlN];
+    if (!it) { it = { y: 0, k: 0, o: null }; dlPool[dlN] = it; }
+    it.y = y; it.k = k; it.o = o;
+    dlN++;
+  }
+  const byY = (a, b) => a.y - b.y;
+  const byEnemyY = (a, b) => a.y - b.y;
   function frame(alpha, dt) {
     if (!game || !ctx) return;
     watchSpeed();
     time += dt;
     RG.fx.update(dt);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // 맵 바깥 바탕은 캔버스 뒤 CSS 그라데이션(브라우저가 따로 합성 — 매 프레임 칠하지 않음), 캔버스는 비우기만
+    // 맵 바깥 바탕: 화면 크기의 그라데이션을 한 번 그려 두고 매 프레임 그대로 찍음(불투명 캔버스)
     const base = REGION_BASE[game.map.def.region] || '#556';
-    if (canvas._bgFor !== base) {
-      canvas._bgFor = base;
-      canvas.style.background = `radial-gradient(ellipse at center, ${RG.art._h.mix(base, '#141019', 0.55)} 20%, #0d0a12 75%)`;
+    const bk = `${base}|${canvas.width}x${canvas.height}`;
+    if (!backdrop || backdrop._k !== bk) {
+      backdrop = document.createElement('canvas');
+      backdrop.width = canvas.width; backdrop.height = canvas.height;
+      backdrop._k = bk;
+      const c2 = backdrop.getContext('2d', { alpha: false });
+      const g0 = c2.createRadialGradient(backdrop.width / 2, backdrop.height / 2, Math.min(backdrop.width, backdrop.height) * 0.2, backdrop.width / 2, backdrop.height / 2, Math.max(backdrop.width, backdrop.height) * 0.75);
+      g0.addColorStop(0, RG.art._h.mix(base, '#141019', 0.55));
+      g0.addColorStop(1, '#0d0a12');
+      c2.fillStyle = g0;
+      c2.fillRect(0, 0, backdrop.width, backdrop.height);
     }
-    ctx.clearRect(0, 0, W, H);
-    // 맵 테두리
-    // 테두리 그늘: 맵 넓이만큼 칠하지 않고 바깥 띠만 (맵 그림이 안쪽을 덮음)
-    ctx.strokeStyle = 'rgba(0,0,0,0.45)';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(X(0) - 2, Y(0) - 2, game.map.cols * T + 4, game.map.rows * T + 4);
-    ctx.strokeStyle = 'rgba(233,196,122,0.55)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(X(0) - 3, Y(0) - 3, game.map.cols * T + 6, game.map.rows * T + 6);
-    const [sx, sy] = RG.fx.shakeOffset(T);
+    const [sx0, sy0] = RG.fx.shakeOffset(T);
+    // 흔들림도 정수 화소로 (반 화소에 걸치면 모든 그림이 느린 길로 그려짐)
+    const sx = Math.round(sx0 * dpr) / dpr;
+    const sy = Math.round(sy0 * dpr) / dpr;
+    // 바깥 바탕 + 테두리 + 맵(탑 그림자 포함)을 한 장으로 구워 두고 매 프레임 한 번만 찍음 (화면 크기 그림 두 번 → 한 번)
+    const layer = bg ? towerShadeLayer() : null;
+    let based = false;
+    if (layer && !sx && !sy) {
+      const bk = `${backdrop._k}|${shadeFor}|${ox},${oy},${T},${dpr}`;
+      if (!baseFrame || baseFrame._k !== bk || baseFrame._layer !== layer) {
+        baseFrame = baseFrame && baseFrame.width === canvas.width && baseFrame.height === canvas.height ? baseFrame : document.createElement('canvas');
+        baseFrame.width = canvas.width; baseFrame.height = canvas.height;
+        const c2 = baseFrame.getContext('2d', { alpha: false });
+        c2.setTransform(1, 0, 0, 1, 0, 0);
+        c2.drawImage(backdrop, 0, 0);
+        c2.setTransform(dpr, 0, 0, dpr, 0, 0);
+        drawFrameBorder(c2);
+        c2.drawImage(layer, X(0), Y(0), game.map.cols * T, game.map.rows * T);
+        baseFrame._k = bk; baseFrame._layer = layer;
+      }
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(baseFrame, 0, 0);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      based = true;
+    } else {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(backdrop, 0, 0);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawFrameBorder(ctx);
+    }
     ctx.save();
     ctx.translate(sx, sy);
-    drawBackground();
+    drawBackground(based);
     drawPortals();
     drawZones();
     drawPathPreview();
@@ -27376,12 +27939,14 @@ RG.render = (() => {
     let alive = 0;
     for (const e of st.enemies) if (!e.dead) alive++;
     manyEnemies = alive > 60;
+    RG.fx.setLite(alive > 120);
     if (manyEnemies) {
       // 적이 아주 많을 때: 발밑 그늘을 한 경로로 모아 한 번에 칠함 (땅·비행 두 번)
+      // (그늘 그림 300장을 찍는 것보다 이쪽이 조금 빠름 — 그리기 호출 하나하나의 고정 비용이 큼)
       for (const fly of [false, true]) {
         ctx.beginPath();
         for (const e of st.enemies) {
-          if (e.burrowed || !!e.flying !== fly) continue;
+          if (e.burrowed || !!e.flying !== fly || bakesShadow(e)) continue; // 그늘을 그림에 구워 넣은 적은 건너뜀
           const p = enemyScreen(e, alpha);
           const ex = X(p.x) + T * 0.03;
           const ey = Y(p.y) + T * 0.01;
@@ -27401,26 +27966,38 @@ RG.render = (() => {
     }
     for (const u of st.units) if (!u.dead && u.kind !== 'drone') shadow(lerp(u.px, u.x, alpha), lerp(u.py, u.y, alpha), u.kind === 'wall' ? 0.45 : 0.22, 0.08, 0.3);
 
-    // y 순서로
-    const list = [];
-    for (const t of st.towers) list.push([t.r + 0.82, 0, t]);
-    list.push([game.map.lantern.r + 0.82, 1, null]);
-    for (const e of st.enemies) if (!e.flying) list.push([lerp(e.py, e.y, alpha), 2, e]);
-    for (const u of st.units) if (!u.dead) list.push([lerp(u.py, u.y, alpha), 3, u]);
-    for (const c of corpses) c.t += dt;
-    corpses = corpses.filter((c) => c.t < c.dur);
-    for (const c of corpses) list.push([c.y - 0.001, 4, c]);
-    list.sort((a, b) => a[0] - b[0]);
-    for (const [, kind, obj] of list) {
+    barOn = true; barN = 0; // 체력 막대는 모아 두었다가 모든 적을 그린 뒤 위에 한 번에
+    // y 순서로 (그릴 것 목록은 매 프레임 새로 만들지 않고 다시 씀)
+    dlN = 0;
+    for (const t of st.towers) dlAdd(t.r + 0.82, 0, t);
+    dlAdd(game.map.lantern.r + 0.82, 1, null);
+    for (let i = 0; i < st.enemies.length; i++) { const e = st.enemies[i]; if (!e.flying) dlAdd(lerp(e.py, e.y, alpha), 2, e); }
+    for (const u of st.units) if (!u.dead) dlAdd(lerp(u.py, u.y, alpha), 3, u);
+    let cn = 0;
+    for (let i = 0; i < corpses.length; i++) { const c = corpses[i]; c.t += dt; if (c.t < c.dur) corpses[cn++] = c; }
+    corpses.length = cn;
+    for (let i = 0; i < corpses.length; i++) dlAdd(corpses[i].y - 0.001, 4, corpses[i]);
+    dlOrder.length = dlN;
+    for (let i = 0; i < dlN; i++) dlOrder[i] = dlPool[i];
+    dlOrder.sort(byY);
+    for (let i = 0; i < dlN; i++) {
+      const it = dlOrder[i];
+      const kind = it.k;
+      const obj = it.o;
       if (kind === 0) drawTower(obj);
       else if (kind === 1) drawLantern();
       else if (kind === 2) drawEnemy(obj, alpha);
       else if (kind === 4) drawCorpse(obj);
       else drawUnit(obj, alpha);
+      it.o = null;
     }
     // 비행 적은 위에
-    const flyers = st.enemies.filter((e) => e.flying).sort((a, b) => a.y - b.y);
-    for (const e of flyers) drawEnemy(e, alpha);
+    flyQ.length = 0;
+    for (let i = 0; i < st.enemies.length; i++) if (st.enemies[i].flying) flyQ.push(st.enemies[i]);
+    flyQ.sort(byEnemyY);
+    for (let i = 0; i < flyQ.length; i++) drawEnemy(flyQ[i], alpha);
+    flyQ.length = 0;
+    flushBars();
     // 건설 미리보기 탑 그림
     const gh = overlay.ghost;
     if (gh) {
@@ -27653,23 +28230,88 @@ RG.render = (() => {
         RG.art.logoFlourish ? UI.svgImg(RG.art.logoFlourish(), 'logo-flourish', '') : null,
         el('p', { class: 'logo-sub', text: '여섯 원소의 울림으로 등불을 지켜라' }),
       ]);
-      const menu = el('div', { class: 'title-menu' });
       const go = (fn) => () => { try { if (RG.audio) RG.audio.init(); } catch (e) { /* 무시 */ } UI.sfx('click'); fn(); };
-      if (run && D().maps.concat(D().endless).some((m) => m.id === run.mapId)) {
-        menu.appendChild(el('button', { class: 'btn btn-primary btn-big', onclick: go(() => UI.show('game', { resume: run })) }, [`이어하기 — ${run.mapId} 웨이브 ${run.wave}`]));
-      }
-      menu.appendChild(el('button', { class: `btn btn-big ${run ? '' : 'btn-primary'}`, onclick: go(() => UI.show('world', has ? { view: 'regions' } : {})) }, [has ? '월드 지도' : '시작하기']));
-      menu.appendChild(el('div', { class: 'title-row' }, [
-        el('button', { class: `btn btn-gacha ${canPull() ? 'ready' : ''}`, onclick: go(() => UI.show('gacha', { back: { screen: 'title' } })) }, [UI.icon('crystal', 'tiny'), '탑 뽑기']),
-        el('button', { class: 'btn', onclick: go(() => UI.show('heroes', {})) }, ['수호대']),
-        el('button', { class: 'btn', onclick: go(() => UI.show('codex', {})) }, ['도감']),
-        el('button', { class: 'btn', onclick: go(() => openSettings()) }, ['설정']),
-        el('button', { class: 'btn', onclick: go(() => credits()) }, ['만든 이']),
-      ]));
-      if (has) menu.appendChild(el('button', { class: 'btn btn-ghost small', onclick: go(() => UI.confirmBox('모든 진행 상황(별, 기술 나무, 도감)을 지우고 처음부터 시작할까요?', () => { P().reset(); RG.save.remove(RG.save.KEYS.run); UI.show('title', {}); }, { danger: true, yes: '처음부터' })) }, ['처음부터 다시']));
-      sec.append(bg, el('div', { class: 'title-wrap' }, [logo, menu]), el('div', { class: 'title-foot', text: '설치 없이 브라우저에서 · 그림과 소리는 모두 코드로 만들었습니다' }));
+      const menu = titleMenu(run, has, go);
+      const corner = el('div', { class: 'title-corner' }, [
+        el('button', { class: 'btn tc-btn', title: '설정', onclick: go(() => openSettings()) }, [UI.icon('settings', 'tc-ico'), el('span', { text: '설정' })]),
+        el('button', { class: 'btn tc-btn', title: '만든 이', onclick: go(() => credits()) }, [UI.icon('crown', 'tc-ico'), el('span', { text: '만든 이' })]),
+      ]);
+      const foot = el('div', { class: 'title-foot' }, [
+        has ? el('button', { class: 'btn btn-ghost small tf-reset', onclick: go(() => UI.confirmBox('모든 진행 상황(별, 기술 나무, 도감)을 지우고 처음부터 시작할까요?', () => { P().reset(); RG.save.remove(RG.save.KEYS.run); UI.show('title', {}); }, { danger: true, yes: '처음부터' })) }, ['처음부터 다시']) : null,
+        el('span', { class: 'tf-note', text: '설치 없이 브라우저에서 · 그림과 소리는 모두 코드로 만들었습니다' }),
+      ]);
+      sec.append(bg, el('div', { class: 'title-wrap' }, [logo, menu]), corner, foot);
     },
   });
+
+  /*
+   * 로비 메뉴 (2026-11-10 개편): 예전엔 '월드 지도'만 크고 나머지는 작은 글자 버튼이라 눈에 띄지 않았음.
+   * 가운데 금빛 큰 카드(모험 — 다음 스테이지·별 진행, 그 지역 풍경), 양옆에 큰 그림 카드 4장
+   * (탑 뽑기·수호대·기술 나무·도감 — 저마다 색, 지금 상태 한 줄, 할 일이 있으면 배지).
+   */
+  function titleMenu(run, has, go) {
+    const menu = el('div', { class: 'title-menu' });
+    const maps = D().maps;
+    const nextId = P().frontier();
+    const nextDef = maps.find((m) => m.id === nextId) || maps[0];
+    const allCleared = maps.every((m) => P().mapRec(m.id).cleared);
+    const maxStars = maps.length * 5;
+    const starsNow = P().starsTotal();
+    // 가운데: 모험 카드 (이어할 판이 있으면 그 카드가 금빛, 지도 카드는 그 아래 보조)
+    const mainCol = el('div', { class: 'tm-main' });
+    const resumable = run && maps.concat(D().endless).some((m) => m.id === run.mapId);
+    const bannerOf = (region) => (RG.art.regionBanner ? UI.svgImg(RG.art.regionBanner(region), 'tm-banner', '') : null);
+    if (resumable) {
+      const rd = maps.concat(D().endless).find((m) => m.id === run.mapId);
+      mainCol.appendChild(el('button', { class: 'btn btn-primary btn-big tm-card tm-hero', onclick: go(() => UI.show('game', { resume: run })) }, [
+        bannerOf(rd.region || 1),
+        el('span', { class: 'tm-medal tm-medal-big' }, [UI.icon('play', 'tm-ico')]),
+        el('span', { class: 'tm-text' }, [
+          el('span', { class: 'tm-kicker', text: `하던 판 · ${run.mapId} 웨이브 ${run.wave}` }),
+          el('b', { class: 'tm-title', text: '이어하기' }),
+          el('span', { class: 'tm-sub', text: rd.name || '' }),
+        ]),
+        el('span', { class: 'tm-go', text: '이어서 ›' }),
+      ]));
+    }
+    mainCol.appendChild(el('button', { class: `btn btn-big tm-card ${resumable ? 'tm-map-small' : 'btn-primary tm-hero'}`, onclick: go(() => UI.show('world', has ? { view: 'regions' } : {})) }, [
+      resumable ? null : bannerOf(nextDef.region),
+      el('span', { class: `tm-medal ${resumable ? '' : 'tm-medal-big'}` }, [UI.icon('map', 'tm-ico')]),
+      el('span', { class: 'tm-text' }, [
+        resumable ? null : el('span', { class: 'tm-kicker', text: '월드 지도' }),
+        el('b', { class: 'tm-title', text: resumable ? '월드 지도' : has ? '모험 계속' : '모험 시작' }),
+        el('span', { class: 'tm-sub', text: allCleared ? '모든 지역을 지켜 냈습니다 · 무한 모드와 도전에 나서 보세요' : `다음 · ${nextDef.id} ${nextDef.name}` }),
+        has ? el('span', { class: 'tm-prog' }, [
+          el('span', { class: 'tm-bar' }, [el('i', { style: `width:${Math.round(Math.min(1, starsNow / maxStars) * 100)}%` })]),
+          el('span', { class: 'tm-stars' }, [UI.icon('star', 'tiny'), `${starsNow} / ${maxStars}`]),
+        ]) : null,
+      ]),
+      resumable ? null : el('span', { class: 'tm-go', text: has ? '출발 ›' : '시작 ›' }),
+    ]));
+    // 양옆 카드 4장
+    const g = P().gachaState();
+    const nPull = Math.floor(g.crystals / RG.gacha.COST.one);
+    const owned = P().ownedTowers().length;
+    const heroes = P().heroesFor(nextId);
+    const free = P().starsFree();
+    const enemiesSeen = (P().get().seen.enemies || []).length;
+    const enemiesAll = Object.keys(D().enemies).length;
+    const lastHero = heroes[heroes.length - 1] || D().heroOrder[0];
+    const tile = (cls, tone, medal, label, sub, badge, onclick) => el('button', { class: `btn tm-tile ${cls}`, style: `--tc:${tone}`, onclick }, [
+      el('span', { class: 'tm-medal' }, [medal]),
+      el('b', { class: 'tm-label', text: label }),
+      el('span', { class: 'tm-sub', text: sub }),
+      badge ? el('span', { class: 'tm-badge', text: badge }) : null,
+    ]);
+    const tiles = [
+      tile(`btn-gacha tm-gacha ${canPull() ? 'ready' : ''}`, '#b07cff', UI.icon('crystal', 'tm-ico'), '탑 뽑기', `공명석 ${g.crystals} · 탑 ${owned}/${D().towerOrder.length}`, nPull >= 10 ? '10회 가능' : nPull ? `${nPull}회 가능` : '', go(() => UI.show('gacha', { back: { screen: 'title' } }))),
+      tile('tm-heroes', '#ff7a6a', RG.art.portrait ? UI.portrait(lastHero, 'normal', 'tm-portrait') : UI.icon('hero', 'tm-ico'), '수호대', `영웅 ${heroes.length}/${D().heroOrder.length}`, '', go(() => UI.show('heroes', {}))),
+      tile('tm-tree', '#7ad46a', UI.icon('tree', 'tm-ico'), '기술 나무', free > 0 ? `쓸 수 있는 별 ★${free}` : `모은 별 ★${starsNow}`, free > 0 ? `★${free}` : '', go(() => UI.show('tree', {}))),
+      tile('tm-codex', '#f2b24a', UI.icon('book', 'tm-ico'), '도감', `만난 적 ${enemiesSeen}/${enemiesAll}`, '', go(() => UI.show('codex', {}))),
+    ];
+    menu.append(tiles[0], tiles[1], mainCol, tiles[2], tiles[3]);
+    return menu;
+  }
 
   /**
    * 타이틀 풍경: 하늘 → 먼 산 → 언덕(+울림등 빛줄기) → 마을 → 앞 나무, 구름과 반딧불.

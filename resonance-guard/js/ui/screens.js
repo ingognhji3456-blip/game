@@ -35,23 +35,88 @@
         RG.art.logoFlourish ? UI.svgImg(RG.art.logoFlourish(), 'logo-flourish', '') : null,
         el('p', { class: 'logo-sub', text: '여섯 원소의 울림으로 등불을 지켜라' }),
       ]);
-      const menu = el('div', { class: 'title-menu' });
       const go = (fn) => () => { try { if (RG.audio) RG.audio.init(); } catch (e) { /* 무시 */ } UI.sfx('click'); fn(); };
-      if (run && D().maps.concat(D().endless).some((m) => m.id === run.mapId)) {
-        menu.appendChild(el('button', { class: 'btn btn-primary btn-big', onclick: go(() => UI.show('game', { resume: run })) }, [`이어하기 — ${run.mapId} 웨이브 ${run.wave}`]));
-      }
-      menu.appendChild(el('button', { class: `btn btn-big ${run ? '' : 'btn-primary'}`, onclick: go(() => UI.show('world', has ? { view: 'regions' } : {})) }, [has ? '월드 지도' : '시작하기']));
-      menu.appendChild(el('div', { class: 'title-row' }, [
-        el('button', { class: `btn btn-gacha ${canPull() ? 'ready' : ''}`, onclick: go(() => UI.show('gacha', { back: { screen: 'title' } })) }, [UI.icon('crystal', 'tiny'), '탑 뽑기']),
-        el('button', { class: 'btn', onclick: go(() => UI.show('heroes', {})) }, ['수호대']),
-        el('button', { class: 'btn', onclick: go(() => UI.show('codex', {})) }, ['도감']),
-        el('button', { class: 'btn', onclick: go(() => openSettings()) }, ['설정']),
-        el('button', { class: 'btn', onclick: go(() => credits()) }, ['만든 이']),
-      ]));
-      if (has) menu.appendChild(el('button', { class: 'btn btn-ghost small', onclick: go(() => UI.confirmBox('모든 진행 상황(별, 기술 나무, 도감)을 지우고 처음부터 시작할까요?', () => { P().reset(); RG.save.remove(RG.save.KEYS.run); UI.show('title', {}); }, { danger: true, yes: '처음부터' })) }, ['처음부터 다시']));
-      sec.append(bg, el('div', { class: 'title-wrap' }, [logo, menu]), el('div', { class: 'title-foot', text: '설치 없이 브라우저에서 · 그림과 소리는 모두 코드로 만들었습니다' }));
+      const menu = titleMenu(run, has, go);
+      const corner = el('div', { class: 'title-corner' }, [
+        el('button', { class: 'btn tc-btn', title: '설정', onclick: go(() => openSettings()) }, [UI.icon('settings', 'tc-ico'), el('span', { text: '설정' })]),
+        el('button', { class: 'btn tc-btn', title: '만든 이', onclick: go(() => credits()) }, [UI.icon('crown', 'tc-ico'), el('span', { text: '만든 이' })]),
+      ]);
+      const foot = el('div', { class: 'title-foot' }, [
+        has ? el('button', { class: 'btn btn-ghost small tf-reset', onclick: go(() => UI.confirmBox('모든 진행 상황(별, 기술 나무, 도감)을 지우고 처음부터 시작할까요?', () => { P().reset(); RG.save.remove(RG.save.KEYS.run); UI.show('title', {}); }, { danger: true, yes: '처음부터' })) }, ['처음부터 다시']) : null,
+        el('span', { class: 'tf-note', text: '설치 없이 브라우저에서 · 그림과 소리는 모두 코드로 만들었습니다' }),
+      ]);
+      sec.append(bg, el('div', { class: 'title-wrap' }, [logo, menu]), corner, foot);
     },
   });
+
+  /*
+   * 로비 메뉴 (2026-11-10 개편): 예전엔 '월드 지도'만 크고 나머지는 작은 글자 버튼이라 눈에 띄지 않았음.
+   * 가운데 금빛 큰 카드(모험 — 다음 스테이지·별 진행, 그 지역 풍경), 양옆에 큰 그림 카드 4장
+   * (탑 뽑기·수호대·기술 나무·도감 — 저마다 색, 지금 상태 한 줄, 할 일이 있으면 배지).
+   */
+  function titleMenu(run, has, go) {
+    const menu = el('div', { class: 'title-menu' });
+    const maps = D().maps;
+    const nextId = P().frontier();
+    const nextDef = maps.find((m) => m.id === nextId) || maps[0];
+    const allCleared = maps.every((m) => P().mapRec(m.id).cleared);
+    const maxStars = maps.length * 5;
+    const starsNow = P().starsTotal();
+    // 가운데: 모험 카드 (이어할 판이 있으면 그 카드가 금빛, 지도 카드는 그 아래 보조)
+    const mainCol = el('div', { class: 'tm-main' });
+    const resumable = run && maps.concat(D().endless).some((m) => m.id === run.mapId);
+    const bannerOf = (region) => (RG.art.regionBanner ? UI.svgImg(RG.art.regionBanner(region), 'tm-banner', '') : null);
+    if (resumable) {
+      const rd = maps.concat(D().endless).find((m) => m.id === run.mapId);
+      mainCol.appendChild(el('button', { class: 'btn btn-primary btn-big tm-card tm-hero', onclick: go(() => UI.show('game', { resume: run })) }, [
+        bannerOf(rd.region || 1),
+        el('span', { class: 'tm-medal tm-medal-big' }, [UI.icon('play', 'tm-ico')]),
+        el('span', { class: 'tm-text' }, [
+          el('span', { class: 'tm-kicker', text: `하던 판 · ${run.mapId} 웨이브 ${run.wave}` }),
+          el('b', { class: 'tm-title', text: '이어하기' }),
+          el('span', { class: 'tm-sub', text: rd.name || '' }),
+        ]),
+        el('span', { class: 'tm-go', text: '이어서 ›' }),
+      ]));
+    }
+    mainCol.appendChild(el('button', { class: `btn btn-big tm-card ${resumable ? 'tm-map-small' : 'btn-primary tm-hero'}`, onclick: go(() => UI.show('world', has ? { view: 'regions' } : {})) }, [
+      resumable ? null : bannerOf(nextDef.region),
+      el('span', { class: `tm-medal ${resumable ? '' : 'tm-medal-big'}` }, [UI.icon('map', 'tm-ico')]),
+      el('span', { class: 'tm-text' }, [
+        resumable ? null : el('span', { class: 'tm-kicker', text: '월드 지도' }),
+        el('b', { class: 'tm-title', text: resumable ? '월드 지도' : has ? '모험 계속' : '모험 시작' }),
+        el('span', { class: 'tm-sub', text: allCleared ? '모든 지역을 지켜 냈습니다 · 무한 모드와 도전에 나서 보세요' : `다음 · ${nextDef.id} ${nextDef.name}` }),
+        has ? el('span', { class: 'tm-prog' }, [
+          el('span', { class: 'tm-bar' }, [el('i', { style: `width:${Math.round(Math.min(1, starsNow / maxStars) * 100)}%` })]),
+          el('span', { class: 'tm-stars' }, [UI.icon('star', 'tiny'), `${starsNow} / ${maxStars}`]),
+        ]) : null,
+      ]),
+      resumable ? null : el('span', { class: 'tm-go', text: has ? '출발 ›' : '시작 ›' }),
+    ]));
+    // 양옆 카드 4장
+    const g = P().gachaState();
+    const nPull = Math.floor(g.crystals / RG.gacha.COST.one);
+    const owned = P().ownedTowers().length;
+    const heroes = P().heroesFor(nextId);
+    const free = P().starsFree();
+    const enemiesSeen = (P().get().seen.enemies || []).length;
+    const enemiesAll = Object.keys(D().enemies).length;
+    const lastHero = heroes[heroes.length - 1] || D().heroOrder[0];
+    const tile = (cls, tone, medal, label, sub, badge, onclick) => el('button', { class: `btn tm-tile ${cls}`, style: `--tc:${tone}`, onclick }, [
+      el('span', { class: 'tm-medal' }, [medal]),
+      el('b', { class: 'tm-label', text: label }),
+      el('span', { class: 'tm-sub', text: sub }),
+      badge ? el('span', { class: 'tm-badge', text: badge }) : null,
+    ]);
+    const tiles = [
+      tile(`btn-gacha tm-gacha ${canPull() ? 'ready' : ''}`, '#b07cff', UI.icon('crystal', 'tm-ico'), '탑 뽑기', `공명석 ${g.crystals} · 탑 ${owned}/${D().towerOrder.length}`, nPull >= 10 ? '10회 가능' : nPull ? `${nPull}회 가능` : '', go(() => UI.show('gacha', { back: { screen: 'title' } }))),
+      tile('tm-heroes', '#ff7a6a', RG.art.portrait ? UI.portrait(lastHero, 'normal', 'tm-portrait') : UI.icon('hero', 'tm-ico'), '수호대', `영웅 ${heroes.length}/${D().heroOrder.length}`, '', go(() => UI.show('heroes', {}))),
+      tile('tm-tree', '#7ad46a', UI.icon('tree', 'tm-ico'), '기술 나무', free > 0 ? `쓸 수 있는 별 ★${free}` : `모은 별 ★${starsNow}`, free > 0 ? `★${free}` : '', go(() => UI.show('tree', {}))),
+      tile('tm-codex', '#f2b24a', UI.icon('book', 'tm-ico'), '도감', `만난 적 ${enemiesSeen}/${enemiesAll}`, '', go(() => UI.show('codex', {}))),
+    ];
+    menu.append(tiles[0], tiles[1], mainCol, tiles[2], tiles[3]);
+    return menu;
+  }
 
   /**
    * 타이틀 풍경: 하늘 → 먼 산 → 언덕(+울림등 빛줄기) → 마을 → 앞 나무, 구름과 반딧불.
