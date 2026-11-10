@@ -2,20 +2,29 @@
 
 /* =========================================================
  * 지형 그림 (SVG 문자열) — 맵 바탕 + 지역 풍경
- * 규격: docs/ARCHITECTURE.md §5, 색: DESIGN.md §14, 칸 종류: DESIGN.md §4.2
+ * 규격: docs/ARCHITECTURE.md §5, 색: DESIGN.md §14, 칸 종류: DESIGN.md §4.2, 빛: docs/design/animation.md §2.6
  *
  *   RG.art.mapBackground(map)   map = RG.grid.parseMap(def) 결과 → viewBox 0 0 cols*100 rows*100
  *   RG.art.regionBanner(id)     1~5 → viewBox 0 0 400 160 (월드 지도·준비 화면용 풍경)
  *
- * - 장식 위치는 (map.id, c, r) 해시로 정합니다(Math.random 없음) → 같은 맵은 늘 같은 그림.
- * - 탑·적·울림등·입구 소용돌이는 렌더러가 위에 그립니다. 여기서는 바닥 표시(광장·동굴 입구·안개)만.
- * - 읽힘 우선(1칸 ≈ 40px):
- *     길  = 테두리가 진한 이어진 길(흙/눌린 눈/모래/젖은 모래/판석)
- *     공터 = 밝고 평평한 땅 + 칸마다 점선 격자 (걸을 수도, 지을 수도 있음)
- *     건설지 = 칸마다 도톰하게 돋운 판(앞면이 보임)
- *     장애물 = 어두운 땅 위의 물체(나무·바위·기둥), 물·용암 웅덩이
+ * 칸을 이어 붙인 티가 나지 않게 그리는 방법
+ *   - 칸 종류마다 "거리장"(칸 덩어리 경계까지의 거리, 5단위 격자)을 만들고, 살짝 흐린 뒤 잡음을 더해
+ *     마칭 스퀘어로 등고선을 뽑습니다. 등고선 몇 겹(젖은 흙 → 모래 → 거품 → 얕은 물 → 깊은 물)이 곧 그림입니다.
+ *   - 길은 길 칸 중심을 잇는 뼈대까지의 거리로 만들어서 굽이·갈림길이 저절로 둥글게 흐릅니다.
+ *   - 장식 위치·흔들림은 (map.id, c, r) 해시로 정합니다(Math.random 없음) → 같은 맵은 늘 같은 그림.
+ * 빛은 늘 왼쪽 위
+ *   - 솟은 것(건설 판석·절벽·바위·나무)은 왼쪽 위 가장자리가 밝고 오른쪽 아래가 어둡고, 그림자는 오른쪽 아래로.
+ *   - 꺼진 것(물·길)은 반대로 왼쪽 위 안쪽에 그늘, 오른쪽 아래 안쪽이 밝음. 높이가 바뀌는 곳에는 접지 그늘.
+ * 읽힘 우선(1칸 ≈ 30~40px)
+ *     길    = 밝은 흙/모래/눌린 눈/판석 띠, 진한 가장자리와 바퀴 자국
+ *     건설지 = 다진 흙 마당 위의 네모난 기초 판석(칸마다 하나, 옅은 테두리와 앞면) → 탑을 올릴 자리
+ *     공터  = 밝고 평평한 빈터(밟힌 풀밭·다진 눈·평평한 모래), 칸 모서리에 아주 옅은 표시만
+ *     막힘  = 어두운 땅 위의 물체(나무·바위·기둥·절벽), 물·용암
+ * 탑·적·울림등·입구 소용돌이는 렌더러가 위에 그립니다. 여기서는 바닥(광장·동굴 입구·다리)만.
  * ========================================================= */
 (() => {
+  // Math를 지역 이름으로 묶어 둠: 해시·잡음이 수백만 번 불리므로 전역 조회를 줄임(Node vm 검사 환경에서 특히 느림)
+  const Math = globalThis.Math;
   const h = RG.art._h;
   const OL = h.OL;
   const f = (v) => Math.round(v * 10) / 10;
@@ -24,72 +33,99 @@
   const K = { PATH: 1, OPEN: 2, BUILD: 3, WATER: 4, ROCK: 5, TREE: 6, LAVA: 7, PILLAR: 8, SPAWN: 9, AIR: 10, LANTERN: 11 };
 
   /* ---------------- 지역 색 ---------------- */
+  const LAVA = { lava: '#ff8a2a', lavaL: '#ffe28c', lavaD: '#c4401b' };
   const PAL = {
     1: { // 솔빛 들판 — 연두·노랑
-      wild: '#5d8c35', wildL: '#7aa944', wildD: '#44702a', forest: '#3c6826', rubble: '#76864f',
-      open: '#d6e38c', openAlt: '#c8d779', openDot: '#58702a',
-      build: '#94c24c', buildL: '#bde074', buildD: '#6f9f35', buildSide: '#7a5c34', buildGap: '#36591f',
-      road: '#dcb478', roadL: '#f2dba8', roadD: '#c29657', roadEdge: '#7d5a30',
-      water: '#4aa8da', waterD: '#2a72ab', waterL: '#c4ecf8', shore: '#cdb979', foam: '#eaf8fc',
-      lava: '#ff8a2a', lavaL: '#ffe28c', lavaD: '#c4401b', crust: '#3e2c26',
+      ground: '#6b9b3d', groundL: '#86b44c', groundD: '#55822f', tuft: '#3d6820', tuftL: '#a8d260',
+      forest: '#4b7b2c', forestD: '#36601f', rubble: '#8e8c66', litter: '#8a9a45',
+      open: '#c8d889', openL: '#dae6a3', openD: '#a2b868', openMark: '#5f7a32',
+      plot: '#8a7c52', plotL: '#a69769', plotD: '#5e5333',
+      slab: '#c7c1a7', slabL: '#e8e3cd', slabD: '#9b957b', slabSide: '#6a644f', slabLine: '#7a745c', moss: '#7aa140', mossL: '#a9cd62',
+      road: '#dab57d', roadL: '#efd7a6', roadD: '#c19762', roadEdge: '#8a6438', roadAO: '#22400e',
+      shoreWet: '#4d6a2a', shore: '#c2b07a', foam: '#e8f8fc', waterL: '#6ac0e0', water: '#3e99cf', waterD: '#2b73ad', waterDeep: '#1f5890',
+      ...LAVA, crust: '#3e2c26',
+      cliffTop: '#b4b19d', cliffTopL: '#dad7c4', cliffTopD: '#878470', cliffFace: '#8c8975', cliffFaceD: '#5e5b4c', cliffLine: '#4f4c40',
       stone: '#a7a69c', stoneL: '#d6d5c9', stoneD: '#6b6a64', accent: '#76a63c',
       plaza: '#ddd3b8', plazaD: '#a19579', wood: '#a8723f', woodD: '#6a4323',
       leaf: '#5ca83a', leafL: '#9cd85e', leafD: '#357026',
       flowers: ['#fff6c8', '#ffd23f', '#ff9db5', '#ffffff'], mist: '#5e5478',
+      shadow: '#15300a', shadowOp: 0.34,
       skyTop: '#86cdf2', skyBot: '#fcf2c4',
     },
     2: { // 서리 고개 — 하양·하늘
-      wild: '#e2ecf6', wildL: '#ffffff', wildD: '#b8cbdf', forest: '#c6d6e8', rubble: '#b3c3d6',
-      open: '#bde3f5', openAlt: '#acd8ef', openDot: '#2f6a99',
-      build: '#9cb2cc', buildL: '#c9d9ea', buildD: '#7d95b2', buildSide: '#56698a', buildGap: '#6d82a0',
-      road: '#bcae9b', roadL: '#ddd3c4', roadD: '#a69584', roadEdge: '#6e5f55',
-      water: '#3d86be', waterD: '#1d4e80', waterL: '#d8f2ff', shore: '#f6fafe', foam: '#ffffff',
-      lava: '#ff8a2a', lavaL: '#ffe28c', lavaD: '#c4401b', crust: '#323744',
+      ground: '#e6eef7', groundL: '#fbfdff', groundD: '#cbd9e8', tuft: '#a9bfd6', tuftL: '#ffffff',
+      forest: '#cbd8e7', forestD: '#b2c3d8', rubble: '#b5c3d3', litter: '#9fb3c9',
+      open: '#cfe4f2', openL: '#e3f0f9', openD: '#a7c7de', openMark: '#4f7ca3',
+      plot: '#aebccd', plotL: '#c9d5e2', plotD: '#7d8ea6',
+      slab: '#8ea1b9', slabL: '#bccbdd', slabD: '#6b7e98', slabSide: '#4b5b75', slabLine: '#5b6d8b', moss: '#ffffff', mossL: '#ffffff',
+      road: '#b9aa98', roadL: '#d8cdbf', roadD: '#a19181', roadEdge: '#6e6056', roadAO: '#7f97b3',
+      shoreWet: '#a2b6cc', shore: '#f3f8fd', foam: '#ffffff', waterL: '#5ea6d6', water: '#3a80b8', waterD: '#245a90', waterDeep: '#173f6c',
+      ...LAVA, crust: '#323744',
+      cliffTop: '#a9bbd0', cliffTopL: '#d9e4ef', cliffTopD: '#7b8faa', cliffFace: '#6f84a2', cliffFaceD: '#4a5b77', cliffLine: '#3c4b64',
       stone: '#8ea1b8', stoneL: '#c9d7e6', stoneD: '#56677e', accent: '#ffffff',
       plaza: '#dce5ef', plazaD: '#8d9fb6', wood: '#7d5a44', woodD: '#4c3427',
       leaf: '#2e6a5c', leafL: '#4f927a', leafD: '#1b463d',
       flowers: ['#ffffff', '#d6f1ff'], mist: '#66658a',
+      shadow: '#4f6f99', shadowOp: 0.3,
       skyTop: '#bfe2fa', skyBot: '#f4fbff',
     },
     3: { // 붉은 협곡 — 주황·적갈
-      wild: '#8a4428', wildL: '#a6583a', wildD: '#6b311c', forest: '#7a3b22', rubble: '#985636',
-      open: '#e8bb7a', openAlt: '#ddad6a', openDot: '#6e3a1c',
-      build: '#cc7640', buildL: '#eb9d5f', buildD: '#a95a2f', buildSide: '#723619', buildGap: '#55270f',
-      road: '#f2ddac', roadL: '#fdf1d2', roadD: '#dcc08a', roadEdge: '#8e522b',
-      water: '#36a6a2', waterD: '#1d6a72', waterL: '#bdf2e6', shore: '#d8b682', foam: '#ecfff7',
-      lava: '#ff8a2a', lavaL: '#ffe28c', lavaD: '#c4401b', crust: '#3a1f1a',
+      ground: '#9a5232', groundL: '#b06440', groundD: '#7f3f24', tuft: '#6a2f17', tuftL: '#d0925a',
+      forest: '#874729', forestD: '#6f3820', rubble: '#a7684a', litter: '#c98b55',
+      open: '#e7c083', openL: '#f1d29c', openD: '#c99b5e', openMark: '#7a4524',
+      plot: '#8f4f30', plotL: '#a8623e', plotD: '#5e2c16',
+      slab: '#cd8a5c', slabL: '#ecb084', slabD: '#a4643c', slabSide: '#6a361b', slabLine: '#7d4426', moss: '#ebcb92', mossL: '#f6dfb0',
+      road: '#f1ddae', roadL: '#fcf0d2', roadD: '#dcc08c', roadEdge: '#9a6236', roadAO: '#4e220f',
+      shoreWet: '#6e3a22', shore: '#d8b682', foam: '#ecfff7', waterL: '#5cc0b8', water: '#36a6a2', waterD: '#1d6a72', waterDeep: '#144e58',
+      ...LAVA, crust: '#3a1f1a',
+      cliffTop: '#c4774a', cliffTopL: '#e9a272', cliffTopD: '#8a4426', cliffFace: '#87401f', cliffFaceD: '#562310', cliffLine: '#3e170a', strata: '#c8784a',
       stone: '#bb673c', stoneL: '#e8986a', stoneD: '#7a381e', accent: '#f3b77a',
       plaza: '#ecd4a4', plazaD: '#a8743f', wood: '#8a6040', woodD: '#553620',
       leaf: '#5e9a48', leafL: '#8fc86c', leafD: '#3a682e',
       flowers: ['#ffd36b', '#ff7a4a', '#fff1c0'], mist: '#5a4466',
+      shadow: '#3a1206', shadowOp: 0.34,
       skyTop: '#ff9f5c', skyBot: '#ffe0a8',
     },
     4: { // 폭풍 해안 — 청록·남색
-      wild: '#2c6064', wildL: '#3e7b7a', wildD: '#1e4850', forest: '#22525a', rubble: '#486570',
-      open: '#a8d6bf', openAlt: '#97c9af', openDot: '#22574f',
-      build: '#4ca48f', buildL: '#77c8ae', buildD: '#378574', buildSide: '#24545a', buildGap: '#173a44',
-      road: '#d6c296', roadL: '#ebdcb8', roadD: '#bea97a', roadEdge: '#76654a',
-      water: '#23618f', waterD: '#103963', waterL: '#a4e6f0', shore: '#dac99e', foam: '#f3fcff',
-      lava: '#ff8a2a', lavaL: '#ffe28c', lavaD: '#c4401b', crust: '#22303a',
+      ground: '#3b7571', groundL: '#4d8b80', groundD: '#2d5d5c', tuft: '#204c49', tuftL: '#74b196',
+      forest: '#2e605d', forestD: '#224d4c', rubble: '#cdbd92', litter: '#5c8f78',
+      open: '#a7d3bc', openL: '#c0e2cd', openD: '#80b39b', openMark: '#2b6556',
+      plot: '#6d7c72', plotL: '#87968b', plotD: '#3f4c47',
+      slab: '#a5b2ab', slabL: '#cbd6d0', slabD: '#7c8b85', slabSide: '#4a5856', slabLine: '#5c6a66', moss: '#5f9c6a', mossL: '#8ccc8c',
+      road: '#dac698', roadL: '#eddcb8', roadD: '#c1aa79', roadEdge: '#7a6848', roadAO: '#12383a',
+      shoreWet: '#7b7660', shore: '#ddcc9f', foam: '#f3fcff', waterL: '#3e91b2', water: '#24628f', waterD: '#174b79', waterDeep: '#0f3762',
+      ...LAVA, crust: '#22303a',
+      cliffTop: '#5b8d6b', cliffTopL: '#86b88e', cliffTopD: '#3d6a52', cliffFace: '#45585f', cliffFaceD: '#26343b', cliffLine: '#1a252b',
       stone: '#56656f', stoneL: '#8d9ea8', stoneD: '#313c45', accent: '#ebe5d2',
       plaza: '#dbd3bb', plazaD: '#8b8b7b', wood: '#9a7448', woodD: '#5c4227',
       leaf: '#4cae62', leafL: '#8edc8a', leafD: '#2a7442',
       flowers: ['#ffd6c9', '#fff2d6', '#ff9a8a'], mist: '#4a5578',
+      shadow: '#081e20', shadowOp: 0.38,
       skyTop: '#1d3a58', skyBot: '#4f8c94',
     },
     5: { // 깨진 대종 — 회보라·금
-      wild: '#433d55', wildL: '#58506d', wildD: '#312c41', forest: '#393348', rubble: '#58526e',
-      open: '#bdb4cd', openAlt: '#aea4c1', openDot: '#43385c',
-      build: '#8b83a7', buildL: '#b2aac9', buildD: '#6e678f', buildSide: '#474160', buildGap: '#29253a',
-      road: '#d6b870', roadL: '#efdca2', roadD: '#bb9b52', roadEdge: '#6a522c',
-      water: '#4e4d88', waterD: '#2a2956', waterL: '#cdc7f4', shore: '#7c7492', foam: '#e8e2ff',
-      lava: '#ff8a2a', lavaL: '#ffe28c', lavaD: '#c4401b', crust: '#2a2234',
+      ground: '#4a4361', groundL: '#5d5577', groundD: '#38324b', tuft: '#2b2640', tuftL: '#8a80a6',
+      forest: '#3d3752', forestD: '#2f2a41', rubble: '#5f5878', litter: '#7a7096',
+      open: '#aaa1be', openL: '#bdb5cf', openD: '#8a819f', openMark: '#3f3658',
+      plot: '#5d5679', plotL: '#726a90', plotD: '#3a3452',
+      slab: '#b6aecd', slabL: '#d8d2e8', slabD: '#8f87aa', slabSide: '#4b4466', slabLine: '#6a6288', moss: '#e8bd4c', mossL: '#f6dc84',
+      road: '#d5b56e', roadL: '#edd89e', roadD: '#b9994f', roadEdge: '#6a522c', roadAO: '#1d182b',
+      shoreWet: '#3a3450', shore: '#7c7492', foam: '#e8e2ff', waterL: '#6a69a8', water: '#4e4d88', waterD: '#363568', waterDeep: '#25244c',
+      ...LAVA, crust: '#2a2234',
+      cliffTop: '#6c6587', cliffTopL: '#8f88aa', cliffTopD: '#524b6c', cliffFace: '#4d4766', cliffFaceD: '#2f2a42', cliffLine: '#221e31',
       stone: '#8b85a1', stoneL: '#bcb6cf', stoneD: '#56506b', accent: '#e8bd4c',
       plaza: '#ddd2b2', plazaD: '#9c8a5a', wood: '#8f899b', woodD: '#5b5568',
       leaf: '#e2b84a', leafL: '#f6dc84', leafD: '#a8802a',
       flowers: ['#f2d27a', '#ffffff'], mist: '#241d33',
+      shadow: '#0e0a18', shadowOp: 0.4,
       skyTop: '#4e4864', skyBot: '#b4a6c6',
     },
+  };
+  /* 맵마다 다른 점 (설계서 docs/design/maps.md의 지형 메모) */
+  const MAP_STYLE = {
+    '1-4': { fireflies: true },         // 반딧불 습지
+    '2-3': { ice: true },               // 얼어붙은 호수: 공터 = 얼음판
+    '4-3': { coral: true },             // 산호 미궁: 바위 = 산호
   };
 
   /* ---------------- 결정적 해시 ---------------- */
@@ -98,58 +134,266 @@
     for (let i = 0; i < s.length; i++) x = Math.imul(x ^ s.charCodeAt(i), 16777619);
     return x >>> 0;
   }
-  /** (c, r, k) → [0, 1). 같은 맵 id면 늘 같은 값 */
+  /** (c, r, k) → [0, 1). 같은 맵 id면 늘 같은 값 (32비트 정수 연산만 → 빠름) */
   function rndFactory(key) {
-    const base = hashStr(String(key));
-    return (c, r, k = 0) => {
-      let x = (base ^ Math.imul(c + 0x3a1, 0x9e3779b1) ^ Math.imul(r + 0x7c3, 0x85ebca77) ^ Math.imul(k + 0x1f5, 0xc2b2ae3d)) >>> 0;
-      x ^= x >>> 16; x = Math.imul(x, 0x7feb352d);
-      x ^= x >>> 15; x = Math.imul(x, 0x846ca68b);
+    const base = hashStr(String(key)) | 0;
+    return (c, r, k) => {
+      let x = base ^ Math.imul((c + 929) | 0, -1640531535) ^ Math.imul((r + 1987) | 0, -2048144777) ^ Math.imul(((k | 0) + 501) | 0, -1028477379);
+      x ^= x >>> 16; x = Math.imul(x, 2146121005);
+      x ^= x >>> 15; x = Math.imul(x, -2073254261);
       x ^= x >>> 16;
       return (x >>> 0) / 4294967296;
     };
   }
+  /** 값 잡음(부드러운 격자 보간) + 겹잡음. 결과 0~1 */
+  function noiseFactory(rnd) {
+    const vn = (x, y, k) => {
+      const ix = Math.floor(x);
+      const iy = Math.floor(y);
+      let fx = x - ix;
+      let fy = y - iy;
+      fx = fx * fx * (3 - 2 * fx);
+      fy = fy * fy * (3 - 2 * fy);
+      const a = rnd(ix, iy, k);
+      const b = rnd(ix + 1, iy, k);
+      const c = rnd(ix, iy + 1, k);
+      const d = rnd(ix + 1, iy + 1, k);
+      return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
+    };
+    const fbm = (x, y, k, oct = 2) => {
+      let s = 0;
+      let amp = 0.5;
+      let tot = 0;
+      let fr = 1;
+      for (let o = 0; o < oct; o++) { s += vn(x * fr + o * 7.3, y * fr - o * 3.1, k + o * 17) * amp; tot += amp; amp *= 0.5; fr *= 2.07; }
+      return s / tot;
+    };
+    return { vn, fbm };
+  }
 
-  /* ---------------- 덩어리(이어 붙인 칸) 경로 ----------------
-   * cells의 칸들을 하나의 경로로. 바깥 모서리는 둥글게(R), 노출된 변은 ins만큼 안쪽으로.
-   * 이웃 칸이 같은 집합이면 경계까지 꽉 채워 이음매가 없습니다(한 path 안 → 틈 없음). */
-  function blobPath(cells, inF, ins, R) {
-    let d = '';
-    for (const [c, r] of cells) {
-      const x0 = c * 100;
-      const y0 = r * 100;
-      // [모서리 x, y, 안쪽 부호 sx, sy, 가로 이웃 dc, 세로 이웃 dr, 들어오는 변이 세로인가]
-      const corners = [
-        [x0, y0, 1, 1, -1, -1, true],
-        [x0 + 100, y0, -1, 1, 1, -1, false],
-        [x0 + 100, y0 + 100, -1, -1, 1, 1, true],
-        [x0, y0 + 100, 1, -1, -1, 1, false],
-      ];
-      let first = true;
-      for (const [cx, cy, sx, sy, hd, vd, vin] of corners) {
-        const hIn = inF(c + hd, r);
-        const vIn = inF(c, r + vd);
-        const P = (a, b) => `${f(cx + sx * a)} ${f(cy + sy * b)}`;
-        const mv = (p) => { const s = (first ? 'M' : 'L') + p; first = false; return s; };
-        if (hIn && vIn) {
-          if (inF(c + hd, r + vd)) d += mv(P(0, 0));
-          else if (vin) d += `${mv(P(0, ins))}Q${P(ins, ins)} ${P(ins, 0)}`;
-          else d += `${mv(P(ins, 0))}Q${P(ins, ins)} ${P(0, ins)}`;
-        } else if (hIn) d += mv(P(0, ins));
-        else if (vIn) d += mv(P(ins, 0));
-        else if (vin) d += `${mv(P(ins, ins + R))}Q${P(ins, ins)} ${P(ins + R, ins)}`;
-        else d += `${mv(P(ins + R, ins))}Q${P(ins, ins)} ${P(ins, ins + R)}`;
+  /* =========================================================
+   * 격자 장(場) — 5단위 표본. 바깥으로 3칸 여유(등고선이 화면 밖에서 닫히도록)
+   * ========================================================= */
+  const GS = 5;
+  const GP = 3;
+  function makeGrid(W, H) {
+    const nx = Math.round(W / GS) + 2 * GP + 1;
+    const ny = Math.round(H / GS) + 2 * GP + 1;
+    const x0 = -GP * GS;
+    const y0 = -GP * GS;
+    const N = nx * ny;
+    const vbuf = new Float32Array(N);
+    const edgeS = new Int32Array(4 * N);
+    const G = { nx, ny, x0, y0, N };
+    G.make = (fn) => {
+      const a = new Float32Array(N);
+      let k = 0;
+      for (let j = 0; j < ny; j++) { const y = y0 + j * GS; for (let i = 0; i < nx; i++) a[k++] = fn(x0 + i * GS, y); }
+      return a;
+    };
+    G.each = (a, fn) => {
+      let k = 0;
+      for (let j = 0; j < ny; j++) { const y = y0 + j * GS; for (let i = 0; i < nx; i++, k++) a[k] = fn(a[k], x0 + i * GS, y); }
+      return a;
+    };
+    /** 쌍선형 보간 값 */
+    G.at = (a, x, y) => {
+      let fx = (x - x0) / GS;
+      let fy = (y - y0) / GS;
+      if (fx < 0) fx = 0; else if (fx > nx - 1.001) fx = nx - 1.001;
+      if (fy < 0) fy = 0; else if (fy > ny - 1.001) fy = ny - 1.001;
+      const i = fx | 0;
+      const j = fy | 0;
+      const tx = fx - i;
+      const ty = fy - j;
+      const k = j * nx + i;
+      return (a[k] * (1 - tx) + a[k + 1] * tx) * (1 - ty) + (a[k + nx] * (1 - tx) + a[k + nx + 1] * tx) * ty;
+    };
+    /** 가우스 흐림 (sig: 단위 길이) */
+    G.blur = (a, sig) => {
+      const s = sig / GS;
+      const R = Math.max(1, Math.ceil(s * 2.5));
+      const w = new Float32Array(2 * R + 1);
+      let tot = 0;
+      for (let k = -R; k <= R; k++) { w[k + R] = Math.exp(-(k * k) / (2 * s * s)); tot += w[k + R]; }
+      for (let k = 0; k < w.length; k++) w[k] /= tot;
+      const tmp = new Float32Array(N);
+      const out = new Float32Array(N);
+      for (let j = 0; j < ny; j++) {
+        const row = j * nx;
+        for (let i = 0; i < nx; i++) {
+          let acc = 0;
+          for (let k = -R; k <= R; k++) { let ii = i + k; if (ii < 0) ii = 0; else if (ii >= nx) ii = nx - 1; acc += a[row + ii] * w[k + R]; }
+          tmp[row + i] = acc;
+        }
       }
+      for (let j = 0; j < ny; j++) {
+        for (let i = 0; i < nx; i++) {
+          let acc = 0;
+          for (let k = -R; k <= R; k++) { let jj = j + k; if (jj < 0) jj = 0; else if (jj >= ny) jj = ny - 1; acc += tmp[jj * nx + i] * w[k + R]; }
+          out[j * nx + i] = acc;
+        }
+      }
+      return out;
+    };
+    /** 마칭 스퀘어: a > t 인 곳을 둘러싼 닫힌 고리들 [[x,y,x,y,...], ...] (neg면 a < t) */
+    G.loops = (a, t, neg = false) => {
+      const v = vbuf;
+      for (let j = 0; j < ny; j++) {
+        for (let i = 0; i < nx; i++) {
+          const k = j * nx + i;
+          v[k] = (i === 0 || j === 0 || i === nx - 1 || j === ny - 1) ? -1 : (neg ? t - a[k] : a[k] - t);
+        }
+      }
+      edgeS.fill(-1);
+      const HE = N;
+      const segA = [];
+      const segB = [];
+      const add = (e1, e2) => {
+        const s = segA.length;
+        segA.push(e1); segB.push(e2);
+        if (edgeS[2 * e1] < 0) edgeS[2 * e1] = s; else edgeS[2 * e1 + 1] = s;
+        if (edgeS[2 * e2] < 0) edgeS[2 * e2] = s; else edgeS[2 * e2 + 1] = s;
+      };
+      for (let j = 0; j < ny - 1; j++) {
+        for (let i = 0; i < nx - 1; i++) {
+          const k = j * nx + i;
+          const cs = (v[k] > 0 ? 8 : 0) | (v[k + 1] > 0 ? 4 : 0) | (v[k + nx + 1] > 0 ? 2 : 0) | (v[k + nx] > 0 ? 1 : 0);
+          if (cs === 0 || cs === 15) continue;
+          const T = k;
+          const B = k + nx;
+          const L = HE + k;
+          const R = HE + k + 1;
+          switch (cs) {
+            case 1: case 14: add(L, B); break;
+            case 2: case 13: add(B, R); break;
+            case 3: case 12: add(L, R); break;
+            case 4: case 11: add(T, R); break;
+            case 6: case 9: add(T, B); break;
+            case 7: case 8: add(L, T); break;
+            case 5: if (v[k] + v[k + 1] + v[k + nx] + v[k + nx + 1] > 0) { add(L, T); add(B, R); } else { add(T, R); add(L, B); } break;
+            default: if (v[k] + v[k + 1] + v[k + nx] + v[k + nx + 1] > 0) { add(T, R); add(L, B); } else { add(L, T); add(B, R); } break;
+          }
+        }
+      }
+      const px = (e) => {
+        if (e < HE) {
+          const i = e % nx;
+          const j = (e / nx) | 0;
+          const v0 = v[e];
+          return [x0 + (i + v0 / (v0 - v[e + 1])) * GS, y0 + j * GS];
+        }
+        const k = e - HE;
+        const i = k % nx;
+        const j = (k / nx) | 0;
+        const v0 = v[k];
+        return [x0 + i * GS, y0 + (j + v0 / (v0 - v[k + nx])) * GS];
+      };
+      const used = new Uint8Array(segA.length);
+      const out = [];
+      for (let s0 = 0; s0 < segA.length; s0++) {
+        if (used[s0]) continue;
+        const pts = [];
+        let s = s0;
+        let e = segA[s0];
+        for (let guard = 0; guard < 400000; guard++) {
+          used[s] = 1;
+          const p = px(e);
+          pts.push(p[0], p[1]);
+          const ne = segA[s] === e ? segB[s] : segA[s];
+          const a1 = edgeS[2 * ne];
+          const ns = a1 === s ? edgeS[2 * ne + 1] : a1;
+          e = ne;
+          if (ns < 0 || used[ns]) break;
+          s = ns;
+        }
+        if (pts.length >= 8) out.push(pts);
+      }
+      return out;
+    };
+    return G;
+  }
+
+  /** 거의 곧은 점은 덜어 내기 (닫힌 고리) */
+  function simplify(pts, eps) {
+    const n = pts.length / 2;
+    if (n < 8) return pts;
+    const out = [pts[0], pts[1]];
+    let lx = pts[0];
+    let ly = pts[1];
+    for (let i = 1; i < n; i++) {
+      const x = pts[2 * i];
+      const y = pts[2 * i + 1];
+      const j = (2 * i + 2) % pts.length;
+      const dx = pts[j] - lx;
+      const dy = pts[j + 1] - ly;
+      const L = Math.hypot(dx, dy) || 1;
+      if (Math.abs((x - lx) * dy - (y - ly) * dx) / L > eps) { out.push(x, y); lx = x; ly = y; }
+    }
+    return out;
+  }
+  /** 고리들 → path d */
+  function pathD(ls, eps = 0.3) {
+    let d = '';
+    for (const L0 of ls) {
+      const L = eps > 0 ? simplify(L0, eps) : L0;
+      if (L.length < 8) continue;
+      d += `M${f(L[0])} ${f(L[1])}`;
+      for (let i = 2; i < L.length; i += 2) { const x = f(L[i]); const y = f(L[i + 1]); d += `${x < 0 ? '' : ' '}${x}${y < 0 ? '' : ' '}${y}`; }
       d += 'Z';
     }
     return d;
   }
+  /** 칸 집합(set[c,r]=1) 경계까지의 부호 거리: 안 +, 밖 −. 맵 밖은 가장자리 칸을 늘인 것으로 봄 */
+  function sdTiles(G, set, cols, rows) {
+    const at = (c, r) => set[(r < 0 ? 0 : r >= rows ? rows - 1 : r) * cols + (c < 0 ? 0 : c >= cols ? cols - 1 : c)];
+    return G.make((x, y) => {
+      const c = Math.floor(x / 100);
+      const r = Math.floor(y / 100);
+      const ins = at(c, r);
+      let best = 1e9;
+      for (let dr = -2; dr <= 2; dr++) {
+        for (let dc = -2; dc <= 2; dc++) {
+          if (at(c + dc, r + dr) === ins) continue;
+          const bx = (c + dc) * 100;
+          const by = (r + dr) * 100;
+          const dx = bx > x ? bx - x : (x > bx + 100 ? x - bx - 100 : 0);
+          const dy = by > y ? by - y : (y > by + 100 ? y - by - 100 : 0);
+          const d = dx * dx + dy * dy;
+          if (d < best) best = d;
+        }
+      }
+      const d = best === 1e9 ? 220 : Math.sqrt(best);
+      return ins ? d : -d;
+    });
+  }
 
-  /** 원 하나를 경로 조각으로 (여러 개를 한 path에 모으기 위해) */
+  /* ---------------- 작은 모양 도우미 ---------------- */
   const circ = (x, y, r) => `M${f(x - r)} ${f(y)}a${f(r)} ${f(r)} 0 1 0 ${f(2 * r)} 0a${f(r)} ${f(r)} 0 1 0 ${f(-2 * r)} 0Z`;
-  /** 타원 조각 */
   const ell = (x, y, rx, ry) => `M${f(x - rx)} ${f(y)}a${f(rx)} ${f(ry)} 0 1 0 ${f(2 * rx)} 0a${f(rx)} ${f(ry)} 0 1 0 ${f(-2 * rx)} 0Z`;
-
+  /** 기울인 타원 (deg: x축 기울기) */
+  const ellR = (x, y, rx, ry, deg) => {
+    const a = (deg * Math.PI) / 180;
+    const ex = Math.cos(a) * rx;
+    const ey = Math.sin(a) * rx;
+    return `M${f(x - ex)} ${f(y - ey)}a${f(rx)} ${f(ry)} ${f(deg)} 1 0 ${f(2 * ex)} ${f(2 * ey)}a${f(rx)} ${f(ry)} ${f(deg)} 1 0 ${f(-2 * ex)} ${f(-2 * ey)}Z`;
+  };
+  /** 둥근 모서리 다각형 */
+  function roundPoly(pts, rad) {
+    const n = pts.length;
+    let d = '';
+    for (let i = 0; i < n; i++) {
+      const p0 = pts[(i + n - 1) % n];
+      const p1 = pts[i];
+      const p2 = pts[(i + 1) % n];
+      const l1 = Math.hypot(p0[0] - p1[0], p0[1] - p1[1]) || 1;
+      const l2 = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) || 1;
+      const r1 = Math.min(rad, l1 / 2);
+      const r2 = Math.min(rad, l2 / 2);
+      d += `${i ? 'L' : 'M'}${f(p1[0] + ((p0[0] - p1[0]) * r1) / l1)} ${f(p1[1] + ((p0[1] - p1[1]) * r1) / l1)}Q${f(p1[0])} ${f(p1[1])} ${f(p1[0] + ((p2[0] - p1[0]) * r2) / l2)} ${f(p1[1] + ((p2[1] - p1[1]) * r2) / l2)}`;
+    }
+    return `${d}Z`;
+  }
   /** 같은 모양새 조각을 한 path로 모으는 통 */
   function Buckets() {
     const map = new Map();
@@ -160,17 +404,22 @@
   }
   const fillA = (col, op = 1) => `fill="${col}"${op < 1 ? ` fill-opacity="${op}"` : ''}`;
   const strokeA = (col, w, op = 1) => `fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"${op < 1 ? ` stroke-opacity="${op}"` : ''}`;
+  const SO = (w = 3.5) => `stroke="${OL}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
+  /** 풀포기 (x, y = 밑동, s = 크기) */
+  const tuftD = (x, y, s = 1) => `M${f(x - 4 * s)} ${f(y)}q${f(-1 * s)} ${f(-5 * s)} ${f(-4 * s)} ${f(-8 * s)}M${f(x)} ${f(y)}q0 ${f(-7 * s)} ${f(1.5 * s)} ${f(-10 * s)}M${f(x + 3.5 * s)} ${f(y)}q${f(1 * s)} ${f(-4 * s)} ${f(4.5 * s)} ${f(-7 * s)}`;
+  const tuftHiD = (x, y, s = 1) => `M${f(x - 5.5 * s)} ${f(y - 4 * s)}q${f(-0.8 * s)} ${f(-2.4 * s)} ${f(-2.5 * s)} ${f(-4 * s)}M${f(x + 0.4 * s)} ${f(y - 5 * s)}q0 ${f(-3 * s)} ${f(1.1 * s)} ${f(-5 * s)}`;
 
   /* =========================================================
    * 물체 기호 (나무·바위·기둥) — 바닥 중심 (0,0), 위쪽이 음수
+   * 형태 그림자: 덩어리마다 오른쪽 아래가 어둡고, 왼쪽 위에 빛
    * ========================================================= */
-  const SO = (w = 3.5) => `stroke="${OL}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
-
-  /** 동그란 수관(겹친 원): 바깥 외곽선 → 채움 → 하이라이트 */
-  function canopy(blobs, grad, hlCol, ow = 3.5) {
+  /** 동그란 수관(겹친 원): 외곽선 → 어두운 바탕 → 왼쪽 위로 비킨 본색 → 하이라이트 → 잎 무늬 */
+  function canopy(blobs, C, ow = 3.5) {
     let s = `<path d="${blobs.map(([x, y, r]) => circ(x, y, r + ow)).join('')}" fill="${OL}"/>`;
-    s += `<path d="${blobs.map(([x, y, r]) => circ(x, y, r)).join('')}" fill="${grad}"/>`;
-    s += `<path d="${blobs.filter((b) => b[3]).map(([x, y, r]) => circ(x - r * 0.3, y - r * 0.35, r * 0.38)).join('')}" fill="${hlCol}" fill-opacity="0.55"/>`;
+    s += `<path d="${blobs.map(([x, y, r]) => circ(x, y, r)).join('')}" fill="${C.d}"/>`;
+    s += `<path d="${blobs.map(([x, y, r]) => circ(x - r * 0.13, y - r * 0.16, r * 0.82)).join('')}" fill="${C.m}"/>`;
+    s += `<path d="${blobs.filter((b) => b[3]).map(([x, y, r]) => circ(x - r * 0.34, y - r * 0.38, r * 0.4)).join('')}" fill="${C.l}" fill-opacity="0.75"/>`;
+    s += `<path d="${blobs.map(([x, y, r]) => `M${f(x + r * 0.05)} ${f(y + r * 0.35)}q${f(r * 0.18)} ${f(-r * 0.16)} ${f(r * 0.36)} 0M${f(x - r * 0.45)} ${f(y + r * 0.05)}q${f(r * 0.16)} ${f(-r * 0.15)} ${f(r * 0.32)} 0`).join('')}" ${strokeA(C.d, 2.2, 0.55)}/>`;
     return s;
   }
   /** 굵은 가지(외곽선 있는 선) */
@@ -181,35 +430,39 @@
   /** 지역별 나무 기호들: [{ g: svg, top: 꼭대기 높이(양수), half: 반폭 }] */
   function treeSyms(region, P, def) {
     const leafG = def('leaf', (id) => h.rg(id, [[0, P.leafL], [0.55, P.leaf], [1, P.leafD]], 0.35, 0.3, 0.8));
-    const trunk = (w = 6, ht = 26) => `<path d="M${-w} 2C${-w * 0.7} -8 ${-w * 0.6} ${-ht * 0.6} ${-w * 0.55} ${-ht}H${w * 0.55}C${w * 0.6} ${-ht * 0.6} ${w * 0.7} -8 ${w} 2Z" fill="${P.wood}" ${SO(3)}/>`;
+    const woodG = def('trunk', (id) => h.lg(id, [[0, h.shade(P.wood, 0.25)], [0.45, P.wood], [1, P.woodD]], 'h'));
+    const LC = { d: P.leafD, m: P.leaf, l: P.leafL };
+    const trunk = (w = 6, ht = 26) => `<path d="M${-w} 2C${-w * 0.7} -8 ${-w * 0.6} ${-ht * 0.6} ${-w * 0.55} ${-ht}H${w * 0.55}C${w * 0.6} ${-ht * 0.6} ${w * 0.7} -8 ${w} 2Z" fill="${woodG}" ${SO(3)}/><path d="M${f(-w * 0.2)} -3V${f(-ht * 0.7)}" ${strokeA(P.woodD, 1.8, 0.5)}/>`;
     const pine = (tiers, wTop, wBot, hTot, snow) => {
       let s = trunk(5, 16);
       const n = tiers;
       for (let i = 0; i < n; i++) {
         const t = i / (n - 1 || 1);
         const yb = -10 - (hTot - 10) * (i / n) * 0.92;
-        const yt = yb - (hTot - 10) / n * 1.55;
+        const yt = yb - ((hTot - 10) / n) * 1.55;
         const w = wBot + (wTop - wBot) * t;
         const tip = i === n - 1 ? yt - 6 : yt;
         s += `<path d="M${-w} ${f(yb)}Q0 ${f(yb + 7)} ${w} ${f(yb)}L3 ${f(tip + 3)}Q0 ${f(tip - 1)} -3 ${f(tip + 3)}Z" fill="${leafG}" ${SO(3.2)}/>`;
-        if (snow) s += `<path d="M${f(-w * 0.55)} ${f(yb - (yb - tip) * 0.42)}Q${f(-w * 0.2)} ${f(yb - (yb - tip) * 0.3)} 0 ${f(yb - (yb - tip) * 0.4)}Q${f(w * 0.3)} ${f(yb - (yb - tip) * 0.28)} ${f(w * 0.55)} ${f(yb - (yb - tip) * 0.44)}L2 ${f(tip + 4)}Q0 ${f(tip + 1)} -2 ${f(tip + 4)}Z" fill="#ffffff" ${SO(2.2)}/>`;
+        // 오른쪽 절반은 그늘
+        s += `<path d="M1 ${f(tip + 4)}L${f(w - 2)} ${f(yb - 1)}Q${f(w * 0.5)} ${f(yb + 4.5)} 1 ${f(yb + 3)}Z" fill="${P.leafD}" fill-opacity="0.45"/>`;
+        if (snow) s += `<path d="M${f(-w * 0.55)} ${f(yb - (yb - tip) * 0.42)}Q${f(-w * 0.2)} ${f(yb - (yb - tip) * 0.3)} 0 ${f(yb - (yb - tip) * 0.4)}Q${f(w * 0.3)} ${f(yb - (yb - tip) * 0.28)} ${f(w * 0.55)} ${f(yb - (yb - tip) * 0.44)}L2 ${f(tip + 4)}Q0 ${f(tip + 1)} -2 ${f(tip + 4)}Z" fill="#ffffff" ${SO(2.2)}/><path d="M${f(w * 0.1)} ${f(yb - (yb - tip) * 0.36)}Q${f(w * 0.32)} ${f(yb - (yb - tip) * 0.3)} ${f(w * 0.5)} ${f(yb - (yb - tip) * 0.42)}" ${strokeA('#bcd0e6', 2.2)}/>`;
         else s += `<path d="M${f(-w * 0.55)} ${f(yb - 2)}L-2 ${f(tip + 6)}" ${strokeA(P.leafL, 3.5, 0.7)}/>`;
       }
       return s;
     };
     const out = [];
     if (region === 1) {
-      out.push({ g: trunk() + canopy([[-14, -36, 19, 1], [14, -37, 19], [0, -53, 22, 1], [0, -33, 20]], leafG, P.leafL), top: 79, half: 37 });
-      out.push({ g: trunk(5, 24) + canopy([[-11, -34, 17, 1], [12, -42, 20, 1], [-5, -55, 16, 1], [4, -30, 16]], leafG, P.leafL), top: 75, half: 36 });
+      out.push({ g: trunk() + canopy([[-14, -36, 19, 1], [14, -37, 19], [0, -53, 22, 1], [0, -33, 20]], LC), top: 79, half: 37 });
+      out.push({ g: trunk(5, 24) + canopy([[-11, -34, 17, 1], [12, -42, 20, 1], [-5, -55, 16, 1], [4, -30, 16]], LC), top: 75, half: 36 });
       out.push({ g: pine(3, 9, 30, 80, false), top: 84, half: 33 });
-      out.push({ g: `${canopy([[-16, -14, 14, 1], [14, -14, 14, 1], [0, -22, 16, 1]], leafG, P.leafL)}<path d="${circ(-8, -18, 3)}${circ(9, -24, 3)}${circ(16, -12, 3)}" fill="${P.flowers[2]}" ${SO(1.5)}/>`, top: 42, half: 34, bush: 1 });
+      out.push({ g: `${canopy([[-16, -14, 14, 1], [14, -14, 14, 1], [0, -22, 16, 1]], LC)}<path d="${circ(-8, -18, 3)}${circ(9, -24, 3)}${circ(16, -12, 3)}" fill="${P.flowers[2]}" ${SO(1.5)}/>`, top: 42, half: 34, bush: 1 });
     } else if (region === 2) {
       out.push({ g: pine(3, 9, 31, 84, true), top: 88, half: 34 });
       out.push({ g: pine(4, 8, 28, 88, true), top: 92, half: 31 });
       out.push({ g: pine(2, 10, 26, 58, true), top: 62, half: 29 });
-      out.push({ g: `<path d="M-30 2C-34-10-22-24-6-24C2-34 22-30 26-16C34-12 34 0 28 2Z" fill="#f4f9fe" ${SO(3.2)}/><path d="M-20-12C-14-18-6-18 0-14" ${strokeA('#bcd0e4', 3)}/>`, top: 32, half: 34, bush: 1 });
+      out.push({ g: `<path d="M-30 2C-34-10-22-24-6-24C2-34 22-30 26-16C34-12 34 0 28 2Z" fill="#f4f9fe" ${SO(3.2)}/><path d="M6 -27C18-27 26-20 26-14C32-10 33-2 28 1C20 2 10 1 6 -2Z" fill="#c6d6e8"/><path d="M-20-12C-14-18-6-18 0-14" ${strokeA('#ffffff', 3)}/>`, top: 32, half: 34, bush: 1 });
     } else if (region === 3) {
-      const cG = def('cactus', (id) => h.lg(id, [[0, P.leafL], [0.5, P.leaf], [1, P.leafD]], 'h'));
+      const cG = def('cactus', (id) => h.lg(id, [[0, P.leafL], [0.45, P.leaf], [1, P.leafD]], 'h'));
       const cactus = (arms) => {
         let s = '';
         const body = 'M-8 2V-54Q-8-64 0-64Q8-64 8-54V2Z';
@@ -218,13 +471,14 @@
         s += `<path d="${body}${armL}${armR}" fill="${OL}" stroke="${OL}" stroke-width="7" stroke-linejoin="round"/>`;
         s += `<path d="${body}${armL}${armR}" fill="${cG}"/>`;
         s += `<path d="M-3 -4V-56M3 -4V-58" ${strokeA(P.leafD, 2.2, 0.6)}/><path d="M-4.5 -10V-56" ${strokeA(P.leafL, 2.4, 0.7)}/>`;
+        s += `<path d="M-2 -60l-4 -2M2 -40l4 -2M-2 -26l-4 -2M2 -14l4 -2" ${strokeA('#fff1c0', 1.6, 0.8)}/>`;
         s += `<path d="${circ(0, -64, 3.5)}" fill="#ff7a8a" ${SO(1.6)}/>`;
         return s;
       };
       out.push({ g: cactus([22, 32]), top: 70, half: 28 });
       out.push({ g: cactus([30, 0]), top: 70, half: 28 });
-      out.push({ g: branches('M0 2L-2-16L-14-30M-2-16L6-34M6-34L14-40M6-34L2-46M-2-16L12-22', P.wood, 4.5) + canopy([[-14, -32, 7, 1], [14, -40, 7, 1], [2, -48, 7, 1]], `${P.leafD}`, P.leafL, 3), top: 58, half: 26 });
-      out.push({ g: `${canopy([[-13, -12, 12, 1], [12, -12, 12, 1], [0, -18, 13, 1]], '#9c8f4e', '#d8cc80')}<path d="M-8-22l-6-9M6-26l3-10M0-30v-8" ${strokeA(P.woodD, 2.6)}/>`, top: 40, half: 28, bush: 1 });
+      out.push({ g: branches('M0 2L-2-16L-14-30M-2-16L6-34M6-34L14-40M6-34L2-46M-2-16L12-22', P.wood, 4.5) + canopy([[-14, -32, 7, 1], [14, -40, 7, 1], [2, -48, 7, 1]], LC, 3), top: 58, half: 26 });
+      out.push({ g: `${canopy([[-13, -12, 12, 1], [12, -12, 12, 1], [0, -18, 13, 1]], { d: '#7a6e38', m: '#9c8f4e', l: '#d8cc80' })}<path d="M-8-22l-6-9M6-26l3-10M0-30v-8" ${strokeA(P.woodD, 2.6)}/>`, top: 40, half: 28, bush: 1 });
     } else if (region === 4) {
       const fr = (a, len) => {
         const r = (a * Math.PI) / 180;
@@ -237,15 +491,15 @@
       const palm = (lean) => {
         const tx = lean;
         const tyTop = -62;
-        let s = `<path d="M-6 2Q${tx * 0.3 - 6} -30 ${tx - 4} ${tyTop}H${tx + 4}Q${tx * 0.3 + 6} -30 6 2Z" fill="${P.wood}" ${SO(3)}/>`;
+        let s = `<path d="M-6 2Q${tx * 0.3 - 6} -30 ${tx - 4} ${tyTop}H${tx + 4}Q${tx * 0.3 + 6} -30 6 2Z" fill="${woodG}" ${SO(3)}/>`;
         s += `<path d="M${f(tx * 0.08 - 5)} -12h10M${f(tx * 0.25 - 5)} -26h10M${f(tx * 0.45 - 5)} -40h10M${f(tx * 0.7 - 5)} -52h10" ${strokeA(P.woodD, 2.4, 0.8)}/>`;
-        const fronds = [200, 235, 270, 305, 340, 160, 20].map((a) => fr(a, 34)).join('');
-        s += `<g transform="translate(${tx} ${tyTop})"><path d="${fronds}" fill="${leafG}" ${SO(3)}/><path d="${circ(-4, 3, 4)}${circ(4, 4, 4)}" fill="${P.woodD}" ${SO(2)}/></g>`;
+        const back = [160, 20, 340].map((a) => fr(a, 34)).join('');
+        const front = [200, 235, 270, 305].map((a) => fr(a, 34)).join('');
+        s += `<g transform="translate(${tx} ${tyTop})"><path d="${back}" fill="${P.leafD}" ${SO(3)}/><path d="${front}" fill="${leafG}" ${SO(3)}/><path d="${circ(-4, 3, 4)}${circ(4, 4, 4)}" fill="${P.woodD}" ${SO(2)}/></g>`;
         return s;
       };
       out.push({ g: palm(10), top: 88, half: 38 });
       out.push({ g: palm(-9), top: 88, half: 38 });
-      // 바닷가 용설란 덤불(뾰족한 잎이 방사형으로)
       const blade = (a, len, w) => {
         const r = (a * Math.PI) / 180;
         const ex = Math.cos(r) * len;
@@ -256,9 +510,7 @@
       };
       const agave = [200, 228, 250, 270, 290, 312, 340].map((a, i) => blade(a, i % 2 ? 30 : 38, 6)).join('');
       out.push({ g: `<g transform="translate(0 -2)"><path d="${agave}" fill="${leafG}" ${SO(3)}/><path d="${[228, 270, 312].map((a) => { const r = (a * Math.PI) / 180; return `M0 0L${f(Math.cos(r) * 24)} ${f(Math.sin(r) * 24)}`; }).join('')}" ${strokeA(P.leafL, 2.4, 0.8)}/></g>`, top: 42, half: 38, bush: 1 });
-      const coral = branches('M0 2V-18M0-18L-14-32V-44M0-18L12-30V-46M-14-32L-22-38M12-30L20-36M0-18V-38', '#ff8a7a', 6) +
-        `<path d="${circ(-14, -45, 3.5)}${circ(12, -47, 3.5)}${circ(0, -40, 3.5)}${circ(-22, -39, 3)}${circ(20, -37, 3)}" fill="#ffd0c4"/>`;
-      out.push({ g: coral, top: 52, half: 28, coral: 1 });
+      out.push({ g: coralSyms()[0].g, top: 52, half: 28, coral: 1 });
     } else {
       // 잿빛 고목: 굵은 밑동 + 맨가지 + 금빛 잎 몇 장
       const wG = def('dwood', (id) => h.lg(id, [[0, h.shade(P.wood, 0.25)], [0.6, P.wood], [1, P.woodD]], 'h'));
@@ -271,7 +523,22 @@
     return out;
   }
 
-  /** 지역별 바위 기호들 */
+  /** 산호 기호들 (폭풍 해안) */
+  function coralSyms() {
+    const pink = branches('M0 2V-18M0-18L-14-32V-44M0-18L12-30V-46M-14-32L-22-38M12-30L20-36M0-18V-38', '#ff8a7a', 6) +
+      `<path d="M2 -4V-16M2-18L13-29" ${strokeA('#c4504a', 2.4, 0.7)}/>` +
+      `<path d="${circ(-14, -45, 3.5)}${circ(12, -47, 3.5)}${circ(0, -40, 3.5)}${circ(-22, -39, 3)}${circ(20, -37, 3)}" fill="#ffd0c4"/>`;
+    const brain = `<path d="M-24 2C-28-10-20-24-2-25C16-26 27-14 25 0C14 5-12 5-24 2Z" fill="#f0b45a" ${SO(3.2)}/>` +
+      `<path d="M4 -24C16-22 25-12 24 0C14 4 4 4 0 3C10-6 10-16 4-24Z" fill="#c4823a" fill-opacity="0.75"/>` +
+      `<path d="M-18-6q6-8 12 0t12 0M-14-14q6-7 12 0t10 0M-10-20q5-4 10 0" ${strokeA('#a0602a', 2.2)}/>` +
+      `<path d="M-16-16q4-5 8-6" ${strokeA('#ffe0a0', 2.6, 0.9)}/>`;
+    const fan = `<path d="M0 2L-2-8M-2-8C-22-14-26-34-14-46C-4-54 10-52 18-42C28-30 20-12 -2-8Z" fill="#a768c8" ${SO(3.2)}/>` +
+      `<path d="M2-10C14-14 24-26 18-42C26-30 22-14 2-10Z" fill="#6e3d8e" fill-opacity="0.7"/>` +
+      `<path d="M-2-10L-14-40M-2-10L-2-48M-2-10L10-44M-2-10L18-32M-2-10L-20-24" ${strokeA('#e0b8f0', 1.8, 0.8)}/>`;
+    return [{ g: pink, top: 52, half: 26 }, { g: brain, top: 28, half: 28 }, { g: fan, top: 56, half: 28 }];
+  }
+
+  /** 지역별 바위 기호들 (오른쪽 아래 면은 어둡게) */
   function rockSyms(region, P, def) {
     const rG = def('rock', (id) => h.rg(id, [[0, P.stoneL], [0.5, P.stone], [1, P.stoneD]], 0.35, 0.25, 0.85));
     const out = [];
@@ -280,20 +547,20 @@
       if (region === 2) return `<path d="${d}" fill="#ffffff" ${SO(2)}/>`;
       return '';
     };
-    const boulder = (body, cap, crack, extra = '') => `<path d="${body}" fill="${rG}" ${SO()}/>${accentCap(cap)}<path d="${crack}" ${strokeA(P.stoneD, 2.6, 0.85)}/>${extra}`;
-    const A = { body: 'M-33 0C-37-10-32-26-18-34C-6-41 14-40 26-30C35-22 37-8 32 0C14 5-16 5-33 0Z', cap: 'M-24-27C-16-35-2-38 10-36C18-34 24-30 26-27C14-22-10-21-24-27Z', crack: 'M6-1L10-13L4-21', top: 40 };
-    const B = { body: 'M-31 0C-35-12-27-30-11-32C3-34 13-24 13-12C13-4 9 0 5 2C-7 4-21 3-31 0ZM3 2C1-8 7-20 19-21C29-22 35-12 33-2C29 4 13 5 3 2Z', cap: 'M-25-21C-19-29-7-31 3-27C-5-23-15-22-25-21ZM8-14C11-19 19-21 26-18C22-14 14-13 8-14Z', crack: 'M-14-2L-11-12M22-2L24-9', top: 34 };
-    const C = { body: 'M-22 0L-26-20L-16-46L-2-52L14-44L22-22L24 0C8 4-10 4-22 0Z', cap: 'M-16-46L-2-52L14-44L4-37Z', crack: 'M4-37L6-18L2 0', top: 54 };
+    const boulder = (S, extra = '') => `<path d="${S.body}" fill="${rG}" ${SO()}/><path d="${S.facet}" fill="${P.stoneD}" fill-opacity="0.45"/>${accentCap(S.cap)}<path d="${S.crack}" ${strokeA(P.stoneD, 2.6, 0.85)}/><path d="${S.hi}" ${strokeA(P.stoneL, 2.8, 0.75)}/>${extra}`;
+    const A = { body: 'M-33 0C-37-10-32-26-18-34C-6-41 14-40 26-30C35-22 37-8 32 0C14 5-16 5-33 0Z', facet: 'M6 1L10-13L4-21L18-36C24-34 30-28 33-22C37-12 36-4 32 0C24 3 14 3 6 1Z', cap: 'M-24-27C-16-35-2-38 10-36C18-34 24-30 26-27C14-22-10-21-24-27Z', crack: 'M6-1L10-13L4-21', hi: 'M-29-12C-28-20-24-26-17-30', top: 40 };
+    const B = { body: 'M-31 0C-35-12-27-30-11-32C3-34 13-24 13-12C13-4 9 0 5 2C-7 4-21 3-31 0ZM3 2C1-8 7-20 19-21C29-22 35-12 33-2C29 4 13 5 3 2Z', facet: 'M-14 2L-11-12L-2-30C8-28 13-20 13-12C13-4 9 0 5 2C-3 3-9 3-14 2ZM22 3L24-9L28-19C33-15 35-8 33-2C30 2 26 3 22 3Z', cap: 'M-25-21C-19-29-7-31 3-27C-5-23-15-22-25-21ZM8-14C11-19 19-21 26-18C22-14 14-13 8-14Z', crack: 'M-14-2L-11-12M22-2L24-9', hi: 'M-28-8C-27-16-23-22-17-26M7-8C8-13 11-16 15-18', top: 34 };
+    const C = { body: 'M-22 0L-26-20L-16-46L-2-52L14-44L22-22L24 0C8 4-10 4-22 0Z', facet: 'M4-37L14-44L22-22L24 0C16 2 8 2 2 0L6-18Z', cap: 'M-16-46L-2-52L14-44L4-37Z', crack: 'M4-37L6-18L2 0', hi: 'M-22-20L-14-42', top: 54 };
     if (region === 3) {
       // 겹겹이 쌓인 사암
-      const slab = (y, w, hh) => `<rect x="${-w}" y="${y - hh}" width="${w * 2}" height="${hh}" rx="7" fill="${rG}" ${SO()}/><path d="M${-w + 5} ${y - hh + 4}H${w - 6}" ${strokeA(P.accent, 3, 0.8)}/>`;
+      const slab = (y, w, hh) => `<rect x="${-w}" y="${y - hh}" width="${w * 2}" height="${hh}" rx="7" fill="${rG}" ${SO()}/><path d="M${w * 0.35} ${y - hh + 2}H${w - 4}V${y - 3}H${w * 0.2}Z" fill="${P.stoneD}" fill-opacity="0.35"/><path d="M${-w + 5} ${y - hh + 4}H${w - 6}" ${strokeA(P.accent, 3, 0.8)}/>`;
       out.push({ g: slab(2, 32, 18) + slab(-15, 25, 16) + slab(-30, 16, 14), top: 46 });
-      out.push({ g: boulder(A.body, A.cap, A.crack, `<path d="M-30-12C-14-8 14-8 33-12" ${strokeA(P.accent, 3, 0.7)}/>`), top: A.top });
-      out.push({ g: boulder(C.body, C.cap, C.crack, `<path d="M-24-14H23M-20-30H18" ${strokeA(P.accent, 3, 0.7)}/>`), top: C.top });
+      out.push({ g: boulder(A, `<path d="M-30-12C-14-8 14-8 33-12" ${strokeA(P.accent, 3, 0.7)}/>`), top: A.top });
+      out.push({ g: boulder(C, `<path d="M-24-14H23M-20-30H18" ${strokeA(P.accent, 3, 0.7)}/>`), top: C.top });
     } else if (region === 5) {
       const bG = def('bronze', (id) => h.rg(id, [[0, '#fbe3a0'], [0.5, '#d29a3a'], [1, '#7c5220']], 0.35, 0.3, 0.85));
-      out.push({ g: boulder(A.body, A.cap, A.crack, `<path d="M-18-30L-10-20L-14-10" ${strokeA(P.accent, 2.6, 0.9)}/>`), top: A.top });
-      out.push({ g: boulder(C.body, C.cap, C.crack), top: C.top });
+      out.push({ g: boulder(A, `<path d="M-18-30L-10-20L-14-10" ${strokeA(P.accent, 2.6, 0.9)}/>`), top: A.top });
+      out.push({ g: boulder(C), top: C.top });
       // 깨진 대종 조각(청동)
       out.push({ g: `<path d="M-29 -4C-28-22-18-38 0-46L7-34L-1-29L8-19L0-12L6 -4Z" fill="${bG}" ${SO()}/>` +
         `<path d="M-32 3C-32-2-31-5-29-8H6L10 3Z" fill="#8a5a22" ${SO()}/>` +
@@ -301,16 +568,16 @@
         `<path d="M12 3L16-9L27-13L33-3L30 3Z" fill="${bG}" ${SO()}/><path d="M14-2H31" ${strokeA('#8a5a22', 3)}/>`, top: 48 });
     } else {
       const ex = region === 4 ? (d) => `<path d="${d}" fill="${P.accent}" ${SO(1.6)}/>` : () => '';
-      out.push({ g: boulder(A.body, A.cap, A.crack, ex(circ(-20, -12, 3) + circ(-12, -6, 2.5) + circ(18, -8, 3))), top: A.top });
-      out.push({ g: boulder(B.body, B.cap, B.crack, ex(circ(-18, -8, 2.6) + circ(24, -6, 2.6))), top: B.top });
-      out.push({ g: boulder(C.body, C.cap, C.crack, ex(circ(-14, -10, 2.6) + circ(10, -6, 2.6))), top: C.top });
+      out.push({ g: boulder(A, ex(circ(-20, -12, 3) + circ(-12, -6, 2.5) + circ(18, -8, 3))), top: A.top });
+      out.push({ g: boulder(B, ex(circ(-18, -8, 2.6) + circ(24, -6, 2.6))), top: B.top });
+      out.push({ g: boulder(C, ex(circ(-14, -10, 2.6) + circ(10, -6, 2.6))), top: C.top });
     }
     return out;
   }
 
   /** 무너진 기둥 기호들 */
   function pillarSyms(region, P, def) {
-    const sG = def('pillar', (id) => h.lg(id, [[0, P.stone], [0.25, P.stoneL], [0.65, P.stone], [1, P.stoneD]], 'h'));
+    const sG = def('pillar', (id) => h.lg(id, [[0, P.stone], [0.22, P.stoneL], [0.6, P.stone], [1, P.stoneD]], 'h'));
     const band = region === 5 ? P.accent : region === 4 ? '#3e8a5c' : region === 1 ? P.accent : null;
     const col = (ht, broken) => {
       const top = -15 - ht;
@@ -334,23 +601,66 @@
   /* =========================================================
    * 맵 바탕
    * ========================================================= */
+  const bgCache = new Map();
   function mapBackground(map) {
+    const mid = String(map.id != null ? map.id : (map.def && map.def.id) || 'map');
+    const ckey = `${mid}|${map.cols}x${map.rows}|${Array.prototype.join.call(map.kinds, '')}`;
+    if (bgCache.has(ckey)) return bgCache.get(ckey);
+    const svg = drawMap(map, mid);
+    if (bgCache.size > 6) bgCache.delete(bgCache.keys().next().value);
+    bgCache.set(ckey, svg);
+    return svg;
+  }
+
+  function drawMap(map, mid) {
     const cols = map.cols;
     const rows = map.rows;
-    const kinds = map.kinds;
     const region = (map.def && PAL[map.def.region]) ? map.def.region : 1;
     const P = PAL[region];
+    const ST = MAP_STYLE[mid] || {};
     const W = cols * 100;
     const H = rows * 100;
-    const rnd = rndFactory(map.id != null ? map.id : (map.def && map.def.id) || 'map');
+    const rnd = rndFactory(mid);
+    const { vn, fbm } = noiseFactory(rnd);
+    const G = makeGrid(W, H);
     const inb = (c, r) => c >= 0 && r >= 0 && c < cols && r < rows;
-    const kAt = (c, r) => (inb(c, r) ? kinds[r * cols + c] : 0);
+    const raw = (c, r) => (inb(c, r) ? map.kinds[r * cols + c] : 0);
+    const N4 = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+
+    /* ---- 하늘 입구 칸의 바닥: 이웃 장애물 중 가장 많은 것으로 (없으면 맨땅) ---- */
+    const kinds = new Uint8Array(cols * rows);
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        let k = raw(c, r);
+        if (k === K.AIR) {
+          const cnt = {};
+          for (const [dc, dr] of N4) {
+            let n = raw(c + dc, r + dr);
+            if (n === K.PILLAR) n = K.ROCK;
+            if (n === K.WATER || n === K.LAVA || n === K.ROCK || n === K.TREE) cnt[n] = (cnt[n] || 0) + 1;
+          }
+          let best = 0;
+          let bk = 0;
+          for (const n of [K.WATER, K.LAVA, K.ROCK, K.TREE]) if ((cnt[n] || 0) > best) { best = cnt[n]; bk = n; }
+          k = bk;
+        }
+        kinds[r * cols + c] = k;
+      }
+    }
+    const kAt = (c, r) => (inb(c, r) ? kinds[r * cols + c] : -1);
+    const isAir = (c, r) => raw(c, r) === K.AIR;
     const isRoad = (k) => k === K.PATH || k === K.SPAWN || k === K.LANTERN;
-    const isObst = (k) => k === K.WATER || k === K.ROCK || k === K.TREE || k === K.LAVA || k === K.PILLAR || k === K.AIR || k === 0;
+    const isObst = (k) => k === K.WATER || k === K.ROCK || k === K.TREE || k === K.LAVA || k === K.PILLAR || k === 0 || k === -1;
     const cellsWhere = (pred) => {
       const out = [];
       for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (pred(kAt(c, r), c, r)) out.push([c, r]);
       return out;
+    };
+    const setOf = (pred) => {
+      const s = new Uint8Array(cols * rows);
+      let any = false;
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (pred(kAt(c, r), c, r)) { s[r * cols + c] = 1; any = true; }
+      return any ? s : null;
     };
 
     const defs = [];
@@ -359,7 +669,19 @@
       if (!memo[key]) { const id = h.uid('tr'); defs.push(mk(id)); memo[key] = `url(#${id})`; }
       return memo[key];
     };
+    const clip = (d, tf = '') => { const id = h.uid('tc'); defs.push(`<clipPath id="${id}"><path d="${d}"${tf ? ` transform="${tf}"` : ''} clip-rule="evenodd"/></clipPath>`); return `url(#${id})`; };
     const body = [];
+    const P_ = (d, attrs) => (d ? `<path d="${d}" ${attrs}/>` : '');
+    const EO = 'fill-rule="evenodd"';
+    const fillP = (d, col, op = 1) => P_(d, `${fillA(col, op)} ${EO}`);
+    const contour = (a, t, eps = 0.3) => pathD(G.loops(a, t), eps);
+    const BIG = `M-60 -60H${W + 60}V${H + 60}H-60Z`;
+    /** 잡음 더하기 (거리장 테두리를 들쭉날쭉하게) */
+    const addNoise = (a, amp, sc, k, amp2 = amp * 0.4, sc2 = sc / 5) => G.each(a, (v, x, y) => (v < -45 ? v : v + amp * (fbm(x / sc, y / sc, k, 2) * 2 - 1) + amp2 * (vn(x / sc2, y / sc2, k + 9) * 2 - 1)));
+    /** 영역 밖은 지움(등고선이 쓸데없이 맵 전체에 생기지 않게): m < lo 인 곳은 등고선 밖 */
+    const maskF = (a, m, lo, neg = false) => { const o = new Float32Array(G.N); for (let k = 0; k < G.N; k++) o[k] = m[k] < lo ? (neg ? 9 : -9) : a[k]; return o; };
+    /** 부호 거리장 (흐림 + 잡음) */
+    const sdField = (set, blurSig, amp, sc, k, amp2) => addNoise(G.blur(sdTiles(G, set, cols, rows), blurSig), amp, sc, k, amp2);
 
     /* ---- 다리 찾기: 길 칸의 양옆(또는 위아래)이 물/용암 ---- */
     const liquid = (k) => k === K.WATER || k === K.LAVA;
@@ -374,459 +696,523 @@
     }
     const bridgeAt = (c, r) => (inb(c, r) ? bridges.get(r * cols + c) : undefined);
 
-    /* ---- 0. 바탕 흙/풀 + 얼룩 ---- */
-    body.push(`<rect width="${W}" height="${H}" fill="${P.wild}"/>`);
-    const nL = def('nl', (id) => h.rg(id, [[0, P.wildL, 0.55], [1, P.wildL, 0]], 0.5, 0.5, 0.5));
-    const nD = def('nd', (id) => h.rg(id, [[0, P.wildD, 0.6], [1, P.wildD, 0]], 0.5, 0.5, 0.5));
+    /* ---- 이어진 바위·기둥(3칸 이상) = 돋운 절벽/성벽 ---- */
+    const cliffSet = new Uint8Array(cols * rows);
     {
-      let s = '';
-      const n = Math.round((cols * rows) / 2.5);
-      for (let i = 0; i < n; i++) {
-        const x = rnd(i, 1, 11) * W;
-        const y = rnd(i, 2, 11) * H;
-        const rx = 50 + rnd(i, 3, 11) * 90;
-        s += `<ellipse cx="${f(x)}" cy="${f(y)}" rx="${f(rx)}" ry="${f(rx * (0.5 + rnd(i, 4, 11) * 0.3))}" fill="${i % 2 ? nL : nD}"/>`;
-      }
-      body.push(s);
-    }
-
-    /* ---- 1. 숲 바닥 · 자갈 바닥 ---- */
-    const treeCells = cellsWhere((k) => k === K.TREE);
-    if (treeCells.length) {
-      const inT = (c, r) => (inb(c, r) ? kAt(c, r) === K.TREE : true);
-      body.push(`<path d="${blobPath(treeCells, inT, 5, 34)}" fill="${P.forest}"/>`);
-    }
-    const rockCells = cellsWhere((k) => k === K.ROCK || k === K.PILLAR);
-    if (rockCells.length) {
-      const inR = (c, r) => { const k = kAt(c, r); return k === K.ROCK || k === K.PILLAR; };
-      body.push(`<path d="${blobPath(rockCells, inR, 9, 32)}" fill="${P.rubble}" fill-opacity="0.75"/>`);
-    }
-
-    /* ---- 2. 물 (다리 아래 포함) ---- */
-    const waterAt = (c, r) => { if (!inb(c, r)) return true; const k = kAt(c, r); if (k === K.WATER) return true; const b = bridgeAt(c, r); return !!(b && !b.lava); };
-    const waterCells = cellsWhere((k, c, r) => k === K.WATER || (bridgeAt(c, r) && !bridgeAt(c, r).lava));
-    if (waterCells.length) {
-      const wG = def('water', (id) => `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${f(W * 0.3)}" y2="${H}"><stop offset="0" stop-color="${h.shade(P.water, 0.08)}"/><stop offset="1" stop-color="${h.shade(P.water, -0.12)}"/></linearGradient>`);
-      const coast = region === 4;
-      body.push(`<path d="${blobPath(waterCells, waterAt, 1, 38)}" fill="${P.shore}"/>`);
-      body.push(`<path d="${blobPath(waterCells, waterAt, 6, 36)}" fill="${h.shade(P.shore, -0.18)}"/>`);
-      body.push(`<path d="${blobPath(waterCells, waterAt, coast ? 9 : 10, 34)}" fill="${P.foam}"/>`);
-      body.push(`<path d="${blobPath(waterCells, waterAt, coast ? 15 : 13, 31)}" fill="${wG}"/>`);
-      body.push(`<path d="${blobPath(waterCells, waterAt, 30, 20)}" fill="${P.waterD}" fill-opacity="0.45"/>`);
-      // 잔물결·반짝임
-      const bk = Buckets();
-      for (const [c, r] of waterCells) {
-        if (bridgeAt(c, r)) continue;
-        const n = 1 + Math.floor(rnd(c, r, 21) * 2);
-        for (let i = 0; i < n; i++) {
-          const x = c * 100 + 24 + rnd(c, r, 22 + i) * 52;
-          const y = r * 100 + 26 + rnd(c, r, 24 + i) * 50;
-          const w = 9 + rnd(c, r, 26 + i) * 8;
-          bk.add(strokeA(P.waterL, 3.2, 0.7), `M${f(x - w)} ${f(y)}q${f(w / 2)} ${-5} ${f(w)} 0q${f(w / 2)} 5 ${f(w)} 0`);
-        }
-        if (rnd(c, r, 28) < 0.35) bk.add(fillA('#ffffff', 0.75), circ(c * 100 + 30 + rnd(c, r, 29) * 40, r * 100 + 30 + rnd(c, r, 30) * 40, 2.6));
-        // 지역 장식
-        const v = rnd(c, r, 31);
-        const x = c * 100 + 28 + rnd(c, r, 32) * 44;
-        const y = r * 100 + 30 + rnd(c, r, 33) * 40;
-        if (region === 1 && v < 0.3) {
-          bk.add(`fill="#5aa64a" ${SO(2.5)}`, `M${f(x)} ${f(y)}l9 -3a10 8 0 1 0 0 6Z`);
-          if (v < 0.12) bk.add(`fill="#ffc6d8" ${SO(1.8)}`, circ(x - 4, y - 1, 3.2));
-        } else if (region === 2 && v < 0.35) {
-          bk.add(`fill="#f2fbff" ${SO(2.4)}`, `M${f(x - 12)} ${f(y)}l5 -7h13l6 6l-5 6h-14Z`);
-        } else if (region === 4 && v < 0.3) {
-          bk.add(strokeA('#ffffff', 3.2, 0.8), `M${f(x - 12)} ${f(y)}q6 -7 12 0q6 7 12 0`);
-        } else if (region === 5 && v < 0.3) {
-          bk.add(fillA(P.accent, 0.8), `M${f(x)} ${f(y - 5)}l2 4l4 1l-4 1l-2 4l-2 -4l-4 -1l4 -1Z`);
-        }
-      }
-      body.push(bk.out());
-    }
-
-    /* ---- 3. 용암 ---- */
-    const lavaCells = cellsWhere((k, c, r) => k === K.LAVA || (bridgeAt(c, r) && bridgeAt(c, r).lava));
-    if (lavaCells.length) {
-      const lavaAt = (c, r) => { if (!inb(c, r)) return true; const k = kAt(c, r); if (k === K.LAVA) return true; const b = bridgeAt(c, r); return !!(b && b.lava); };
-      const blurF = def('lblur', (id) => h.blur(id, 9));
-      const lG = def('lava', (id) => h.rg(id, [[0, P.lavaL], [0.5, P.lava], [1, P.lavaD]], 0.5, 0.5, 0.7));
-      const d0 = blobPath(lavaCells, lavaAt, 4, 34);
-      const d1 = blobPath(lavaCells, lavaAt, 11, 30);
-      body.push(`<path d="${d0}" fill="${P.lava}" fill-opacity="0.75" filter="${blurF}"/>`);
-      body.push(`<path d="${d0}" fill="${P.crust}"/>`);
-      body.push(`<path d="${blobPath(lavaCells, lavaAt, 8, 32)}" fill="${P.lavaL}"/>`);
-      body.push(`<path d="${d1}" fill="${lG}"/>`);
-      // 판 모양 딱지 사이로 빛나는 금 — 칸을 넘어 이어지도록 공용 격자점(흔들림) 사용
-      const clipId = h.uid('tr');
-      defs.push(`<clipPath id="${clipId}"><path d="${d1}"/></clipPath>`);
-      const S2 = 50;
-      const jp = (gx, gy) => [gx * S2 + (rnd(gx, gy, 41) - 0.5) * 34, gy * S2 + (rnd(gx, gy, 42) - 0.5) * 34];
-      let plates = '';
-      let hot = '';
-      for (const [c, r] of lavaCells) {
-        for (let sy = 0; sy < 2; sy++) {
-          for (let sx = 0; sx < 2; sx++) {
-            const gx = c * 2 + sx;
-            const gy = r * 2 + sy;
-            if (rnd(gx, gy, 43) < 0.07) continue; // 녹은 웅덩이(딱지 없음)
-            const q = [jp(gx, gy), jp(gx + 1, gy), jp(gx + 1, gy + 1), jp(gx, gy + 1)];
-            const cx = (q[0][0] + q[1][0] + q[2][0] + q[3][0]) / 4;
-            const cy = (q[0][1] + q[1][1] + q[2][1] + q[3][1]) / 4;
-            const sh = 0.82 + rnd(gx, gy, 44) * 0.08;
-            const pts = q.map(([x, y]) => [cx + (x - cx) * sh, cy + (y - cy) * sh]);
-            // 변 가운데 점도 흔들어 둥글고 고르지 않은 판으로
-            const mids = pts.map((p0, i) => {
-              const p1 = pts[(i + 1) % 4];
-              const t = (rnd(gx * 4 + i, gy, 45) - 0.5) * 0.25;
-              return [(p0[0] + p1[0]) / 2 + (p1[1] - p0[1]) * t, (p0[1] + p1[1]) / 2 - (p1[0] - p0[0]) * t];
-            });
-            plates += `M${f(mids[3][0])} ${f(mids[3][1])}`;
-            for (let i = 0; i < 4; i++) plates += `Q${f(pts[i][0])} ${f(pts[i][1])} ${f(mids[i][0])} ${f(mids[i][1])}`;
-            plates += 'Z';
-            hot += circ(cx - 3, cy - 3, 5 + rnd(gx, gy, 46) * 4);
-          }
-        }
-      }
-      const pG = def('crust', (id) => h.rg(id, [[0, h.shade(P.crust, 0.25)], [1, P.crust]], 0.35, 0.3, 0.9));
-      body.push(`<g clip-path="url(#${clipId})"><path d="${plates}" fill="${pG}" stroke="${h.shade(P.lavaD, -0.2)}" stroke-width="2"/><path d="${hot}" fill="${h.shade(P.crust, 0.35)}" fill-opacity="0.5"/></g>`);
-    }
-
-    /* ---- 4. 공터: 밝은 땅 + 바둑판 + 점선 격자 ---- */
-    const openCells = cellsWhere((k) => k === K.OPEN);
-    if (openCells.length) {
-      const inO = (c, r) => { if (!inb(c, r)) return true; const k = kAt(c, r); return k === K.OPEN || isRoad(k); };
-      const dO = blobPath(openCells, inO, 4, 16);
-      const oG = def('open', (id) => h.rg(id, [[0, h.shade(P.open, 0.12)], [1, P.open]], 0.4, 0.35, 0.8));
-      body.push(`<path d="${blobPath(openCells, inO, 1, 18)}" fill="${h.shade(P.open, -0.28)}"/>`);
-      body.push(`<path d="${dO}" fill="${oG}"/>`);
-      const clipId = h.uid('tr');
-      defs.push(`<clipPath id="${clipId}"><path d="${dO}"/></clipPath>`);
-      let chk = '';
-      for (const [c, r] of openCells) if ((c + r) % 2 === 0) chk += `M${c * 100} ${r * 100}h100v100h-100Z`;
-      const bk = Buckets();
-      // 장식(작고 흐리게): 꽃·풀·금·반짝임
-      for (const [c, r] of openCells) {
-        const n = rnd(c, r, 51) < 0.6 ? 1 : 2;
-        for (let i = 0; i < n; i++) {
-          const x = c * 100 + 22 + rnd(c, r, 52 + i) * 56;
-          const y = r * 100 + 24 + rnd(c, r, 54 + i) * 52;
-          const v = rnd(c, r, 56 + i);
-          if (region === 1) {
-            if (v < 0.5) bk.add(strokeA(P.openDot, 2.4, 0.35), `M${f(x - 4)} ${f(y)}l-2 -7M${f(x)} ${f(y)}v-8M${f(x + 4)} ${f(y)}l2 -6`);
-            else bk.add(fillA(P.flowers[Math.floor(v * 10) % P.flowers.length], 0.9), circ(x, y, 3));
-          } else if (region === 2) {
-            if (v < 0.5) bk.add(strokeA('#ffffff', 2.6, 0.8), `M${f(x - 10)} ${f(y - 4)}l7 4l5 -3l8 6`);
-            else bk.add(fillA('#ffffff', 0.9), `M${f(x)} ${f(y - 5)}l1.5 3.5l3.5 1.5l-3.5 1.5l-1.5 3.5l-1.5 -3.5l-3.5 -1.5l3.5 -1.5Z`);
-          } else if (region === 3) {
-            bk.add(strokeA(P.openDot, 2.4, 0.3), `M${f(x - 10)} ${f(y)}l6 -2l4 4l7 -3M${f(x - 4)} ${f(y - 2)}l-2 -6`);
-          } else if (region === 4) {
-            if (v < 0.55) bk.add(strokeA(P.openDot, 2.4, 0.35), `M${f(x - 3)} ${f(y)}q-3 -6 -1 -10M${f(x + 2)} ${f(y)}q2 -6 5 -8`);
-            else bk.add(`fill="${P.flowers[Math.floor(v * 10) % P.flowers.length]}" stroke="${P.openDot}" stroke-width="1.4" stroke-opacity="0.5"`, `M${f(x - 4)} ${f(y + 2)}q4 -9 8 0Z`);
-          } else {
-            if (v < 0.5) bk.add(fillA(P.accent, 0.7), circ(x, y, 2.2));
-            else bk.add(strokeA(P.openDot, 2.2, 0.3), `M${f(x - 8)} ${f(y)}l5 -3l4 3l6 -2`);
-          }
-        }
-      }
-      // 칸 경계 점선: 공터끼리 맞닿은 변 + 꼭짓점 십자
-      let grid = '';
-      let cross = '';
-      for (const [c, r] of openCells) {
-        if (kAt(c + 1, r) === K.OPEN) grid += `M${c * 100 + 100} ${r * 100 + 14}V${r * 100 + 86}`;
-        if (kAt(c, r + 1) === K.OPEN) grid += `M${c * 100 + 14} ${r * 100 + 100}H${c * 100 + 86}`;
-        if (kAt(c + 1, r) === K.OPEN && kAt(c, r + 1) === K.OPEN && kAt(c + 1, r + 1) === K.OPEN) {
-          const x = c * 100 + 100;
-          const y = r * 100 + 100;
-          cross += `M${x - 7} ${y}h14M${x} ${y - 7}v14`;
-        }
-      }
-      body.push(`<g clip-path="url(#${clipId})"><path d="${chk}" fill="${P.openAlt}" fill-opacity="0.55"/>${bk.out()}</g>`);
-      body.push(`<path d="${grid}" fill="none" stroke="${P.openDot}" stroke-opacity="0.42" stroke-width="4" stroke-linecap="round" stroke-dasharray="0.1 12"/>`);
-      body.push(`<path d="${cross}" ${strokeA(P.openDot, 3.4, 0.5)}/>`);
-    }
-
-    /* ---- 5. 건설지: 칸마다 돋운 판 ---- */
-    const buildCells = cellsWhere((k) => k === K.BUILD);
-    if (buildCells.length) {
-      const inB = (c, r) => kAt(c, r) === K.BUILD;
-      body.push(`<path d="${blobPath(buildCells, inB, 1, 14)}" fill="${P.buildGap}"/>`);
-      const bG = def('build', (id) => h.lg(id, [[0, P.buildL], [0.45, P.build], [1, P.buildD]], [0, 0, 0.6, 1]));
-      let side = '';
-      let top = '';
-      let hl = '';
-      let edge = '';
-      const bk = Buckets();
-      for (const [c, r] of buildCells) {
-        const x = c * 100;
-        const y = r * 100;
-        side += `M${x + 18} ${y + 9}H${x + 82}Q${x + 95} ${y + 9} ${x + 95} ${y + 22}V${y + 83}Q${x + 95} ${y + 96} ${x + 82} ${y + 96}H${x + 18}Q${x + 5} ${y + 96} ${x + 5} ${y + 83}V${y + 22}Q${x + 5} ${y + 9} ${x + 18} ${y + 9}Z`;
-        top += `M${x + 18} ${y + 5}H${x + 82}Q${x + 95} ${y + 5} ${x + 95} ${y + 18}V${y + 73}Q${x + 95} ${y + 86} ${x + 82} ${y + 86}H${x + 18}Q${x + 5} ${y + 86} ${x + 5} ${y + 73}V${y + 18}Q${x + 5} ${y + 5} ${x + 18} ${y + 5}Z`;
-        hl += `M${x + 10} ${y + 66}V${y + 20}Q${x + 10} ${y + 10} ${x + 20} ${y + 10}H${x + 78}`;
-        edge += `M${x + 7} ${y + 80}Q${x + 12} ${y + 86} ${x + 22} ${y + 86}H${x + 78}Q${x + 88} ${y + 86} ${x + 93} ${y + 80}`;
-        // 작은 장식(판 가장자리 쪽)
-        const v = rnd(c, r, 61);
-        const px = x + 20 + rnd(c, r, 62) * 60;
-        const py = y + 20 + rnd(c, r, 63) * 50;
-        if (v < 0.55) {
-          if (region === 1 || region === 4) bk.add(strokeA(P.buildD, 2.4, 0.7), `M${f(px - 4)} ${f(py)}l-2 -7M${f(px)} ${f(py)}v-8M${f(px + 4)} ${f(py)}l2 -6`);
-          else if (region === 2) bk.add(fillA('#ffffff', 0.8), ell(px, py, 9, 4));
-          else if (region === 3) bk.add(strokeA(P.buildD, 2.4, 0.6), `M${f(px - 9)} ${f(py)}l6 -3l5 4l6 -3`);
-          else bk.add(strokeA(P.accent, 2.2, 0.55), `M${f(px - 8)} ${f(py)}l5 -4l4 4l5 -3`);
-        }
-        if (region === 1 && v > 0.88) bk.add(fillA(P.flowers[1]), circ(px, py, 3));
-      }
-      body.push(`<path d="${side}" fill="${P.buildSide}" ${SO(2.5)}/>`);
-      body.push(`<path d="${top}" fill="${bG}"/>`);
-      body.push(`<path d="${hl}" ${strokeA(P.buildL, 3.5, 0.85)}/>`);
-      body.push(`<path d="${edge}" ${strokeA(P.buildD, 3, 0.8)}/>`);
-      body.push(bk.out());
-    }
-
-    /* ---- 6. 길 (끊김 없이 둥글게 이어진 띠) ---- */
-    const roadCells = cellsWhere((k) => isRoad(k));
-    if (roadCells.length) {
-      let segR = '';
-      let segB = '';
-      let blocks = '';
-      for (const [c, r] of roadCells) {
-        const cx = c * 100 + 50;
-        const cy = r * 100 + 50;
-        const nb = [[0, -1], [1, 0], [0, 1], [-1, 0]].map(([dc, dr]) => kAt(c + dc, r + dr));
-        if (isRoad(nb[1])) segR += `M${cx} ${cy}H${cx + 100}`;
-        if (isRoad(nb[2])) segR += `M${cx} ${cy}V${cy + 100}`;
-        if (!nb.some(isRoad)) segR += `M${cx} ${cy}h.1`;
-        // 공터로 들어가는 길: 경계까지
-        [[0, -1], [1, 0], [0, 1], [-1, 0]].forEach(([dc, dr], i) => {
-          if (nb[i] === K.OPEN) segB += `M${cx} ${cy}L${cx + dc * 52} ${cy + dr * 52}`;
-        });
-        // 가장자리 입구: 맵 밖까지
-        if (kAt(c, r) === K.SPAWN) {
-          if (c === 0) segB += `M${cx} ${cy}H${cx - 70}`;
-          else if (c === cols - 1) segB += `M${cx} ${cy}H${cx + 70}`;
-          else if (r === 0) segB += `M${cx} ${cy}V${cy - 70}`;
-          else if (r === rows - 1) segB += `M${cx} ${cy}V${cy + 70}`;
-        }
-        if (isRoad(kAt(c + 1, r)) && isRoad(kAt(c, r + 1)) && isRoad(kAt(c + 1, r + 1))) blocks += `M${cx} ${cy}h100v100h-100Z`;
-      }
-      const RW = 70;
-      const layer = (col, w, op = 1, extra = '') => {
-        const o = op < 1 ? ` stroke-opacity="${op}"` : '';
-        let s = `<path d="${segR}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"${o}${extra}/>`;
-        if (segB) s += `<path d="${segB}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="butt"${o}${extra}/>`;
-        if (blocks && op === 1) s += `<path d="${blocks}" fill="${col}"/>`;
-        return s;
-      };
-      // 길 결 무늬(지역별)
-      const tex = def('rtex', (id) => {
-        let p = '';
-        if (region === 1) p = `<path d="${circ(8, 10, 2.2)}${circ(31, 4, 1.6)}${circ(40, 30, 2.4)}${circ(17, 38, 1.8)}${circ(46, 47, 1.5)}" fill="${P.roadD}"/><path d="${circ(25, 21, 1.8)}${circ(4, 44, 1.6)}" fill="${P.roadL}"/>`;
-        else if (region === 2) p = `<path d="${ell(10, 12, 3, 4.5)}${ell(17, 18, 3, 4.5)}${ell(36, 34, 3, 4.5)}${ell(43, 40, 3, 4.5)}" fill="${P.roadD}"/><path d="${circ(30, 8, 1.8)}${circ(6, 40, 1.8)}" fill="#ffffff"/>`;
-        else if (region === 3) p = `<path d="M2 14q6 -4 12 0t12 0M24 36q6 -4 12 0t12 0" fill="none" stroke="${P.roadD}" stroke-width="2.4" stroke-linecap="round"/><path d="${circ(40, 12, 2)}${circ(10, 40, 1.8)}" fill="${P.roadEdge}" fill-opacity="0.5"/>`;
-        else if (region === 4) p = `<path d="M4 18q10 -5 20 0M28 42q10 -5 20 0" fill="none" stroke="${P.roadL}" stroke-width="3" stroke-linecap="round"/><path d="${circ(38, 14, 2)}${circ(12, 34, 1.6)}" fill="${P.roadD}"/>`;
-        else p = `<path d="M0 0.5H50M0 25.5H50M17 0V25M42 25V50M5 50V25" fill="none" stroke="${P.roadEdge}" stroke-width="2.6" stroke-opacity="0.55"/><path d="M2 3H15M19 28H40" stroke="${P.roadL}" stroke-width="2" fill="none"/>`;
-        return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="50" height="50">${p}</pattern>`;
-      });
-      body.push(layer(P.roadEdge, RW + 10));
-      body.push(layer(P.roadD, RW));
-      body.push(layer(P.road, RW - 14));
-      body.push(layer(P.roadL, RW * 0.36, 0.55));
-      body.push(layer(tex, RW - 8, 1).replace(/<path d="[^"]*" fill="url\([^)]*\)"\/>/g, ''));
-    }
-
-    /* ---- 7. 다리 ---- */
-    for (const b of bridges.values()) {
-      const cx = b.c * 100 + 50;
-      const cy = b.r * 100 + 50;
-      const along = b.dir === 'h';
-      const prevB = along ? bridgeAt(b.c - 1, b.r) : bridgeAt(b.c, b.r - 1);
-      const nextB = along ? bridgeAt(b.c + 1, b.r) : bridgeAt(b.c, b.r + 1);
-      const L = prevB ? -50 : -56;
-      const R = nextB ? 50 : 56;
-      let s = '';
-      // 지역 좌표: x = 길 방향, y = 강 방향(-42~42)
-      if (!b.lava) {
-        const woodG = def('plank', (id) => h.lg(id, [[0, h.shade(P.wood, 0.25)], [1, P.wood]]));
-        s += `<rect x="${L}" y="-34" width="${R - L}" height="${76}" fill="#000" fill-opacity="0.22"/>`;
-        s += `<rect x="${L}" y="-38" width="${R - L}" height="76" fill="${woodG}" ${SO(3)}/>`;
-        let pl = '';
-        for (let x = L + 12; x < R - 4; x += 12) pl += `M${x} -36V36`;
-        s += `<path d="${pl}" ${strokeA(P.woodD, 2.6, 0.75)}/>`;
-        s += `<path d="M${L} -38H${R}M${L} 38H${R}" ${strokeA(OL, 11)}/><path d="M${L} -38H${R}M${L} 38H${R}" ${strokeA(P.woodD, 6)}/>`;
-        const posts = [];
-        if (!prevB) posts.push(L + 5);
-        if (!nextB) posts.push(R - 5);
-        for (const x of posts) s += `<rect x="${x - 6}" y="-46" width="12" height="16" rx="3" fill="${P.wood}" ${SO(3)}/><rect x="${x - 6}" y="30" width="12" height="16" rx="3" fill="${P.wood}" ${SO(3)}/>`;
-      } else {
-        const stG = def('bstone', (id) => h.lg(id, [[0, P.stoneL], [1, P.stone]]));
-        s += `<rect x="${L}" y="-40" width="${R - L}" height="80" fill="${stG}" ${SO(3)}/>`;
-        let j = '';
-        for (let x = L + 18; x < R - 4; x += 18) j += `M${x} -40V40`;
-        s += `<path d="${j}M${L} 0H${R}" ${strokeA(P.stoneD, 2.4, 0.7)}/>`;
-        s += `<path d="M${L} -40H${R}M${L} 40H${R}" ${strokeA(OL, 10)}/><path d="M${L} -40H${R}M${L} 40H${R}" ${strokeA(P.stoneD, 5)}/>`;
-      }
-      body.push(`<g transform="translate(${cx} ${cy})${along ? '' : ' rotate(90)'}">${s}</g>`);
-    }
-
-    /* ---- 8. 울림등 광장 ---- */
-    if (map.lantern) {
-      const cx = map.lantern.c * 100 + 50;
-      const cy = map.lantern.r * 100 + 50;
-      let j = '';
-      for (let i = 0; i < 8; i++) {
-        const a = ((i * 45 + 22.5) * Math.PI) / 180;
-        j += `M${f(cx + Math.cos(a) * 16)} ${f(cy + Math.sin(a) * 16)}L${f(cx + Math.cos(a) * 39)} ${f(cy + Math.sin(a) * 39)}`;
-      }
-      const pG = def('plaza', (id) => h.rg(id, [[0, h.shade(P.plaza, 0.3)], [0.7, P.plaza], [1, h.shade(P.plaza, -0.08)]], 0.4, 0.35, 0.8));
-      body.push(`<circle cx="${cx}" cy="${cy}" r="47" fill="${P.plazaD}" ${SO(3)}/><circle cx="${cx}" cy="${cy}" r="40" fill="${pG}"/>` +
-        `<path d="${j}" ${strokeA(P.plazaD, 3)}/><circle cx="${cx}" cy="${cy}" r="16" fill="none" stroke="${P.plazaD}" stroke-width="3"/>` +
-        `<path d="M${cx - 34} ${cy - 16}A37 37 0 0 1 ${cx - 12} ${cy - 35}" ${strokeA('#ffffff', 3.5, 0.55)}/>` +
-        `<path d="${[0, 1, 2, 3].map((i) => { const a = ((i * 90 + 45) * Math.PI) / 180; return circ(cx + Math.cos(a) * 43.5, cy + Math.sin(a) * 43.5, 3.2); }).join('')}" fill="#f2c14e" ${SO(1.6)}/>`);
-    }
-
-    /* ---- 9. 지상 입구: 어두운 안개 동굴 ---- */
-    const mouthG = def('mouth', (id) => h.rg(id, [[0, '#07050c'], [0.55, '#140f1e'], [0.85, P.mist], [1, h.shade(P.mist, 0.25)]], 0.62, 0.5, 0.6));
-    const hazeG = def('haze', (id) => h.rg(id, [[0, '#cfc6e8', 0.55], [1, '#cfc6e8', 0]], 0.5, 0.5, 0.5));
-    const rockG = def('rock', (id) => h.rg(id, [[0, P.stoneL], [0.5, P.stone], [1, P.stoneD]], 0.35, 0.25, 0.85));
-    const caveG = def('cave', (id) => h.lg(id, [[0, h.shade(P.stone, -0.05)], [1, h.shade(P.stoneD, -0.25)]], [0, 0, 0.8, 1]));
-    for (const s of map.spawns || []) {
-      const cx = s.c * 100 + 50;
-      const cy = s.r * 100 + 50;
-      let ang = null;
-      if (s.c === 0) ang = 0; else if (s.c === cols - 1) ang = 180; else if (s.r === 0) ang = 90; else if (s.r === rows - 1) ang = 270;
-      const haze = `<ellipse cx="6" cy="2" rx="34" ry="26" fill="${hazeG}"/><path d="${ell(4, -12, 14, 5)}${ell(14, 14, 16, 5)}" fill="#e4def5" fill-opacity="0.35"/>`;
-      if (ang !== null) {
-        // 맵 가장자리에 붙은 바위 언덕 + 어두운 동굴 입구 (지역 좌표: 가장자리 = 왼쪽)
-        const cave = `<path d="M-54 -52H-30C-8 -48 4 -28 1 -8C4 14 -4 40 -28 52H-54Z" fill="${caveG}" ${SO(3.5)}/>` +
-          `<path d="M-44 -42C-28 -40-16-32-10-20M-14 30C-10 24-8 18-8 12" ${strokeA(P.stoneL, 3.2, 0.7)}/>` +
-          `<path d="M-48 -26L-38 -22M-46 28L-36 34" ${strokeA(OL, 2.6, 0.5)}/>` +
-          `<path d="M-52 -30C-34 -30-12 -20-10 2C-12 22-34 32-52 32Z" fill="${mouthG}" ${SO(3.5)}/>`;
-        body.push(`<g transform="translate(${cx} ${cy}) ${ang === 180 ? 'scale(-1 1)' : `rotate(${ang})`}">${cave}${haze}</g>`);
-      } else {
-        body.push(`<g transform="translate(${cx} ${cy})"><ellipse cx="0" cy="2" rx="38" ry="30" fill="${caveG}" ${SO(3.5)}/><ellipse cx="0" cy="4" rx="27" ry="20" fill="${mouthG}" ${SO(3)}/>${haze}</g>`);
-      }
-    }
-
-    /* ---- 10. 길가·장애물 땅 장식 ---- */
-    {
-      const bk = Buckets();
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const k = kAt(c, r);
-          const x0 = c * 100;
-          const y0 = r * 100;
-          if (k === K.PATH && !bridgeAt(c, r)) {
-            // 길가 풀(길 가장자리 바깥쪽 어깨)
-            const sides = [[0, -1], [1, 0], [0, 1], [-1, 0]].filter(([dc, dr]) => !isRoad(kAt(c + dc, r + dr)) && kAt(c + dc, r + dr) !== K.OPEN);
-            for (const [dc, dr] of sides) {
-              if (rnd(c, r, 71 + dc * 3 + dr) > 0.55) continue;
-              const t = rnd(c, r, 75 + dc * 3 + dr) * 50 - 25;
-              const x = x0 + 50 + dc * 43 + (dr ? t : 0);
-              const y = y0 + 50 + dr * 43 + (dc ? t : 0) + 4;
-              if (region === 2) bk.add(fillA('#ffffff', 0.9), ell(x, y, 8, 4));
-              else if (region === 5) bk.add(fillA(P.stoneD), circ(x, y - 2, 3.5));
-              else bk.add(strokeA(region === 3 ? '#c49a5c' : P.wildL, 2.6), `M${f(x - 4)} ${f(y)}l-2 -7M${f(x)} ${f(y)}v-9M${f(x + 4)} ${f(y)}l2 -6`);
-            }
-            // 길 위 돌멩이
-            if (rnd(c, r, 79) < 0.5) {
-              const x = x0 + 30 + rnd(c, r, 80) * 40;
-              const y = y0 + 30 + rnd(c, r, 81) * 40;
-              bk.add(`fill="${P.roadD}" stroke="${P.roadEdge}" stroke-width="1.6"`, ell(x, y, 4.5, 3.2));
-            }
-          } else if (k === K.ROCK || k === K.TREE || k === K.AIR) {
-            const n = 1 + Math.floor(rnd(c, r, 82) * 2);
-            for (let i = 0; i < n; i++) {
-              const x = x0 + 14 + rnd(c, r, 83 + i) * 72;
-              const y = y0 + 20 + rnd(c, r, 85 + i) * 72;
-              const v = rnd(c, r, 87 + i);
-              if (region === 1) {
-                if (v < 0.65) bk.add(strokeA(P.wildL, 2.6), `M${f(x - 4)} ${f(y)}l-2 -7M${f(x)} ${f(y)}v-9M${f(x + 4)} ${f(y)}l2 -6`);
-                else bk.add(`fill="${P.flowers[Math.floor(v * 7) % 4]}" ${SO(1.4)}`, circ(x, y, 3.4));
-              } else if (region === 2) bk.add(fillA('#ffffff', 0.85), ell(x, y, 10, 4.5));
-              else if (region === 3) bk.add(fillA(P.wildD, 0.8), ell(x, y, 5, 3.5));
-              else if (region === 4) bk.add(strokeA(P.wildL, 2.6), `M${f(x - 3)} ${f(y)}q-3 -6 -1 -10M${f(x + 2)} ${f(y)}q2 -6 5 -8`);
-              else bk.add(fillA(P.wildL, 0.9), circ(x, y, 3.2));
-            }
-          }
-        }
-      }
-      body.push(bk.out());
-    }
-
-    /* ---- 10b. 이어진 바위(3칸 이상) = 돋운 바위 벽/능선 ---- */
-    const wallSet = new Set();
-    {
+      const isR = (c, r) => { const k = kAt(c, r); return k === K.ROCK || k === K.PILLAR; };
       const seen = new Uint8Array(cols * rows);
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
-          const i0 = r * cols + c;
-          if (seen[i0] || kAt(c, r) !== K.ROCK) continue;
+          if (seen[r * cols + c] || !isR(c, r)) continue;
           const group = [];
           const stack = [[c, r]];
-          seen[i0] = 1;
+          seen[r * cols + c] = 1;
           while (stack.length) {
             const [cc, rr] = stack.pop();
             group.push(rr * cols + cc);
-            for (const [dc, dr] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
+            for (const [dc, dr] of N4) {
               const nc = cc + dc;
               const nr = rr + dr;
-              if (kAt(nc, nr) !== K.ROCK || seen[nr * cols + nc]) continue;
+              if (!inb(nc, nr) || !isR(nc, nr) || seen[nr * cols + nc]) continue;
               seen[nr * cols + nc] = 1;
               stack.push([nc, nr]);
             }
           }
-          if (group.length >= 3) group.forEach((i) => wallSet.add(i));
+          if (group.length >= 3) group.forEach((i) => { cliffSet[i] = 1; });
         }
       }
     }
-    const wallCells = cellsWhere((k, c, r) => wallSet.has(r * cols + c));
-    if (wallCells.length) {
-      const inW = (c, r) => inb(c, r) && wallSet.has(r * cols + c);
-      const dW = blobPath(wallCells, inW, 15, 14);
-      const topCol = region === 2 ? '#f3f8fd' : P.stone;
-      const wTex = def('wtex', (id) => {
-        let p;
-        if (region === 1 || region === 5) p = `<path d="M0 1H50M0 26H50M18 1V26M43 26V50M6 26V50" fill="none" stroke="${P.stoneD}" stroke-width="2.6" stroke-opacity="0.6"/><path d="M3 5H15M22 30H40" stroke="${P.stoneL}" stroke-width="2.4" stroke-opacity="0.7" fill="none"/>`;
-        else if (region === 2) p = `<path d="M6 14q8 -4 16 0M30 38q8 -4 16 0" fill="none" stroke="#c4d6ea" stroke-width="3" stroke-linecap="round"/>`;
-        else if (region === 3) p = `<path d="M0 12H50M0 37H50" stroke="${P.accent}" stroke-width="3" stroke-opacity="0.6" fill="none"/><path d="M14 20l6 6l-3 6" stroke="${P.stoneD}" stroke-width="2.2" fill="none"/>`;
-        else p = `<path d="${circ(10, 12, 2.6)}${circ(34, 30, 2.2)}${circ(20, 42, 2)}" fill="${P.accent}" fill-opacity="0.8"/><path d="M28 8l6 8l-4 6" stroke="${P.stoneD}" stroke-width="2.2" fill="none"/>`;
-        return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="50" height="50">${p}</pattern>`;
-      });
-      const faceTex = def('ftex', (id) => `<pattern id="${id}" patternUnits="userSpaceOnUse" width="34" height="100"><path d="M17 0V100" stroke="${OL}" stroke-width="2.4" stroke-opacity="0.35"/></pattern>`);
-      const dWo = blobPath(wallCells, inW, 11.5, 17.5);
-      let s = `<g transform="translate(0 10)"><path d="${dWo}" fill="${OL}"/><path d="${dW}" fill="${h.shade(P.stoneD, -0.1)}"/><path d="${dW}" fill="${faceTex}"/></g>`;
-      s += `<g transform="translate(0 -5)"><path d="${dWo}" fill="${OL}"/><path d="${dW}" fill="${region === 2 ? '#ffffff' : P.stoneL}"/><path d="${blobPath(wallCells, inW, 18.5, 11)}" fill="${topCol}"/><path d="${dW}" fill="${wTex}"/></g>`;
-      const bk = Buckets();
-      for (const [c, r] of wallCells) {
-        const x = c * 100 + 30 + rnd(c, r, 131) * 40;
-        const y = r * 100 + 30 + rnd(c, r, 132) * 30;
-        const v = rnd(c, r, 133);
-        if (region === 1 && v < 0.45) {
-          bk.add(fillA(h.shade(P.accent, -0.15), 0.9), circ(x - 6, y + 1, 5) + circ(x + 1, y - 2, 6) + circ(x + 8, y + 1, 4.5));
-          bk.add(fillA(h.shade(P.accent, 0.25), 0.9), circ(x - 1, y - 4, 3));
-        }
-        else if (region === 2 && v < 0.5) bk.add(fillA('#ffffff'), ell(x, y, 12, 5));
-        else if (region === 5 && v < 0.35) bk.add(strokeA(P.accent, 2.6, 0.9), `M${f(x - 6)} ${f(y - 6)}l5 6l-3 6`);
-      }
-      s += bk.out();
-      body.push(s);
+    const inCliff = (c, r) => inb(c, r) && cliffSet[r * cols + c] === 1;
+
+    /* 바닥이 비었는지(풀·장식을 놓아도 되는지) 볼 장들 — 아래에서 채움 */
+    const F = {};
+    const val = (name, x, y, dflt) => (F[name] ? G.at(F[name], x, y) : dflt);
+
+    /* =====================================================
+     * 0. 바탕 땅 + 큰 얼룩 (등고선 띠로 칠한 붓 자국)
+     * ===================================================== */
+    body.push(`<rect x="-10" y="-10" width="${W + 20}" height="${H + 20}" fill="${P.ground}"/>`);
+    {
+      const M = G.make((x, y) => fbm(x / 210, y / 210, 5, 3));
+      body.push(P_(pathD(G.loops(M, 0.4, true), 0.5), `${fillA(P.groundD, 0.55)} ${EO}`));
+      body.push(P_(pathD(G.loops(M, 0.33, true), 0.5), `${fillA(P.groundD, 0.5)} ${EO}`));
+      body.push(P_(pathD(G.loops(M, 0.58), 0.5), `${fillA(P.groundL, 0.45)} ${EO}`));
+      body.push(P_(pathD(G.loops(M, 0.66), 0.5), `${fillA(P.groundL, 0.4)} ${EO}`));
+      const M2 = G.make((x, y) => fbm(x / 55, y / 55, 7, 2));
+      body.push(P_(pathD(G.loops(M2, 0.64), 0.4), `${fillA(region === 2 ? '#ffffff' : P.tuftL, region === 2 ? 0.6 : 0.16)} ${EO}`));
+      body.push(P_(pathD(G.loops(M2, 0.36, true), 0.4), `${fillA(P.groundD, 0.3)} ${EO}`));
     }
 
-    /* ---- 11. 물체 (위→아래 순서로 겹치게) ---- */
+    /* =====================================================
+     * 장(場) 만들기
+     * ===================================================== */
+    const waterSet = setOf((k, c, r) => k === K.WATER || (bridgeAt(c, r) && !bridgeAt(c, r).lava));
+    const lavaSet = setOf((k, c, r) => k === K.LAVA || (bridgeAt(c, r) && bridgeAt(c, r).lava));
+    const openSet = setOf((k) => k === K.OPEN);
+    const buildSet = setOf((k) => k === K.BUILD);
+    const treeSet = setOf((k) => k === K.TREE);
+    const rubbleSet = setOf((k, c, r) => (k === K.ROCK || k === K.PILLAR) && !inCliff(c, r));
+    const anyCliff = cliffSet.some((v) => v);
+    if (waterSet) F.water = sdField(waterSet, 13, 8, 70, 401, 2.4);
+    if (lavaSet) F.lava = sdField(lavaSet, 12, 6, 55, 421, 2);
+    if (openSet) F.open = sdField(openSet, 8, 4, 60, 441, 1.5);
+    if (buildSet) F.build = sdField(buildSet, 6, 5, 45, 461, 2);
+    if (treeSet) F.tree = sdField(treeSet, 10, 8, 60, 481, 3);
+    if (rubbleSet) F.rubble = sdField(rubbleSet, 10, 11, 35, 501, 4);
+    if (anyCliff) F.cliff = sdField(cliffSet, 6, 4, 45, 521, 1.6);
+
+    /* ---- 길: 길 칸 중심을 잇는 뼈대까지의 거리 ---- */
+    const HW = 33; // 길 반폭
+    const roadCells = cellsWhere((k) => isRoad(k));
+    if (roadCells.length) {
+      const prims = [];
+      const bucket = Array.from({ length: cols * rows }, () => []);
+      const cl = (v, n) => (v < 0 ? 0 : v >= n ? n - 1 : v);
+      const addPrim = (p) => {
+        const i = prims.length;
+        prims.push(p);
+        const ex = p.k === 2 ? 50 : 0;
+        const c0 = cl(Math.floor((Math.min(p.ax, p.bx) - ex - 75) / 100), cols);
+        const c1 = cl(Math.floor((Math.max(p.ax, p.bx) + ex + 75) / 100), cols);
+        const r0 = cl(Math.floor((Math.min(p.ay, p.by) - ex - 75) / 100), rows);
+        const r1 = cl(Math.floor((Math.max(p.ay, p.by) + ex + 75) / 100), rows);
+        for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) bucket[r * cols + c].push(i);
+      };
+      for (const [c, r] of roadCells) {
+        const cx = c * 100 + 50;
+        const cy = r * 100 + 50;
+        // 길과 이어지지 않은 울림등(공터 한가운데)은 광장만 그림
+        if (kAt(c, r) === K.LANTERN && !N4.some(([dc, dr]) => isRoad(kAt(c + dc, r + dr)))) continue;
+        addPrim({ k: 0, ax: cx, ay: cy, bx: cx, by: cy });
+        if (isRoad(kAt(c + 1, r))) addPrim({ k: 0, ax: cx, ay: cy, bx: cx + 100, by: cy });
+        if (isRoad(kAt(c, r + 1))) addPrim({ k: 0, ax: cx, ay: cy, bx: cx, by: cy + 100 });
+        for (const [dc, dr] of N4) if (kAt(c + dc, r + dr) === K.OPEN) addPrim({ k: 1, ax: cx, ay: cy, bx: cx + dc * 58, by: cy + dr * 58 });
+        if (kAt(c, r) === K.SPAWN) {
+          if (c === 0) addPrim({ k: 0, ax: cx, ay: cy, bx: cx - 120, by: cy });
+          else if (c === cols - 1) addPrim({ k: 0, ax: cx, ay: cy, bx: cx + 120, by: cy });
+          else if (r === 0) addPrim({ k: 0, ax: cx, ay: cy, bx: cx, by: cy - 120 });
+          else if (r === rows - 1) addPrim({ k: 0, ax: cx, ay: cy, bx: cx, by: cy + 120 });
+        }
+        if (isRoad(kAt(c + 1, r)) && isRoad(kAt(c, r + 1)) && isRoad(kAt(c + 1, r + 1))) addPrim({ k: 2, ax: cx + 50, ay: cy + 50, bx: cx + 50, by: cy + 50 });
+      }
+      const rf = new Float32Array(G.N);
+      const dm = new Float32Array(G.N);
+      let kk = 0;
+      for (let j = 0; j < G.ny; j++) {
+        const y = G.y0 + j * GS;
+        for (let i = 0; i < G.nx; i++, kk++) {
+          const x = G.x0 + i * GS;
+          const list = bucket[cl(Math.floor(y / 100), rows) * cols + cl(Math.floor(x / 100), cols)];
+          let best = -90;
+          let dmin = 999;
+          for (let q = 0; q < list.length; q++) {
+            const p = prims[list[q]];
+            let v;
+            let d;
+            if (p.k === 2) {
+              const dx = Math.max(0, Math.abs(x - p.ax) - 50);
+              const dy = Math.max(0, Math.abs(y - p.ay) - 50);
+              d = Math.sqrt(dx * dx + dy * dy);
+              v = HW - d;
+            } else {
+              const vx = p.bx - p.ax;
+              const vy = p.by - p.ay;
+              const L2 = vx * vx + vy * vy;
+              let t = L2 ? ((x - p.ax) * vx + (y - p.ay) * vy) / L2 : 0;
+              if (p.k === 1 && t > 1) continue;
+              const tc = t < 0 ? 0 : t > 1 ? 1 : t;
+              const qx = p.ax + vx * tc - x;
+              const qy = p.ay + vy * tc - y;
+              d = Math.sqrt(qx * qx + qy * qy);
+              v = HW - d;
+              if (p.k === 1 && t > 0) {
+                // 공터로 들어가는 길: 끝이 벌어지며 흐려짐
+                v += 13 * t * t - Math.max(0, t - 0.62) * 70 * (0.25 + vn(x / 9, y / 9, 77));
+              }
+            }
+            if (v > best) best = v;
+            if (d < dmin) dmin = d;
+          }
+          rf[kk] = best < -40 ? best : best + 6.5 * (fbm(x / 48, y / 48, 31, 2) * 2 - 1) + 2.4 * (vn(x / 9, y / 9, 37) * 2 - 1);
+          dm[kk] = dmin;
+        }
+      }
+      F.road = rf;
+      F.roadD = dm;
+    }
+    /** 맨땅인가 (풀·장식 자리) */
+    const wild = (x, y, m = 0) => val('road', x, y, -99) < -11 - m && val('water', x, y, -99) < -12 - m && val('lava', x, y, -99) < -14 - m &&
+      val('open', x, y, -99) < -6 - m && val('build', x, y, -99) < -5 - m && val('cliff', x, y, -99) < -3 - m;
+
+    /* =====================================================
+     * 1. 맨땅 장식 (풀포기·꽃·돌멩이·눈더미…)
+     * ===================================================== */
+    {
+      const bk = Buckets();
+      const GD = 21;
+      for (let gy = 0; gy * GD < H + GD; gy++) {
+        for (let gx = 0; gx * GD < W + GD; gx++) {
+          const x = (gx + rnd(gx, gy, 601)) * GD;
+          const y = (gy + rnd(gx, gy, 602)) * GD;
+          if (!wild(x, y)) continue;
+          const inTree = val('tree', x, y, -99) > -4;
+          const inRub = val('rubble', x, y, -99) > -8;
+          const v = rnd(gx, gy, 603);
+          const s = 0.8 + rnd(gx, gy, 604) * 0.5;
+          groundDeco(bk, region, P, x, y, v, s, inTree, inRub, rnd(gx, gy, 605));
+        }
+      }
+      body.push(bk.out());
+    }
+
+    /* =====================================================
+     * 2. 숲 바닥 · 자갈 바닥
+     * ===================================================== */
+    if (F.tree) {
+      body.push(fillP(contour(F.tree, -7), P.forest, 0.8));
+      body.push(fillP(contour(F.tree, 14), P.forestD, 0.7));
+      const bk = Buckets();
+      for (const [c, r] of cellsWhere((k) => k === K.TREE)) {
+        for (let i = 0; i < 5; i++) {
+          const x = c * 100 + rnd(c, r, 611 + i) * 100;
+          const y = r * 100 + rnd(c, r, 621 + i) * 100;
+          if (region === 2) bk.add(fillA('#ffffff', 0.85), ell(x, y, 7, 3));
+          else bk.add(fillA(P.litter, 0.6), ellR(x, y, 3.4, 1.8, rnd(c, r, 631 + i) * 180));
+        }
+      }
+      body.push(bk.out());
+    }
+    if (F.rubble) {
+      const rub = ST.coral ? '#d8c99c' : P.rubble;
+      body.push(fillP(contour(F.rubble, 2), rub, 0.3));
+      body.push(fillP(contour(F.rubble, 12), rub, 0.5));
+      const bk = Buckets();
+      for (const [c, r] of cellsWhere((k, cc, rr) => (k === K.ROCK || k === K.PILLAR) && !inCliff(cc, rr))) {
+        for (let i = 0; i < 6; i++) {
+          const a = rnd(c, r, 641 + i) * Math.PI * 2;
+          const rr0 = 28 + rnd(c, r, 651 + i) * 22;
+          const x = c * 100 + 50 + Math.cos(a) * rr0;
+          const y = r * 100 + 60 + Math.sin(a) * rr0 * 0.8;
+          pebble(bk, P, x, y, 2.2 + rnd(c, r, 661 + i) * 2.4);
+        }
+      }
+      body.push(bk.out());
+    }
+
+    /* =====================================================
+     * 3. 공터: 밟혀 평평해진 빈터 (걸을 수도, 지을 수도 있음)
+     * ===================================================== */
+    if (F.open) {
+      const ice = !!ST.ice;
+      const oCol = ice ? '#c7e3f3' : P.open;
+      const oL = ice ? '#e4f3fb' : P.openL;
+      const oD = ice ? '#9cc6e0' : P.openD;
+      body.push(fillP(contour(F.open, -8), oD, 0.32));
+      const dO = contour(F.open, 0);
+      body.push(fillP(dO, oCol));
+      let s = '';
+      const M0 = G.make((x, y) => fbm(x / 95, y / 95, 711, 3));
+      s += fillP(pathD(G.loops(maskF(M0, F.open, -4), 0.57), 0.5), oL, 0.6);
+      s += fillP(pathD(G.loops(maskF(M0, F.open, -4, true), 0.4, true), 0.5), oD, 0.22);
+      const bk = Buckets();
+      const openCells = cellsWhere((k) => k === K.OPEN);
+      for (const [c, r] of openCells) {
+        const n = 2 + Math.floor(rnd(c, r, 721) * 3);
+        for (let i = 0; i < n; i++) {
+          const x = c * 100 + 8 + rnd(c, r, 722 + i) * 84;
+          const y = r * 100 + 8 + rnd(c, r, 732 + i) * 84;
+          const v = rnd(c, r, 742 + i);
+          openDeco(bk, region, P, x, y, v, ice, oD, oL);
+        }
+        if (ice) {
+          // 얼음 금: 칸을 넘어 이어지게 칸 모서리 근처에서 시작
+          if (rnd(c, r, 751) < 0.55) {
+            let x = c * 100 + rnd(c, r, 752) * 100;
+            let y = r * 100 + rnd(c, r, 753) * 100;
+            let a = rnd(c, r, 754) * Math.PI * 2;
+            let d = `M${f(x)} ${f(y)}`;
+            for (let i = 0; i < 4; i++) { a += (rnd(c, r, 755 + i) - 0.5) * 1.6; x += Math.cos(a) * 16; y += Math.sin(a) * 16; d += `L${f(x)} ${f(y)}`; }
+            bk.add(strokeA('#ffffff', 2.2, 0.85), d);
+            bk.add(strokeA('#8fb9d6', 1.6, 0.6), d.replace(/(-?[\d.]+) (-?[\d.]+)/g, (m, a1, b1) => `${f(+a1 + 1.6)} ${f(+b1 + 1.6)}`));
+          }
+        }
+      }
+      s += bk.out();
+      body.push(`<g clip-path="${clip(dO)}">${s}</g>`);
+      // 아주 옅은 칸 표시: 공터 네 칸이 만나는 모서리에 작은 십자
+      let cross = '';
+      for (const [c, r] of openCells) {
+        if (kAt(c + 1, r) === K.OPEN && kAt(c, r + 1) === K.OPEN && kAt(c + 1, r + 1) === K.OPEN) {
+          const x = c * 100 + 100;
+          const y = r * 100 + 100;
+          cross += `M${x - 6} ${y}h12M${x} ${y - 6}v12`;
+        }
+      }
+      body.push(P_(cross, strokeA(ice ? '#5f8fb5' : P.openMark, 3, 0.3)));
+    }
+
+    /* =====================================================
+     * 4. 물: 젖은 흙 → 물가 → 거품 → 얕은 물 → 깊은 물
+     * ===================================================== */
+    if (F.water) {
+      const A = F.water;
+      body.push(fillP(contour(A, -11), P.shoreWet, 0.45));
+      body.push(fillP(contour(A, -5.5), P.shore));
+      body.push(fillP(contour(A, -2.5), h.mix(P.shore, P.shoreWet, 0.45)));
+      body.push(fillP(contour(A, -0.5), P.foam, 0.9));
+      const dW = contour(A, 2);
+      const wG = def('water', (id) => `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${f(W * 0.35)}" y2="${H}"><stop offset="0" stop-color="${h.shade(P.waterL, 0.06)}"/><stop offset="1" stop-color="${h.shade(P.waterL, -0.1)}"/></linearGradient>`);
+      body.push(fillP(dW, wG));
+      let s = '';
+      s += fillP(contour(A, 11), P.water, 0.9);
+      s += fillP(contour(A, 26), P.waterD, 0.85);
+      s += fillP(contour(A, 46), P.waterDeep, 0.7);
+      // 물가 안쪽 그늘(왼쪽 위 둑이 가림) + 오른쪽 아래 둑의 밝은 반사
+      s += `<path d="${BIG}${dW}" ${EO} fill="#06142a" fill-opacity="0.26" transform="translate(7 9)"/>`;
+      s += `<path d="${BIG}${dW}" ${EO} fill="#ffffff" fill-opacity="0.12" transform="translate(-4 -5)"/>`;
+      // 물가를 따라 도는 잔물결(거품 줄)
+      s += P_(contour(A, 6.5), `${strokeA(P.foam, 2.4, 0.65)} stroke-dasharray="15 7 5 10"`);
+      s += P_(contour(A, 15), `${strokeA(h.shade(P.waterL, 0.3), 2, 0.45)} stroke-dasharray="7 18"`);
+      if (region === 4) {
+        s += P_(contour(A, 30), `${strokeA('#ffffff', 2.6, 0.35)} stroke-dasharray="22 14 8 20"`);
+        s += P_(contour(A, 52), `${strokeA('#ffffff', 2.4, 0.25)} stroke-dasharray="16 26"`);
+      }
+      const bk = Buckets();
+      const bk2 = Buckets();
+      for (const [c, r] of cellsWhere((k, cc, rr) => k === K.WATER || (bridgeAt(cc, rr) && !bridgeAt(cc, rr).lava))) {
+        if (bridgeAt(c, r)) continue;
+        const n = 2 + Math.floor(rnd(c, r, 801) * 2);
+        for (let i = 0; i < n; i++) {
+          const x = c * 100 + 14 + rnd(c, r, 802 + i) * 72;
+          const y = r * 100 + 14 + rnd(c, r, 812 + i) * 72;
+          const dep = G.at(A, x, y);
+          if (dep < 14) continue;
+          const w = 7 + rnd(c, r, 822 + i) * 7;
+          bk.add(strokeA(h.shade(P.waterL, 0.35), 2.4, 0.6), `M${f(x - w)} ${f(y)}q${f(w / 2)} -4 ${f(w)} 0q${f(w / 2)} 4 ${f(w)} 0`);
+        }
+        if (rnd(c, r, 831) < 0.5) bk.add(fillA('#ffffff', 0.8), ellR(c * 100 + 20 + rnd(c, r, 832) * 60, r * 100 + 20 + rnd(c, r, 833) * 60, 4.5, 1.6, -12));
+        // 지역 장식
+        const v = rnd(c, r, 841);
+        const x = c * 100 + 20 + rnd(c, r, 842) * 60;
+        const y = r * 100 + 20 + rnd(c, r, 843) * 60;
+        const dep = G.at(A, x, y);
+        if (region === 1 && v < 0.42 && dep > 8 && dep < 40) {
+          // 수련 잎(왼쪽 위 밝게, 아래로 작은 그림자)
+          bk2.add(fillA('#0b2a44', 0.3), ell(x + 2, y + 3, 10, 7));
+          bk2.add(`fill="#5aa64a" ${SO(2.2)}`, `M${f(x)} ${f(y)}l9 -3a10 7.5 0 1 0 0 6Z`);
+          bk2.add(strokeA('#9cd46a', 2, 0.8), `M${f(x - 7)} ${f(y - 2)}q2 -4 6 -5`);
+          if (v < 0.14) bk2.add(`fill="#ffc6d8" ${SO(1.6)}`, circ(x - 3, y - 1, 3.4));
+        } else if (region === 2 && v < 0.5 && dep > 10) {
+          // 얼음 조각
+          bk2.add(fillA('#0b2a44', 0.25), `M${f(x - 10)} ${f(y + 4)}l5 -7h13l6 6l-5 6h-14Z`);
+          bk2.add(`fill="#f2fbff" ${SO(2.2)}`, `M${f(x - 13)} ${f(y)}l5 -7h13l6 6l-5 6h-14Z`);
+          bk2.add(fillA('#bcd6ea', 0.9), `M${f(x + 5)} ${f(y + 5)}l5 -6l1 1l-5 6Z`);
+        } else if (region === 4 && v < 0.35 && dep > 16) {
+          bk2.add(strokeA('#ffffff', 3, 0.75), `M${f(x - 12)} ${f(y)}q6 -7 12 0q6 7 12 0`);
+        } else if (region === 5 && v < 0.35) {
+          bk2.add(fillA(P.accent, 0.8), `M${f(x)} ${f(y - 5)}l2 4l4 1l-4 1l-2 4l-2 -4l-4 -1l4 -1Z`);
+        }
+      }
+      s += bk.out() + bk2.out();
+      body.push(`<g clip-path="${clip(dW)}">${s}</g>`);
+      // 물가 갈대 (들판·해안)
+      if (region === 1 || region === 4 || region === 3) {
+        const bk3 = Buckets();
+        const ls = G.loops(A, -1);
+        let q = 0;
+        for (const L of ls) {
+          for (let i = 0; i < L.length; i += 6) {
+            q++;
+            const x = L[i];
+            const y = L[i + 1];
+            if (x < 0 || y < 0 || x > W || y > H) continue;
+            if (rnd(q, 3, 861) > 0.22) continue;
+            if (val('road', x, y, -99) > -14 || val('build', x, y, -99) > -6 || val('open', x, y, -99) > -4) continue;
+            reeds(bk3, region, P, x, y + 2, rnd(q, 4, 862));
+          }
+        }
+        body.push(bk3.out());
+      }
+    }
+
+    /* =====================================================
+     * 5. 용암: 그을린 땅 → 식은 딱지 테두리 → 빛나는 가장자리 → 녹은 몸통 + 떠다니는 딱지
+     * ===================================================== */
+    if (F.lava) {
+      const A = F.lava;
+      const blurF = def('lblur', (id) => h.blur(id, 10));
+      const crustC = h.mix(P.crust, P.lavaD, 0.22);
+      body.push(fillP(contour(A, -16), P.crust, 0.35));
+      body.push(fillP(contour(A, -8), P.lava, 0.55).replace('/>', ` filter="${blurF}"/>`));
+      body.push(fillP(contour(A, -3.5), P.crust));
+      body.push(P_(contour(A, -3.5), `fill="none" stroke="${h.shade(P.crust, 0.35)}" stroke-width="3" stroke-opacity="0.75" transform="translate(-1.5 -2)"`));
+      body.push(fillP(contour(A, 0.5), P.lavaD));
+      const d1 = contour(A, 3);
+      const lG = def('lava', (id) => h.rg(id, [[0, P.lavaL], [0.55, P.lava], [1, P.lavaD]], 0.5, 0.5, 0.7));
+      body.push(fillP(d1, lG));
+      let s = fillP(contour(A, 13), P.lava, 0.75) + fillP(contour(A, 30), P.lavaL, 0.6);
+      // 흐름 줄기
+      const FL = G.make((x, y) => fbm(x / 64, y / 24, 1201, 2));
+      s += P_(pathD(G.loops(maskF(FL, A, 0), 0.56), 0.4), strokeA(P.lavaL, 2.4, 0.8));
+      s += P_(pathD(G.loops(maskF(FL, A, 0), 0.42), 0.4), strokeA('#fff4c0', 1.6, 0.55));
+      // 식은 딱지: 둑 가까이 많고, 가운데엔 드문드문 떠다님
+      const CR = new Float32Array(G.N);
+      for (let k = 0; k < G.N; k++) {
+        if (A[k] < 3) { CR[k] = -1; continue; }
+        const x = G.x0 + (k % G.nx) * GS;
+        const y = G.y0 + Math.floor(k / G.nx) * GS;
+        CR[k] = fbm(x / 30, y / 30, 1211, 2) - 0.6 + Math.max(0, 20 - A[k]) / 42;
+      }
+      const dC = pathD(G.loops(CR, 0), 0.3);
+      if (dC) {
+        s += P_(dC, `fill="none" stroke="${P.lavaL}" stroke-width="5" stroke-opacity="0.85" ${EO}`);
+        s += fillP(dC, crustC);
+        const CK = maskF(G.make((x, y) => vn(x / 13, y / 13, 1221)), CR, -0.02);
+        let cs = fillP(pathD(G.loops(CK, 0.62), 0.4), h.shade(crustC, 0.18), 0.8);
+        cs += P_(pathD(G.loops(CK, 0.5), 0.4), strokeA(P.lava, 1.8, 0.85));
+        s += `<g clip-path="${clip(dC)}">${cs}<path d="${BIG}${dC}" ${EO} fill="${P.lavaL}" fill-opacity="0.35" transform="translate(-2.5 -2.5)"/></g>`;
+        s += P_(dC, `fill="none" stroke="${h.shade(crustC, 0.4)}" stroke-width="1.6" stroke-opacity="0.6" transform="translate(-1 -1.2)"`);
+      }
+      // 거품
+      const bk = Buckets();
+      for (const [c, r] of cellsWhere((k) => k === K.LAVA)) {
+        if (rnd(c, r, 871) < 0.6) {
+          const x = c * 100 + 25 + rnd(c, r, 872) * 50;
+          const y = r * 100 + 25 + rnd(c, r, 873) * 50;
+          bk.add(`fill="${P.lavaL}" stroke="${P.lavaD}" stroke-width="1.6"`, circ(x, y, 2.5 + rnd(c, r, 874) * 2));
+        }
+      }
+      s += bk.out();
+      body.push(`<g clip-path="${clip(d1)}">${s}</g>`);
+    }
+
+    /* =====================================================
+     * 7. 길: 풀 그늘 → 진한 가장자리 → 흙 → 닳은 가운데 → 바퀴 자국·돌멩이·발자국
+     * ===================================================== */
+    if (F.road) {
+      const A = F.road;
+      body.push(fillP(contour(A, -8), P.roadAO, 0.3));
+      body.push(fillP(contour(A, -1.5), P.roadEdge));
+      body.push(fillP(contour(A, 1.5), P.roadD));
+      const dR = contour(A, 5.5);
+      body.push(fillP(dR, P.road));
+      let s = '';
+      // 닳아 밝은 가운데
+      const wear = G.make((x, y) => 0);
+      for (let k = 0; k < G.N; k++) {
+        const x = G.x0 + (k % G.nx) * GS;
+        const y = G.y0 + Math.floor(k / G.nx) * GS;
+        wear[k] = A[k] < 15 ? A[k] - 15 : Math.min(A[k] - 15, (fbm(x / 34, y / 34, 951, 2) - 0.5) * 90);
+      }
+      s += fillP(pathD(G.loops(wear, 0), 0.4), P.roadL, 0.55);
+      if (region === 5) {
+        s += pavingStones(roadCells, P, rnd);
+      } else {
+        // 바퀴 자국(길 뼈대에서 일정 거리, 군데군데 끊김)
+        const dm = F.roadD;
+        const rut = new Float32Array(G.N);
+        for (let k = 0; k < G.N; k++) {
+          const x = G.x0 + (k % G.nx) * GS;
+          const y = G.y0 + Math.floor(k / G.nx) * GS;
+          rut[k] = A[k] < 8 ? A[k] - 8 : Math.min(2.6 - Math.abs(dm[k] - 13), (vn(x / 42, y / 42, 961) - 0.34) * 22, A[k] - 8);
+        }
+        const rd = pathD(G.loops(rut, 0), 0.3);
+        const rutCol = region === 2 ? '#8f7f70' : P.roadD;
+        s += P_(rd, `${fillA(P.roadL, 0.55)} ${EO} transform="translate(1.4 1.8)"`);
+        s += P_(rd, `${fillA(rutCol, 0.8)} ${EO}`);
+      }
+      // 길 안쪽 그늘: 왼쪽 위 둑이 드리움
+      s += `<path d="${BIG}${dR}" ${EO} fill="${P.roadEdge}" fill-opacity="0.3" transform="translate(5 6)"/>`;
+      const bk = Buckets();
+      const GD = 15;
+      for (let gy = 0; gy * GD < H; gy++) {
+        for (let gx = 0; gx * GD < W; gx++) {
+          const x = (gx + rnd(gx, gy, 971)) * GD;
+          const y = (gy + rnd(gx, gy, 972)) * GD;
+          const a = G.at(A, x, y);
+          if (a < 8) continue;
+          const v = rnd(gx, gy, 973);
+          if (v < 0.075) pebble(bk, { stone: P.roadD, stoneL: P.roadL, stoneD: P.roadEdge }, x, y, 2 + rnd(gx, gy, 974) * 2.6);
+          else if (region === 3 && v < 0.12) bk.add(strokeA(P.roadD, 2, 0.8), `M${f(x - 8)} ${f(y)}q4 -3 8 0t8 0`);
+          else if (region === 4 && v < 0.1) bk.add(`fill="#fbf2e2" stroke="${P.roadEdge}" stroke-width="1.2" stroke-opacity="0.6"`, `M${f(x - 3.5)} ${f(y + 2)}q3.5 -8 7 0Z`);
+          else if (region === 1 && v < 0.095 && a > 18) bk.add(strokeA('#6f9a3a', 2, 0.8), tuftD(x, y, 0.6));
+        }
+      }
+      // 눈길 발자국
+      if (region === 2) footprints(bk, roadCells, kAt, isRoad, rnd);
+      s += bk.out();
+      body.push(`<g clip-path="${clip(dR)}">${s}</g>`);
+      // 길가로 비집고 들어온 풀/눈/돌
+      const bk2 = Buckets();
+      const ls = G.loops(A, -1.5);
+      let q = 0;
+      for (const L of ls) {
+        for (let i = 0; i < L.length; i += 4) {
+          q++;
+          const x = L[i];
+          const y = L[i + 1];
+          if (x < -5 || y < -5 || x > W + 5 || y > H + 5) continue;
+          if (rnd(q, 1, 981) > 0.5) continue;
+          if (val('open', x, y, -99) > -10 || val('water', x, y, -99) > -14 || val('build', x, y, -99) > -4 || val('lava', x, y, -99) > -14) continue;
+          edgeDeco(bk2, region, P, x, y, rnd(q, 2, 982));
+        }
+      }
+      body.push(bk2.out());
+    }
+
+    /* =====================================================
+     * 8. 건설지: 이웃한 건설 칸을 하나로 묶은 낮은 돌 축대 + 칸마다 큰 판석 한 장(가는 줄눈)
+     * ===================================================== */
+    const buildCells = cellsWhere((k) => k === K.BUILD);
+    if (F.build) body.push(drawTerrace(F.build, G, buildCells, P, region, rnd, def, clip, kAt, maskF(G.make((x, y) => fbm(x / 38, y / 38, 471, 2)), F.build, -12), val));
+
+    /* =====================================================
+     * 9. 다리
+     * ===================================================== */
+    for (const b of bridges.values()) body.push(drawBridge(b, bridgeAt, P, def));
+
+    /* =====================================================
+     * 10. 울림등 광장 (울림등은 렌더러가 그림)
+     * ===================================================== */
+    if (map.lantern) body.push(drawPlaza(map.lantern.c * 100 + 50, map.lantern.r * 100 + 58, P, def, rnd));
+
+    /* =====================================================
+     * 11. 절벽·성벽 (돋운 땅: 그림자 → 앞면 → 윗면 → 윗면 무늬)
+     * ===================================================== */
+    const HC = 20; // 절벽 높이
+    if (F.cliff) body.push(drawCliffs(F.cliff, G, HC, P, region, def, clip, rnd, cellsWhere, inCliff, maskF(G.make((x, y) => fbm(x / 46, y / 46, 1301, 2)), F.cliff, -28)));
+
+    /* =====================================================
+     * 12. 물체 그림자 + 물체 (위→아래 순서로 겹치게)
+     * ===================================================== */
     const tSyms = treeSyms(region, P, def);
-    const rSyms = rockSyms(region, P, def);
+    const rSyms = ST.coral ? coralSyms() : rockSyms(region, P, def);
     const pSyms = pillarSyms(region, P, def);
     const symIds = (arr) => arr.map((s) => { const id = h.uid('tr'); defs.push(`<g id="${id}">${s.g}</g>`); return { ...s, id }; });
     const TR = symIds(tSyms);
     const RK = symIds(rSyms);
     const PI = symIds(pSyms);
     const objs = [];
-    const place = (sym, x, y, sc, flip) => objs.push({ y, s: `<use href="#${sym.id}" transform="translate(${f(x)} ${f(y)}) scale(${flip ? -f(sc * 100) / 100 : f(sc * 100) / 100} ${f(sc * 100) / 100})"/>` });
-    const nearWater = (c, r) => [[0, -1], [1, 0], [0, 1], [-1, 0]].filter(([dc, dr]) => kAt(c + dc, r + dr) === K.WATER).length;
+    let shadowD = '';
+    const castShadow = (x, y, ht, half) => {
+      // 오른쪽 아래로 드리운 그림자(키에 비례해 길게) + 밑동 그늘
+      shadowD += ellR(x + ht * 0.2, y - 1 + ht * 0.03, half * 0.95, half * 0.42, 14);
+      shadowD += ell(x + 3, y + 1, half * 0.62, Math.max(4, half * 0.2));
+    };
+    const place = (sym, x, y, sc, flip) => {
+      objs.push({ y, s: `<use href="#${sym.id}" transform="translate(${f(x)} ${f(y)}) scale(${flip ? -f(sc * 100) / 100 : f(sc * 100) / 100} ${f(sc * 100) / 100})"/>` });
+      castShadow(x, y, sym.top * sc, (sym.half || 34) * sc);
+    };
+    const rockG = def('rock', (id) => h.rg(id, [[0, P.stoneL], [0.5, P.stone], [1, P.stoneD]], 0.35, 0.25, 0.85));
+    const nearWater = (c, r) => N4.filter(([dc, dr]) => kAt(c + dc, r + dr) === K.WATER).length;
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
+        if (isAir(c, r)) continue;
         const k = kAt(c, r);
         const x0 = c * 100;
         const y0 = r * 100;
-        const roomUp = r === 0 || isObst(kAt(c, r - 1)) ? 22 : -2; // 위 칸이 장애물이면 위로 넘쳐도 됨
+        const up = kAt(c, r - 1);
+        const roomUp = r === 0 || (isObst(up) && up !== K.WATER && up !== K.LAVA) ? 22 : (isObst(up) ? 8 : -2);
         if (k === K.TREE) {
           const trees = TR.filter((t) => !t.bush && !t.coral);
           const bushes = TR.filter((t) => t.bush);
@@ -839,11 +1225,11 @@
             const sym = corals[0];
             const by = y0 + 82;
             place(sym, x0 + 50 + (rnd(c, r, 93) - 0.5) * 16, by, fit(sym, by, 1.05), flip);
-          } else if (v < 0.62) {
+          } else if (v < 0.58) {
             const sym = pick(trees, 94);
             const by = y0 + 86 + (rnd(c, r, 95) - 0.5) * 6;
-            const dense = [[0, -1], [1, 0], [0, 1], [-1, 0]].every(([dc, dr]) => isObst(kAt(c + dc, r + dr)));
-            place(sym, x0 + 50 + (rnd(c, r, 96) - 0.5) * 12, by, fit(sym, by, (dense ? 1.04 : 0.94) + rnd(c, r, 97) * 0.2), flip);
+            const dense = N4.every(([dc, dr]) => isObst(kAt(c + dc, r + dr)));
+            place(sym, x0 + 50 + (rnd(c, r, 96) - 0.5) * 14, by, fit(sym, by, (dense ? 1.04 : 0.94) + rnd(c, r, 97) * 0.2), flip);
           } else if (v < 0.86) {
             const a = pick(trees, 98);
             const b = pick(trees, 99);
@@ -856,22 +1242,30 @@
             const bsh = bushes.length ? bushes[0] : a;
             const by1 = y0 + 74;
             place(a, x0 + 38, by1, fit(a, by1, 0.8), flip);
-            place(bsh, x0 + 66, y0 + 92, 0.7, !flip);
+            place(bsh, x0 + 68, y0 + 92, 0.68, !flip);
           }
-        } else if (k === K.ROCK && wallSet.has(r * cols + c)) {
-          // 벽 위에 굴러 떨어진 돌 몇 개
-          if (rnd(c, r, 118) < 0.3) {
+        } else if ((k === K.ROCK || k === K.PILLAR) && inCliff(c, r)) {
+          // 절벽 윗면의 돌덩이 / 무너진 기둥 그루터기
+          const topY = y0 + 72 - HC;
+          if (k === K.PILLAR && rnd(c, r, 118) < 0.55) {
+            const sym = PI[Math.floor(rnd(c, r, 119) * PI.length) % PI.length];
+            place(sym, x0 + 50 + (rnd(c, r, 120) - 0.5) * 20, topY, Math.min(0.72, (topY - y0 + 20) / sym.top), rnd(c, r, 121) < 0.5);
+          } else if (k === K.ROCK && rnd(c, r, 118) < 0.3 && !ST.coral) {
             const sym = RK[Math.floor(rnd(c, r, 119) * RK.length) % RK.length];
-            place(sym, x0 + 38 + rnd(c, r, 120) * 24, y0 + 66, 0.5, rnd(c, r, 121) < 0.5);
+            place(sym, x0 + 34 + rnd(c, r, 120) * 32, topY, 0.48, rnd(c, r, 121) < 0.5);
           }
         } else if (k === K.ROCK) {
           const sym = RK[Math.floor(rnd(c, r, 111) * RK.length) % RK.length];
           const by = y0 + 80 + (rnd(c, r, 112) - 0.5) * 8;
           const sc = Math.min(1.08, 0.88 + rnd(c, r, 113) * 0.22, (by - y0 + roomUp) / sym.top);
           place(sym, x0 + 50 + (rnd(c, r, 114) - 0.5) * 12, by, sc, rnd(c, r, 115) < 0.5);
-          if (rnd(c, r, 116) < 0.45) {
+          if (ST.coral) {
+            const s2 = RK[(Math.floor(rnd(c, r, 111) * RK.length) + 1) % RK.length];
+            place(s2, x0 + (rnd(c, r, 117) < 0.5 ? 24 : 76), y0 + 92, 0.5, rnd(c, r, 119) < 0.5);
+          } else if (rnd(c, r, 116) < 0.45) {
             const x = x0 + (rnd(c, r, 117) < 0.5 ? 18 : 82);
             objs.push({ y: y0 + 92, s: `<path d="${ell(x, y0 + 90, 8, 5.5)}" fill="${rockG}" ${SO(2.6)}/>` });
+            shadowD += ell(x + 4, y0 + 92, 9, 4);
           }
         } else if (k === K.PILLAR) {
           const sym = PI[Math.floor(rnd(c, r, 121) * PI.length) % PI.length];
@@ -881,27 +1275,579 @@
         }
       }
     }
+    /* 지상 입구: 맵 가장자리 바위 언덕 + 어두운 동굴 */
+    for (const s of map.spawns || []) {
+      const o = drawCave(s, cols, rows, kAt, isRoad, P, def, rnd);
+      objs.push({ y: s.r * 100 + 60, s: o.svg });
+      shadowD += o.shadow;
+    }
+    body.push(`<path d="${shadowD}" fill="${P.shadow}" fill-opacity="${P.shadowOp}"/>`);
     objs.sort((a, b) => a.y - b.y);
     body.push(objs.map((o) => o.s).join(''));
 
-    /* ---- 12. 하늘 입구: 엷은 안개 소용돌이 ---- */
-    if ((map.airSpawns || []).length) {
-      const aG = def('air', (id) => h.rg(id, [[0, '#ffffff', 0.45], [0.6, '#e6e0ff', 0.18], [1, '#e6e0ff', 0]], 0.5, 0.5, 0.5));
-      const sp = 'M0 -32A32 32 0 0 1 32 0A24 24 0 0 1 8 24A15 15 0 0 1 -7 9A7 7 0 0 1 0 2';
-      for (const a of map.airSpawns) {
-        const cx = a.c * 100 + 50;
-        const cy = a.r * 100 + 50;
-        body.push(`<g transform="translate(${cx} ${cy})"><circle r="46" fill="${aG}"/><path d="${sp}" ${strokeA(P.mist, 10, region === 2 ? 0.6 : 0.4)}/><path d="${sp}" transform="rotate(180)" ${strokeA(P.mist, 8, region === 2 ? 0.45 : 0.3)}/><path d="${sp}" ${strokeA('#ffffff', 5, 0.75)}/><path d="${sp}" transform="rotate(180)" ${strokeA('#ffffff', 4, 0.5)}/></g>`);
+    /* =====================================================
+     * 13. 반딧불 (반딧불 습지)
+     * ===================================================== */
+    if (ST.fireflies && F.water) {
+      const gG = def('ffly', (id) => h.rg(id, [[0, '#fff7a8', 0.9], [0.35, '#ffe46a', 0.35], [1, '#ffe46a', 0]], 0.5, 0.5, 0.5));
+      let s = '';
+      for (let i = 0; i < 26; i++) {
+        const x = rnd(i, 1, 991) * W;
+        const y = rnd(i, 2, 991) * H;
+        const d = val('water', x, y, -99);
+        if (d < -30 || d > 30) continue;
+        s += `<circle cx="${f(x)}" cy="${f(y)}" r="9" fill="${gG}"/><circle cx="${f(x)}" cy="${f(y)}" r="2" fill="#fffbd0"/>`;
       }
+      body.push(s);
     }
 
-    /* ---- 13. 가장자리 살짝 어둡게 ---- */
-    const vG = def('vig', (id) => h.rg(id, [[0.6, OL, 0], [1, OL, region === 2 ? 0.16 : 0.26]], 0.5, 0.5, 0.75));
+    /* =====================================================
+     * 14. 하늘 입구: 바닥에 엷은 빛 웅덩이만 (소용돌이는 렌더러)
+     * ===================================================== */
+    if ((map.airSpawns || []).length) {
+      const aG = def('air', (id) => h.rg(id, [[0, '#ffffff', 0.32], [0.6, '#e6e0ff', 0.12], [1, '#e6e0ff', 0]], 0.5, 0.5, 0.5));
+      for (const a of map.airSpawns) body.push(`<ellipse cx="${a.c * 100 + 50}" cy="${a.r * 100 + 56}" rx="44" ry="36" fill="${aG}"/>`);
+    }
+
+    /* ---- 15. 가장자리 살짝 어둡게 ---- */
+    const vG = def('vig', (id) => h.rg(id, [[0.62, OL, 0], [1, OL, region === 2 ? 0.16 : 0.24]], 0.5, 0.5, 0.75));
     body.push(`<rect width="${W}" height="${H}" fill="${vG}"/>`);
 
     return h.svg(`0 0 ${W} ${H}`, defs.join(''), body.join(''), `width="${W}" height="${H}"`);
   }
 
+  /* =========================================================
+   * 부품
+   * ========================================================= */
+  /** 돌멩이 하나(왼쪽 위 밝게, 아래 그늘) */
+  function pebble(bk, P, x, y, r) {
+    bk.add(fillA('#000000', 0.18), ell(x + r * 0.35, y + r * 0.45, r * 1.05, r * 0.7));
+    bk.add(fillA(P.stone), ell(x, y, r, r * 0.72));
+    bk.add(fillA(P.stoneL, 0.85), ell(x - r * 0.3, y - r * 0.25, r * 0.45, r * 0.3));
+    bk.add(strokeA(P.stoneD, 1.2, 0.7), `M${f(x - r * 0.6)} ${f(y + r * 0.5)}Q${f(x)} ${f(y + r * 0.95)} ${f(x + r * 0.9)} ${f(y + r * 0.2)}`);
+  }
+
+  /** 맨땅 장식 */
+  function groundDeco(bk, region, P, x, y, v, s, inTree, inRub, v2) {
+    if (inTree) {
+      if (region === 1 || region === 4) { if (v < 0.25) { bk.add(strokeA(P.tuft, 2.4, 0.9), tuftD(x, y, s)); } else if (v < 0.3) { bk.add(`fill="#e8d8b0" ${SO(1.4)}`, `M${f(x - 4)} ${f(y)}q4 -9 8 0Z`); bk.add(fillA(region === 1 ? '#d9533f' : '#e89a6a'), `M${f(x - 5)} ${f(y - 3)}q5 -8 10 0Z`); } }
+      return;
+    }
+    if (inRub) { if (v < 0.25) pebble(bk, P, x, y, 2.4 * s); return; }
+    if (region === 1) {
+      if (v < 0.4) {
+        bk.add(strokeA(P.tuft, 2.4, 0.85), tuftD(x, y, s));
+        bk.add(strokeA(P.tuftL, 1.8, 0.8), tuftHiD(x, y, s));
+      } else if (v < 0.5) {
+        const col = P.flowers[Math.floor(v2 * 4) % 4];
+        bk.add(fillA(col), circ(x - 3, y, 2.4) + circ(x + 2.5, y - 2, 2.4) + circ(x + 1, y + 2.6, 2.2));
+        bk.add(fillA('#e6a21a'), circ(x, y, 1.3));
+      } else if (v < 0.56) pebble(bk, P, x, y, 2.4 * s);
+      else if (v < 0.62) bk.add(fillA(P.tuftL, 0.35), ell(x, y, 9 * s, 4 * s));
+    } else if (region === 2) {
+      if (v < 0.32) bk.add(strokeA('#b9cde2', 2.6, 0.75), `M${f(x - 11 * s)} ${f(y)}q${f(11 * s)} ${f(-6 * s)} ${f(22 * s)} 0`);
+      else if (v < 0.42) bk.add(fillA('#ffffff'), `M${f(x)} ${f(y - 4)}l1.2 2.8l2.8 1.2l-2.8 1.2l-1.2 2.8l-1.2 -2.8l-2.8 -1.2l2.8 -1.2Z`);
+      else if (v < 0.5) bk.add(strokeA('#9c8a66', 1.8, 0.8), `M${f(x - 3)} ${f(y)}l-2 -6M${f(x)} ${f(y)}v-7M${f(x + 3)} ${f(y)}l2 -5`);
+      else if (v < 0.55) { pebble(bk, P, x, y, 3 * s); bk.add(fillA('#ffffff'), ell(x - 0.5, y - 2 * s, 3 * s, 1.5 * s)); }
+    } else if (region === 3) {
+      if (v < 0.25) { pebble(bk, P, x, y, 2 * s); pebble(bk, P, x + 6, y + 3, 1.5 * s); }
+      else if (v < 0.4) { bk.add(strokeA(P.tuft, 2.2, 0.8), tuftD(x, y, s * 0.9)); bk.add(strokeA(P.tuftL, 1.6, 0.8), tuftHiD(x, y, s * 0.9)); }
+      else if (v < 0.5) bk.add(strokeA(P.groundD, 2, 0.8), `M${f(x - 9)} ${f(y - 2)}l5 3l4 -3l5 4l4 -2`);
+      else if (v < 0.56) bk.add(fillA(P.groundL, 0.5), ell(x, y, 8 * s, 3.5 * s));
+    } else if (region === 4) {
+      if (v < 0.42) {
+        bk.add(strokeA(P.tuft, 2.4, 0.85), `M${f(x - 3)} ${f(y)}q-3 -6 -1 -11M${f(x + 1)} ${f(y)}q1 -7 5 -10M${f(x - 1)} ${f(y)}q-1 -5 -5 -7`);
+        bk.add(strokeA(P.tuftL, 1.6, 0.7), `M${f(x - 4)} ${f(y - 4)}q-1 -3 0 -6`);
+      } else if (v < 0.48) bk.add(`fill="#f3e8d0" stroke="${P.tuft}" stroke-width="1.2"`, `M${f(x - 3.5)} ${f(y + 2)}q3.5 -8 7 0Z`);
+      else if (v < 0.54) bk.add(fillA(P.flowers[Math.floor(v2 * 3) % 3]), circ(x - 2, y, 2.2) + circ(x + 2, y - 1, 2.2));
+      else if (v < 0.58) pebble(bk, P, x, y, 2.4 * s);
+    } else {
+      if (v < 0.26) pebble(bk, P, x, y, 2.6 * s);
+      else if (v < 0.38) bk.add(`fill="${P.groundL}" stroke="${P.tuft}" stroke-width="1.4"`, `M${f(x - 7 * s)} ${f(y - 2)}l${f(9 * s)} -3l${f(5 * s)} 4l${f(-9 * s)} 3Z`);
+      else if (v < 0.48) bk.add(strokeA(P.tuftL, 1.8, 0.7), `M${f(x - 3)} ${f(y)}l-2 -6M${f(x)} ${f(y)}v-7M${f(x + 3)} ${f(y)}l2 -5`);
+      else if (v < 0.52) bk.add(fillA(P.accent, 0.85), circ(x, y, 1.6));
+    }
+  }
+
+  /** 공터 장식 (옅게) */
+  function openDeco(bk, region, P, x, y, v, ice, oD, oL) {
+    if (ice) {
+      if (v < 0.35) bk.add(fillA('#ffffff', 0.75), ellR(x, y, 12, 4, -8));
+      else if (v < 0.5) bk.add(strokeA('#ffffff', 2, 0.7), `M${f(x - 8)} ${f(y)}l16 -3`);
+      return;
+    }
+    if (region === 1) {
+      if (v < 0.4) bk.add(strokeA(oD, 2, 0.55), tuftD(x, y, 0.6));
+      else if (v < 0.5) bk.add(fillA(P.flowers[Math.floor(v * 40) % 4], 0.9), circ(x, y, 1.8));
+      else if (v < 0.6) bk.add(fillA(oL, 0.7), ell(x, y, 8, 3));
+    } else if (region === 2) {
+      if (v < 0.4) bk.add(strokeA('#ffffff', 2.2, 0.75), `M${f(x - 9)} ${f(y)}q9 -4 18 0`);
+      else if (v < 0.55) bk.add(fillA('#a9c6dc', 0.5), ellR(x, y, 2.4, 3.6, 10) + ellR(x + 5, y - 9, 2.4, 3.6, 10));
+    } else if (region === 3) {
+      if (v < 0.45) bk.add(strokeA(oD, 2, 0.5), `M${f(x - 10)} ${f(y)}q5 -3 10 0t10 0`);
+      else if (v < 0.55) bk.add(fillA(oD, 0.7), ell(x, y, 2.2, 1.6));
+    } else if (region === 4) {
+      if (v < 0.42) bk.add(strokeA(oD, 2, 0.55), `M${f(x - 2)} ${f(y)}q-2 -5 0 -8M${f(x + 2)} ${f(y)}q2 -4 4 -6`);
+      else if (v < 0.5) bk.add(fillA('#f3ead6', 0.9), `M${f(x - 3)} ${f(y + 1.5)}q3 -6 6 0Z`);
+    } else {
+      if (v < 0.35) bk.add(fillA(oD, 0.55), ell(x, y, 2.4, 1.7));
+      else if (v < 0.42) bk.add(fillA(P.accent, 0.7), circ(x, y, 1.4));
+      else if (v < 0.55) bk.add(strokeA(oD, 1.8, 0.45), `M${f(x - 9)} ${f(y)}l5 -2l4 2l6 -1`);
+    }
+  }
+
+  /** 물가 갈대·바다풀 */
+  function reeds(bk, region, P, x, y, v) {
+    if (region === 3) { bk.add(strokeA('#6c8a3a', 2.2), `M${f(x)} ${f(y)}q-1 -6 -3 -9M${f(x + 3)} ${f(y)}q1 -6 3 -8`); return; }
+    const dark = region === 1 ? '#3d6a24' : '#1f4d44';
+    const lite = region === 1 ? '#8cc456' : '#6aa88c';
+    bk.add(strokeA(dark, 2.6), `M${f(x - 3)} ${f(y)}q-2 -8 -5 -13M${f(x)} ${f(y)}q0 -10 2 -16M${f(x + 3)} ${f(y)}q2 -7 6 -11`);
+    bk.add(strokeA(lite, 1.6, 0.8), `M${f(x - 4)} ${f(y - 5)}q-1 -3 -3 -6M${f(x)} ${f(y - 6)}q0 -4 1 -7`);
+    if (region === 1 && v < 0.45) bk.add(`fill="#7a4a24" ${SO(1.4)}`, ellR(x + 2, y - 17, 2.2, 4.4, 8));
+  }
+
+  /** 길가 장식(가장자리를 덮는 풀/눈/돌) */
+  function edgeDeco(bk, region, P, x, y, v) {
+    if (region === 1 || region === 4) {
+      const s = 0.75 + v * 0.45;
+      bk.add(strokeA(region === 1 ? '#4a7a28' : P.tuft, 2.3, 0.9), tuftD(x, y + 2, s));
+      bk.add(strokeA(region === 1 ? '#9fcb5a' : P.tuftL, 1.6, 0.8), tuftHiD(x, y + 2, s));
+    } else if (region === 2) {
+      bk.add(fillA('#ffffff'), ell(x, y, 6 + v * 5, 3 + v * 1.5));
+      bk.add(fillA('#c3d4e6', 0.8), `M${f(x - 5)} ${f(y + 2.5)}q5 2 10 0`);
+    } else if (region === 3) {
+      if (v < 0.5) bk.add(strokeA('#c79254', 2, 0.9), tuftD(x, y + 2, 0.7));
+      else pebble(bk, PAL[3], x, y, 2.4);
+    } else {
+      pebble(bk, PAL[5], x, y, 2.2 + v * 1.6);
+    }
+  }
+
+  /** 눈길 발자국 (길 뼈대를 따라 좌우 번갈아) */
+  function footprints(bk, roadCells, kAt, isRoad, rnd) {
+    for (const [c, r] of roadCells) {
+      const cx = c * 100 + 50;
+      const cy = r * 100 + 50;
+      for (const [dc, dr] of [[1, 0], [0, 1]]) {
+        if (!isRoad(kAt(c + dc, r + dr))) continue;
+        const deg = dc ? 0 : 90;
+        for (let i = 0; i < 6; i++) {
+          const t = 8 + i * 16 + (rnd(c, r, 1001 + i) - 0.5) * 3;
+          const side = (i % 2 ? 1 : -1) * 5;
+          const x = cx + dc * t + dr * side;
+          const y = cy + dr * t + dc * side;
+          bk.add(fillA('#7f7062', 0.45), ellR(x, y, 3.6, 2.2, deg));
+        }
+      }
+    }
+  }
+
+  /** 판석 길 (깨진 대종): 세상 좌표의 엇갈린 돌 줄 → 칸 경계 없이 이어짐 */
+  function pavingStones(roadCells, P, rnd) {
+    const RH = 24;
+    let joints = '';
+    let tint = '';
+    let tintD = '';
+    const done = new Set();
+    for (const [c, r] of roadCells) {
+      for (let rr = Math.floor((r * 100 - 20) / RH); rr * RH < r * 100 + 120; rr++) {
+        const key0 = `${rr}`;
+        const y0 = rr * RH;
+        const x0 = c * 100 - 20;
+        const x1 = c * 100 + 120;
+        const off = (rr % 2) * 19;
+        for (let k = Math.floor((x0 - off) / 38) - 1; k * 38 + off < x1; k++) {
+          const sx = k * 38 + off + (rnd(k, rr, 1011) - 0.5) * 10;
+          const ex = (k + 1) * 38 + off + (rnd(k + 1, rr, 1011) - 0.5) * 10;
+          const id = `${key0}:${k}`;
+          if (done.has(id)) continue;
+          done.add(id);
+          joints += `M${f(sx)} ${y0}V${y0 + RH}M${f(sx)} ${y0}H${f(ex)}`;
+          const v = rnd(k, rr, 1012);
+          if (v < 0.25) tint += `M${f(sx + 2)} ${y0 + 2}H${f(ex - 2)}V${y0 + RH - 2}H${f(sx + 2)}Z`;
+          else if (v > 0.8) tintD += `M${f(sx + 2)} ${y0 + 2}H${f(ex - 2)}V${y0 + RH - 2}H${f(sx + 2)}Z`;
+        }
+      }
+    }
+    return `<path d="${tint}" fill="${P.roadL}" fill-opacity="0.45"/><path d="${tintD}" fill="${P.roadD}" fill-opacity="0.5"/>` +
+      `<path d="${joints}" ${strokeA(P.roadL, 1.8, 0.6)} transform="translate(1.5 1.5)"/><path d="${joints}" ${strokeA(P.roadEdge, 2.4, 0.55)}/>`;
+  }
+
+  /** 건설지 축대: 이어진 건설 칸 = 하나의 낮은 돌 축대(그림자 → 앞면 → 윗면 테두리 빛).
+   *  윗면은 칸마다 큰 판석 한 장 — 줄눈은 가늘게, 판석마다 결·금·이끼가 달라 손으로 깐 느낌 */
+  function drawTerrace(A, G, cells, P, region, rnd, def, clip, kAt, CM, val) {
+    const EO = 'fill-rule="evenodd"';
+    const HT = 6;
+    const L0 = 1.5;
+    const loops = G.loops(A, L0);
+    const base = pathD(loops, 0.3);
+    let s = '';
+    // 그림자(오른쪽 아래) + 접지 그늘
+    s += `<path d="${base}" ${EO} fill="${P.shadow}" fill-opacity="${f(P.shadowOp * 0.75)}" transform="translate(7 6)"/>`;
+    s += `<path d="${base}" ${EO} fill="${P.shadow}" fill-opacity="${f(P.shadowOp * 0.5)}" transform="translate(2 2.5)"/>`;
+    // 앞면
+    s += `<path d="${base}" ${EO} fill="${P.slabSide}" stroke="${OL}" stroke-width="2.6" stroke-opacity="0.75"/>`;
+    s += `<path d="${base}" ${EO} fill="${h.mix(P.slabSide, P.slabD, 0.45)}" transform="translate(0 ${-HT * 0.5})"/>`;
+    // 윗면
+    const up = `translate(0 ${-HT})`;
+    const topClip = clip(base, up);
+    const inClip = clip(base, `translate(2.5 ${-HT + 2.5})`);
+    let t = `<path d="${base}" ${EO} fill="${P.slabL}" transform="${up}"/>`;
+    t += `<path d="${base}" ${EO} fill="${P.slabD}" transform="translate(2.5 ${-HT + 2.5})"/>`;
+    t += `<g clip-path="${inClip}"><path d="${base}" ${EO} fill="${P.slab}" transform="translate(-2.5 ${-HT - 2.5})"/></g>`;
+    // 큰 얼룩(돌 색 변화 / 눈·모래 덮임)
+    if (region === 2) {
+      const sn = pathD(G.loops(CM, 0.6), 0.4);
+      t += `<path d="${sn}" ${EO} fill="#b4c6da" transform="translate(1.5 ${-HT + 2})"/><path d="${sn}" ${EO} fill="#ffffff" fill-opacity="0.95" transform="${up}"/>`;
+    } else if (region === 3) {
+      t += `<path d="${pathD(G.loops(CM, 0.62), 0.4)}" ${EO} fill="${P.moss}" fill-opacity="0.75" transform="${up}"/>`;
+    } else {
+      t += `<path d="${pathD(G.loops(CM, 0.62), 0.4)}" ${EO} fill="${P.slabL}" fill-opacity="0.35" transform="${up}"/>`;
+    }
+    t += `<path d="${pathD(G.loops(CM.map((v) => (v === -9 ? 9 : v)), 0.36, true), 0.4)}" ${EO} fill="${P.slabD}" fill-opacity="0.22" transform="${up}"/>`;
+    const tint = Buckets();
+    const jt = Buckets();
+    const det = Buckets();
+    const isB = (c, r) => kAt(c, r) === K.BUILD;
+    const jointCol = region === 5 ? P.moss : P.slabLine;
+    for (const [c, r] of cells) {
+      const x0 = c * 100;
+      const y0 = r * 100 - HT;
+      const j = (k, a) => (rnd(c, r, k) - 0.5) * a;
+      // 판석마다 살짝 다른 색
+      const tv = rnd(c, r, 9);
+      if (tv < 0.3) tint.add(fillA(P.slabL, 0.16), `M${x0} ${y0}h100v100h-100Z`);
+      else if (tv > 0.72) tint.add(fillA(P.slabD, 0.16), `M${x0} ${y0}h100v100h-100Z`);
+      // 칸 사이 줄눈(오른쪽·아래 이웃이 건설지일 때) — 빛 받는 쪽 가는 밝은 선
+      const jx = x0 + 100 + j(1, 2);
+      const jy = y0 + 100 + j(2, 2);
+      if (isB(c + 1, r)) {
+        jt.add(strokeA(jointCol, region === 5 ? 2.2 : 2.6, 0.8), `M${f(jx)} ${y0 - 2}L${f(jx + j(3, 2))} ${y0 + 102}`);
+        jt.add(strokeA(P.slabL, 1.5, 0.6), `M${f(jx + 2)} ${y0 + 2}L${f(jx + 2 + j(3, 2))} ${y0 + 98}`);
+      }
+      if (isB(c, r + 1)) {
+        jt.add(strokeA(jointCol, region === 5 ? 2.2 : 2.6, 0.8), `M${x0 - 2} ${f(jy)}L${x0 + 102} ${f(jy + j(4, 2))}`);
+        jt.add(strokeA(P.slabL, 1.5, 0.6), `M${x0 + 2} ${f(jy + 2)}L${x0 + 98} ${f(jy + 2 + j(4, 2))}`);
+      }
+      if (region === 5) {
+        // 금빛 상감: 판석 안쪽 테
+        det.add(strokeA(P.slabLine, 2, 0.4), `M${x0 + 14} ${y0 + 14}h72v72h-72Z`);
+        det.add(strokeA(P.moss, 1.4, 0.55), `M${x0 + 15.5} ${y0 + 15.5}h72v72h-72Z`);
+      }
+      // 판석 안의 이음매(한 장 / 둘 / 셋)
+      const kind = rnd(c, r, 20);
+      const seam = (ax, ay, bx, by) => {
+        det.add(strokeA(P.slabL, 1.4, 0.5), `M${f(ax + 1.3)} ${f(ay + 1.3)}L${f(bx + 1.3)} ${f(by + 1.3)}`);
+        det.add(strokeA(P.slabLine, 2, 0.6), `M${f(ax)} ${f(ay)}L${f(bx)} ${f(by)}`);
+      };
+      const sx = x0 + 34 + rnd(c, r, 21) * 32;
+      const sy = y0 + 34 + rnd(c, r, 22) * 32;
+      if (kind > 0.45 && kind < 0.7) seam(sx, y0 + 3, sx + j(23, 8), y0 + 97);
+      else if (kind >= 0.7 && kind < 0.85) seam(x0 + 3, sy, x0 + 97, sy + j(24, 8));
+      else if (kind >= 0.85) { seam(sx, y0 + 3, sx + j(23, 6), y0 + 97); seam(rnd(c, r, 25) < 0.5 ? x0 + 3 : sx, sy, rnd(c, r, 25) < 0.5 ? sx : x0 + 97, sy + j(24, 6)); }
+      // 금
+      if (rnd(c, r, 30) < 0.45) {
+        let px = x0 + 15 + rnd(c, r, 31) * 70;
+        let py = y0 + 10 + rnd(c, r, 32) * 40;
+        let d = `M${f(px)} ${f(py)}`;
+        for (let i = 0; i < 3; i++) { px += j(33 + i, 18); py += 6 + rnd(c, r, 36 + i) * 8; d += `L${f(px)} ${f(py)}`; }
+        det.add(strokeA(P.slabL, 1.3, 0.5), d.replace(/(-?[\d.]+) (-?[\d.]+)/g, (m, a1, b1) => `${f(+a1 + 1.2)} ${f(+b1 + 1.2)}`));
+        det.add(strokeA(P.slabLine, 1.7, 0.7), d);
+      }
+      // 모서리 이 빠짐(이웃 판석과 만나는 모서리)
+      if (rnd(c, r, 40) < 0.3 && isB(c + 1, r) && isB(c, r + 1)) {
+        const x = jx;
+        const y = jy;
+        det.add(fillA(P.slabLine, 0.75), `M${f(x - 7)} ${f(y)}L${f(x)} ${f(y - 6)}L${f(x + 6)} ${f(y)}L${f(x)} ${f(y + 7)}Z`);
+      }
+      // 지역 장식
+      const m = rnd(c, r, 50);
+      if (region === 1 || region === 4) {
+        if (m < 0.45) {
+          const x = x0 + 10 + rnd(c, r, 51) * 80;
+          const y = y0 + (rnd(c, r, 52) < 0.5 ? 8 : 92) + j(53, 6);
+          det.add(fillA(P.moss, 0.85), circ(x, y, 4.5) + circ(x + 5, y + 1, 3.4) + circ(x - 4, y + 1.5, 3));
+          det.add(fillA(P.mossL, 0.85), circ(x - 1, y - 1.5, 2));
+        }
+        if (m > 0.55 && isB(c + 1, r)) {
+          const y = y0 + 20 + rnd(c, r, 54) * 60;
+          det.add(strokeA(region === 1 ? '#5c8a30' : P.tuft, 1.9, 0.9), tuftD(jx, y, 0.55));
+        }
+      } else if (region === 3) {
+        if (m < 0.5) det.add(strokeA(P.slabL, 1.8, 0.45), `M${x0 + 12} ${f(y0 + 30 + m * 30)}h${f(30 + m * 40)}`);
+      }
+    }
+    t += `<g transform="translate(0 0)">${tint.out()}${det.out()}${jt.out()}</g>`;
+    s += `<g clip-path="${topClip}">${t}</g>`;
+    s += `<path d="${base}" ${EO} fill="none" stroke="${OL}" stroke-width="2.2" stroke-opacity="0.55" transform="${up}"/>`;
+    // 축대 가장자리 풀·눈
+    const bk = Buckets();
+    let q = 0;
+    for (const L of loops) {
+      for (let i = 0; i < L.length; i += 4) {
+        q++;
+        const x = L[i];
+        const y = L[i + 1];
+        if (rnd(q, 5, 1401) > 0.4) continue;
+        if (val('road', x, y, -99) > -6 || val('water', x, y, -99) > -4 || val('open', x, y, -99) > -4) continue;
+        const below = G.at(A, x, y + 4) < L0; // 남쪽 가장자리면 앞면 아래에
+        edgeDeco(bk, region, P, x + 1, below ? y + 2 : y - HT + 1, rnd(q, 6, 1402));
+      }
+    }
+    s += bk.out();
+    return s;
+  }
+
+  /** 다리 (물/용암 위 길 칸) — 세상 좌표로 직접 그려 빛 방향 유지 */
+  function drawBridge(b, bridgeAt, P, def) {
+    const cx = b.c * 100 + 50;
+    const cy = b.r * 100 + 50;
+    const along = b.dir === 'h'; // 길이 가로로 지나감
+    const prevB = along ? bridgeAt(b.c - 1, b.r) : bridgeAt(b.c, b.r - 1);
+    const nextB = along ? bridgeAt(b.c + 1, b.r) : bridgeAt(b.c, b.r + 1);
+    const A0 = prevB ? -50 : -60;
+    const A1 = nextB ? 50 : 60;
+    const HWd = 36;
+    // (u: 길 방향, v: 가로지름) → 세상 좌표
+    const X = (u, v) => (along ? cx + u : cx + v);
+    const Y = (u, v) => (along ? cy + v : cy + u);
+    const rect = (u0, u1, v0, v1) => `M${f(Math.min(X(u0, v0), X(u1, v1)))} ${f(Math.min(Y(u0, v0), Y(u1, v1)))}H${f(Math.max(X(u0, v0), X(u1, v1)))}V${f(Math.max(Y(u0, v0), Y(u1, v1)))}H${f(Math.min(X(u0, v0), X(u1, v1)))}Z`;
+    let s = '';
+    s += `<path d="${rect(A0, A1, -HWd, HWd)}" fill="#04101e" fill-opacity="0.35" transform="translate(8 11)"/>`;
+    if (!b.lava) {
+      const woodG = def('plank', (id) => h.lg(id, [[0, h.shade(P.wood, 0.28)], [1, h.shade(P.wood, -0.05)]]));
+      s += `<path d="${rect(A0, A1, -HWd, HWd)}" fill="${P.woodD}" ${SO(3)}/>`;
+      let pl = '';
+      let plD = '';
+      let gaps = '';
+      for (let u = A0 + 2; u < A1 - 2; u += 12) {
+        const u1 = Math.min(A1 - 2, u + 10.5);
+        const k = Math.round(u + cx * 3 + cy * 7);
+        const j0 = ((k * 37) % 5) - 2;
+        const d = rect(u, u1, -HWd + 2 + j0 * 0.6, HWd - 2 + j0 * 0.5);
+        if (((k * 13) % 7) < 2) plD += d; else pl += d;
+        gaps += along ? `M${f(X(u1 - 2, -HWd + 6))} ${f(Y(u1 - 2, -HWd + 6))}L${f(X(u1 - 2, HWd - 6))} ${f(Y(u1 - 2, HWd - 6))}` : `M${f(X(u1 - 2, -HWd + 6))} ${f(Y(u1 - 2, -HWd + 6))}L${f(X(u1 - 2, HWd - 6))} ${f(Y(u1 - 2, HWd - 6))}`;
+      }
+      s += `<path d="${pl}" fill="${woodG}"/><path d="${plD}" fill="${h.shade(P.wood, -0.12)}"/>`;
+      s += `<path d="${gaps}" ${strokeA(P.woodD, 1.6, 0.5)}/>`;
+      // 난간(가로대): 위/왼쪽은 밝게, 아래/오른쪽은 어둡게
+      const railA = along ? `M${X(A0, -HWd)} ${Y(A0, -HWd)}L${X(A1, -HWd)} ${Y(A1, -HWd)}` : `M${X(A0, -HWd)} ${Y(A0, -HWd)}L${X(A1, -HWd)} ${Y(A1, -HWd)}`;
+      const railB = `M${X(A0, HWd)} ${Y(A0, HWd)}L${X(A1, HWd)} ${Y(A1, HWd)}`;
+      s += `<path d="${railA}${railB}" ${strokeA(OL, 11)}/><path d="${railA}" ${strokeA(h.shade(P.wood, 0.15), 6)}/><path d="${railB}" ${strokeA(P.woodD, 6)}/>`;
+      s += `<path d="${railA}" ${strokeA(h.shade(P.wood, 0.45), 2, 0.8)} transform="translate(-1 -1.5)"/>`;
+      const posts = [];
+      if (!prevB) posts.push(A0 + 5);
+      if (!nextB) posts.push(A1 - 5);
+      for (const u of posts) {
+        for (const v of [-HWd, HWd]) {
+          const px = X(u, v);
+          const py = Y(u, v);
+          s += `<rect x="${f(px - 6.5)}" y="${f(py - 9)}" width="13" height="16" rx="3" fill="${P.wood}" ${SO(3)}/><path d="M${f(px - 3.5)} ${f(py - 6)}V${f(py + 3)}" ${strokeA(h.shade(P.wood, 0.4), 2, 0.8)}/>`;
+        }
+      }
+    } else {
+      const stG = def('bstone', (id) => h.lg(id, [[0, P.stoneL], [1, P.stone]]));
+      s += `<path d="${rect(A0, A1, -HWd - 3, HWd + 3)}" fill="${stG}" ${SO(3)}/>`;
+      let j = '';
+      for (let u = A0 + 18; u < A1 - 4; u += 18) j += along ? `M${X(u, -HWd)} ${Y(u, -HWd)}V${Y(u, HWd)}` : `M${X(u, -HWd)} ${Y(u, -HWd)}H${X(u, HWd)}`;
+      s += `<path d="${j}" ${strokeA(P.stoneD, 2.4, 0.7)}/>`;
+    }
+    return s;
+  }
+
+  /** 울림등 광장: 둥근 판석 바닥 + 연석 */
+  function drawPlaza(cx, cy, P, def, rnd) {
+    const R = 44;
+    const pG = def('plaza', (id) => h.rg(id, [[0, h.shade(P.plaza, 0.3)], [0.7, P.plaza], [1, h.shade(P.plaza, -0.1)]], 0.38, 0.32, 0.8));
+    let s = `<ellipse cx="${cx + 3}" cy="${cy + 5}" rx="${R + 5}" ry="${R * 0.86 + 5}" fill="#000" fill-opacity="0.22"/>`;
+    s += `<ellipse cx="${cx + 1}" cy="${cy + 3}" rx="${R + 1}" ry="${R * 0.86 + 1}" fill="${P.plazaD}" ${SO(3)}/>`;
+    s += `<ellipse cx="${cx}" cy="${cy}" rx="${R}" ry="${R * 0.86}" fill="${pG}"/>`;
+    // 판석 줄눈: 고리 둘 + 방사선
+    let j = `M${cx - R * 0.45} ${cy}a${R * 0.45} ${R * 0.39} 0 1 0 ${R * 0.9} 0a${R * 0.45} ${R * 0.39} 0 1 0 ${-R * 0.9} 0Z`;
+    j += `M${cx - R * 0.76} ${cy}a${R * 0.76} ${R * 0.65} 0 1 0 ${R * 1.52} 0a${R * 0.76} ${R * 0.65} 0 1 0 ${-R * 1.52} 0Z`;
+    for (let i = 0; i < 10; i++) {
+      const a = ((i * 36 + 12) * Math.PI) / 180;
+      const r0 = i % 2 ? 0.45 : 0.76;
+      j += `M${f(cx + Math.cos(a) * R * r0)} ${f(cy + Math.sin(a) * R * r0 * 0.86)}L${f(cx + Math.cos(a) * R * 0.98)} ${f(cy + Math.sin(a) * R * 0.98 * 0.86)}`;
+    }
+    for (let i = 0; i < 6; i++) {
+      const a = ((i * 60 + 30) * Math.PI) / 180;
+      j += `M${f(cx + Math.cos(a) * R * 0.45)} ${f(cy + Math.sin(a) * R * 0.39)}L${f(cx + Math.cos(a) * R * 0.76)} ${f(cy + Math.sin(a) * R * 0.65)}`;
+    }
+    s += `<path d="${j}" ${strokeA('#ffffff', 1.6, 0.45)} transform="translate(1.2 1.2)"/><path d="${j}" ${strokeA(P.plazaD, 2.4, 0.9)}/>`;
+    // 연석 하이라이트(왼쪽 위)
+    s += `<path d="M${f(cx - R * 0.92)} ${f(cy - R * 0.2)}A${R} ${R * 0.86} 0 0 1 ${f(cx - R * 0.2)} ${f(cy - R * 0.84)}" ${strokeA('#ffffff', 3.4, 0.55)}/>`;
+    s += `<path d="M${f(cx + R * 0.95)} ${f(cy + R * 0.12)}A${R} ${R * 0.86} 0 0 1 ${f(cx + R * 0.1)} ${f(cy + R * 0.85)}" ${strokeA('#000000', 3, 0.18)}/>`;
+    s += `<path d="${[0, 1, 2, 3].map((i) => { const a = ((i * 90 + 45) * Math.PI) / 180; return circ(cx + Math.cos(a) * (R + 0.5), cy + Math.sin(a) * (R + 0.5) * 0.86, 3.4); }).join('')}" fill="#f2c14e" ${SO(1.6)}/>`;
+    return s;
+  }
+
+  /** 절벽·성벽 (돋운 땅): 그림자 → 앞면(남쪽만 보임) → 윗면(왼쪽 위 밝은 테, 오른쪽 아래 어두운 테) → 윗면 무늬 */
+  function drawCliffs(A, G, HC, P, region, def, clip, rnd, cellsWhere, inCliff, CM) {
+    const EO = 'fill-rule="evenodd"';
+    const L0 = 7;
+    const loops = G.loops(A, L0);
+    const base = pathD(loops, 0.3);
+    const masonry = region === 1 || region === 5;
+    let s = '';
+    // 1) 오른쪽 아래로 드리운 그림자 + 밑동 접지 그늘
+    s += `<path d="${base}" ${EO} fill="${P.shadow}" fill-opacity="${f(P.shadowOp * 0.85)}" transform="translate(14 10)"/>`;
+    s += `<path d="${base}" ${EO} fill="${P.shadow}" fill-opacity="${f(P.shadowOp * 0.7)}" transform="translate(5 4)"/>`;
+    // 2) 앞면: 아래쪽 반은 더 어둡게(접지), 결·줄눈
+    s += `<path d="${base}" ${EO} fill="${P.cliffFaceD}" stroke="${OL}" stroke-width="3"/>`;
+    s += `<path d="${base}" ${EO} fill="${P.cliffFace}" transform="translate(0 ${-HC * 0.45})"/>`;
+    if (region === 3) {
+      s += `<path d="${base}" fill="none" stroke="${P.strata}" stroke-width="2.6" stroke-opacity="0.7" transform="translate(0 -5)"/>`;
+      s += `<path d="${base}" fill="none" stroke="${P.cliffLine}" stroke-width="2" stroke-opacity="0.45" transform="translate(0 -10)"/>`;
+    } else if (masonry) {
+      s += `<path d="${base}" fill="none" stroke="${P.cliffLine}" stroke-width="2" stroke-opacity="0.6" transform="translate(0 -7.5)"/>`;
+    } else if (region === 2) {
+      s += `<path d="${base}" fill="none" stroke="#c9d8ea" stroke-width="2.2" stroke-opacity="0.55" transform="translate(0 -6)"/>`;
+    }
+    {
+      let v = '';
+      let q = 0;
+      for (const L of loops) {
+        for (let i = 0; i < L.length; i += 2) {
+          q++;
+          const x = L[i];
+          const y = L[i + 1];
+          if (G.at(A, x, y + 4) > L0 || G.at(A, x, y - 4) < L0) continue; // 남쪽을 향한 가장자리만
+          if (masonry) {
+            if (q % 3) continue;
+            const off = (Math.floor(x / 16) % 2) * 7.5;
+            v += `M${f(x)} ${f(y - 1.5 - off)}v-5.5`;
+          } else if (region === 4) {
+            if (q % 3) continue;
+            v += `M${f(x)} ${f(y - 1)}v${-HC + 2}`;
+          } else {
+            if (rnd(q, 9, 1101) > 0.14) continue;
+            v += `M${f(x)} ${f(y - 1)}l${f((rnd(q, 9, 1103) - 0.5) * 3)} ${f(-HC * (0.45 + rnd(q, 9, 1102) * 0.5))}`;
+          }
+        }
+      }
+      s += `<path d="${v}" ${strokeA(P.cliffLine, 2, 0.55)}/>`;
+    }
+    // 3) 윗면
+    const topClip = clip(base, `translate(0 ${-HC})`);
+    const inClip = clip(base, `translate(3.5 ${-HC + 3.5})`);
+    let t = `<path d="${base}" ${EO} fill="${P.cliffTopL}" transform="translate(0 ${-HC})"/>`;
+    t += `<path d="${base}" ${EO} fill="${P.cliffTopD}" transform="translate(3.5 ${-HC + 3.5})"/>`;
+    t += `<g clip-path="${inClip}"><path d="${base}" ${EO} fill="${P.cliffTop}" transform="translate(-3 ${-HC - 3})"/></g>`;
+    // 윗면 얼룩 (밝은/어두운 바위, 눈 덮인 곳)
+    if (region === 2) {
+      const sn = pathD(G.loops(CM, 0.44), 0.4);
+      t += `<path d="${sn}" ${EO} fill="#a7bad1" transform="translate(2 3)"/><path d="${sn}" ${EO} fill="#ffffff"/>`;
+      t += `<path d="${pathD(G.loops(CM, 0.6), 0.4)}" ${EO} fill="#e4edf6" fill-opacity="0.8"/>`;
+    } else {
+      t += `<path d="${pathD(G.loops(CM, 0.6), 0.4)}" ${EO} fill="${P.cliffTopL}" fill-opacity="0.35"/>`;
+      t += `<path d="${pathD(G.loops(CM.map((v) => (v === -9 ? 9 : v)), 0.38, true), 0.4)}" ${EO} fill="${P.cliffTopD}" fill-opacity="0.4"/>`;
+    }
+    // 4) 윗면 무늬
+    const bk = Buckets();
+    for (const [c, r] of cellsWhere((k, cc, rr) => inCliff(cc, rr))) {
+      const x0 = c * 100;
+      const y0 = r * 100;
+      if (masonry) {
+        // 갓돌: 줄마다 엇갈린 돌
+        for (let row = 0; row < 4; row++) {
+          const yy = y0 + row * 25;
+          const off = (row % 2) * 17;
+          bk.add(strokeA(P.cliffLine, 2, 0.5), `M${x0} ${yy}H${x0 + 100}`);
+          bk.add(strokeA(P.cliffTopL, 1.6, 0.55), `M${x0} ${yy + 2}H${x0 + 100}`);
+          for (let xx = x0 + off; xx < x0 + 100; xx += 34) {
+            const jx = f(xx + (rnd(c, r, 1111 + row * 7 + (xx - x0)) - 0.5) * 6);
+            bk.add(strokeA(P.cliffLine, 2, 0.5), `M${jx} ${yy}v25`);
+            bk.add(strokeA(P.cliffTopL, 1.4, 0.45), `M${f(jx + 2)} ${yy + 2}v21`);
+          }
+          if (rnd(c, r, 1150 + row) < 0.35) {
+            const xx = x0 + rnd(c, r, 1160 + row) * 80;
+            bk.add(fillA(P.cliffTopD, 0.35), `M${f(xx)} ${yy + 3}h${f(14 + rnd(c, r, 1170 + row) * 10)}v19h${f(-14)}Z`);
+          }
+        }
+        if (region === 1) {
+          for (let i = 0; i < 3; i++) {
+            if (rnd(c, r, 1121 + i) > 0.5) continue;
+            const x = x0 + 15 + rnd(c, r, 1124 + i) * 70;
+            const y = y0 + 15 + rnd(c, r, 1127 + i) * 70;
+            bk.add(fillA(h.shade(P.accent, -0.1), 0.9), circ(x - 5, y, 5) + circ(x + 2, y - 2, 6) + circ(x + 8, y + 1, 4));
+            bk.add(fillA('#a9d36a', 0.85), circ(x, y - 4, 2.6));
+          }
+        } else {
+          if (rnd(c, r, 1121) < 0.4) bk.add(strokeA(P.accent, 2.4, 0.8), `M${f(x0 + 30 + rnd(c, r, 1122) * 40)} ${y0 + 30}l6 8l-4 8l5 9`);
+        }
+      } else {
+        for (let i = 0; i < 4; i++) {
+          const x = x0 + 12 + rnd(c, r, 1131 + i) * 76;
+          const y = y0 + 12 + rnd(c, r, 1135 + i) * 76;
+          const v = rnd(c, r, 1139 + i);
+          if (region === 2) {
+            if (v < 0.5) bk.add(strokeA('#c3d3e6', 2.6, 0.8), `M${f(x - 11)} ${f(y)}q11 -5 22 0`);
+            else if (v < 0.7) { bk.add(fillA('#7d90aa', 0.85), ell(x, y, 4.5, 2.8)); bk.add(fillA('#ffffff'), ell(x - 0.5, y - 2, 3.5, 1.4)); }
+          } else if (region === 3) {
+            if (v < 0.4) bk.add(strokeA(P.cliffLine, 2, 0.55), `M${f(x - 10)} ${f(y)}l6 3l5 -4l7 2`);
+            else if (v < 0.7) bk.add(strokeA(P.cliffTopL, 2.4, 0.45), `M${f(x - 12)} ${f(y)}h24`);
+            else bk.add(strokeA('#e0a868', 2, 0.85), tuftD(x, y, 0.7));
+          } else if (region === 4) {
+            if (v < 0.6) { bk.add(strokeA('#2a5446', 2.3, 0.85), tuftD(x, y, 0.8)); bk.add(strokeA('#8cc49a', 1.5, 0.7), tuftHiD(x, y, 0.8)); }
+            else bk.add(fillA(P.stone, 0.8), ell(x, y, 4, 2.6));
+          }
+        }
+      }
+    }
+    t += `<g transform="translate(0 ${-HC})">${bk.out()}</g>`;
+    s += `<g clip-path="${topClip}">${t}</g>`;
+    // 윗면 테두리 외곽선
+    s += `<path d="${base}" ${EO} fill="none" stroke="${OL}" stroke-width="2.6" stroke-opacity="0.8" transform="translate(0 ${-HC})"/>`;
+    return s;
+  }
+
+  /** 지상 입구 동굴 */
+  function drawCave(s, cols, rows, kAt, isRoad, P, def, rnd) {
+    const cx = s.c * 100 + 50;
+    const cy = s.r * 100 + 50;
+    let ox = 0;
+    let oy = 0;
+    if (s.c === 0) ox = -1; else if (s.c === cols - 1) ox = 1; else if (s.r === 0) oy = -1; else if (s.r === rows - 1) oy = 1;
+    else {
+      // 안쪽 입구: 길이 오는 쪽의 반대편이 바위
+      let sx = 0;
+      let sy = 0;
+      for (const [dc, dr] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) if (isRoad(kAt(s.c + dc, s.r + dr))) { sx -= dc; sy -= dr; }
+      if (Math.abs(sx) >= Math.abs(sy) && sx) ox = Math.sign(sx); else if (sy) oy = Math.sign(sy); else ox = 1;
+    }
+    // u = 바깥 방향, v = 옆 방향
+    const T = (u, v) => [cx + ox * u - oy * v, cy + oy * u + ox * v];
+    const rockG = def('caveRock', (id) => h.rg(id, [[0, P.stoneL], [0.45, P.stone], [1, P.stoneD]], 0.32, 0.25, 0.85));
+    const mouthG = def('mouth', (id) => h.rg(id, [[0, '#06040b'], [0.55, '#140f1e'], [0.85, P.mist], [1, h.shade(P.mist, 0.25)]], 0.5, 0.5, 0.6));
+    const hazeG = def('haze', (id) => h.rg(id, [[0, '#cfc6e8', 0.5], [1, '#cfc6e8', 0]], 0.5, 0.5, 0.5));
+    // 바위 언덕: 원 여럿 (바깥쪽에 몰림)
+    const blobs = [[46, -40, 24], [40, 40, 24], [30, -26, 22], [26, 28, 22], [52, 0, 28], [20, -44, 14], [18, 46, 14]];
+    let mound = '';
+    let moundO = '';
+    let hi = '';
+    let sh = '';
+    for (const [u, v, r] of blobs) {
+      const [x, y] = T(u, v);
+      mound += circ(x, y, r);
+      moundO += circ(x, y, r + 3.5);
+      hi += `M${f(x - r * 0.75)} ${f(y - r * 0.15)}A${r * 0.8} ${r * 0.8} 0 0 1 ${f(x - r * 0.1)} ${f(y - r * 0.78)}`;
+      sh += circ(x + 8, y + 7, r);
+    }
+    let svg = `<path d="${moundO}" fill="${OL}"/><path d="${mound}" fill="${rockG}"/>`;
+    svg += `<path d="${hi}" ${strokeA(P.stoneL, 3, 0.65)}/>`;
+    // 입구(어두운 구멍) — 안쪽(−u)을 향함
+    const [mx, my] = T(16, 0);
+    const rx = oy ? 30 : 20;
+    const ry = oy ? 18 : 30;
+    svg += `<ellipse cx="${f(mx)}" cy="${f(my)}" rx="${rx + 4}" ry="${ry + 4}" fill="${h.shade(P.stoneD, -0.2)}" ${SO(3)}/>`;
+    svg += `<ellipse cx="${f(mx)}" cy="${f(my)}" rx="${rx}" ry="${ry}" fill="${mouthG}"/>`;
+    // 입구 위 돌출부(빛을 가림)
+    svg += `<path d="M${f(mx - rx)} ${f(my - ry * 0.35)}A${rx} ${ry} 0 0 1 ${f(mx + rx * 0.7)} ${f(my - ry * 0.75)}" ${strokeA(P.stoneL, 3, 0.6)} transform="translate(0 -4)"/>`;
+    const [hx, hy] = T(-2, 0);
+    svg += `<ellipse cx="${f(hx)}" cy="${f(hy)}" rx="30" ry="24" fill="${hazeG}"/><path d="${ell(hx - 4, hy - 12, 13, 4.5)}${ell(hx + 8, hy + 12, 15, 4.5)}" fill="#e4def5" fill-opacity="0.3"/>`;
+    return { svg, shadow: sh };
+  }
   /* =========================================================
    * 지역 풍경 (400 × 160)
    * ========================================================= */
