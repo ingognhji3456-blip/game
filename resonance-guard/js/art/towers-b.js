@@ -1751,7 +1751,7 @@
     F.forEach(([dx, dy, L, w, a]) => { const sg = Math.sign(dx); back += stoneFinger(c, x + dx * k, y + dy * k, L * k * (Math.abs(dx) > 10 ? 1 : 1.06), w * k, a - sg * curl, Math.abs(dx) > 10 ? col : h.shade(col, -0.15), nail); });
     const P = (a, b) => `${f(x + a * k)} ${f(y + b * k)}`;
     let front = c.p(`M${P(-20, -2)}Q${P(-20, 14)} ${P(0, 15)}Q${P(20, 14)} ${P(20, -2)}Q${P(0, 6)} ${P(-20, -2)}Z`, c.cg(col), 3);
-    front += c.ln(`M${P(-12, 8)}Q${P(-10, 4)} ${P(-6, 6)}M${P(12, 8)}Q${P(10, 4)} ${P(6, 6)}M${P(-3, 11)}h${f(6 * k)}`, h.shade(col, -0.38), 1.3);
+    front += c.ln(`M${P(-11, 3.6)}Q${P(-11.5, 7)} ${P(-10, 10)}M${P(0, 6)}V${P(0, 12.5).split(' ')[1]}M${P(11, 3.6)}Q${P(11.5, 7)} ${P(10, 10)}`, h.shade(col, -0.38), 1.3) + c.ln(`M${P(-17, 2)}Q${P(-10, 8)} ${P(0, 8.5)}`, h.shade(col, 0.3), 1, 0.7);
     return { back, front };
   }
   /** 던진 순간: 빈 손 위 소용돌이 고리 + 위로 솟는 꼬리 */
@@ -1823,7 +1823,7 @@
       const tips = [[22 - out, 36 - out * 0.5], [50, 18 - out * 0.4], [78 + out, 36 - out * 0.5]];
       const fin = (x0, y0, t) => c.ol(`M${f(x0)} ${f(y0)}Q${f((x0 + t[0]) / 2 + (t[0] < 50 ? -3 : t[0] > 50 ? 3 : 0))} ${f((y0 + t[1]) / 2)} ${f(t[0])} ${f(t[1] + 8)}`, h.shade(col, 0.05), 7);
       o += fin(42, 72, tips[0]) + fin(58, 72, tips[2]) + fin(50, 70, tips[1]);
-      o += c.p('M34 80Q34 66 50 64Q66 66 66 80Q50 88 34 80Z', c.cg(col), 3) + c.ln('M42 76Q46 72 50 74M58 76Q54 72 50 74', h.shade(col, -0.38), 1.3);
+      o += c.p('M34 80Q34 66 50 64Q66 66 66 80Q50 88 34 80Z', c.cg(col), 3) + c.ln('M43 70Q42 75 43 80M50 68V82M57 70Q58 75 57 80', h.shade(col, -0.38), 1.3);
       const rb = by(pose, 10, 12.5, 10);
       if (pose !== 'fire') {
         o += voidBallB(c, tips[0][0], tips[0][1], rb, 0) + voidBallB(c, tips[2][0], tips[2][1], rb, 0) + voidBallB(c, tips[1][0], tips[1][1], rb + 1, 0);

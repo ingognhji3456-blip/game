@@ -1274,14 +1274,14 @@
     return G(s, `rotate(${f(ang)} ${f(x)} ${f(y)})`);
   }
   /** 떠 있는 결정 + 작은 결정들 + 자세별 효과. 돌려줌 { s, tip } */
-  function frostCore(c, x, y, w, ht, pose, n = 0, orbitR = 18, boltAng = -32) {
+  function frostCore(c, x, y, w, ht, pose, n = 0, orbitR = 18, boltAng = -32, gr = 1.55) {
     const E = c.E;
     const dy = pose === 'aim' ? -3.5 : pose === 'fire' ? 1.5 : 0;
     const cy = y + dy;
     const tip = [x, cy - ht / 2];
     let s = '';
     s += aura(c, x, cy, w * (pose === 'idle' ? 1.1 : 1.5), ht * (pose === 'idle' ? 0.75 : 0.95), pose === 'idle' ? E.color : E.light, pose === 'idle' ? 0.5 : 0.85);
-    if (pose === 'aim') s += gather(c, x, cy - ht * 0.1, w * 0.85, w * 1.55, E.light, 8, 22);
+    if (pose === 'aim') s += gather(c, x, cy - ht * 0.1, w * 0.85, w * gr, E.light, 8, 22);
     /* 작은 결정: idle 제자리 · aim 안으로 · fire 밖으로 */
     const orb2 = [];
     for (let i = 0; i < n; i++) {
@@ -1311,7 +1311,7 @@
   const snowCap = (c, x, y, rx, ry) => c.p(`M${f(x - rx)} ${f(y)}Q${f(x - rx * 0.6)} ${f(y - ry * 1.3)} ${f(x)} ${f(y - ry)}Q${f(x + rx * 0.6)} ${f(y - ry * 1.3)} ${f(x + rx)} ${f(y)}Q${f(x + rx * 0.6)} ${f(y + ry * 0.9)} ${f(x + rx * 0.2)} ${f(y + ry * 0.5)}Q${f(x - rx * 0.3)} ${f(y + ry * 1.1)} ${f(x - rx)} ${f(y)}Z`, c.vg('#ffffff', 0, -0.12), 2);
 
   T.frost_crystal = {
-    muzzle: [[50, 28], [50, 17], [50, 13], [50, 7], [79, 23]],
+    muzzle: [[50, 28], [50, 17], [50, 13], [50, 10], [79, 23]],
     draw(c, v, pose = 'idle') {
       const h = c.h;
       const E = c.E;
@@ -1355,16 +1355,16 @@
         if (pose === 'aim') o += c.e(50, 99, 36, 10, 'none', 0, ` stroke="${E.light}" stroke-width="${c.sw(2.6)}" opacity="0.9"`) + frostMotes(c, [[18, 92, 2.4], [82, 90, 2.4], [30, 80, 2], [72, 76, 2]]);
         o += shard(c, 27, 46, 99, 17, E.light) + shard(c, 74, 38, 99, 19, E.light);
         /* 돌 오벨리스크(얼음이 덮음) */
-        o += c.p('M40 99L44 38L50 28L56 38L60 99Q50 102 40 99Z', c.cg('#8a9cb0'), 3);
+        o += c.p('M40 99L44 41L50 31L56 41L60 99Q50 102 40 99Z', c.cg('#8a9cb0'), 3);
         o += c.ln('M41 84H59M42 70H58M42.8 56H57.2M43.6 42H56.4M46 91V99M54 77V84M47 63V70M53 49V56', h.shade('#8a9cb0', -0.4), 1.5, 0.85);
         /* 서리 룬(빛나면 밝게) */
         o += c.ln('M50 48V60M46 52L54 56M54 52L46 56M50 74V82M47 76L53 80', glow ? '#ffffff' : E.dark, glow ? 2 : 1.6, glow ? 0.95 : 0.7);
         if (glow) o += c.ln('M50 48V60M46 52L54 56M54 52L46 56M50 74V82M47 76L53 80', E.light, 4, 0.4);
-        o += c.p('M44 39L50 28L56 39Q53 44 50 41Q47 45 44 39Z', c.vg('#f2fbff', 0.1, -0.15), 2.2);
+        o += c.p('M44 42L50 31L56 42Q53 47 50 44Q47 48 44 42Z', c.vg('#f2fbff', 0.1, -0.15), 2.2);
         o += shard(c, 36, 70, 102, 12, E.color) + shard(c, 64, 64, 102, 13, E.color);
         o += c.p('M22 100Q30 93 40 99Q50 95 60 99Q70 93 78 100Q50 108 22 100Z', c.vg('#ffffff', 0, -0.15), 2.4);
         /* 꼭대기 결정 */
-        const C = frostCore(c, 50, 20, 14, 20, pose, 0, 18, -6);
+        const C = frostCore(c, 50, 23, 14, 20, pose, 0, 18, -6, 1.3);
         o += C.s;
         if (pose === 'fire') o += burstRing(c, 50, 99, 40, 11, '#ffffff', 2.6, 0.85) + frostMotes(c, [[16, 86, 3], [84, 84, 3], [12, 100, 2.4], [88, 102, 2.4]]);
         return o;
@@ -1553,7 +1553,7 @@
         const L3 = v === 3;
         let o = plat(c, v, { stone: st, trim: M.silver });
         o += footShade(c, 50, 104, 26, 6);
-        if (L3) o += flag(c, 84, 100, 32, E.color, 1, 11);
+        if (L3) o += flag(c, 9, 100, 36, E.color, -1, 9);
         o += stoneWall(c, 50, 82, 104, 18, 21, st, { ch: 6.6, bw: 10, seed: L3 ? 105 : 103, moss: !L3 });
         o += c.e(50, 82, 18, 5.4, c.vg(h.shade(st, 0.25), 0.2, -0.05), 2.6);
         if (L3) o += band(c, 50, 90, 93.5, 19.4, 5.8, c.vg(M.silver, 0.35, -0.25));
