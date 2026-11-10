@@ -302,6 +302,10 @@ RG.render = (() => {
     const m = game.map;
     if (!overlay.showPaths) return;
     if (st.wave.started && !(st.wave.countdown !== null && st.wave.countdown > 0 && st.enemies.length === 0)) return;
+    // 공터에 놓을 탑 미리보기가 있으면 그 탑을 지은 뒤의 길을 보여 줌
+    const gh = overlay.ghost;
+    const flow = gh && gh.flow ? gh.flow : game.flow;
+    const blocked = gh && gh.blocked ? gh.blocked : game.blocked;
     ctx.save();
     ctx.globalAlpha = 0.55 + 0.25 * Math.sin(time * 3);
     ctx.fillStyle = '#fff6d8';
@@ -311,7 +315,7 @@ RG.render = (() => {
       let guard = 0;
       let k = 0;
       while (guard++ < 200) {
-        const nx = RG.grid.nextStep(m, game.flow, game.blocked, c, r, 0);
+        const nx = RG.grid.nextStep(m, flow, blocked, c, r, 0);
         if (!nx) break;
         if (k % 2 === 0) {
           const ax = X(c + 0.5);
@@ -458,6 +462,27 @@ RG.render = (() => {
     ctx.restore();
   }
 
+  /** 건설 미리보기 탑 그림: 지을 수 있으면 초록빛, 없으면 붉은빛을 입힌 사본 (탑 그림마다 한 번 만들어 둠) */
+  const ghostTints = new Map();
+  function ghostImage(key, ok) {
+    const s = RG.art.sprites.get(key);
+    if (!s) return null;
+    const k = `${key}|${ok ? 1 : 0}`;
+    let g = ghostTints.get(k);
+    if (g && g.src === s.canvas) return g.canvas;
+    const cv = document.createElement('canvas');
+    cv.width = s.canvas.width;
+    cv.height = s.canvas.height;
+    const c2 = cv.getContext('2d');
+    c2.drawImage(s.canvas, 0, 0);
+    c2.globalCompositeOperation = 'source-atop';
+    c2.fillStyle = ok ? 'rgba(120,255,150,0.22)' : 'rgba(255,60,60,0.5)';
+    c2.fillRect(0, 0, cv.width, cv.height);
+    g = { src: s.canvas, canvas: cv };
+    ghostTints.set(k, g);
+    return cv;
+  }
+
   function drawOverlayUnder() {
     const st = game.state;
     // 마우스가 올라간 칸
@@ -508,6 +533,9 @@ RG.render = (() => {
       ctx.save();
       ctx.fillStyle = gh.ok ? 'rgba(140,255,160,0.22)' : 'rgba(255,90,90,0.28)';
       ctx.fillRect(X(gh.c), Y(gh.r), T, T);
+      ctx.strokeStyle = gh.ok ? 'rgba(170,255,185,0.9)' : 'rgba(255,120,120,0.9)';
+      ctx.lineWidth = Math.max(1.5, T * 0.045);
+      ctx.strokeRect(X(gh.c) + 1.5, Y(gh.r) + 1.5, T - 3, T - 3);
       ctx.restore();
       if (spec.range) rangeCircle(x, y, spec.range * (1 + ((game.meta && game.meta.rangePct) || 0)), gh.ok ? 'rgba(200,255,210,A)' : 'rgba(255,140,140,A)');
       if (spec.rallyRange) rangeCircle(x, y, spec.rallyRange, 'rgba(180,230,140,A)', true);
@@ -1219,8 +1247,11 @@ RG.render = (() => {
     const gh = overlay.ghost;
     if (gh) {
       ctx.save();
-      ctx.globalAlpha = 0.65;
-      sprite(RG.art.sprites.towerKey(gh.type, 1, null, 'idle'), X(gh.c + 0.5), Y(gh.r + 0.82), T, T * 1.3, 0.5, 112 / 130, false);
+      const key = RG.art.sprites.towerKey(gh.type, 1, null, 'idle');
+      const tinted = ghostImage(key, gh.ok);
+      ctx.globalAlpha = gh.ok ? 0.82 : 0.7;
+      if (tinted) ctx.drawImage(tinted, X(gh.c + 0.5) - T * 0.5, Y(gh.r + 0.82) - T * 1.3 * (112 / 130), T, T * 1.3);
+      else sprite(key, X(gh.c + 0.5), Y(gh.r + 0.82), T, T * 1.3, 0.5, 112 / 130, false);
       ctx.restore();
     }
     drawProjectiles(alpha);

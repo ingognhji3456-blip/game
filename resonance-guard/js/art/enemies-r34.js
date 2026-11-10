@@ -209,20 +209,18 @@
   const GL = (c, base, o = {}) => c.lin([[0, lt(base, o.hi != null ? o.hi : 0.18, o.cool)], [0.45, base], [1, dk(base, o.lo != null ? o.lo : 0.34, o.cool)]], o.dir || 'v');
   /** 안쪽 선: 그 자리 색의 어두운 변형(굵기 = 바깥 윤곽의 50~65%) */
   const inl = (c, d, base, w = 1.7, amt = 0.5, x = '') => c.L(d, dk(base, amt), w, x);
-  /** 반사광: 그늘 쪽(오른쪽 아래) 가장자리 안쪽의 밝은 띠. d 닫힌 경로, a 그 좌표계의 회전(도) — 화면 기준 오른쪽 아래를 유지 */
-  function rimL(c, d, col, o = {}) {
-    const id = H.uid('er');
-    const k = o.k != null ? o.k : 1.7;
-    const off = rot([-k, -k], [0, 0], -(o.a || 0));
-    return `<clipPath id="${id}"><path d="${d}"/></clipPath><g clip-path="url(#${id})" stroke-linejoin="round"><path d="${d}" fill="none" stroke="${col}" stroke-width="${n(o.w || 2.6)}" opacity="${o.op != null ? o.op : 0.6}" transform="translate(${n(off[0])} ${n(off[1])})"/></g>`;
+  /** 초승달 띠: 도형 d에서 왼쪽 위로 k만큼 옮긴 자기 모양을 뺀 부분(= 오른쪽 아래 가장자리 띠)을 칠함.
+   *  a: 그 좌표계의 회전(도) — 돌아간 무리 안에서도 화면 기준 오른쪽 아래를 유지, sc: 그 좌표계의 배율 */
+  function crescent(c, d, fill, k, op, a = 0, sc = 1) {
+    const id = H.uid('em');
+    const off = rot([-k / sc, -k / sc], [0, 0], -a);
+    return `<mask id="${id}"><path d="${d}" fill="#fff" stroke="none"/><path d="${d}" fill="#000" stroke="none" transform="translate(${n(off[0])} ${n(off[1])})"/></mask>` +
+      `<path d="${d}" fill="${fill}" stroke="none" opacity="${op}" mask="url(#${id})"/>`;
   }
-  /** 형태 그늘: 오른쪽 아래 쪽 넓은 그늘을 색 튼 반투명 덩어리로(빛 반대편 면) */
-  function shadeL(c, d, col, o = {}) {
-    const id = H.uid('er');
-    const k = o.k != null ? o.k : 5;
-    const off = rot([-k, -k], [0, 0], -(o.a || 0));
-    return `<clipPath id="${id}"><path d="${d}"/></clipPath><g clip-path="url(#${id})"><path d="${d}" fill="${col}" stroke="none" opacity="${o.op != null ? o.op : 0.4}" fill-rule="evenodd" transform="translate(${n(off[0])} ${n(off[1])})"/></g>`;
-  }
+  /** 반사광: 그늘 쪽 가장자리 안쪽의 얇은 밝은 띠(주변 색이 비침) */
+  const rimL = (c, d, col, o = {}) => crescent(c, d, col, o.k != null ? o.k : 1.8, o.op != null ? o.op : 0.6, o.a || 0, o.sc || 1);
+  /** 형태 그늘: 빛 반대편(오른쪽 아래) 넓은 면을 색 튼 반투명으로 */
+  const shadeL = (c, d, col, o = {}) => crescent(c, d, col, o.k != null ? o.k : 5, o.op != null ? o.op : 0.4, o.a || 0, o.sc || 1);
   /** 접촉 그늘(맞닿는 곳의 작고 진한 그늘, 가장자리가 부드러움) */
   function ao(c, x, y, rx, ry, op = 0.55, col = '#2a1232') {
     c._ao = c._ao || {};
