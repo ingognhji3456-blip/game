@@ -126,6 +126,7 @@
    * 월드 지도
    * ===================================================== */
   let worldRegion = null;
+  let worldFitBound = false;
   UI.register('world', {
     enter(sec, data) {
       UI.music('worldmap');
@@ -158,36 +159,73 @@
       const reg = D().regions.find((r) => r.id === worldRegion);
       const maps = D().maps.filter((m) => m.region === worldRegion);
       const board = el('div', { class: `region-board theme-${reg.theme}` });
-      board.appendChild(UI.svgImg(RG.art.regionBanner ? RG.art.regionBanner(reg.id) : '', 'region-banner'));
-      board.appendChild(el('div', { class: 'region-desc' }, [el('h3', { text: reg.name }), el('p', { text: reg.desc })]));
-      const nodes = el('div', { class: 'map-nodes' });
+      // 그림 지도: 지역 그림 위에 메달(노드)을 길을 따라 놓음 (그림: js/art/scenes.js regionMap)
+      const art = RG.art.regionMap ? UI.svgImg(RG.art.regionMap(reg.id), 'wm-art', reg.name) : UI.svgImg(RG.art.regionBanner(reg.id), 'wm-art', reg.name);
+      const spots = (RG.art.REGION_NODES && RG.art.REGION_NODES[reg.id]) || [];
+      const nodes = el('div', { class: 'map-nodes wm-map' }, [art]);
+      const pos = (i) => { const p = spots[i] || [100 + i * 200, 450]; return `left:${(p[0] / 16).toFixed(2)}%;top:${(p[1] / 9).toFixed(2)}%`; };
       maps.forEach((m, i) => {
         const open = P().mapUnlocked(m.id);
         const rec = P().mapRec(m.id);
         const node = el('button', {
           class: `map-node ${open ? '' : 'locked'} ${rec.cleared ? 'cleared' : ''} ${m.id === front ? 'frontier' : ''} ${m.boss ? 'boss' : ''}`,
+          style: pos(i),
+          'aria-label': `${m.id} ${m.name}${open ? ` 별 ${rec.stars || 0}개` : ' 잠김'}`,
           onclick: () => { if (!open) { UI.toast('앞 맵을 먼저 지켜 내야 합니다', 'warn'); return; } UI.sfx('click'); UI.show('brief', { mapId: m.id }); },
         }, [
-          el('span', { class: 'mn-id', text: m.id }),
+          el('span', { class: 'mn-medal' }, [
+            el('span', { class: 'mn-id', text: m.id }),
+            open ? null : UI.icon('lock', 'mn-lock'),
+            m.boss ? el('span', { class: 'mn-boss', 'aria-hidden': 'true' }, [UI.icon('crown', 'mn-crown')]) : null,
+          ]),
+          open ? UI.stars(rec.stars || 0, 3, 'mn-stars') : null,
           el('span', { class: 'mn-name', text: m.name }),
-          open ? UI.stars(rec.stars || 0, 3, 'mn-stars') : UI.icon('lock', 'mn-lock'),
-          open ? el('span', { class: 'mn-extra' }, [rec.task ? '공명 ✓' : '', rec.challenge ? ' 도전 ✓' : '']) : null,
-          m.boss ? el('span', { class: 'mn-boss', text: '👑' }) : null,
+          open && (rec.task || rec.challenge) ? el('span', { class: 'mn-extra' }, [rec.task ? '공명 ✓' : '', rec.challenge ? ' 도전 ✓' : '']) : null,
         ]);
         node.style.setProperty('--i', i);
+        UI.tooltipFor(node, () => `<b>${m.id} ${m.name}</b><br>${open ? `★ ${rec.stars || 0}/3${rec.task ? ' · 공명 과제 ✓' : ''}${rec.challenge ? ' · 도전 ✓' : ''}${m.boss ? '<br>보스 맵' : ''}` : '앞 맵을 먼저 지켜 내야 합니다'}`);
         nodes.appendChild(node);
       });
-      if (!maps.length) nodes.appendChild(el('p', { class: 'dim', text: '이 지역은 아직 준비 중입니다.' }));
+      if (!maps.length) nodes.appendChild(el('p', { class: 'dim wm-empty', text: '이 지역은 아직 준비 중입니다.' }));
       // 무한 맵
       const endless = (D().endless || []).filter((e) => e.region === worldRegion);
       for (const e of endless) {
         const open = P().mapUnlocked(e.id);
-        nodes.appendChild(el('button', { class: `map-node endless ${open ? '' : 'locked'}`, onclick: () => { if (!open) { UI.toast('지역 보스를 쓰러뜨리면 열립니다', 'warn'); return; } UI.show('brief', { mapId: e.id }); } }, [
-          el('span', { class: 'mn-id', text: '∞' }), el('span', { class: 'mn-name', text: e.name }), el('span', { class: 'mn-extra', text: open ? `최고 ${P().get().endless[e.id] || 0}웨이브` : '잠김' }),
+        nodes.appendChild(el('button', { class: `map-node endless ${open ? '' : 'locked'}`, style: pos(6), 'aria-label': `무한 맵 ${e.name}`, onclick: () => { if (!open) { UI.toast('지역 보스를 쓰러뜨리면 열립니다', 'warn'); return; } UI.show('brief', { mapId: e.id }); } }, [
+          el('span', { class: 'mn-medal' }, [el('span', { class: 'mn-id', text: '∞' }), open ? null : UI.icon('lock', 'mn-lock')]),
+          el('span', { class: 'mn-name', text: e.name }),
+          el('span', { class: 'mn-extra', text: open ? `최고 ${P().get().endless[e.id] || 0}웨이브` : '잠김' }),
         ]));
       }
-      board.appendChild(nodes);
+      // 방향키로 메달 사이 옮기기
+      nodes.addEventListener('keydown', (ev) => {
+        const list = [...nodes.querySelectorAll('.map-node')];
+        const i = list.indexOf(document.activeElement);
+        if (i < 0) return;
+        if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') { list[(i + 1) % list.length].focus(); ev.preventDefault(); }
+        if (ev.key === 'ArrowLeft' || ev.key === 'ArrowUp') { list[(i - 1 + list.length) % list.length].focus(); ev.preventDefault(); }
+      });
+      const plate = el('div', { class: 'region-desc wm-plate' }, [
+        RG.art.regionEmblem ? UI.svgImg(RG.art.regionEmblem(reg.id), 'wm-emblem', '') : null,
+        el('div', {}, [el('h3', { text: `${reg.id}. ${reg.name}` }), el('p', { text: reg.desc })]),
+      ]);
+      const frame = el('div', { class: 'wm-frame' }, [nodes, plate]);
+      board.appendChild(frame);
+      // 지도 크기: 남은 자리에 16:9로 꽉 차게 (가로·세로 중 모자란 쪽에 맞춤)
+      const fit = () => {
+        const bw = board.clientWidth - 28; // 금빛 테두리(그림자 고리)가 잘리지 않게 여유
+        const bh = board.clientHeight - 22;
+        if (bw <= 0 || bh <= 0) return;
+        const w = Math.min(bw, bh * 16 / 9);
+        frame.style.width = `${Math.floor(w)}px`;
+        frame.style.height = `${Math.floor(w * 9 / 16)}px`;
+        frame.style.setProperty('--wm', `${Math.floor(w)}px`);
+      };
+      requestAnimationFrame(fit);
+      if (!worldFitBound) { worldFitBound = true; window.addEventListener('resize', () => { const f0 = document.querySelector('#screen-world.active .wm-frame'); if (f0 && f0._fit) f0._fit(); }); }
+      frame._fit = fit;
       sec.append(head, tabs, board);
+      requestAnimationFrame(() => { fit(); const f0 = nodes.querySelector('.map-node.frontier') || nodes.querySelector('.map-node:not(.locked)'); if (f0 && UI.keyboardUser && UI.keyboardUser()) f0.focus(); });
     },
   });
 
