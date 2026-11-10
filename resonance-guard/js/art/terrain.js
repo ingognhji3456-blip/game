@@ -44,7 +44,7 @@
       road: '#dab57d', roadL: '#efd7a6', roadD: '#c19762', roadEdge: '#8a6438', roadAO: '#22400e',
       shoreWet: '#4d6a2a', shore: '#c2b07a', foam: '#e8f8fc', waterL: '#6ac0e0', water: '#3e99cf', waterD: '#2b73ad', waterDeep: '#1f5890',
       ...LAVA, crust: '#3e2c26',
-      cliffTop: '#b4b19d', cliffTopL: '#dad7c4', cliffTopD: '#878470', cliffFace: '#8c8975', cliffFaceD: '#5e5b4c', cliffLine: '#4f4c40',
+      cliffTop: '#9d9b87', cliffTopL: '#c9c7b3', cliffTopD: '#6e6c5b', cliffFace: '#7e7c69', cliffFaceD: '#525043', cliffLine: '#45443a',
       stone: '#a7a69c', stoneL: '#d6d5c9', stoneD: '#6b6a64', accent: '#76a63c',
       plaza: '#ddd3b8', plazaD: '#a19579', wood: '#a8723f', woodD: '#6a4323',
       leaf: '#5ca83a', leafL: '#9cd85e', leafD: '#357026',
@@ -1062,9 +1062,8 @@
       body.push(P_(contour(A, -3.5), `fill="none" stroke="${h.shade(P.crust, 0.35)}" stroke-width="3" stroke-opacity="0.75" transform="translate(-1.5 -2)"`));
       body.push(fillP(contour(A, 0.5), P.lavaD));
       const d1 = contour(A, 3);
-      const lG = def('lava', (id) => h.rg(id, [[0, P.lavaL], [0.55, P.lava], [1, P.lavaD]], 0.5, 0.5, 0.7));
-      body.push(fillP(d1, lG));
-      let s = fillP(contour(A, 13), P.lava, 0.75) + fillP(contour(A, 30), P.lavaL, 0.6);
+      body.push(fillP(d1, P.lava));
+      let s = fillP(contour(A, 12), '#ffa23c', 0.85) + fillP(contour(A, 26), P.lavaL, 0.45);
       // 흐름 줄기
       const FL = G.make((x, y) => fbm(x / 64, y / 24, 1201, 2));
       s += P_(pathD(G.loops(maskF(FL, A, 0), 0.56), 0.4), strokeA(P.lavaL, 2.4, 0.8));
@@ -1712,8 +1711,8 @@
     const masonry = region === 1 || region === 5;
     let s = '';
     // 1) 오른쪽 아래로 드리운 그림자 + 밑동 접지 그늘
-    s += `<path d="${base}" ${EO} fill="${P.shadow}" fill-opacity="${f(P.shadowOp * 0.85)}" transform="translate(14 10)"/>`;
-    s += `<path d="${base}" ${EO} fill="${P.shadow}" fill-opacity="${f(P.shadowOp * 0.7)}" transform="translate(5 4)"/>`;
+    s += `<path d="${base}" ${EO} fill="${P.shadow}" fill-opacity="${f(P.shadowOp)}" transform="translate(15 11)"/>`;
+    s += `<path d="${base}" ${EO} fill="${P.shadow}" fill-opacity="${f(P.shadowOp * 0.75)}" transform="translate(5 4)"/>`;
     // 2) 앞면: 아래쪽 반은 더 어둡게(접지), 결·줄눈
     s += `<path d="${base}" ${EO} fill="${P.cliffFaceD}" stroke="${OL}" stroke-width="3"/>`;
     s += `<path d="${base}" ${EO} fill="${P.cliffFace}" transform="translate(0 ${-HC * 0.45})"/>`;
@@ -1749,21 +1748,23 @@
       }
       s += `<path d="${v}" ${strokeA(P.cliffLine, 2, 0.55)}/>`;
     }
-    // 3) 윗면
+    // 3) 윗면: 왼쪽 위 테는 밝게, 오른쪽 아래 테는 어둡게, 가운데는 본색 + 얼룩(눈은 테를 덮지 않음)
+    const RB = 4;
     const topClip = clip(base, `translate(0 ${-HC})`);
-    const inClip = clip(base, `translate(3.5 ${-HC + 3.5})`);
+    const inA = clip(base, `translate(${RB} ${-HC + RB})`);
+    const inB = clip(base, `translate(${-RB} ${-HC - RB})`);
     let t = `<path d="${base}" ${EO} fill="${P.cliffTopL}" transform="translate(0 ${-HC})"/>`;
-    t += `<path d="${base}" ${EO} fill="${P.cliffTopD}" transform="translate(3.5 ${-HC + 3.5})"/>`;
-    t += `<g clip-path="${inClip}"><path d="${base}" ${EO} fill="${P.cliffTop}" transform="translate(-3 ${-HC - 3})"/></g>`;
-    // 윗면 얼룩 (밝은/어두운 바위, 눈 덮인 곳)
+    t += `<path d="${base}" ${EO} fill="${P.cliffTopD}" transform="translate(${RB} ${-HC + RB})"/>`;
+    let mid = `<rect x="-60" y="-60" width="${G.nx * GS + 120}" height="${G.ny * GS + 120}" fill="${P.cliffTop}"/>`;
     if (region === 2) {
-      const sn = pathD(G.loops(CM, 0.33), 0.4);
-      t += `<path d="${sn}" ${EO} fill="#a7bad1" transform="translate(2 3)"/><path d="${sn}" ${EO} fill="#ffffff"/>`;
-      t += `<path d="${pathD(G.loops(CM, 0.6), 0.4)}" ${EO} fill="#e4edf6" fill-opacity="0.8"/>`;
+      const sn = pathD(G.loops(CM, 0.3), 0.4);
+      mid += `<path d="${sn}" ${EO} fill="#a7bad1" transform="translate(2 3)"/><path d="${sn}" ${EO} fill="#ffffff"/>`;
+      mid += `<path d="${pathD(G.loops(CM, 0.6), 0.4)}" ${EO} fill="#e4edf6" fill-opacity="0.8"/>`;
     } else {
-      t += `<path d="${pathD(G.loops(CM, 0.6), 0.4)}" ${EO} fill="${P.cliffTopL}" fill-opacity="0.35"/>`;
-      t += `<path d="${pathD(G.loops(CM.map((v) => (v === -9 ? 9 : v)), 0.38, true), 0.4)}" ${EO} fill="${P.cliffTopD}" fill-opacity="0.4"/>`;
+      mid += `<path d="${pathD(G.loops(CM, 0.6), 0.4)}" ${EO} fill="${P.cliffTopL}" fill-opacity="0.35"/>`;
+      mid += `<path d="${pathD(G.loops(CM.map((v) => (v === -9 ? 9 : v)), 0.38, true), 0.4)}" ${EO} fill="${P.cliffTopD}" fill-opacity="0.4"/>`;
     }
+    t += `<g clip-path="${inA}"><g clip-path="${inB}">${mid}</g></g>`;
     // 4) 윗면 무늬
     const bk = Buckets();
     for (const [c, r] of cellsWhere((k, cc, rr) => inCliff(cc, rr))) {
