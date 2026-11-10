@@ -116,10 +116,20 @@ RG.stats = (() => {
       c.inapplicable = [];
       c.amp = t.amp || 0;
       c.onHit = c.onHit || {};
+      // 뽑기 중복 강화: 단계마다 +6% (공격 탑은 공격력, 지원 탑은 지원 효과, 병영은 병사 체력·공격력, 광산은 수입)
+      const rank = (game.ranks && game.ranks[t.type]) || 0;
+      c.rank = rank;
+      const rk = RG.gacha ? RG.gacha.rankMult(rank) : 1;
+      if (rk !== 1) {
+        if (def.role === 'economy') { if (c.income) c.income = Math.round(c.income * rk); }
+        else if (def.role === 'barracks') {
+          if (c.soldiers) { c.soldiers = Object.assign({}, c.soldiers); c.soldiers.hp *= rk; if (c.soldiers.damage) c.soldiers.damage *= rk; }
+        } else if (def.role !== 'support') c.dmgBonus += rk - 1;
+      }
 
       if (def.role === 'support') {
-        // 증폭: 지원 수치 × (1 + amp)
-        const k = 1 + c.amp;
+        // 증폭: 지원 수치 × (1 + amp) × 중복 강화
+        const k = (1 + c.amp) * rk;
         if (c.aura) {
           for (const key of ['damagePct', 'speedPct', 'rangePct', 'critChance']) if (c.aura[key]) c.aura[key] *= k;
           if (c.aura.burnOnHit) c.aura.burnOnHit.pct *= k;

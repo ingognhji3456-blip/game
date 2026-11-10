@@ -639,6 +639,7 @@
         'aria-pressed': 'false',
       }, [
         key ? el('kbd', { text: key }) : null,
+        (game.ranks && game.ranks[type]) ? el('em', { class: 'tc-rank', text: `+${game.ranks[type]}` }) : null,
         UI.towerImg(type, 1, null, 'tc-img'),
         el('span', { class: 'tc-name', text: td.name }),
         el('span', { class: 'tc-cost' }, [UI.icon('gold', 'tiny'), String(cost)]),
@@ -1116,7 +1117,7 @@
       UI.towerImg(t.type, t.level, t.branch, 'ip-img'),
       el('div', { class: 'ip-title' }, [
         el('b', { text: info.name }),
-        el('span', { class: 'ip-sub' }, [UI.elementBadge(td.element), el('span', { text: t.level >= 4 ? ' 분기' : ` Lv${t.level}` })]),
+        el('span', { class: 'ip-sub' }, [UI.elementBadge(td.element), el('span', { text: t.level >= 4 ? ' 분기' : ` Lv${t.level}` }), calc && calc.rank ? el('em', { class: 'ip-rank', title: `뽑기 중복 강화: ${UI.rankText ? UI.rankText(t.type, calc.rank) : ''}`, text: ` 강화 +${calc.rank}` }) : null]),
       ]),
       el('button', { class: 'x-btn', 'aria-label': '닫기', onclick: cancelAll }, [UI.icon('close')]),
     ]);

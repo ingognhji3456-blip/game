@@ -106,7 +106,7 @@ async function run() {
     });
     await shot(page, dir, '08-tower-panel'); await checkLayout(page, `${sizeName}/tower`, issues);
     await page.evaluate(() => RG.ui.show('result', {
-      mapId: '1-2', mode: 'normal', result: 'win', lives: 11, maxLives: 12, task: { done: true }, rec: { stars: 3, newStars: 5, unlocks: { towers: ['flame_mortar'], heroes: [], maps: ['1-3'], branches: false } },
+      mapId: '1-2', mode: 'normal', result: 'win', lives: 11, maxLives: 12, task: { done: true }, rec: { stars: 3, newStars: 5, unlocks: { towers: [], heroes: [], maps: ['1-3'], branches: false }, reward: { crystals: 265, tickets: 1, lines: [['승리', 15], ['첫 클리어', 100], ['새 별 ★5', 150]] } },
       stats: { damage: {}, kills: 50, gold: 900, heroDamage: 0, towers: [], time: 300 }, opts: { heroId: 'kara', mode: 'normal' }, waves: 8,
     }));
     await shot(page, dir, '09-result'); await checkLayout(page, `${sizeName}/result`, issues);
@@ -114,6 +114,15 @@ async function run() {
       await page.evaluate((s) => RG.ui.show(s, {}), id);
       await shot(page, dir, name); await checkLayout(page, `${sizeName}/${id}`, issues);
     }
+    // 탑 뽑기: 모음 화면 + 10회 결과(카드 모두 연 뒤)
+    await page.evaluate(() => { const g = RG.progress.gachaState(); g.crystals = 1800; g.tickets = 1; RG.progress.save(); RG.ui.show('gacha', {}); });
+    await page.waitForTimeout(400);
+    await shot(page, dir, '13-gacha'); await checkLayout(page, `${sizeName}/gacha`, issues);
+    await page.evaluate(() => { Math.random = (() => { let s = 7; return () => { s = (s * 16807) % 2147483647; return s / 2147483647; }; })(); document.querySelector('.gc-ten').click(); });
+    await page.waitForTimeout(300);
+    await page.evaluate(() => document.querySelector('.gc-skip').click());
+    await page.waitForTimeout(700);
+    await shot(page, dir, '14-gacha-result'); await checkLayout(page, `${sizeName}/gacha-result`, issues);
     await ctx.close();
   }
   await browser.close();

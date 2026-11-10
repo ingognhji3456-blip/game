@@ -420,6 +420,23 @@ RG.art.icon = (() => {
         + hl('M16 34V50', 3);
     },
     skull() { return skull(1, 0, true) + hl('M16 22C17 16 21 12 26 11'); },
+    /** 공명석(뽑기 재화): 여섯 원소 빛이 도는 보라 수정 */
+    crystal() {
+      const g = grad('#f2d8ff', '#7a4ad8');
+      return P('M32 4L50 20L44 54L32 62L20 54L14 20Z', g)
+        + P('M32 4L50 20L32 26Z', '#fff1ff', ' stroke-width="2"') + P('M32 4L14 20L32 26Z', '#d4b0ff', ' stroke-width="2"')
+        + P('M14 20L32 26L20 54Z', '#9a6ae8', ' stroke-width="2"') + P('M50 20L32 26L44 54Z', '#6a3ac0', ' stroke-width="2"')
+        + P('M32 26L20 54L32 62L44 54Z', '#5a2aa8', ' stroke-width="2"')
+        + C(26, 16, 2.4, '#ffffff', ' stroke="none"') + hl('M22 22L28 40', 2.6, 0.55);
+    },
+    /** 새 탑 확정권: 금빛 표 + 탑 그림 */
+    ticket() {
+      return P('M6 18H58V28A5 5 0 0 0 58 38V48H6V38A5 5 0 0 0 6 28Z', grad(K.goldL, K.gold))
+        + P('M18 22V44', 'none', ' stroke-dasharray="3 3" stroke-width="2"')
+        + P('M34 42V27L38 23L42 27V42ZM31 42H45', '#7a4a14', ' stroke-width="2.4"')
+        + P('M27 30L28.5 33.5L32 34L29.4 36.4L30 40L27 38.2L24 40L24.6 36.4L22 34L25.5 33.5Z', '#fff6c8', ' stroke-width="1.6"')
+        + hl('M10 22H54', 2.4, 0.6);
+    },
     crown() {
       const g = grad(K.goldL, K.gold);
       return P('M8 18L20 33L32 10L44 33L56 18L51 54H13Z', g)

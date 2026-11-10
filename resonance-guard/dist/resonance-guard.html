@@ -470,6 +470,157 @@ button { font-family: var(--font); color: inherit; }
   .map-node { min-height: 74px; padding: 6px 10px; }
 }
 
+/* =========================================================
+ * 탑 뽑기 (js/ui/gacha.js)
+ * ========================================================= */
+#screen-gacha { display: none; flex-direction: column; background: radial-gradient(ellipse at 30% 40%, #4a2a7a 0%, #24163e 45%, #0f0a1a 100%); }
+#screen-gacha.active { display: flex; }
+#screen-gacha .top-bar { background: linear-gradient(180deg, #2c1f44, #1a1229); border-bottom: 1px solid #ffdf9a33; }
+#screen-gacha .top-bar h2 { background: linear-gradient(180deg, #fff6d6, #f2c46a); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 2px 0 #3a1e06); }
+.gc-wallet { margin-left: auto; display: flex; gap: 8px; }
+.gc-coin { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px 4px 6px; border-radius: 999px; background: #0007; border: 1px solid #b48aff66; font-size: 1.05rem; }
+.gc-coin .icon { width: 26px; height: 26px; }
+.gc-coin b { font-variant-numeric: tabular-nums; color: #f0dcff; }
+.gc-coin.ticket { border-color: #ffd27a55; }
+.gc-coin.ticket.has b { color: var(--gold2); }
+.gc-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(280px, 0.9fr) 1.3fr; gap: 14px; padding: 12px calc(14px + var(--safe-r)) calc(12px + var(--safe-b)) calc(14px + var(--safe-l)); overflow: hidden; }
+
+/* 제단 */
+.gc-altar { display: flex; flex-direction: column; align-items: center; gap: 12px; min-height: 0; overflow-y: auto; padding: 6px 4px; }
+.gc-shrine { position: relative; width: min(260px, 70%); aspect-ratio: 1; flex: none; }
+.gc-rays { position: absolute; inset: -14%; background: repeating-conic-gradient(from 0deg, #ffe7a855 0deg 6deg, transparent 6deg 22deg); border-radius: 50%; -webkit-mask: radial-gradient(circle, #000 18%, transparent 68%); mask: radial-gradient(circle, #000 18%, transparent 68%); animation: gc-spin 40s linear infinite; }
+.gc-ring { position: absolute; border-radius: 50%; border: 2px solid #ffd77a88; box-shadow: 0 0 18px #c890ff88, inset 0 0 18px #c890ff55; }
+.gc-ring.r1 { inset: 8%; animation: gc-pulse 3.2s ease-in-out infinite; }
+.gc-ring.r2 { inset: 20%; border-color: #c8a0ffaa; animation: gc-pulse 3.2s ease-in-out -1.6s infinite; }
+.gc-core { position: absolute; left: 50%; top: 50%; width: 42%; height: 42%; transform: translate(-50%, -50%); filter: drop-shadow(0 0 16px #d0a0ff) drop-shadow(0 0 30px #a070ff); animation: gc-float 3.6s ease-in-out infinite; }
+.gc-orbit { position: absolute; inset: 0; animation: gc-spin 24s linear infinite; }
+.gc-gem { position: absolute; width: 17%; height: 17%; left: 41.5%; top: 41.5%; filter: drop-shadow(0 2px 4px #000a); }
+.gc-gem.g0 { transform: rotate(0deg) translateY(-210%) rotate(0deg); } .gc-gem.g1 { transform: rotate(60deg) translateY(-210%) rotate(-60deg); } .gc-gem.g2 { transform: rotate(120deg) translateY(-210%) rotate(-120deg); }
+.gc-gem.g3 { transform: rotate(180deg) translateY(-210%) rotate(-180deg); } .gc-gem.g4 { transform: rotate(240deg) translateY(-210%) rotate(-240deg); } .gc-gem.g5 { transform: rotate(300deg) translateY(-210%) rotate(-300deg); }
+@keyframes gc-spin { to { rotate: 360deg; } }
+@keyframes gc-pulse { 0%, 100% { opacity: 0.55; scale: 0.97; } 50% { opacity: 1; scale: 1.03; } }
+@keyframes gc-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -6px; } }
+.gc-buttons { display: flex; flex-direction: column; gap: 8px; width: min(340px, 100%); }
+.gc-pull { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 52px; padding: 8px 16px; font-size: 1.05rem; background: linear-gradient(180deg, #6a4aa8, #3a2470); border-color: #c8a6ff; box-shadow: 0 0 0 2px #120a20, 0 5px 0 #120a20, 0 0 18px #a070ff55; }
+.gc-pull b { font-weight: 900; }
+.gc-cost { display: inline-flex; align-items: center; gap: 3px; font-weight: 800; color: #f2e2ff; }
+.gc-cost small { font-weight: 600; color: #e8d0ff; font-size: 0.72rem; }
+.gc-pull.gc-ten { background: linear-gradient(180deg, #fff0bc 0%, #f6cf78 40%, #d98f32 100%); border-color: #fff2c4; color: #3a1e06; box-shadow: 0 0 0 2px #6a3a10, 0 5px 0 #5a2e0c, 0 0 22px #ffbf5a80; }
+.gc-pull.gc-ten .gc-cost, .gc-pull.gc-ten .gc-cost small { color: #4a2a08; }
+.gc-pull.gc-ticket { background: linear-gradient(180deg, #3aa86a, #1e6a40); border-color: #a8ffcc; }
+.gc-pull:disabled { filter: grayscale(0.7) brightness(0.7); cursor: not-allowed; }
+.gc-rules { width: min(360px, 100%); font-size: 0.82rem; background: #0006; border: 1px solid #ffffff14; border-radius: 12px; padding: 8px 12px; }
+.gc-rules p { margin: 4px 0; }
+.gc-rates { display: flex; gap: 12px; flex-wrap: wrap; }
+.rar-badge { display: inline-block; padding: 0 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 900; color: #1a1030; }
+.rar-badge.rar-common { background: linear-gradient(#f0ecf8, #b8b0cc); }
+.rar-badge.rar-rare { background: linear-gradient(#bfe6ff, #4aa0f0); }
+.rar-badge.rar-epic { background: linear-gradient(#fff2b0, #f0a020); box-shadow: 0 0 8px #ffc44a99; }
+
+/* 모음 */
+.gc-collection { min-height: 0; overflow-y: auto; padding: 4px 6px 10px; background: #0005; border: 1px solid #ffffff12; border-radius: 16px; }
+.gc-coll-head { padding: 6px 6px 2px; font-size: 1.05rem; }
+.gc-sec { margin-top: 6px; }
+.gc-sec-title { padding: 4px 6px; }
+.gc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; padding: 2px 4px; }
+.gc-card { --rc: #c9c3d8; position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px 7px; border-radius: 12px; background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--rc) 22%, transparent), transparent 70%), linear-gradient(#2a2040, #18122a); border: 2px solid color-mix(in srgb, var(--rc) 55%, #000); box-shadow: 0 3px 0 #0008; outline: none; }
+.gc-card.rar-rare { --rc: #5fb4ff; } .gc-card.rar-epic { --rc: #ffc44a; }
+.gc-card.rar-epic.owned { box-shadow: 0 0 14px #ffc44a55, 0 3px 0 #0008; }
+.gc-card:focus-visible { outline: 2px solid var(--gold2); }
+.gc-img { width: 58px; height: 68px; object-fit: contain; filter: drop-shadow(1px 2px 1px #0008); }
+.gc-card.missing .gc-img { filter: brightness(0) drop-shadow(0 0 1px #8a7ab0); opacity: 0.55; }
+.gc-name { font-size: 0.74rem; font-weight: 800; text-align: center; line-height: 1.2; }
+.gc-card.missing .gc-name { color: var(--dim); }
+.gc-q { font-size: 0.66rem; color: var(--dim); }
+.rank-pips { display: flex; gap: 2px; }
+.rank-pips i { width: 9px; height: 9px; border-radius: 50%; background: #0008; box-shadow: inset 0 0 0 1px #ffffff30; }
+.rank-pips i.on { background: radial-gradient(circle at 35% 30%, #fff6c8, #f0a020); box-shadow: 0 0 5px #ffc44a; }
+.gc-rank { position: absolute; top: 4px; right: 6px; font-style: normal; font-weight: 900; font-size: 0.82rem; color: var(--gold2); text-shadow: 0 1px 2px #000; }
+
+/* 결과: 카드 뒤집기 */
+.gc-reveal { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 16px; background: radial-gradient(ellipse at center, #3a2468ee, #0c0816f6); animation: gc-in 0.25s ease-out; }
+@keyframes gc-in { from { opacity: 0; } }
+.gc-reveal.best-epic { background: radial-gradient(ellipse at center, #6a4414ee, #1a0e06f8); }
+.gc-flash { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle, #fff6d0, #ffc44a00 60%); opacity: 0; }
+.gc-flash.go { animation: gc-flash 0.7s ease-out; }
+@keyframes gc-flash { 0% { opacity: 0.95; } 100% { opacity: 0; } }
+.gc-rtitle { font-size: 1.3rem; font-weight: 900; color: var(--gold2); text-shadow: 0 2px 6px #000; }
+.gc-rcards { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: min(820px, 100%); }
+.gc-rcard { --rc: #c9c3d8; position: relative; width: clamp(92px, 13vw, 140px); aspect-ratio: 3 / 4; appearance: none; border: 0; padding: 0; background: none; cursor: pointer; perspective: 700px; animation: gc-deal 0.35s calc(var(--i) * 0.05s) ease-out both; }
+.gc-rcard.rar-rare { --rc: #5fb4ff; } .gc-rcard.rar-epic { --rc: #ffc44a; }
+@keyframes gc-deal { from { opacity: 0; transform: translateY(30px) scale(0.85); } }
+.gc-face { position: absolute; inset: 0; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; backface-visibility: hidden; transition: transform 0.45s cubic-bezier(.3,1.4,.5,1); }
+.gc-face.back { background: repeating-linear-gradient(45deg, #3a2470 0 8px, #2c1a58 8px 16px); border: 3px solid #c8a6ff; box-shadow: 0 6px 16px #000a, inset 0 0 18px #a070ff66; }
+.gc-back-icon { width: 46%; height: 46%; filter: drop-shadow(0 0 10px #c890ff); animation: gc-float 2.4s ease-in-out infinite; }
+.gc-face.front { transform: rotateY(180deg); background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--rc) 40%, #2a1d40), #160f24 75%); border: 3px solid var(--rc); box-shadow: 0 0 22px color-mix(in srgb, var(--rc) 70%, transparent), 0 6px 16px #000a; padding: 6px; }
+.gc-rcard.open .gc-face.back { transform: rotateY(-180deg); }
+.gc-rcard.open .gc-face.front { transform: rotateY(0deg); }
+.gc-rcard.rar-epic.open .gc-face.front { animation: gc-epic 1.6s ease-in-out infinite; }
+@keyframes gc-epic { 50% { box-shadow: 0 0 36px #ffd77a, 0 6px 16px #000a; } }
+.gc-rimg { width: 70%; height: 52%; object-fit: contain; filter: drop-shadow(1px 3px 2px #000a); }
+.gc-rname { font-size: 0.82rem; text-align: center; line-height: 1.15; }
+.gc-tag { font-style: normal; font-weight: 900; font-size: 0.78rem; padding: 1px 7px; border-radius: 999px; display: inline-flex; align-items: center; gap: 2px; }
+.gc-tag.new { background: linear-gradient(#ff8a7a, #e0334a); color: #fff; box-shadow: 0 0 10px #ff6a6a99; }
+.gc-tag.up { background: linear-gradient(#fff2b0, #f0a020); color: #3a1e06; }
+.gc-tag.refund { background: #b48aff; color: #1a0e2e; }
+.gc-summary { min-height: 1.3em; font-weight: 800; color: #fff1d6; text-shadow: 0 1px 3px #000; }
+.gc-rbtns { display: flex; gap: 10px; }
+.gc-rbtns .btn { min-width: 120px; min-height: 46px; }
+.gc-rbtns .hidden { display: none; }
+
+/* 다른 화면의 뽑기 버튼·내 탑 칩 */
+.btn-gacha { display: inline-flex; align-items: center; gap: 4px; }
+.btn-gacha.ready { border-color: #c8a6ff; box-shadow: 0 0 12px #a070ff88; animation: gc-ready 2.4s ease-in-out infinite; }
+@keyframes gc-ready { 50% { box-shadow: 0 0 20px #c890ffcc; } }
+.t-chip { position: relative; }
+.t-chip.rar-rare { box-shadow: inset 0 -3px 0 #5fb4ff; } .t-chip.rar-epic { box-shadow: inset 0 -3px 0 #ffc44a; }
+.t-chip em.rank { position: absolute; top: -4px; right: -4px; font-style: normal; font-weight: 900; font-size: 0.7rem; color: #3a1e06; background: var(--gold2); border-radius: 6px; padding: 0 4px; }
+.t-chip.more { appearance: none; border: 2px dashed #b48aff; background: #2a1d40; color: #e8d0ff; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; cursor: pointer; border-radius: 10px; }
+.t-chip.more small { font-size: 0.62rem; }
+.reward-box { margin: 8px 0; padding: 8px 12px; border-radius: 12px; background: linear-gradient(180deg, #3a2468, #22163e); border: 1px solid #c8a6ff66; }
+.rw-total { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 1.1rem; }
+.rw-total b { color: #f0dcff; font-size: 1.3rem; }
+.rw-ticket { margin-left: 8px; display: inline-flex; align-items: center; gap: 4px; color: var(--gold2); font-weight: 800; }
+.rw-lines { font-size: 0.78rem; margin-top: 2px; }
+
+@media (max-width: 760px), (max-height: 460px) {
+  .gc-body { grid-template-columns: minmax(220px, 0.8fr) 1.2fr; gap: 8px; padding-top: 6px; }
+  .gc-shrine { width: min(150px, 45%); }
+  .gc-pull { min-height: 44px; padding: 4px 12px; font-size: 0.95rem; }
+  .gc-rules { font-size: 0.72rem; padding: 6px 8px; }
+  .gc-grid { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
+  .gc-img { width: 44px; height: 52px; }
+  .gc-rcard { width: clamp(64px, 17vw, 110px); }
+  .gc-rcards { gap: 6px; }
+  .gc-rname { font-size: 0.68rem; }
+  .gc-tag { font-size: 0.66rem; }
+}
+@media (max-width: 560px) and (min-height: 461px) {
+  .gc-body { grid-template-columns: 1fr; overflow-y: auto; }
+  .gc-collection { overflow: visible; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gc-rays, .gc-ring, .gc-core, .gc-orbit, .gc-back-icon, .btn-gacha.ready, .gc-rcard, .gc-rcard.rar-epic.open .gc-face.front { animation: none !important; }
+  .gc-face { transition: none; }
+}
+/* 키 작은 화면(휴대폰 가로): 제단 그림을 작게, 결과 카드는 한 줄로 */
+@media (max-height: 460px) {
+  .gc-altar { gap: 6px; padding-top: 0; }
+  .gc-shrine { width: min(96px, 26vh); }
+  .gc-buttons { gap: 5px; }
+  .gc-rules p.dim { display: none; }
+  .gc-reveal { gap: 8px; padding: 8px; }
+  .gc-rtitle { font-size: 1rem; }
+  .gc-rcards { flex-wrap: nowrap; gap: 5px; max-width: 100%; }
+  .gc-reveal.nmany .gc-rcard { width: min(76px, 9.2vw); }
+  .gc-reveal.none .gc-rcard { width: 120px; }
+  .gc-face.front { padding: 3px; gap: 2px; border-width: 2px; }
+  .gc-rname { font-size: 0.6rem; }
+  .gc-tag { font-size: 0.58rem; padding: 0 4px; }
+  .rar-badge { font-size: 0.6rem; padding: 0 4px; }
+  .gc-rbtns .btn { min-height: 42px; }
+}
+
 </style>
   <style>/* css/game.css */
 /* =========================================================
@@ -721,6 +872,9 @@ body.rg-dragging, body.rg-dragging * { cursor: grabbing !important; }
 @media (pointer: coarse) {
   .tower-card kbd { display: none; }
 }
+/* 뽑기 중복 강화 표시 */
+.tower-card .tc-rank { position: absolute; top: 2px; right: 4px; font-style: normal; font-weight: 900; font-size: 0.66rem; color: #3a1e06; background: var(--gold2); border-radius: 5px; padding: 0 3px; line-height: 1.3; }
+.ip-rank { font-style: normal; font-weight: 900; color: var(--gold2); }
 
 </style>
 </head>
@@ -735,6 +889,7 @@ body.rg-dragging, body.rg-dragging * { cursor: grabbing !important; }
     <section class="screen" id="screen-codex"></section>
     <section class="screen" id="screen-heroes"></section>
     <section class="screen" id="screen-tree"></section>
+    <section class="screen" id="screen-gacha"></section>
   </div>
   <div id="modal-root"></div>
   <div id="tooltip" class="tooltip" role="tooltip"></div>
@@ -3649,10 +3804,20 @@ RG.stats = (() => {
       c.inapplicable = [];
       c.amp = t.amp || 0;
       c.onHit = c.onHit || {};
+      // 뽑기 중복 강화: 단계마다 +6% (공격 탑은 공격력, 지원 탑은 지원 효과, 병영은 병사 체력·공격력, 광산은 수입)
+      const rank = (game.ranks && game.ranks[t.type]) || 0;
+      c.rank = rank;
+      const rk = RG.gacha ? RG.gacha.rankMult(rank) : 1;
+      if (rk !== 1) {
+        if (def.role === 'economy') { if (c.income) c.income = Math.round(c.income * rk); }
+        else if (def.role === 'barracks') {
+          if (c.soldiers) { c.soldiers = Object.assign({}, c.soldiers); c.soldiers.hp *= rk; if (c.soldiers.damage) c.soldiers.damage *= rk; }
+        } else if (def.role !== 'support') c.dmgBonus += rk - 1;
+      }
 
       if (def.role === 'support') {
-        // 증폭: 지원 수치 × (1 + amp)
-        const k = 1 + c.amp;
+        // 증폭: 지원 수치 × (1 + amp) × 중복 강화
+        const k = (1 + c.amp) * rk;
         if (c.aura) {
           for (const key of ['damagePct', 'speedPct', 'rangePct', 'critChance']) if (c.aura[key]) c.aura[key] *= k;
           if (c.aura.burnOnHit) c.aura.burnOnHit.pct *= k;
@@ -3990,8 +4155,10 @@ RG.sim = (() => {
     const unlocked = o.towers ? new Set(o.towers) : null;  // null = 전부
     const branchesOk = o.branches !== false;
 
+    // 뽑기 중복 강화 단계 {탑: 0~5} — 도전 모드는 기술 나무처럼 쓰지 않음(순수 실력)
+    const ranks = o.mode === 'challenge' ? {} : Object.assign({}, o.towerRanks || {});
     const game = {
-      opts: o, def, map, rules, meta, challenge, state: st, log, DT,
+      opts: o, def, map, rules, meta, ranks, challenge, state: st, log, DT,
       tileTower: (c, r) => (c >= 0 && r >= 0 && c < map.cols && r < map.rows ? tileTowers[r * map.cols + c] : null),
     };
 
@@ -6086,6 +6253,136 @@ RG.save = (() => {
 })();
 
 </script>
+  <script>/* js/core/gacha.js */
+'use strict';
+
+/* =========================================================
+ * 탑 뽑기 — 탑은 뽑기로만 얻고, 같은 탑이 또 나오면 그 탑이 강화됩니다.
+ * 설계: DESIGN.md §11.5 (2026-11-10 추가)
+ *
+ *  - 기본 탑 3종(불씨 궁수탑·바위 병영·서리 결정탑)은 처음부터 가지고 있음
+ *  - 공명석으로 뽑기: 1회 100, 10회 900 (10회는 희귀 이상 하나 확정)
+ *  - 등급: 일반 60% · 희귀 30% · 영웅 10%, 30회 안에 영웅 확정(천장)
+ *  - 중복: 그 탑 강화 +1 (최대 +5). +5에서 또 나오면 공명석 30을 돌려받음
+ *  - 강화 효과: 단계마다 공격력(지원 탑은 지원 효과, 광산은 수입) +6%
+ *  - 새 탑 확정권: 새 탑이 나오던 맵에 닿으면 1장 — 아직 없는 탑 중에서만 뽑음
+ *
+ * 순수 함수(무작위는 rng를 받아 씀) — 시험에서 결과를 정할 수 있게.
+ * ========================================================= */
+RG.gacha = (() => {
+  const D = () => RG.data;
+
+  const BASIC = ['ember_archer', 'stone_barracks', 'frost_crystal'];
+  const RARITY = {
+    ember_archer: 'common', stone_barracks: 'common', frost_crystal: 'common', flame_mortar: 'common', crystal_mine: 'common', sanctuary: 'common',
+    winter_bell: 'rare', quake_hammer: 'rare', lightning_rod: 'rare', forge: 'rare', ice_ballista: 'rare', gale_cannon: 'rare',
+    shadow_snare: 'epic', sun_lens: 'epic', hex_spire: 'epic', radiance_spire: 'epic', void_orb: 'epic', dynamo: 'epic',
+  };
+  const RARITIES = {
+    common: { name: '일반', rate: 0.6, color: '#c9c3d8' },
+    rare: { name: '희귀', rate: 0.3, color: '#5fb4ff' },
+    epic: { name: '영웅', rate: 0.1, color: '#ffc44a' },
+  };
+  const COST = { one: 100, ten: 900 };
+  const MAX_RANK = 5;
+  const RANK_PCT = 0.06;
+  const REFUND = 30;
+  const PITY = 30;
+  const START_CRYSTALS = 100;
+  /** 판 결과로 얻는 공명석 */
+  const REWARD = { firstClear: 100, perStar: 30, win: 15, lose: 5, endlessWave: 4 };
+
+  const rarityOf = (t) => RARITY[t] || 'common';
+
+  /** 등급 하나 고르기 (pity: 천장까지 남은 수가 0이면 영웅, floor: 최소 등급) */
+  function rollRarity(rng, floor) {
+    let r = rng();
+    const order = ['epic', 'rare', 'common'];
+    let pick = 'common';
+    let acc = 0;
+    for (const k of order) { acc += RARITIES[k].rate; if (r < acc) { pick = k; break; } }
+    if (floor === 'rare' && pick === 'common') pick = 'rare';
+    if (floor === 'epic') pick = 'epic';
+    return pick;
+  }
+
+  /** 등급 안에서 탑 하나 (onlyNew: 가진 것 제외, 그 등급에 없으면 다른 등급으로) */
+  function rollTower(rng, rarity, owned, onlyNew) {
+    const all = D().towerOrder.filter((t) => D().towers[t]);
+    const ok = (t) => !onlyNew || !(t in owned);
+    let pool = all.filter((t) => rarityOf(t) === rarity && ok(t));
+    if (!pool.length) {
+      // 그 등급에 남은 새 탑이 없으면: 가까운 등급부터
+      const near = { epic: ['rare', 'common'], rare: ['common', 'epic'], common: ['rare', 'epic'] }[rarity];
+      for (const k of near) { pool = all.filter((t) => rarityOf(t) === k && ok(t)); if (pool.length) break; }
+    }
+    if (!pool.length) return null;
+    return pool[Math.floor(rng() * pool.length) % pool.length];
+  }
+
+  /**
+   * 뽑기 실행. state = { owned: {type: rank}, crystals, tickets, pity }
+   * kind: 'one' | 'ten' | 'ticket'.  반환: { ok, reason, results: [{ type, rarity, isNew, rank, refund }] }
+   * state를 바꿉니다(호출한 쪽이 저장).
+   */
+  function pull(state, kind, rng = Math.random) {
+    const n = kind === 'ten' ? 10 : 1;
+    if (kind === 'ticket') {
+      if ((state.tickets || 0) <= 0) return { ok: false, reason: '새 탑 확정권이 없습니다' };
+      if (D().towerOrder.every((t) => t in state.owned)) return { ok: false, reason: '이미 모든 탑을 가지고 있습니다' };
+    } else {
+      const cost = COST[kind];
+      if ((state.crystals || 0) < cost) return { ok: false, reason: `공명석이 부족합니다 (${cost} 필요)` };
+      state.crystals -= cost;
+    }
+    if (kind === 'ticket') state.tickets -= 1;
+    const results = [];
+    let gotRare = false;
+    for (let i = 0; i < n; i++) {
+      state.pity = (state.pity || 0) + 1;
+      let floor = null;
+      if (state.pity >= PITY) floor = 'epic';
+      else if (kind === 'ten' && i === n - 1 && !gotRare) floor = 'rare';
+      const rarity = rollRarity(rng, floor);
+      const type = rollTower(rng, rarity, state.owned, kind === 'ticket');
+      if (!type) continue;
+      const realRarity = rarityOf(type);
+      if (realRarity === 'epic') state.pity = 0;
+      if (realRarity !== 'common') gotRare = true;
+      results.push(grant(state, type));
+    }
+    return { ok: true, results };
+  }
+
+  /** 탑 하나를 받음: 없으면 새로, 있으면 강화 +1, 최대면 공명석 돌려받음 */
+  function grant(state, type) {
+    const rarity = rarityOf(type);
+    if (!(type in state.owned)) { state.owned[type] = 0; return { type, rarity, isNew: true, rank: 0, refund: 0 }; }
+    if (state.owned[type] < MAX_RANK) { state.owned[type] += 1; return { type, rarity, isNew: false, rank: state.owned[type], refund: 0 }; }
+    state.crystals = (state.crystals || 0) + REFUND;
+    return { type, rarity, isNew: false, rank: MAX_RANK, refund: REFUND };
+  }
+
+  /** 강화 단계에 따른 배율 (1 + 단계 × 6%) */
+  const rankMult = (rank) => 1 + Math.max(0, Math.min(MAX_RANK, rank || 0)) * RANK_PCT;
+
+  /** 판 결과로 얻는 공명석과 확정권 계산 (기록 전 상태 기준) */
+  function rewardFor({ result, mode, firstClear, newStars, endlessGain, nextNewTowers }) {
+    let crystals = 0;
+    const lines = [];
+    if (mode === 'endless') {
+      if (endlessGain > 0) { crystals += endlessGain * REWARD.endlessWave; lines.push([`최고 기록 +${endlessGain}웨이브`, endlessGain * REWARD.endlessWave]); }
+    } else if (result === 'win') { crystals += REWARD.win; lines.push(['승리', REWARD.win]); } else { crystals += REWARD.lose; lines.push(['참가', REWARD.lose]); }
+    if (firstClear) { crystals += REWARD.firstClear; lines.push(['첫 클리어', REWARD.firstClear]); }
+    if (newStars > 0) { crystals += newStars * REWARD.perStar; lines.push([`새 별 ★${newStars}`, newStars * REWARD.perStar]); }
+    const tickets = firstClear ? (nextNewTowers || []).filter((t) => !BASIC.includes(t)).length : 0;
+    return { crystals, tickets, lines };
+  }
+
+  return { BASIC, RARITY, RARITIES, COST, MAX_RANK, RANK_PCT, REFUND, PITY, START_CRYSTALS, REWARD, rarityOf, rollRarity, rollTower, pull, grant, rankMult, rewardFor };
+})();
+
+</script>
   <script>/* js/core/progress.js */
 'use strict';
 
@@ -6097,7 +6394,13 @@ RG.progress = (() => {
   const D = () => RG.data;
 
   function blank() {
-    return { v: 1, maps: {}, skills: [], seen: { enemies: [], story: [], tips: [] }, endless: {}, lastMap: '1-1', lastHero: 'kara' };
+    return { v: 1, maps: {}, skills: [], seen: { enemies: [], story: [], tips: [] }, endless: {}, lastMap: '1-1', lastHero: 'kara', gacha: blankGacha() };
+  }
+  /** 뽑기 상태: 가진 탑과 강화 단계, 공명석, 새 탑 확정권, 천장 */
+  function blankGacha() {
+    const owned = {};
+    for (const t of RG.gacha.BASIC) owned[t] = 0;
+    return { owned, crystals: RG.gacha.START_CRYSTALS, tickets: 0, pity: 0, pulls: 0 };
   }
 
   let profile = null;
@@ -6106,6 +6409,13 @@ RG.progress = (() => {
     const p = RG.save.get(RG.save.KEYS.progress, null);
     profile = p && p.v === 1 ? Object.assign(blank(), p) : blank();
     profile.seen = Object.assign({ enemies: [], story: [], tips: [] }, profile.seen || {});
+    if (!p || !p.gacha) {
+      // 뽑기가 생기기 전 기록: 그때까지 해금했던 탑은 그대로 가진 것으로 (빼앗지 않음)
+      const g = blankGacha();
+      if (p) for (const t of towersFor(frontier())) if (!(t in g.owned)) g.owned[t] = 0;
+      profile.gacha = g;
+      if (p) RG.save.set(RG.save.KEYS.progress, profile);
+    }
     return profile;
   }
   function get() { return profile || load(); }
@@ -6135,6 +6445,20 @@ RG.progress = (() => {
       const u = mapIndex(D().towers[t].unlock);
       return u >= 0 && u <= idx;
     });
+  }
+
+  /* ---------------- 뽑기 ---------------- */
+  const gachaState = () => get().gacha;
+  /** 가진 탑 (설계서 순서) */
+  function ownedTowers() { const o = gachaState().owned; return D().towerOrder.filter((t) => t in o); }
+  const ownsTower = (t) => t in gachaState().owned;
+  const towerRank = (t) => (ownsTower(t) ? gachaState().owned[t] : -1);
+  /** 판에 넘길 강화 단계 묶음 (명령 재현이 같도록 판 시작 때 복사해 둠) */
+  function towerRanks() { return Object.assign({}, gachaState().owned); }
+  function pullGacha(kind, rng) {
+    const res = RG.gacha.pull(gachaState(), kind, rng);
+    if (res.ok) { gachaState().pulls = (gachaState().pulls || 0) + res.results.length; save(); }
+    return res;
   }
 
   function heroesFor(mapId) {
@@ -6190,6 +6514,7 @@ RG.progress = (() => {
     const rec = p.maps[mapId] || {};
     const before = mapStars(mapId);
     const beforeTowers = new Set(towersFor(nextMapId(mapId) || mapId));
+    const beforeEndless = p.endless[mapId] || 0;
     const beforeHeroes = new Set(heroesFor(nextMapId(mapId) || mapId));
     const wasBranches = branchesUnlocked();
     const wasCleared = !!rec.cleared;
@@ -6216,6 +6541,13 @@ RG.progress = (() => {
     save();
     const after = mapStars(mapId);
     const next = nextMapId(mapId);
+    // 공명석·새 탑 확정권
+    const firstClear = st.result === 'win' && !wasCleared && mode === 'normal';
+    const nextDef = next && D().maps.find((m) => m.id === next);
+    const reward = RG.gacha.rewardFor({ result: st.result, mode, firstClear, newStars: after - before, endlessGain: mode === 'endless' ? (p.endless[mapId] || 0) - beforeEndless : 0, nextNewTowers: nextDef ? nextDef.newTowers : [] });
+    p.gacha.crystals += reward.crystals;
+    p.gacha.tickets += reward.tickets;
+    save();
     const unlocks = { towers: [], heroes: [], maps: [], branches: false };
     if (st.result === 'win' && mode === 'normal' && !wasCleared) {
       if (next) {
@@ -6226,7 +6558,7 @@ RG.progress = (() => {
       for (const e of D().endless || []) if (e.unlockAfter === mapId) unlocks.maps.push(e.id);
       unlocks.branches = !wasBranches && branchesUnlocked();
     }
-    return { stars, newStars: after - before, firstClear: st.result === 'win' && !wasCleared && mode === 'normal', unlocks };
+    return { stars, newStars: after - before, firstClear, unlocks, reward };
   }
 
   function nextMapId(id) {
@@ -6256,6 +6588,7 @@ RG.progress = (() => {
 
   return {
     load, get, save, reset, hasSave, mapIndex, mapRec, mapUnlocked, towersFor, heroesFor, branchesUnlocked,
+    gachaState, ownedTowers, ownsTower, towerRank, towerRanks, pullGacha,
     mapStars, starsTotal, starsSpent, starsFree, canLearn, learn, resetSkills, record, nextMapId, markSeen, seen, frontier, skillCost,
   };
 })();
@@ -23022,6 +23355,23 @@ RG.art.icon = (() => {
         + hl('M16 34V50', 3);
     },
     skull() { return skull(1, 0, true) + hl('M16 22C17 16 21 12 26 11'); },
+    /** 공명석(뽑기 재화): 여섯 원소 빛이 도는 보라 수정 */
+    crystal() {
+      const g = grad('#f2d8ff', '#7a4ad8');
+      return P('M32 4L50 20L44 54L32 62L20 54L14 20Z', g)
+        + P('M32 4L50 20L32 26Z', '#fff1ff', ' stroke-width="2"') + P('M32 4L14 20L32 26Z', '#d4b0ff', ' stroke-width="2"')
+        + P('M14 20L32 26L20 54Z', '#9a6ae8', ' stroke-width="2"') + P('M50 20L32 26L44 54Z', '#6a3ac0', ' stroke-width="2"')
+        + P('M32 26L20 54L32 62L44 54Z', '#5a2aa8', ' stroke-width="2"')
+        + C(26, 16, 2.4, '#ffffff', ' stroke="none"') + hl('M22 22L28 40', 2.6, 0.55);
+    },
+    /** 새 탑 확정권: 금빛 표 + 탑 그림 */
+    ticket() {
+      return P('M6 18H58V28A5 5 0 0 0 58 38V48H6V38A5 5 0 0 0 6 28Z', grad(K.goldL, K.gold))
+        + P('M18 22V44', 'none', ' stroke-dasharray="3 3" stroke-width="2"')
+        + P('M34 42V27L38 23L42 27V42ZM31 42H45', '#7a4a14', ' stroke-width="2.4"')
+        + P('M27 30L28.5 33.5L32 34L29.4 36.4L30 40L27 38.2L24 40L24.6 36.4L22 34L25.5 33.5Z', '#fff6c8', ' stroke-width="1.6"')
+        + hl('M10 22H54', 2.4, 0.6);
+    },
     crown() {
       const g = grad(K.goldL, K.gold);
       return P('M8 18L20 33L32 10L44 33L56 18L51 54H13Z', g)
@@ -27119,6 +27469,16 @@ RG.render = (() => {
   const UI = RG.ui;
   const D = () => RG.data;
   const P = () => RG.progress;
+  /** 중복 강화 효과 글 */
+  function rankText(t, rank) {
+    const role = RG.data.towers[t].role;
+    const pct = Math.round(rank * RG.gacha.RANK_PCT * 100);
+    return role === 'support' ? `지원 효과 +${pct}%` : role === 'economy' ? `수입 +${pct}%` : role === 'barracks' ? `병사 체력·공격력 +${pct}%` : `공격력 +${pct}%`;
+  }
+  RG.ui.rankText = rankText;
+  /** 지금 뽑기를 할 수 있나 (공명석 100 이상 또는 확정권) */
+  const canPull = () => { const g = RG.progress.gachaState(); return g.crystals >= RG.gacha.COST.one || g.tickets > 0; };
+  RG.ui.canPull = canPull;
 
   /* =====================================================
    * 타이틀
@@ -27143,6 +27503,7 @@ RG.render = (() => {
       }
       menu.appendChild(el('button', { class: `btn btn-big ${run ? '' : 'btn-primary'}`, onclick: go(() => UI.show('world', {})) }, [has ? '월드 지도' : '시작하기']));
       menu.appendChild(el('div', { class: 'title-row' }, [
+        el('button', { class: `btn btn-gacha ${canPull() ? 'ready' : ''}`, onclick: go(() => UI.show('gacha', { back: { screen: 'title' } })) }, [UI.icon('crystal', 'tiny'), '탑 뽑기']),
         el('button', { class: 'btn', onclick: go(() => UI.show('heroes', {})) }, ['수호대']),
         el('button', { class: 'btn', onclick: go(() => UI.show('codex', {})) }, ['도감']),
         el('button', { class: 'btn', onclick: go(() => openSettings()) }, ['설정']),
@@ -27251,6 +27612,7 @@ RG.render = (() => {
         el('h2', { text: '월드 지도' }),
         el('div', { class: 'top-stars' }, [UI.icon('star'), el('b', { text: String(P().starsTotal()) }), el('small', { text: ' / 150' })]),
         el('div', { class: 'top-actions' }, [
+          el('button', { class: `btn small btn-gacha ${canPull() ? 'ready' : ''}`, onclick: () => UI.show('gacha', { back: { screen: 'world' } }) }, [UI.icon('crystal', 'tiny'), `뽑기 ${P().gachaState().crystals}${P().gachaState().tickets ? ` · 확정권 ${P().gachaState().tickets}` : ''}`]),
           el('button', { class: 'btn small', onclick: () => UI.show('tree', {}) }, [UI.icon('tree', 'tiny'), `기술 나무${P().starsFree() > 0 ? ` (${P().starsFree()})` : ''}`]),
           el('button', { class: 'btn small', onclick: () => UI.show('heroes', {}) }, [UI.icon('hero', 'tiny'), '수호대']),
           el('button', { class: 'btn small', onclick: () => UI.show('codex', {}) }, [UI.icon('book', 'tiny'), '도감']),
@@ -27353,9 +27715,8 @@ RG.render = (() => {
       const heroes = P().heroesFor(def.id);
       let hero = data.hero || (heroes.includes(P().get().lastHero) ? P().get().lastHero : (def.hero && heroes.includes(def.hero) ? def.hero : heroes[0]));
       if (def.hero && !RG.progress.mapRec(def.id).cleared && heroes.includes(def.hero) && !data.hero) hero = def.hero;
-      // 도전은 "그 시점까지 해금된 탑 전부"(§11.3): 이 맵과 지금까지 연 맵 중 더 뒤쪽 기준
-      const later = P().mapIndex(P().frontier()) > P().mapIndex(def.id) ? P().frontier() : def.id;
-      const towers = P().towersFor(mode === 'challenge' && !isEndless ? later : def.id);
+      // 탑은 뽑기로 얻은 것 전부 (2026-11-10 개정: 예전엔 맵마다 해금)
+      const towers = P().ownedTowers();
       // "붙잡기 없이" 도전에서 근접 영웅이 골라져 있으면 근접 아닌 영웅으로 바꿈 (영웅이 조용히 빠지지 않게)
       if (mode === 'challenge' && def.challenge && def.challenge.type === 'noBlock' && hero && D().heroes[hero].melee) {
         hero = heroes.find((h) => !D().heroes[h].melee) || null;
@@ -27419,11 +27780,13 @@ RG.render = (() => {
       // 탑과 적
       const towerRow = el('div', { class: 'chip-row' });
       for (const t of towers) {
-        const isNew = (def.newTowers || []).includes(t);
-        const chip = el('span', { class: `t-chip ${isNew ? 'new' : ''}` }, [UI.towerImg(t, 1, null, 'mini'), isNew ? el('em', { text: 'NEW' }) : null]);
-        UI.tooltipFor(chip, () => `<b>${esc(D().towers[t].name)}</b><br>${esc(D().towers[t].desc)}`);
+        const rank = P().towerRank(t);
+        const chip = el('span', { class: `t-chip rar-${RG.gacha.rarityOf(t)}` }, [UI.towerImg(t, 1, null, 'mini'), rank > 0 ? el('em', { class: 'rank', text: `+${rank}` }) : null]);
+        UI.tooltipFor(chip, () => `<b>${esc(D().towers[t].name)}</b>${rank > 0 ? ` <span class="good">+${rank} (${esc(rankText(t, rank))})</span>` : ''}<br>${esc(D().towers[t].desc)}`);
         towerRow.appendChild(chip);
       }
+      const missing = D().towerOrder.length - towers.length;
+      if (missing > 0) towerRow.appendChild(el('button', { class: 't-chip more', title: '탑 뽑기', onclick: () => UI.show('gacha', { back: { screen: 'brief', data: { mapId: def.id, mode, hero } } }) }, [el('b', { text: `+${missing}` }), el('small', { text: '뽑기' })]));
       const enemyRow = el('div', { class: 'chip-row' });
       const eset = new Set();
       for (const w of RG.grid.parseWaves(def.waves || [])) for (const g of w.groups) eset.add(g.e);
@@ -27442,7 +27805,7 @@ RG.render = (() => {
         if (hero) { P().get().lastHero = hero; P().save(); }
         const opts = {
           mapId: def.id, mode, heroId: noHero ? null : hero, skills: P().get().skills.slice(),
-          seed: (Math.random() * 1e9) >>> 0, towers, branches: P().branchesUnlocked(),
+          seed: (Math.random() * 1e9) >>> 0, towers, towerRanks: P().towerRanks(), branches: P().branchesUnlocked(),
         };
         const go = () => UI.show('game', { opts });
         const story = def.story && def.story.before;
@@ -27455,7 +27818,7 @@ RG.render = (() => {
       ]);
       info.append(
         el('div', { class: 'sec-title', text: '영웅' }), heroRow, heroInfo,
-        el('div', { class: 'sec-title', text: `쓸 수 있는 탑 (${towers.length})` }), towerRow,
+        el('div', { class: 'sec-title', text: `내 탑 (${towers.length}/${D().towerOrder.length})` }), towerRow,
         el('div', { class: 'sec-title', text: '나오는 적' }), enemyRow,
         actions,
       );
@@ -27497,10 +27860,18 @@ RG.render = (() => {
       if (win && data.mode === 'challenge') box.appendChild(el('p', { class: 'good', text: '도전 클리어! ★+1' }));
       if (data.rec.newStars > 0) box.appendChild(el('p', { class: 'good', text: `새로 얻은 별 ★${data.rec.newStars} — 기술 나무에서 쓸 수 있습니다` }));
       // 해금
+      // 공명석·새 탑 확정권 (탑은 뽑기로 얻음)
+      const rw = data.rec.reward;
+      if (rw && (rw.crystals || rw.tickets)) {
+        const rb = el('div', { class: 'reward-box' }, [
+          el('div', { class: 'rw-total' }, [UI.icon('crystal', 'small'), el('b', { text: `+${rw.crystals}` }), el('span', { text: '공명석' }), rw.tickets ? el('span', { class: 'rw-ticket' }, [UI.icon('ticket', 'small'), `새 탑 확정권 +${rw.tickets}`]) : null]),
+          el('div', { class: 'rw-lines dim', text: rw.lines.map(([k, v]) => `${k} +${v}`).join(' · ') }),
+        ]);
+        box.appendChild(rb);
+      }
       const un = data.rec.unlocks;
-      if (un && (un.towers.length || un.heroes.length || un.branches)) {
+      if (un && (un.heroes.length || un.branches)) {
         const ul = el('div', { class: 'unlocks' });
-        for (const t of un.towers) ul.appendChild(el('div', { class: 'unlock' }, [UI.towerImg(t, 1, null, 'mini'), el('span', { text: `새 탑: ${D().towers[t].name}` })]));
         for (const h of un.heroes) ul.appendChild(el('div', { class: 'unlock' }, [UI.portrait(h, 'happy', 'mini-portrait'), el('span', { text: `새 영웅: ${D().heroes[h].name}` })]));
         if (un.branches) ul.appendChild(el('div', { class: 'unlock' }, [UI.icon('upgrade', 'small'), el('span', { text: '분기 강화(Lv4)가 열렸습니다!' })]));
         box.appendChild(ul);
@@ -27525,6 +27896,7 @@ RG.render = (() => {
       const btns = el('div', { class: 'result-buttons' }, [
         el('button', { class: 'btn', onclick: () => UI.show('brief', { mapId: def.id, mode: data.mode, hero }) }, ['다시 하기']),
         el('button', { class: 'btn', onclick: () => (afterStory ? UI.show('story', { id: after, then: goWorld }) : goWorld()) }, ['월드 지도']),
+        el('button', { class: `btn btn-gacha ${canPull() ? 'ready' : ''}`, onclick: () => UI.show('gacha', {}) }, [UI.icon('crystal', 'tiny'), '탑 뽑기']),
         win && next && data.mode === 'normal' ? el('button', { class: 'btn btn-primary', onclick: () => { const go = () => UI.show('brief', { mapId: next }); if (afterStory) UI.show('story', { id: after, then: go }); else go(); } }, ['다음 맵 ▶']) : null,
       ]);
       box.appendChild(btns);
@@ -27660,13 +28032,8 @@ RG.render = (() => {
     },
   });
 
-  function towerUnlocked(t) {
-    const u = D().towers[t].unlock;
-    const i = P().mapIndex(u);
-    if (i < 0) return false;          // 아직 데이터가 없는 지역
-    if (i === 0) return true;
-    return P().mapRec(D().maps[i - 1].id).cleared;
-  }
+  /** 뽑기로 얻은 탑만 도감에 보임 (2026-11-10 개정) */
+  function towerUnlocked(t) { return P().ownsTower(t); }
 
   function towersTab(body) {
     const grid = el('div', { class: 'codex-grid' });
@@ -27829,6 +28196,169 @@ RG.render = (() => {
       sec.append(head, el('p', { class: 'dim tree-note', text: '기술 나무는 캠페인과 무한 모드에 적용되고, 도전에는 적용되지 않습니다. 캠페인은 기술 나무 없이도 별 셋을 받을 수 있게 만들어져 있습니다.' }), grid);
     },
   });
+})();
+
+</script>
+  <script>/* js/ui/gacha.js */
+'use strict';
+
+/* =========================================================
+ * 탑 뽑기 화면 — 공명석으로 탑을 뽑고, 중복은 강화. 규칙: js/core/gacha.js
+ * 왼쪽: 울림 제단(뽑기 버튼·확률·천장) / 오른쪽: 내 탑 모음(등급별, 강화 단계)
+ * 뽑으면 카드가 뒤집히며 하나씩 드러남(누르면 바로, "모두 열기"로 한꺼번에)
+ * ========================================================= */
+(() => {
+  const { el } = RG.util;
+  const UI = RG.ui;
+  const D = () => RG.data;
+  const P = () => RG.progress;
+  const G = () => RG.gacha;
+
+  let back = null;
+  let revealTimers = [];
+
+  function clearTimers() { revealTimers.forEach(clearTimeout); revealTimers = []; }
+
+  function rarityBadge(r) {
+    const R = G().RARITIES[r];
+    return el('span', { class: `rar-badge rar-${r}`, text: R.name });
+  }
+
+  /** 강화 단계 점 5개 */
+  function pips(rank) {
+    const box = el('span', { class: 'rank-pips', 'aria-label': `강화 +${Math.max(0, rank)}` });
+    for (let i = 1; i <= G().MAX_RANK; i++) box.appendChild(el('i', { class: i <= rank ? 'on' : '' }));
+    return box;
+  }
+
+  UI.register('gacha', {
+    leave() { clearTimers(); },
+    enter(sec, data) {
+      UI.music('worldmap');
+      clearTimers();
+      if (data && data.back) back = data.back;
+      else if (!data || !data.keepBack) back = null;
+      sec.innerHTML = '';
+      const g = P().gachaState();
+      const goBack = () => { const b = back; back = null; if (b) UI.show(b.screen, b.data || {}); else UI.show(P().hasSave() ? 'world' : 'title', {}); };
+
+      const head = el('header', { class: 'top-bar' }, [
+        el('button', { class: 'icon-btn', title: '돌아가기', 'aria-label': '돌아가기', onclick: goBack }, [UI.icon('back')]),
+        el('h2', { text: '탑 뽑기' }),
+        el('div', { class: 'gc-wallet' }, [
+          el('span', { class: 'gc-coin', title: '공명석 — 맵을 클리어하고 별을 얻으면 모입니다' }, [UI.icon('crystal'), el('b', { text: g.crystals.toLocaleString() })]),
+          el('span', { class: `gc-coin ticket ${g.tickets ? 'has' : ''}`, title: '새 탑 확정권 — 아직 없는 탑만 나옵니다' }, [UI.icon('ticket'), el('b', { text: String(g.tickets) })]),
+        ]),
+      ]);
+
+      /* ---------- 제단 ---------- */
+      const C = G().COST;
+      const doPull = (kind) => {
+        const res = P().pullGacha(kind);
+        if (!res.ok) { UI.toast(res.reason, 'warn'); UI.sfx('error'); return; }
+        UI.sfx('click');
+        reveal(sec, res.results, () => UI.show('gacha', { keepBack: true }));
+      };
+      const pullBtn = (kind, label, sub, enabled, cls = '') => el('button', { class: `btn gc-pull ${cls}`, disabled: !enabled, onclick: () => doPull(kind) }, [el('b', { text: label }), el('span', { class: 'gc-cost' }, sub)]);
+      const allOwned = D().towerOrder.every((t) => P().ownsTower(t));
+      const toEpic = Math.max(1, G().PITY - (g.pity || 0));
+      const altar = el('div', { class: 'gc-altar' }, [
+        el('div', { class: 'gc-shrine', 'aria-hidden': 'true' }, [
+          el('div', { class: 'gc-rays' }),
+          el('div', { class: 'gc-ring r1' }), el('div', { class: 'gc-ring r2' }),
+          UI.svgImg(RG.art.icon('crystal'), 'gc-core', ''),
+          el('div', { class: 'gc-orbit' }, D().elementOrder.map((e, i) => (RG.art.elementGem ? UI.svgImg(RG.art.elementGem(e), `gc-gem g${i}`, '') : UI.icon(e, `gc-gem g${i}`)))),
+        ]),
+        el('div', { class: 'gc-buttons' }, [
+          pullBtn('one', '1회 뽑기', [UI.icon('crystal', 'tiny'), String(C.one)], g.crystals >= C.one),
+          pullBtn('ten', '10회 뽑기', [UI.icon('crystal', 'tiny'), String(C.ten), el('small', { text: ' 희귀 이상 1개 확정' })], g.crystals >= C.ten, 'gc-ten'),
+          g.tickets > 0 && !allOwned ? pullBtn('ticket', '새 탑 확정권 사용', [UI.icon('ticket', 'tiny'), `${g.tickets}장 — 아직 없는 탑만`], true, 'gc-ticket') : null,
+        ]),
+        el('div', { class: 'gc-rules' }, [
+          el('div', { class: 'gc-rates' }, ['common', 'rare', 'epic'].map((r) => el('span', {}, [rarityBadge(r), ` ${Math.round(G().RARITIES[r].rate * 100)}%`]))),
+          el('p', {}, [`영웅 등급 확정까지 `, el('b', { text: `${toEpic}회` })]),
+          el('p', { class: 'dim', text: `같은 탑이 또 나오면 그 탑이 강화됩니다(최대 +${G().MAX_RANK}, 단계마다 +${Math.round(G().RANK_PCT * 100)}%). +${G().MAX_RANK}에서 또 나오면 공명석 ${G().REFUND}을 돌려받습니다.` }),
+          el('p', { class: 'dim', text: `공명석은 맵 첫 클리어 ${G().REWARD.firstClear}, 새 별마다 ${G().REWARD.perStar}, 승리 ${G().REWARD.win}로 모입니다. 새 탑이 나오던 맵에 닿으면 새 탑 확정권을 받습니다.` }),
+        ]),
+      ]);
+
+      /* ---------- 내 탑 모음 ---------- */
+      const coll = el('div', { class: 'gc-collection' });
+      const owned = P().ownedTowers().length;
+      coll.appendChild(el('div', { class: 'gc-coll-head' }, [el('b', { text: '내 탑' }), el('span', { class: 'dim', text: ` ${owned}/${D().towerOrder.length}` })]));
+      for (const r of ['epic', 'rare', 'common']) {
+        const list = D().towerOrder.filter((t) => G().rarityOf(t) === r);
+        const grid = el('div', { class: 'gc-grid' });
+        for (const t of list) {
+          const has = P().ownsTower(t);
+          const rank = P().towerRank(t);
+          const td = D().towers[t];
+          const card = el('div', { class: `gc-card rar-${r} el-${td.element} ${has ? 'owned' : 'missing'}`, tabindex: '0', 'aria-label': `${td.name} ${has ? `강화 +${rank}` : '아직 없음'}` }, [
+            UI.towerImg(t, has ? Math.min(3, 1 + Math.floor(rank / 2)) : 1, null, 'gc-img'),
+            el('span', { class: 'gc-name', text: has ? td.name : '???' }),
+            has ? pips(rank) : el('span', { class: 'gc-q', text: '아직 없음' }),
+            has && rank > 0 ? el('em', { class: 'gc-rank', text: `+${rank}` }) : null,
+          ]);
+          UI.tooltipFor(card, () => `<b>${td.name}</b> <span style="color:${G().RARITIES[r].color}">${G().RARITIES[r].name}</span><br>${td.desc}<br>${has ? (rank > 0 ? `<span class="good">강화 +${rank}: ${UI.rankText(t, rank)}</span>` : '강화 +0') : '<span class="dim">뽑기에서 얻을 수 있습니다</span>'}`);
+          grid.appendChild(card);
+        }
+        coll.appendChild(el('div', { class: 'gc-sec' }, [el('div', { class: 'gc-sec-title' }, [rarityBadge(r), el('span', { class: 'dim', text: ` ${list.filter((t) => P().ownsTower(t)).length}/${list.length}` })]), grid]));
+      }
+
+      sec.append(head, el('div', { class: 'gc-body' }, [altar, coll]));
+    },
+  });
+
+  /* ---------- 뽑기 결과: 카드 뒤집기 ---------- */
+  function reveal(sec, results, done) {
+    clearTimers();
+    const best = results.some((r) => r.rarity === 'epic') ? 'epic' : results.some((r) => r.rarity === 'rare') ? 'rare' : 'common';
+    const ov = el('div', { class: `gc-reveal best-${best} n${results.length > 1 ? 'many' : 'one'}`, role: 'dialog', 'aria-label': '뽑기 결과' });
+    const flash = el('div', { class: 'gc-flash' });
+    const row = el('div', { class: 'gc-rcards' });
+    const cards = results.map((r, i) => {
+      const td = D().towers[r.type];
+      const tag = r.isNew ? el('em', { class: 'gc-tag new', text: 'NEW!' }) : r.refund ? el('em', { class: 'gc-tag refund' }, [UI.icon('crystal', 'tiny'), `+${r.refund}`]) : el('em', { class: 'gc-tag up', text: `강화 +${r.rank}` });
+      const card = el('button', { class: `gc-rcard rar-${r.rarity}`, style: `--i:${i}`, 'aria-label': `${i + 1}번째 카드` }, [
+        el('span', { class: 'gc-face back' }, [UI.svgImg(RG.art.icon('crystal'), 'gc-back-icon', '')]),
+        el('span', { class: 'gc-face front' }, [
+          rarityBadge(r.rarity),
+          UI.towerImg(r.type, 1, null, 'gc-rimg'),
+          el('b', { class: 'gc-rname', text: td.name }),
+          tag,
+        ]),
+      ]);
+      card.addEventListener('click', () => flip(card, r));
+      return card;
+    });
+    cards.forEach((c) => row.appendChild(c));
+    const skip = el('button', { class: 'btn gc-skip', onclick: () => cards.forEach((c, i) => flip(c, results[i])) }, ['모두 열기']);
+    const ok = el('button', { class: 'btn btn-primary gc-ok hidden', onclick: () => { clearTimers(); ov.remove(); done(); } }, ['확인']);
+    const summary = el('div', { class: 'gc-summary' });
+    ov.append(flash, el('div', { class: 'gc-rtitle', text: results.length > 1 ? `${results.length}회 뽑기` : '뽑기' }), row, summary, el('div', { class: 'gc-rbtns' }, [skip, ok]));
+    sec.appendChild(ov);
+    let opened = 0;
+    function flip(card, r) {
+      if (card.classList.contains('open')) return;
+      card.classList.add('open');
+      opened++;
+      UI.sfx(r.rarity === 'epic' ? 'unlock' : r.isNew ? 'star' : r.rarity === 'rare' ? 'upgrade' : 'build', { vol: 0.6 });
+      if (r.rarity === 'epic') { flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go'); }
+      if (opened === cards.length) finish();
+    }
+    function finish() {
+      skip.classList.add('hidden');
+      ok.classList.remove('hidden');
+      const nNew = results.filter((r) => r.isNew).length;
+      const nUp = results.filter((r) => !r.isNew && !r.refund).length;
+      const ref = results.reduce((s, r) => s + r.refund, 0);
+      summary.textContent = [nNew ? `새 탑 ${nNew}개` : '', nUp ? `강화 ${nUp}번` : '', ref ? `공명석 ${ref} 돌려받음` : ''].filter(Boolean).join(' · ');
+      setTimeout(() => ok.focus(), 50);
+    }
+    // 하나씩 자동으로 (눌러서 먼저 열 수도 있음)
+    const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    cards.forEach((c, i) => revealTimers.push(setTimeout(() => flip(c, results[i]), (reduce ? 120 : 520) + i * (reduce ? 60 : 230))));
+  }
 })();
 
 </script>
@@ -28474,6 +29004,7 @@ RG.render = (() => {
         'aria-pressed': 'false',
       }, [
         key ? el('kbd', { text: key }) : null,
+        (game.ranks && game.ranks[type]) ? el('em', { class: 'tc-rank', text: `+${game.ranks[type]}` }) : null,
         UI.towerImg(type, 1, null, 'tc-img'),
         el('span', { class: 'tc-name', text: td.name }),
         el('span', { class: 'tc-cost' }, [UI.icon('gold', 'tiny'), String(cost)]),
@@ -28951,7 +29482,7 @@ RG.render = (() => {
       UI.towerImg(t.type, t.level, t.branch, 'ip-img'),
       el('div', { class: 'ip-title' }, [
         el('b', { text: info.name }),
-        el('span', { class: 'ip-sub' }, [UI.elementBadge(td.element), el('span', { text: t.level >= 4 ? ' 분기' : ` Lv${t.level}` })]),
+        el('span', { class: 'ip-sub' }, [UI.elementBadge(td.element), el('span', { text: t.level >= 4 ? ' 분기' : ` Lv${t.level}` }), calc && calc.rank ? el('em', { class: 'ip-rank', title: `뽑기 중복 강화: ${UI.rankText ? UI.rankText(t.type, calc.rank) : ''}`, text: ` 강화 +${calc.rank}` }) : null]),
       ]),
       el('button', { class: 'x-btn', 'aria-label': '닫기', onclick: cancelAll }, [UI.icon('close')]),
     ]);

@@ -2,12 +2,14 @@
 
 /*
  * 입력 방식별 한 판 + 이어하기 (QUALITY.md §5)
- *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|mouse|resume]
+ *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|mouse|resume|gacha]
  *
  * - keyboard: 숫자(탑 고르기)·방향키·Enter·U·Space·F만으로 1-1을 깬다 (마우스·터치 없음)
  * - touch:    휴대폰 가로(터치 에뮬레이션)에서 탑 목록 탭 → 칸 탭, 탑 끌어다 놓기만으로 1-1을 깬다
  * - mouse:    탑 고르고 놓기의 세부 동작 (누르기·끌어다 놓기·Shift 이어 짓기·취소·못 짓는 칸·빈 칸 안내)
  * - resume:   판 도중 새로고침 → 타이틀의 "이어하기" → 같은 틱·같은 상태 해시
+ * - gacha:    타이틀 → 탑 뽑기 → 1회 뽑기(카드 뒤집기) → 확인 → 공명석이 줄고 탑이 늘거나 강화됨,
+ *             뽑은 탑이 출정 준비 "내 탑"과 전투 탑 목록에 나옴, 공명석이 모자라면 버튼이 꺼짐
  *
  * 시험을 빨리 끝내려고 배속만 코드로 올립니다(입력은 전부 실제 키·터치 이벤트).
  */
@@ -316,9 +318,42 @@ async function resumeRun(browser) {
   return { name: '판 도중 새로고침 → 이어하기', ok, detail: `버튼 "${label.trim()}", 저장 틱 ${before.tick} → 이어서 ${after.tick}, 재현 상태와 해시 ${after.hash === after.ref ? '같음' : '다름'}, 탑 ${after.towers}개`, errors };
 }
 
+async function gachaRun(browser) {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await page.goto(URL);
+  await page.waitForSelector('#screen-title.active .btn-gacha');
+  const g0 = await page.evaluate(() => JSON.parse(JSON.stringify(RG.progress.gachaState())));
+  await page.click('#screen-title .btn-gacha');
+  await page.waitForSelector('#screen-gacha.active .gc-pull');
+  await page.click('.gc-pull:not(.gc-ten):not(.gc-ticket)');
+  await page.waitForSelector('.gc-ok:not(.hidden)', { timeout: 5000 });
+  const pulled = await page.evaluate(() => [...document.querySelectorAll('.gc-rcard .gc-rname')].map((n) => n.textContent));
+  await page.click('.gc-ok');
+  await page.waitForSelector('#screen-gacha.active .gc-pull');
+  const g1 = await page.evaluate(() => JSON.parse(JSON.stringify(RG.progress.gachaState())));
+  const gotType = Object.keys(g1.owned).find((t) => !(t in g0.owned) || g1.owned[t] !== g0.owned[t]);
+  const spent = g0.crystals - g1.crystals === 100;
+  const disabled = await page.evaluate(() => document.querySelector('.gc-pull:not(.gc-ticket)').disabled);
+  // 출정 준비와 전투에 뽑은 탑이 보이는지 (새 탑일 때)
+  await page.evaluate(() => { for (const id of Object.keys(RG.data.story)) RG.progress.markSeen('story', id); RG.ui.show('brief', { mapId: '1-1' }); });
+  const briefCount = await page.evaluate(() => (document.querySelector('#screen-brief').textContent.match(/내 탑 \((\d+)\//) || [])[1]);
+  await page.click('#screen-brief .btn-primary.btn-big');
+  await page.waitForFunction(() => RG.ui.game.game && !document.querySelector('#screen-game').classList.contains('loading'));
+  const dock = await page.evaluate(() => [...document.querySelectorAll('.tower-card')].map((c) => c.dataset.type));
+  await ctx.close();
+  const ownedN = Object.keys(g1.owned).length;
+  const inDock = gotType ? dock.includes(gotType) : false;
+  const ok = spent && !!gotType && disabled && +briefCount === ownedN && dock.length === ownedN && inDock;
+  return { name: '탑 뽑기', ok, detail: `뽑은 탑 "${pulled.join(', ')}"(${gotType}${g1.owned[gotType] > 0 ? ` 강화 +${g1.owned[gotType]}` : ' 새 탑'}), 공명석 ${g0.crystals}→${g1.crystals}, 모자라면 버튼 꺼짐 ${disabled}, 출정 준비 내 탑 ${briefCount}개, 전투 탑 목록 ${dock.length}개`, errors };
+}
+
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
-  const runs = { keyboard: keyboardRun, touch: touchRun, mouse: mouseRun, resume: resumeRun };
+  const runs = { keyboard: keyboardRun, touch: touchRun, mouse: mouseRun, resume: resumeRun, gacha: gachaRun };
   let fail = 0;
   for (const [k, fn] of Object.entries(runs)) {
     if (only && only !== k) continue;

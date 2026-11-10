@@ -302,3 +302,154 @@
   .map-nodes { grid-row: 1 / span 2; grid-column: 2; }
   .map-node { min-height: 74px; padding: 6px 10px; }
 }
+
+/* =========================================================
+ * 탑 뽑기 (js/ui/gacha.js)
+ * ========================================================= */
+#screen-gacha { display: none; flex-direction: column; background: radial-gradient(ellipse at 30% 40%, #4a2a7a 0%, #24163e 45%, #0f0a1a 100%); }
+#screen-gacha.active { display: flex; }
+#screen-gacha .top-bar { background: linear-gradient(180deg, #2c1f44, #1a1229); border-bottom: 1px solid #ffdf9a33; }
+#screen-gacha .top-bar h2 { background: linear-gradient(180deg, #fff6d6, #f2c46a); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 2px 0 #3a1e06); }
+.gc-wallet { margin-left: auto; display: flex; gap: 8px; }
+.gc-coin { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px 4px 6px; border-radius: 999px; background: #0007; border: 1px solid #b48aff66; font-size: 1.05rem; }
+.gc-coin .icon { width: 26px; height: 26px; }
+.gc-coin b { font-variant-numeric: tabular-nums; color: #f0dcff; }
+.gc-coin.ticket { border-color: #ffd27a55; }
+.gc-coin.ticket.has b { color: var(--gold2); }
+.gc-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(280px, 0.9fr) 1.3fr; gap: 14px; padding: 12px calc(14px + var(--safe-r)) calc(12px + var(--safe-b)) calc(14px + var(--safe-l)); overflow: hidden; }
+
+/* 제단 */
+.gc-altar { display: flex; flex-direction: column; align-items: center; gap: 12px; min-height: 0; overflow-y: auto; padding: 6px 4px; }
+.gc-shrine { position: relative; width: min(260px, 70%); aspect-ratio: 1; flex: none; }
+.gc-rays { position: absolute; inset: -14%; background: repeating-conic-gradient(from 0deg, #ffe7a855 0deg 6deg, transparent 6deg 22deg); border-radius: 50%; -webkit-mask: radial-gradient(circle, #000 18%, transparent 68%); mask: radial-gradient(circle, #000 18%, transparent 68%); animation: gc-spin 40s linear infinite; }
+.gc-ring { position: absolute; border-radius: 50%; border: 2px solid #ffd77a88; box-shadow: 0 0 18px #c890ff88, inset 0 0 18px #c890ff55; }
+.gc-ring.r1 { inset: 8%; animation: gc-pulse 3.2s ease-in-out infinite; }
+.gc-ring.r2 { inset: 20%; border-color: #c8a0ffaa; animation: gc-pulse 3.2s ease-in-out -1.6s infinite; }
+.gc-core { position: absolute; left: 50%; top: 50%; width: 42%; height: 42%; transform: translate(-50%, -50%); filter: drop-shadow(0 0 16px #d0a0ff) drop-shadow(0 0 30px #a070ff); animation: gc-float 3.6s ease-in-out infinite; }
+.gc-orbit { position: absolute; inset: 0; animation: gc-spin 24s linear infinite; }
+.gc-gem { position: absolute; width: 17%; height: 17%; left: 41.5%; top: 41.5%; filter: drop-shadow(0 2px 4px #000a); }
+.gc-gem.g0 { transform: rotate(0deg) translateY(-210%) rotate(0deg); } .gc-gem.g1 { transform: rotate(60deg) translateY(-210%) rotate(-60deg); } .gc-gem.g2 { transform: rotate(120deg) translateY(-210%) rotate(-120deg); }
+.gc-gem.g3 { transform: rotate(180deg) translateY(-210%) rotate(-180deg); } .gc-gem.g4 { transform: rotate(240deg) translateY(-210%) rotate(-240deg); } .gc-gem.g5 { transform: rotate(300deg) translateY(-210%) rotate(-300deg); }
+@keyframes gc-spin { to { rotate: 360deg; } }
+@keyframes gc-pulse { 0%, 100% { opacity: 0.55; scale: 0.97; } 50% { opacity: 1; scale: 1.03; } }
+@keyframes gc-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -6px; } }
+.gc-buttons { display: flex; flex-direction: column; gap: 8px; width: min(340px, 100%); }
+.gc-pull { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 52px; padding: 8px 16px; font-size: 1.05rem; background: linear-gradient(180deg, #6a4aa8, #3a2470); border-color: #c8a6ff; box-shadow: 0 0 0 2px #120a20, 0 5px 0 #120a20, 0 0 18px #a070ff55; }
+.gc-pull b { font-weight: 900; }
+.gc-cost { display: inline-flex; align-items: center; gap: 3px; font-weight: 800; color: #f2e2ff; }
+.gc-cost small { font-weight: 600; color: #e8d0ff; font-size: 0.72rem; }
+.gc-pull.gc-ten { background: linear-gradient(180deg, #fff0bc 0%, #f6cf78 40%, #d98f32 100%); border-color: #fff2c4; color: #3a1e06; box-shadow: 0 0 0 2px #6a3a10, 0 5px 0 #5a2e0c, 0 0 22px #ffbf5a80; }
+.gc-pull.gc-ten .gc-cost, .gc-pull.gc-ten .gc-cost small { color: #4a2a08; }
+.gc-pull.gc-ticket { background: linear-gradient(180deg, #3aa86a, #1e6a40); border-color: #a8ffcc; }
+.gc-pull:disabled { filter: grayscale(0.7) brightness(0.7); cursor: not-allowed; }
+.gc-rules { width: min(360px, 100%); font-size: 0.82rem; background: #0006; border: 1px solid #ffffff14; border-radius: 12px; padding: 8px 12px; }
+.gc-rules p { margin: 4px 0; }
+.gc-rates { display: flex; gap: 12px; flex-wrap: wrap; }
+.rar-badge { display: inline-block; padding: 0 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 900; color: #1a1030; }
+.rar-badge.rar-common { background: linear-gradient(#f0ecf8, #b8b0cc); }
+.rar-badge.rar-rare { background: linear-gradient(#bfe6ff, #4aa0f0); }
+.rar-badge.rar-epic { background: linear-gradient(#fff2b0, #f0a020); box-shadow: 0 0 8px #ffc44a99; }
+
+/* 모음 */
+.gc-collection { min-height: 0; overflow-y: auto; padding: 4px 6px 10px; background: #0005; border: 1px solid #ffffff12; border-radius: 16px; }
+.gc-coll-head { padding: 6px 6px 2px; font-size: 1.05rem; }
+.gc-sec { margin-top: 6px; }
+.gc-sec-title { padding: 4px 6px; }
+.gc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; padding: 2px 4px; }
+.gc-card { --rc: #c9c3d8; position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px 7px; border-radius: 12px; background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--rc) 22%, transparent), transparent 70%), linear-gradient(#2a2040, #18122a); border: 2px solid color-mix(in srgb, var(--rc) 55%, #000); box-shadow: 0 3px 0 #0008; outline: none; }
+.gc-card.rar-rare { --rc: #5fb4ff; } .gc-card.rar-epic { --rc: #ffc44a; }
+.gc-card.rar-epic.owned { box-shadow: 0 0 14px #ffc44a55, 0 3px 0 #0008; }
+.gc-card:focus-visible { outline: 2px solid var(--gold2); }
+.gc-img { width: 58px; height: 68px; object-fit: contain; filter: drop-shadow(1px 2px 1px #0008); }
+.gc-card.missing .gc-img { filter: brightness(0) drop-shadow(0 0 1px #8a7ab0); opacity: 0.55; }
+.gc-name { font-size: 0.74rem; font-weight: 800; text-align: center; line-height: 1.2; }
+.gc-card.missing .gc-name { color: var(--dim); }
+.gc-q { font-size: 0.66rem; color: var(--dim); }
+.rank-pips { display: flex; gap: 2px; }
+.rank-pips i { width: 9px; height: 9px; border-radius: 50%; background: #0008; box-shadow: inset 0 0 0 1px #ffffff30; }
+.rank-pips i.on { background: radial-gradient(circle at 35% 30%, #fff6c8, #f0a020); box-shadow: 0 0 5px #ffc44a; }
+.gc-rank { position: absolute; top: 4px; right: 6px; font-style: normal; font-weight: 900; font-size: 0.82rem; color: var(--gold2); text-shadow: 0 1px 2px #000; }
+
+/* 결과: 카드 뒤집기 */
+.gc-reveal { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 16px; background: radial-gradient(ellipse at center, #3a2468ee, #0c0816f6); animation: gc-in 0.25s ease-out; }
+@keyframes gc-in { from { opacity: 0; } }
+.gc-reveal.best-epic { background: radial-gradient(ellipse at center, #6a4414ee, #1a0e06f8); }
+.gc-flash { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle, #fff6d0, #ffc44a00 60%); opacity: 0; }
+.gc-flash.go { animation: gc-flash 0.7s ease-out; }
+@keyframes gc-flash { 0% { opacity: 0.95; } 100% { opacity: 0; } }
+.gc-rtitle { font-size: 1.3rem; font-weight: 900; color: var(--gold2); text-shadow: 0 2px 6px #000; }
+.gc-rcards { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: min(820px, 100%); }
+.gc-rcard { --rc: #c9c3d8; position: relative; width: clamp(92px, 13vw, 140px); aspect-ratio: 3 / 4; appearance: none; border: 0; padding: 0; background: none; cursor: pointer; perspective: 700px; animation: gc-deal 0.35s calc(var(--i) * 0.05s) ease-out both; }
+.gc-rcard.rar-rare { --rc: #5fb4ff; } .gc-rcard.rar-epic { --rc: #ffc44a; }
+@keyframes gc-deal { from { opacity: 0; transform: translateY(30px) scale(0.85); } }
+.gc-face { position: absolute; inset: 0; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; backface-visibility: hidden; transition: transform 0.45s cubic-bezier(.3,1.4,.5,1); }
+.gc-face.back { background: repeating-linear-gradient(45deg, #3a2470 0 8px, #2c1a58 8px 16px); border: 3px solid #c8a6ff; box-shadow: 0 6px 16px #000a, inset 0 0 18px #a070ff66; }
+.gc-back-icon { width: 46%; height: 46%; filter: drop-shadow(0 0 10px #c890ff); animation: gc-float 2.4s ease-in-out infinite; }
+.gc-face.front { transform: rotateY(180deg); background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--rc) 40%, #2a1d40), #160f24 75%); border: 3px solid var(--rc); box-shadow: 0 0 22px color-mix(in srgb, var(--rc) 70%, transparent), 0 6px 16px #000a; padding: 6px; }
+.gc-rcard.open .gc-face.back { transform: rotateY(-180deg); }
+.gc-rcard.open .gc-face.front { transform: rotateY(0deg); }
+.gc-rcard.rar-epic.open .gc-face.front { animation: gc-epic 1.6s ease-in-out infinite; }
+@keyframes gc-epic { 50% { box-shadow: 0 0 36px #ffd77a, 0 6px 16px #000a; } }
+.gc-rimg { width: 70%; height: 52%; object-fit: contain; filter: drop-shadow(1px 3px 2px #000a); }
+.gc-rname { font-size: 0.82rem; text-align: center; line-height: 1.15; }
+.gc-tag { font-style: normal; font-weight: 900; font-size: 0.78rem; padding: 1px 7px; border-radius: 999px; display: inline-flex; align-items: center; gap: 2px; }
+.gc-tag.new { background: linear-gradient(#ff8a7a, #e0334a); color: #fff; box-shadow: 0 0 10px #ff6a6a99; }
+.gc-tag.up { background: linear-gradient(#fff2b0, #f0a020); color: #3a1e06; }
+.gc-tag.refund { background: #b48aff; color: #1a0e2e; }
+.gc-summary { min-height: 1.3em; font-weight: 800; color: #fff1d6; text-shadow: 0 1px 3px #000; }
+.gc-rbtns { display: flex; gap: 10px; }
+.gc-rbtns .btn { min-width: 120px; min-height: 46px; }
+.gc-rbtns .hidden { display: none; }
+
+/* 다른 화면의 뽑기 버튼·내 탑 칩 */
+.btn-gacha { display: inline-flex; align-items: center; gap: 4px; }
+.btn-gacha.ready { border-color: #c8a6ff; box-shadow: 0 0 12px #a070ff88; animation: gc-ready 2.4s ease-in-out infinite; }
+@keyframes gc-ready { 50% { box-shadow: 0 0 20px #c890ffcc; } }
+.t-chip { position: relative; }
+.t-chip.rar-rare { box-shadow: inset 0 -3px 0 #5fb4ff; } .t-chip.rar-epic { box-shadow: inset 0 -3px 0 #ffc44a; }
+.t-chip em.rank { position: absolute; top: -4px; right: -4px; font-style: normal; font-weight: 900; font-size: 0.7rem; color: #3a1e06; background: var(--gold2); border-radius: 6px; padding: 0 4px; }
+.t-chip.more { appearance: none; border: 2px dashed #b48aff; background: #2a1d40; color: #e8d0ff; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; cursor: pointer; border-radius: 10px; }
+.t-chip.more small { font-size: 0.62rem; }
+.reward-box { margin: 8px 0; padding: 8px 12px; border-radius: 12px; background: linear-gradient(180deg, #3a2468, #22163e); border: 1px solid #c8a6ff66; }
+.rw-total { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 1.1rem; }
+.rw-total b { color: #f0dcff; font-size: 1.3rem; }
+.rw-ticket { margin-left: 8px; display: inline-flex; align-items: center; gap: 4px; color: var(--gold2); font-weight: 800; }
+.rw-lines { font-size: 0.78rem; margin-top: 2px; }
+
+@media (max-width: 760px), (max-height: 460px) {
+  .gc-body { grid-template-columns: minmax(220px, 0.8fr) 1.2fr; gap: 8px; padding-top: 6px; }
+  .gc-shrine { width: min(150px, 45%); }
+  .gc-pull { min-height: 44px; padding: 4px 12px; font-size: 0.95rem; }
+  .gc-rules { font-size: 0.72rem; padding: 6px 8px; }
+  .gc-grid { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
+  .gc-img { width: 44px; height: 52px; }
+  .gc-rcard { width: clamp(64px, 17vw, 110px); }
+  .gc-rcards { gap: 6px; }
+  .gc-rname { font-size: 0.68rem; }
+  .gc-tag { font-size: 0.66rem; }
+}
+@media (max-width: 560px) and (min-height: 461px) {
+  .gc-body { grid-template-columns: 1fr; overflow-y: auto; }
+  .gc-collection { overflow: visible; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gc-rays, .gc-ring, .gc-core, .gc-orbit, .gc-back-icon, .btn-gacha.ready, .gc-rcard, .gc-rcard.rar-epic.open .gc-face.front { animation: none !important; }
+  .gc-face { transition: none; }
+}
+/* 키 작은 화면(휴대폰 가로): 제단 그림을 작게, 결과 카드는 한 줄로 */
+@media (max-height: 460px) {
+  .gc-altar { gap: 6px; padding-top: 0; }
+  .gc-shrine { width: min(96px, 26vh); }
+  .gc-buttons { gap: 5px; }
+  .gc-rules p.dim { display: none; }
+  .gc-reveal { gap: 8px; padding: 8px; }
+  .gc-rtitle { font-size: 1rem; }
+  .gc-rcards { flex-wrap: nowrap; gap: 5px; max-width: 100%; }
+  .gc-reveal.nmany .gc-rcard { width: min(76px, 9.2vw); }
+  .gc-reveal.none .gc-rcard { width: 120px; }
+  .gc-face.front { padding: 3px; gap: 2px; border-width: 2px; }
+  .gc-rname { font-size: 0.6rem; }
+  .gc-tag { font-size: 0.58rem; padding: 0 4px; }
+  .rar-badge { font-size: 0.6rem; padding: 0 4px; }
+  .gc-rbtns .btn { min-height: 42px; }
+}

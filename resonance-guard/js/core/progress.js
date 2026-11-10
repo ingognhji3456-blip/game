@@ -8,7 +8,13 @@ RG.progress = (() => {
   const D = () => RG.data;
 
   function blank() {
-    return { v: 1, maps: {}, skills: [], seen: { enemies: [], story: [], tips: [] }, endless: {}, lastMap: '1-1', lastHero: 'kara' };
+    return { v: 1, maps: {}, skills: [], seen: { enemies: [], story: [], tips: [] }, endless: {}, lastMap: '1-1', lastHero: 'kara', gacha: blankGacha() };
+  }
+  /** 뽑기 상태: 가진 탑과 강화 단계, 공명석, 새 탑 확정권, 천장 */
+  function blankGacha() {
+    const owned = {};
+    for (const t of RG.gacha.BASIC) owned[t] = 0;
+    return { owned, crystals: RG.gacha.START_CRYSTALS, tickets: 0, pity: 0, pulls: 0 };
   }
 
   let profile = null;
@@ -17,6 +23,13 @@ RG.progress = (() => {
     const p = RG.save.get(RG.save.KEYS.progress, null);
     profile = p && p.v === 1 ? Object.assign(blank(), p) : blank();
     profile.seen = Object.assign({ enemies: [], story: [], tips: [] }, profile.seen || {});
+    if (!p || !p.gacha) {
+      // 뽑기가 생기기 전 기록: 그때까지 해금했던 탑은 그대로 가진 것으로 (빼앗지 않음)
+      const g = blankGacha();
+      if (p) for (const t of towersFor(frontier())) if (!(t in g.owned)) g.owned[t] = 0;
+      profile.gacha = g;
+      if (p) RG.save.set(RG.save.KEYS.progress, profile);
+    }
     return profile;
   }
   function get() { return profile || load(); }
@@ -46,6 +59,20 @@ RG.progress = (() => {
       const u = mapIndex(D().towers[t].unlock);
       return u >= 0 && u <= idx;
     });
+  }
+
+  /* ---------------- 뽑기 ---------------- */
+  const gachaState = () => get().gacha;
+  /** 가진 탑 (설계서 순서) */
+  function ownedTowers() { const o = gachaState().owned; return D().towerOrder.filter((t) => t in o); }
+  const ownsTower = (t) => t in gachaState().owned;
+  const towerRank = (t) => (ownsTower(t) ? gachaState().owned[t] : -1);
+  /** 판에 넘길 강화 단계 묶음 (명령 재현이 같도록 판 시작 때 복사해 둠) */
+  function towerRanks() { return Object.assign({}, gachaState().owned); }
+  function pullGacha(kind, rng) {
+    const res = RG.gacha.pull(gachaState(), kind, rng);
+    if (res.ok) { gachaState().pulls = (gachaState().pulls || 0) + res.results.length; save(); }
+    return res;
   }
 
   function heroesFor(mapId) {
@@ -101,6 +128,7 @@ RG.progress = (() => {
     const rec = p.maps[mapId] || {};
     const before = mapStars(mapId);
     const beforeTowers = new Set(towersFor(nextMapId(mapId) || mapId));
+    const beforeEndless = p.endless[mapId] || 0;
     const beforeHeroes = new Set(heroesFor(nextMapId(mapId) || mapId));
     const wasBranches = branchesUnlocked();
     const wasCleared = !!rec.cleared;
@@ -127,6 +155,13 @@ RG.progress = (() => {
     save();
     const after = mapStars(mapId);
     const next = nextMapId(mapId);
+    // 공명석·새 탑 확정권
+    const firstClear = st.result === 'win' && !wasCleared && mode === 'normal';
+    const nextDef = next && D().maps.find((m) => m.id === next);
+    const reward = RG.gacha.rewardFor({ result: st.result, mode, firstClear, newStars: after - before, endlessGain: mode === 'endless' ? (p.endless[mapId] || 0) - beforeEndless : 0, nextNewTowers: nextDef ? nextDef.newTowers : [] });
+    p.gacha.crystals += reward.crystals;
+    p.gacha.tickets += reward.tickets;
+    save();
     const unlocks = { towers: [], heroes: [], maps: [], branches: false };
     if (st.result === 'win' && mode === 'normal' && !wasCleared) {
       if (next) {
@@ -137,7 +172,7 @@ RG.progress = (() => {
       for (const e of D().endless || []) if (e.unlockAfter === mapId) unlocks.maps.push(e.id);
       unlocks.branches = !wasBranches && branchesUnlocked();
     }
-    return { stars, newStars: after - before, firstClear: st.result === 'win' && !wasCleared && mode === 'normal', unlocks };
+    return { stars, newStars: after - before, firstClear, unlocks, reward };
   }
 
   function nextMapId(id) {
@@ -167,6 +202,7 @@ RG.progress = (() => {
 
   return {
     load, get, save, reset, hasSave, mapIndex, mapRec, mapUnlocked, towersFor, heroesFor, branchesUnlocked,
+    gachaState, ownedTowers, ownsTower, towerRank, towerRanks, pullGacha,
     mapStars, starsTotal, starsSpent, starsFree, canLearn, learn, resetSkills, record, nextMapId, markSeen, seen, frontier, skillCost,
   };
 })();

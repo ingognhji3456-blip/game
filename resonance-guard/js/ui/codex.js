@@ -37,13 +37,8 @@
     },
   });
 
-  function towerUnlocked(t) {
-    const u = D().towers[t].unlock;
-    const i = P().mapIndex(u);
-    if (i < 0) return false;          // 아직 데이터가 없는 지역
-    if (i === 0) return true;
-    return P().mapRec(D().maps[i - 1].id).cleared;
-  }
+  /** 뽑기로 얻은 탑만 도감에 보임 (2026-11-10 개정) */
+  function towerUnlocked(t) { return P().ownsTower(t); }
 
   function towersTab(body) {
     const grid = el('div', { class: 'codex-grid' });

@@ -8,6 +8,16 @@
   const UI = RG.ui;
   const D = () => RG.data;
   const P = () => RG.progress;
+  /** 중복 강화 효과 글 */
+  function rankText(t, rank) {
+    const role = RG.data.towers[t].role;
+    const pct = Math.round(rank * RG.gacha.RANK_PCT * 100);
+    return role === 'support' ? `지원 효과 +${pct}%` : role === 'economy' ? `수입 +${pct}%` : role === 'barracks' ? `병사 체력·공격력 +${pct}%` : `공격력 +${pct}%`;
+  }
+  RG.ui.rankText = rankText;
+  /** 지금 뽑기를 할 수 있나 (공명석 100 이상 또는 확정권) */
+  const canPull = () => { const g = RG.progress.gachaState(); return g.crystals >= RG.gacha.COST.one || g.tickets > 0; };
+  RG.ui.canPull = canPull;
 
   /* =====================================================
    * 타이틀
@@ -32,6 +42,7 @@
       }
       menu.appendChild(el('button', { class: `btn btn-big ${run ? '' : 'btn-primary'}`, onclick: go(() => UI.show('world', {})) }, [has ? '월드 지도' : '시작하기']));
       menu.appendChild(el('div', { class: 'title-row' }, [
+        el('button', { class: `btn btn-gacha ${canPull() ? 'ready' : ''}`, onclick: go(() => UI.show('gacha', { back: { screen: 'title' } })) }, [UI.icon('crystal', 'tiny'), '탑 뽑기']),
         el('button', { class: 'btn', onclick: go(() => UI.show('heroes', {})) }, ['수호대']),
         el('button', { class: 'btn', onclick: go(() => UI.show('codex', {})) }, ['도감']),
         el('button', { class: 'btn', onclick: go(() => openSettings()) }, ['설정']),
@@ -140,6 +151,7 @@
         el('h2', { text: '월드 지도' }),
         el('div', { class: 'top-stars' }, [UI.icon('star'), el('b', { text: String(P().starsTotal()) }), el('small', { text: ' / 150' })]),
         el('div', { class: 'top-actions' }, [
+          el('button', { class: `btn small btn-gacha ${canPull() ? 'ready' : ''}`, onclick: () => UI.show('gacha', { back: { screen: 'world' } }) }, [UI.icon('crystal', 'tiny'), `뽑기 ${P().gachaState().crystals}${P().gachaState().tickets ? ` · 확정권 ${P().gachaState().tickets}` : ''}`]),
           el('button', { class: 'btn small', onclick: () => UI.show('tree', {}) }, [UI.icon('tree', 'tiny'), `기술 나무${P().starsFree() > 0 ? ` (${P().starsFree()})` : ''}`]),
           el('button', { class: 'btn small', onclick: () => UI.show('heroes', {}) }, [UI.icon('hero', 'tiny'), '수호대']),
           el('button', { class: 'btn small', onclick: () => UI.show('codex', {}) }, [UI.icon('book', 'tiny'), '도감']),
@@ -242,9 +254,8 @@
       const heroes = P().heroesFor(def.id);
       let hero = data.hero || (heroes.includes(P().get().lastHero) ? P().get().lastHero : (def.hero && heroes.includes(def.hero) ? def.hero : heroes[0]));
       if (def.hero && !RG.progress.mapRec(def.id).cleared && heroes.includes(def.hero) && !data.hero) hero = def.hero;
-      // 도전은 "그 시점까지 해금된 탑 전부"(§11.3): 이 맵과 지금까지 연 맵 중 더 뒤쪽 기준
-      const later = P().mapIndex(P().frontier()) > P().mapIndex(def.id) ? P().frontier() : def.id;
-      const towers = P().towersFor(mode === 'challenge' && !isEndless ? later : def.id);
+      // 탑은 뽑기로 얻은 것 전부 (2026-11-10 개정: 예전엔 맵마다 해금)
+      const towers = P().ownedTowers();
       // "붙잡기 없이" 도전에서 근접 영웅이 골라져 있으면 근접 아닌 영웅으로 바꿈 (영웅이 조용히 빠지지 않게)
       if (mode === 'challenge' && def.challenge && def.challenge.type === 'noBlock' && hero && D().heroes[hero].melee) {
         hero = heroes.find((h) => !D().heroes[h].melee) || null;
@@ -308,11 +319,13 @@
       // 탑과 적
       const towerRow = el('div', { class: 'chip-row' });
       for (const t of towers) {
-        const isNew = (def.newTowers || []).includes(t);
-        const chip = el('span', { class: `t-chip ${isNew ? 'new' : ''}` }, [UI.towerImg(t, 1, null, 'mini'), isNew ? el('em', { text: 'NEW' }) : null]);
-        UI.tooltipFor(chip, () => `<b>${esc(D().towers[t].name)}</b><br>${esc(D().towers[t].desc)}`);
+        const rank = P().towerRank(t);
+        const chip = el('span', { class: `t-chip rar-${RG.gacha.rarityOf(t)}` }, [UI.towerImg(t, 1, null, 'mini'), rank > 0 ? el('em', { class: 'rank', text: `+${rank}` }) : null]);
+        UI.tooltipFor(chip, () => `<b>${esc(D().towers[t].name)}</b>${rank > 0 ? ` <span class="good">+${rank} (${esc(rankText(t, rank))})</span>` : ''}<br>${esc(D().towers[t].desc)}`);
         towerRow.appendChild(chip);
       }
+      const missing = D().towerOrder.length - towers.length;
+      if (missing > 0) towerRow.appendChild(el('button', { class: 't-chip more', title: '탑 뽑기', onclick: () => UI.show('gacha', { back: { screen: 'brief', data: { mapId: def.id, mode, hero } } }) }, [el('b', { text: `+${missing}` }), el('small', { text: '뽑기' })]));
       const enemyRow = el('div', { class: 'chip-row' });
       const eset = new Set();
       for (const w of RG.grid.parseWaves(def.waves || [])) for (const g of w.groups) eset.add(g.e);
@@ -331,7 +344,7 @@
         if (hero) { P().get().lastHero = hero; P().save(); }
         const opts = {
           mapId: def.id, mode, heroId: noHero ? null : hero, skills: P().get().skills.slice(),
-          seed: (Math.random() * 1e9) >>> 0, towers, branches: P().branchesUnlocked(),
+          seed: (Math.random() * 1e9) >>> 0, towers, towerRanks: P().towerRanks(), branches: P().branchesUnlocked(),
         };
         const go = () => UI.show('game', { opts });
         const story = def.story && def.story.before;
@@ -344,7 +357,7 @@
       ]);
       info.append(
         el('div', { class: 'sec-title', text: '영웅' }), heroRow, heroInfo,
-        el('div', { class: 'sec-title', text: `쓸 수 있는 탑 (${towers.length})` }), towerRow,
+        el('div', { class: 'sec-title', text: `내 탑 (${towers.length}/${D().towerOrder.length})` }), towerRow,
         el('div', { class: 'sec-title', text: '나오는 적' }), enemyRow,
         actions,
       );
@@ -386,10 +399,18 @@
       if (win && data.mode === 'challenge') box.appendChild(el('p', { class: 'good', text: '도전 클리어! ★+1' }));
       if (data.rec.newStars > 0) box.appendChild(el('p', { class: 'good', text: `새로 얻은 별 ★${data.rec.newStars} — 기술 나무에서 쓸 수 있습니다` }));
       // 해금
+      // 공명석·새 탑 확정권 (탑은 뽑기로 얻음)
+      const rw = data.rec.reward;
+      if (rw && (rw.crystals || rw.tickets)) {
+        const rb = el('div', { class: 'reward-box' }, [
+          el('div', { class: 'rw-total' }, [UI.icon('crystal', 'small'), el('b', { text: `+${rw.crystals}` }), el('span', { text: '공명석' }), rw.tickets ? el('span', { class: 'rw-ticket' }, [UI.icon('ticket', 'small'), `새 탑 확정권 +${rw.tickets}`]) : null]),
+          el('div', { class: 'rw-lines dim', text: rw.lines.map(([k, v]) => `${k} +${v}`).join(' · ') }),
+        ]);
+        box.appendChild(rb);
+      }
       const un = data.rec.unlocks;
-      if (un && (un.towers.length || un.heroes.length || un.branches)) {
+      if (un && (un.heroes.length || un.branches)) {
         const ul = el('div', { class: 'unlocks' });
-        for (const t of un.towers) ul.appendChild(el('div', { class: 'unlock' }, [UI.towerImg(t, 1, null, 'mini'), el('span', { text: `새 탑: ${D().towers[t].name}` })]));
         for (const h of un.heroes) ul.appendChild(el('div', { class: 'unlock' }, [UI.portrait(h, 'happy', 'mini-portrait'), el('span', { text: `새 영웅: ${D().heroes[h].name}` })]));
         if (un.branches) ul.appendChild(el('div', { class: 'unlock' }, [UI.icon('upgrade', 'small'), el('span', { text: '분기 강화(Lv4)가 열렸습니다!' })]));
         box.appendChild(ul);
@@ -414,6 +435,7 @@
       const btns = el('div', { class: 'result-buttons' }, [
         el('button', { class: 'btn', onclick: () => UI.show('brief', { mapId: def.id, mode: data.mode, hero }) }, ['다시 하기']),
         el('button', { class: 'btn', onclick: () => (afterStory ? UI.show('story', { id: after, then: goWorld }) : goWorld()) }, ['월드 지도']),
+        el('button', { class: `btn btn-gacha ${canPull() ? 'ready' : ''}`, onclick: () => UI.show('gacha', {}) }, [UI.icon('crystal', 'tiny'), '탑 뽑기']),
         win && next && data.mode === 'normal' ? el('button', { class: 'btn btn-primary', onclick: () => { const go = () => UI.show('brief', { mapId: next }); if (afterStory) UI.show('story', { id: after, then: go }); else go(); } }, ['다음 맵 ▶']) : null,
       ]);
       box.appendChild(btns);

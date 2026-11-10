@@ -84,8 +84,10 @@ RG.sim = (() => {
     const unlocked = o.towers ? new Set(o.towers) : null;  // null = 전부
     const branchesOk = o.branches !== false;
 
+    // 뽑기 중복 강화 단계 {탑: 0~5} — 도전 모드는 기술 나무처럼 쓰지 않음(순수 실력)
+    const ranks = o.mode === 'challenge' ? {} : Object.assign({}, o.towerRanks || {});
     const game = {
-      opts: o, def, map, rules, meta, challenge, state: st, log, DT,
+      opts: o, def, map, rules, meta, ranks, challenge, state: st, log, DT,
       tileTower: (c, r) => (c >= 0 && r >= 0 && c < map.cols && r < map.rows ? tileTowers[r * map.cols + c] : null),
     };
 
