@@ -13,7 +13,24 @@ RG.art.sprites = (() => {
     return svg.replace(/<svg\b([^>]*)>/, (m, attrs) => `<svg${attrs.replace(/\s(width|height)="[^"]*"/g, '')} width="${w}" height="${h}">`);
   }
 
-  function toCanvas(svg, w, h) {
+  /**
+   * 덩어리 빛(docs/design/animation.md §7.2): 그린 그림 모양 안에만 왼쪽 위 따뜻한 빛 → 오른쪽 아래 푸른 보랏빛 그늘을 얹음.
+   * 모든 탑·적·영웅에 같은 방향의 빛이 들어 한 장면처럼 보이고 면이 둥글게 보임. 그림 한 장당 한 번(불러올 때)만.
+   */
+  function volumeLight(ctx, w, h, k) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-atop';
+    const g = ctx.createLinearGradient(w * 0.15, h * 0.05, w * 0.85, h * 0.95);
+    g.addColorStop(0, `rgba(255,240,200,${0.2 * k})`);
+    g.addColorStop(0.42, 'rgba(255,240,200,0)');
+    g.addColorStop(0.6, 'rgba(40,24,90,0)');
+    g.addColorStop(1, `rgba(40,24,90,${0.32 * k})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+  }
+
+  function toCanvas(svg, w, h, opt) {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
@@ -21,6 +38,7 @@ RG.art.sprites = (() => {
         cv.width = w; cv.height = h;
         const ctx = cv.getContext('2d');
         try { ctx.drawImage(img, 0, 0, w, h); } catch (e) { /* 무시 */ }
+        if (opt && opt.light) volumeLight(ctx, w, h, opt.light);
         resolve(cv);
       };
       img.onerror = () => resolve(null);
@@ -29,13 +47,15 @@ RG.art.sprites = (() => {
   }
 
   /** key로 그림을 준비. make()는 SVG 문자열을 돌려줌 */
+  // 덩어리 빛 세기: 탑·적·영웅·병사만 (아이콘·등불은 그대로)
+  const lightOf = (key) => (key.startsWith('tower:') ? 1 : key.startsWith('enemy:') ? 0.8 : key.startsWith('hero:') || key.startsWith('unit:') ? 0.7 : 0);
   function load(key, make, w, h) {
     if (cache.has(key)) return Promise.resolve(cache.get(key));
     if (loading.has(key)) return loading.get(key);
     let svg;
     try { svg = make(); } catch (e) { svg = null; }
     if (!svg) { cache.set(key, null); return Promise.resolve(null); }
-    const p = toCanvas(svg, w, h).then((cv) => {
+    const p = toCanvas(svg, w, h, { light: lightOf(key) }).then((cv) => {
       const entry = cv ? { canvas: cv, w, h } : null;
       cache.set(key, entry);
       loading.delete(key);

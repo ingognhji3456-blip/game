@@ -312,7 +312,7 @@
   };
 
   function drawLegionnaire(fr) {
-    const c = make(2.5);
+    const c = make(2.5, { fine: true });
     const steel = '#9694ad';
     const steelL = sh(steel, 0.32);
     const steelD = sh(steel, -0.3);
@@ -496,7 +496,7 @@
   };
 
   function drawMonk(fr) {
-    const c = make(2.5);
+    const c = make(2.5, { fine: true });
     const robe = '#8a84a2';
     const robeD = sh(robe, -0.28);
     const robeL = sh(robe, 0.28);
@@ -711,7 +711,7 @@
   };
 
   function drawStalker(fr) {
-    const c = make(2.5);
+    const c = make(2.5, { fine: true });
     const ink = '#2e2544';
     const inkL = '#56487a';
     const VOID = '#e052cc';
@@ -894,7 +894,7 @@
   };
 
   function drawPaladin(fr) {
-    const c = make(2.6);
+    const c = make(2.6, { fine: true });
     const plate = '#dcd6cc';
     const plateL = sh(plate, 0.4);
     const plateD = sh(plate, -0.3);
@@ -1094,7 +1094,7 @@
   };
 
   function drawShade(fr) {
-    const c = make(2.5);
+    const c = make(2.5, { fine: true });
     const body = '#4c4462';
     const bodyD = sh(body, -0.25);
     const rim = '#9f90d8';
@@ -1233,7 +1233,7 @@
   };
 
   function drawGolem(fr) {
-    const c = make(2.7);
+    const c = make(2.7, { fine: true });
     const br = '#b0844a';          // 청동(길의 금빛 벽돌과 섞이지 않게 붉은 기를 조금 더)
     const brD = sh(br, -0.32);
     const brL = sh(br, 0.38);
@@ -1389,7 +1389,7 @@
   };
 
   function drawDrake(fr) {
-    const c = make(2.5);
+    const c = make(2.5, { fine: true });
     const scale = '#837f96';
     const scaleD = sh(scale, -0.3);
     const memb = '#a094bf';
@@ -1524,7 +1524,7 @@
   };
 
   function drawEater(fr) {
-    const c = make(2.5);
+    const c = make(2.5, { fine: true });
     const shadow = '#3e3652';
     const fork = '#cfc8da';
     const P = EATER[fr];
@@ -1668,7 +1668,7 @@
   };
 
   function drawKeeper(fr) {
-    const c = make(2.6);
+    const c = make(2.6, { fine: true });
     const robe = '#6e6e7c';
     const robeD = sh(robe, -0.28);
     const hoodC = '#8a8a96';
@@ -1856,7 +1856,7 @@
   const ELEM6 = [EMBER, ICE, VOLT, '#8fcf5a', '#ffe48a', '#d14fc0'];
 
   function drawSilence(fr) {
-    const c = make(2.6);
+    const c = make(2.6, { fine: true });
     const ash = '#6c6582';
     const ashD = sh(ash, -0.3);
     const mantle = '#827a98';

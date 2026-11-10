@@ -96,6 +96,33 @@
     c.sg = (col) => def(`S${col}`, (id) => rgc(id, [[0, hs(col, 0.62)], [0.42, col], [0.84, hs(col, -0.46)], [1, hs(col, -0.2)]], 0.36, 0.3, 0.78));
     // 평면(왼쪽 위 → 오른쪽 아래)
     c.dg = (col, a = 0.28, b = -0.3) => def(`D${col}${a}${b}`, (id) => lgc(id, [[0, hs(col, a)], [0.55, col], [1, hs(col, b)]], 'd'));
+    /*
+     * 안쪽 선을 그 자리 색으로 (docs/design/animation.md §7.1): 굵기가 얇은(2.4 미만) 도형은 안쪽 꾸밈이므로
+     * 진한 윤곽색 대신 칠한 색의 어두운 변형으로 테두리를 그림. 두꺼운 바깥 윤곽은 그대로.
+     * 그라데이션으로 칠한 도형은 그 그라데이션의 바탕색을 기억해 둠.
+     */
+    const base = {};
+    for (const k of ['cg', 'vg', 'sg', 'dg']) {
+      const g0 = c[k];
+      c[k] = (col, ...rest) => { const u = g0(col, ...rest); base[u] = col; return u; };
+    }
+    const HEX = /^#[0-9a-f]{6}$/i;
+    const inkFor = (fill) => {
+      const col = HEX.test(fill) ? fill : base[fill];
+      return col ? H0.mix(hs(col, -0.55), '#1c1426', 0.25) : null;
+    };
+    const tint = (fill, w, ex) => {
+      if (!w || w >= 2.4 || ex.includes('stroke=')) return ex;
+      const ink = inkFor(fill);
+      return ink ? ` stroke="${ink}"${ex}` : ex;
+    };
+    const p0 = c.p; const e0 = c.e; const ci0 = c.ci; const r0 = c.r; const ln0 = c.ln;
+    c.p = (d, fill, w = 3, ex = '') => p0(d, fill, w, tint(fill, w, ex));
+    c.e = (cx, cy, rx, ry, fill, w = 3, ex = '') => e0(cx, cy, rx, ry, fill, w, tint(fill, w, ex));
+    c.ci = (cx, cy, r, fill, w = 3, ex = '') => ci0(cx, cy, r, fill, w, tint(fill, w, ex));
+    c.r = (x, y, wd, ht, fill, rx = 0, w = 3, ex = '') => r0(x, y, wd, ht, fill, rx, w, tint(fill, w, ex));
+    // 색을 정하지 않은 가는 꾸밈 선(이음매·결)은 새까만 윤곽색 대신 부드러운 짙은 보라
+    c.ln = (d, col, w = 2, op) => ln0(d, col == null || (col === '#1c1426' && w < 2.4) ? '#3d2c4a' : col, w, op);
     c._b4 = true;
     return c;
   }
@@ -1037,7 +1064,7 @@
    * 4A 깊은 광맥: 같은 광부가 권양기 손잡이를 돌려 갱도에서 광석 통을 끌어 올림.
    * 4B 보석 세공소: 같은 광부가 앞치마를 두르고 망치로 정을 쳐 보석을 깎음.
    * ================================================================ */
-  const MINER = { skin: '#eebd92', shirt: '#b98a56', pants: '#5c4a3c', boot: '#3e2c20', beard: '#7a4a2a' };
+  const MINER = { skin: '#f2c49a', shirt: '#3f86d0', pants: '#6a4a32', boot: '#3e2c20', beard: '#8a4e26' }; // 돌·나무와 구별되는 파란 웃옷
   /** 광부 얼굴: 눈, 코, 짧은 수염, 뒷머리 */
   function minerFace(loupe) {
     return (c, H, r) => {
@@ -1094,7 +1121,8 @@
     const P = MINER_POSE[pose];
     const gB = P.g;
     const gF = toolEnd(gB, P.ang, 3.4);
-    const F = fig(c, { ...MINER, hip: P.hip, lean: P.lean, feet: P.feet, hands: [gB, gF], bend: [1, 1], glove: tier >= 3 ? '#8a5a34' : null, sleeve: tier >= 3 ? '#9a7246' : null, face: minerFace(false), hat: minerHat(tier) });
+    // 게임 크기에서 동작이 읽히게 조금 크게(1.16배), 발은 그대로 두고 엉덩이를 올림
+    const F = fig(c, { ...MINER, k: 1.16, hip: [P.hip[0], P.hip[1] - 2], lean: P.lean, feet: P.feet, hands: [gB, gF], bend: [1, 1], glove: tier >= 3 ? '#8a5a34' : null, sleeve: tier >= 3 ? '#356fb0' : null, face: minerFace(false), hat: minerHat(tier) });
     const tool = pickaxe(c, gB, P.ang, 20, tier >= 3 ? '#9aa4b2' : '#6a7280', tier >= 3 ? M.gold : null);
     return figAll(F, tool + (held || ''));
   }
@@ -1247,7 +1275,7 @@
         o += c.ci(ax[0], ax[1], 6.4, c.sg(M.wood), 2.6) + c.ci(ax[0], ax[1], 4.2, 'none', 0, ` stroke="#d9c08a" stroke-width="${c.sw(2.2)}"`) + c.ci(ax[0], ax[1], 4.2, 'none', 0, ` stroke="#8a6a3a" stroke-width="${c.sw(0.8)}" stroke-dasharray="${c.sw(1.2)} ${c.sw(1)}"`);
         const hd = pol(ax, 7, crank);
         const ML = by(pose, { hip: [20, 89.5], lean: 6, feet: [[15, 102], [25, 102]] }, { hip: [19, 90], lean: -14, feet: [[14, 102], [24, 102]] }, { hip: [21.5, 90], lean: 14, feet: [[15, 102], [27, 102]] });
-        const F = fig(c, { ...MINER, ...ML, hands: [mix2(hd, ax, 0.1), hd], bend: [1, 1], glove: '#8a5a34', sleeve: '#9a7246', face: minerFace(false), hat: minerHat(3) });
+        const F = fig(c, { ...MINER, ...ML, hands: [mix2(hd, ax, 0.1), hd], bend: [1, 1], glove: '#8a5a34', sleeve: '#356fb0', k: 1.12, face: minerFace(false), hat: minerHat(3) });
         const crankArm = c.ol(`M${pp(ax)}L${pp(hd)}`, M.iron, 2.2) + c.ci(ax[0], ax[1], 1.8, c.sg(M.ironL), 1.4) + c.ci(hd[0], hd[1], 1.6, M.woodD, 1.2);
         o += F.back + F.body + crankArm + F.handB + F.front;
         o += tcrys(c, 84, 90, 6, 10, 24, E.light, 2) + tcrys(c, 88.5, 92, 5, 8, 40, E.color, 1.8);
@@ -1293,7 +1321,7 @@
         { hip: [20.5, 91.5], lean: -6, ham: [27, 74], ha: -120 },
         { hip: [22, 91.5], lean: 16, ham: [35, 81], ha: 60 });
       const chisel = [38.5, 84];
-      const F = fig(c, { ...MINER, hip: JP.hip, lean: JP.lean, feet: [[16, 103], [26, 103]], hands: [[36.2, 86], JP.ham], bend: [1, 1], apron: '#7a5a3c', face: minerFace(true), hat: minerHat('B') });
+      const F = fig(c, { ...MINER, hip: JP.hip, lean: JP.lean, feet: [[16, 103], [26, 103]], hands: [[36.2, 86], JP.ham], bend: [1, 1], apron: '#7a5a3c', k: 1.1, face: minerFace(true), hat: minerHat('B') });
       const ham = (() => {
         const e = pol(JP.ham, 8, JP.ha);
         return c.ol(`M${pp(pol(JP.ham, -1.5, JP.ha))}L${pp(e)}`, M.woodD, 1.8) + rotG(c.r(e[0] - 2.4, e[1] - 1.6, 4.8, 3.2, c.vg(M.ironL, 0.4, -0.2), 0.5, 1.6), JP.ha + 90, e);
