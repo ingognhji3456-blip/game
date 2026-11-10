@@ -17,10 +17,12 @@
  *   - 꺼진 것(물·길)은 반대로 왼쪽 위 안쪽에 그늘, 오른쪽 아래 안쪽이 밝음. 높이가 바뀌는 곳에는 접지 그늘.
  * 읽힘 우선(1칸 ≈ 30~40px)
  *     길    = 밝은 흙/모래/눌린 눈/판석 띠, 진한 가장자리와 바퀴 자국
- *     건설지 = 다진 흙 마당 위의 네모난 기초 판석(칸마다 하나, 옅은 테두리와 앞면) → 탑을 올릴 자리
+ *     건설지 = 낮은 돌 축대(앞면·그림자) 위에 크기가 제각각인 판석을 깐 하나의 마당, 칸은 옅은 모서리 십자로만 → 탑을 올릴 자리
  *     공터  = 밝고 평평한 빈터(밟힌 풀밭·다진 눈·평평한 모래), 칸 모서리에 아주 옅은 표시만
  *     막힘  = 어두운 땅 위의 물체(나무·바위·기둥·절벽), 물·용암
+ *     절벽  = 바위·기둥이 5칸 이상(가장자리는 3칸) 이어지면 돋운 절벽/성벽(앞면·윗면·오른쪽 아래 그림자)
  * 탑·적·울림등·입구 소용돌이는 렌더러가 위에 그립니다. 여기서는 바닥(광장·동굴 입구·다리)만.
+ * 같은 맵은 결과를 몇 개 기억해 둡니다(준비 화면·전투 화면이 같은 그림을 다시 만들지 않게).
  * ========================================================= */
 (() => {
   // Math를 지역 이름으로 묶어 둠: 해시·잡음이 수백만 번 불리므로 전역 조회를 줄임(Node vm 검사 환경에서 특히 느림)
@@ -378,9 +380,10 @@
     const ey = Math.sin(a) * rx;
     return `M${f(x - ex)} ${f(y - ey)}a${f(rx)} ${f(ry)} ${f(deg)} 1 0 ${f(2 * ex)} ${f(2 * ey)}a${f(rx)} ${f(ry)} ${f(deg)} 1 0 ${f(-2 * ex)} ${f(-2 * ey)}Z`;
   };
-  /** 둥근 모서리 다각형 */
-  function roundPoly(pts, rad) {
+  /** 둥근 모서리 다각형 (정수 좌표 — 수천 개 판석의 글자 수를 줄임) */
+  function roundPolyI(pts, rad) {
     const n = pts.length;
+    const R = Math.round;
     let d = '';
     for (let i = 0; i < n; i++) {
       const p0 = pts[(i + n - 1) % n];
@@ -390,7 +393,7 @@
       const l2 = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) || 1;
       const r1 = Math.min(rad, l1 / 2);
       const r2 = Math.min(rad, l2 / 2);
-      d += `${i ? 'L' : 'M'}${f(p1[0] + ((p0[0] - p1[0]) * r1) / l1)} ${f(p1[1] + ((p0[1] - p1[1]) * r1) / l1)}Q${f(p1[0])} ${f(p1[1])} ${f(p1[0] + ((p2[0] - p1[0]) * r2) / l2)} ${f(p1[1] + ((p2[1] - p1[1]) * r2) / l2)}`;
+      d += `${i ? 'L' : 'M'}${R(p1[0] + ((p0[0] - p1[0]) * r1) / l1)} ${R(p1[1] + ((p0[1] - p1[1]) * r1) / l1)}Q${R(p1[0])} ${R(p1[1])} ${R(p1[0] + ((p2[0] - p1[0]) * r2) / l2)} ${R(p1[1] + ((p2[1] - p1[1]) * r2) / l2)}`;
     }
     return `${d}Z`;
   }
@@ -681,7 +684,7 @@
     /** 영역 밖은 지움(등고선이 쓸데없이 맵 전체에 생기지 않게): m < lo 인 곳은 등고선 밖 */
     const maskF = (a, m, lo, neg = false) => { const o = new Float32Array(G.N); for (let k = 0; k < G.N; k++) o[k] = m[k] < lo ? (neg ? 9 : -9) : a[k]; return o; };
     /** 부호 거리장 (흐림 + 잡음) */
-    const sdField = (set, blurSig, amp, sc, k, amp2) => addNoise(G.blur(sdTiles(G, set, cols, rows), blurSig), amp, sc, k, amp2);
+    const sdField = (set, blurSig, amp, sc, k, amp2, sc2) => addNoise(G.blur(sdTiles(G, set, cols, rows), blurSig), amp, sc, k, amp2, sc2 || sc / 5);
 
     /* ---- 다리 찾기: 길 칸의 양옆(또는 위아래)이 물/용암 ---- */
     const liquid = (k) => k === K.WATER || k === K.LAVA;
@@ -767,13 +770,13 @@
     const onOpen = (c, r) => !!(openSet && openSet[r * cols + c]);
     const rubbleSet = setOf((k, c, r) => (k === K.ROCK || k === K.PILLAR) && !inCliff(c, r));
     const anyCliff = cliffSet.some((v) => v);
-    if (waterSet) F.water = sdField(waterSet, 13, 8, 70, 401, 2.4);
-    if (lavaSet) F.lava = sdField(lavaSet, 12, 6, 55, 421, 2);
-    if (openSet) F.open = sdField(openSet, 8, 4, 60, 441, 1.5);
-    if (buildSet) F.build = sdField(buildSet, 6, 5, 45, 461, 2);
-    if (treeSet) F.tree = sdField(treeSet, 10, 8, 60, 481, 3);
+    if (waterSet) F.water = sdField(waterSet, 13, 14, 70, 401, 4, 14);
+    if (lavaSet) F.lava = sdField(lavaSet, 10, 22, 40, 421, 7, 10);
+    if (openSet) F.open = sdField(openSet, 8, 10, 60, 441, 3.5, 12);
+    if (buildSet) F.build = sdField(buildSet, 8, 12, 45, 461, 4, 10);
+    if (treeSet) F.tree = sdField(treeSet, 10, 14, 60, 481, 5, 12);
     if (rubbleSet) F.rubble = sdField(rubbleSet, 10, 11, 35, 501, 4);
-    if (anyCliff) F.cliff = sdField(cliffSet, 6, 4, 45, 521, 1.6);
+    if (anyCliff) F.cliff = sdField(cliffSet, 6, 7, 45, 521, 3, 9);
 
     /* ---- 길: 길 칸 중심을 잇는 뼈대까지의 거리 ---- */
     const HW = 33; // 길 반폭
@@ -800,7 +803,9 @@
         addPrim({ k: 0, ax: cx, ay: cy, bx: cx, by: cy });
         if (isRoad(kAt(c + 1, r))) addPrim({ k: 0, ax: cx, ay: cy, bx: cx + 100, by: cy });
         if (isRoad(kAt(c, r + 1))) addPrim({ k: 0, ax: cx, ay: cy, bx: cx, by: cy + 100 });
-        for (const [dc, dr] of N4) if (kAt(c + dc, r + dr) === K.OPEN) addPrim({ k: 1, ax: cx, ay: cy, bx: cx + dc * 58, by: cy + dr * 58 });
+        // 공터로 들어가는 길 끝만 벌어지게(공터 옆을 나란히 지나는 길은 그대로 → 가장자리에 톱니가 생기지 않음)
+        const nRoad = N4.filter(([dc, dr]) => isRoad(kAt(c + dc, r + dr))).length;
+        for (const [dc, dr] of N4) if (kAt(c + dc, r + dr) === K.OPEN && (nRoad <= 1 || isRoad(kAt(c - dc, r - dr)))) addPrim({ k: 1, ax: cx, ay: cy, bx: cx + dc * 58, by: cy + dr * 58 });
         if (kAt(c, r) === K.SPAWN) {
           if (c === 0) addPrim({ k: 0, ax: cx, ay: cy, bx: cx - 120, by: cy });
           else if (c === cols - 1) addPrim({ k: 0, ax: cx, ay: cy, bx: cx + 120, by: cy });
@@ -847,7 +852,7 @@
             if (v > best) best = v;
             if (d < dmin) dmin = d;
           }
-          rf[kk] = best < -40 ? best : best + 6.5 * (fbm(x / 48, y / 48, 31, 2) * 2 - 1) + 2.4 * (vn(x / 9, y / 9, 37) * 2 - 1);
+          rf[kk] = best < -40 ? best : best + 9 * (fbm(x / 48, y / 48, 31, 2) * 2 - 1) + 3 * (vn(x / 9, y / 9, 37) * 2 - 1);
           dm[kk] = dmin;
         }
       }
@@ -927,11 +932,14 @@
       let s = '';
       const M0 = G.make((x, y) => fbm(x / 95, y / 95, 711, 3));
       s += fillP(pathD(G.loops(maskF(M0, F.open, -4), 0.57), 0.5), oL, 0.6);
-      s += fillP(pathD(G.loops(maskF(M0, F.open, -4, true), 0.4, true), 0.5), oD, 0.22);
+      s += fillP(pathD(G.loops(maskF(M0, F.open, -4, true), 0.4, true), 0.5), oD, 0.28);
+      s += fillP(pathD(G.loops(maskF(M0, F.open, -4, true), 0.33, true), 0.5), oD, 0.25);
+      const M1 = maskF(G.make((x, y) => fbm(x / 28, y / 28, 731, 2)), F.open, -4);
+      s += fillP(pathD(G.loops(M1, 0.67), 0.4), oD, 0.2);
       const bk = Buckets();
       const openCells = cellsWhere((k) => k === K.OPEN);
       for (const [c, r] of openCells) {
-        const n = 2 + Math.floor(rnd(c, r, 721) * 3);
+        const n = 3 + Math.floor(rnd(c, r, 721) * 4);
         for (let i = 0; i < n; i++) {
           const x = c * 100 + 8 + rnd(c, r, 722 + i) * 84;
           const y = r * 100 + 8 + rnd(c, r, 732 + i) * 84;
@@ -1060,6 +1068,40 @@
       body.push(fillP(contour(A, -8), P.lava, 0.55).replace('/>', ` filter="${blurF}"/>`));
       body.push(fillP(contour(A, -3.5), P.crust));
       body.push(P_(contour(A, -3.5), `fill="none" stroke="${h.shade(P.crust, 0.35)}" stroke-width="3" stroke-opacity="0.75" transform="translate(-1.5 -2)"`));
+      // 식은 테두리에서 바깥 바위로 뻗은 금 — 드물게, 꺾이고 갈라지게(안쪽 끝은 아직 빨갛게)
+      {
+        let ck = '';
+        let hot = '';
+        let q = 0;
+        const walk = (x, y, n, seed, branch) => {
+          let d = `M${f(x)} ${f(y)}`;
+          for (let k = 0; k < n; k++) {
+            const gx = G.at(A, x + 3, y) - G.at(A, x - 3, y);
+            const gy = G.at(A, x, y + 3) - G.at(A, x, y - 3);
+            const gl = Math.hypot(gx, gy) || 1;
+            const step = 4 + rnd(seed, k, 1603) * 5;
+            const jx = (rnd(seed, k, 1604) - 0.5) * 14;
+            x += (-gx / gl) * step + (gy / gl) * jx;
+            y += (-gy / gl) * step - (gx / gl) * jx;
+            d += `L${f(x)} ${f(y)}`;
+            if (branch && k === 1 && rnd(seed, 9, 1605) < 0.6) ck += walk(x, y, 2, seed * 7 + 3, false);
+          }
+          return d;
+        };
+        for (const L of G.loops(A, -3)) {
+          for (let i = 0; i < L.length; i += 2) {
+            q++;
+            if (rnd(q, 11, 1601) > 0.035) continue;
+            const n = 2 + Math.floor(rnd(q, 12, 1602) * 3);
+            const d = walk(L[i], L[i + 1], n, q, true);
+            ck += d;
+            const m = /L(-?[\d.]+) (-?[\d.]+)/.exec(d);
+            if (m) hot += `M${f(L[i])} ${f(L[i + 1])}L${m[1]} ${m[2]}`;
+          }
+        }
+        body.push(P_(ck, strokeA(h.mix(P.crust, P.ground, 0.35), 2, 0.75)));
+        body.push(P_(hot, strokeA(P.lava, 1.5, 0.85)));
+      }
       body.push(fillP(contour(A, 0.5), P.lavaD));
       const d1 = contour(A, 3);
       body.push(fillP(d1, P.lava));
@@ -1111,7 +1153,7 @@
       body.push(fillP(dR, P.road));
       let s = '';
       // 닳아 밝은 가운데
-      const wear = G.make((x, y) => 0);
+      const wear = new Float32Array(G.N);
       for (let k = 0; k < G.N; k++) {
         const x = G.x0 + (k % G.nx) * GS;
         const y = G.y0 + Math.floor(k / G.nx) * GS;
@@ -1174,7 +1216,7 @@
     }
 
     /* =====================================================
-     * 8. 건설지: 이웃한 건설 칸을 하나로 묶은 낮은 돌 축대 + 칸마다 큰 판석 한 장(가는 줄눈)
+     * 8. 건설지: 이웃한 건설 칸을 하나로 묶은 낮은 돌 축대, 윗면은 칸과 무관하게 깐 판석 + 옅은 칸 모서리 표시
      * ===================================================== */
     const buildCells = cellsWhere((k) => k === K.BUILD);
     if (F.build) body.push(drawTerrace(F.build, G, buildCells, P, region, rnd, def, clip, kAt, maskF(G.make((x, y) => fbm(x / 38, y / 38, 471, 2)), F.build, -12), val));
@@ -1377,8 +1419,8 @@
       else if (v < 0.54) bk.add(fillA(P.flowers[Math.floor(v2 * 3) % 3]), circ(x - 2, y, 2.2) + circ(x + 2, y - 1, 2.2));
       else if (v < 0.58) pebble(bk, P, x, y, 2.4 * s);
     } else {
-      if (v < 0.26) pebble(bk, P, x, y, 2.6 * s);
-      else if (v < 0.38) bk.add(`fill="${P.groundL}" stroke="${P.tuft}" stroke-width="1.4"`, `M${f(x - 7 * s)} ${f(y - 2)}l${f(9 * s)} -3l${f(5 * s)} 4l${f(-9 * s)} 3Z`);
+      if (v < 0.15) pebble(bk, P, x, y, 2.6 * s);
+      else if (v < 0.3) bk.add(`fill="${P.groundL}" stroke="${P.tuft}" stroke-width="1.4"`, `M${f(x - 7 * s)} ${f(y - 2)}l${f(9 * s)} -3l${f(5 * s)} 4l${f(-9 * s)} 3Z`);
       else if (v < 0.48) bk.add(strokeA(P.tuftL, 1.8, 0.7), `M${f(x - 3)} ${f(y)}l-2 -6M${f(x)} ${f(y)}v-7M${f(x + 3)} ${f(y)}l2 -5`);
       else if (v < 0.52) bk.add(fillA(P.accent, 0.85), circ(x, y, 1.6));
     }
@@ -1399,8 +1441,10 @@
       if (v < 0.4) bk.add(strokeA('#ffffff', 2.2, 0.75), `M${f(x - 9)} ${f(y)}q9 -4 18 0`);
       else if (v < 0.55) bk.add(fillA('#a9c6dc', 0.5), ellR(x, y, 2.4, 3.6, 10) + ellR(x + 5, y - 9, 2.4, 3.6, 10));
     } else if (region === 3) {
-      if (v < 0.45) bk.add(strokeA(oD, 2, 0.5), `M${f(x - 10)} ${f(y)}q5 -3 10 0t10 0`);
-      else if (v < 0.55) bk.add(fillA(oD, 0.7), ell(x, y, 2.2, 1.6));
+      if (v < 0.3) bk.add(strokeA(oD, 2, 0.5), `M${f(x - 10)} ${f(y)}q5 -3 10 0t10 0`);
+      else if (v < 0.44) pebble(bk, { stone: '#c08a5a', stoneL: '#ecc796', stoneD: '#7a4524' }, x, y, 2 + v * 4);
+      else if (v < 0.56) bk.add(strokeA('#9a6538', 1.8, 0.6), `M${f(x - 9)} ${f(y - 2)}l5 3l4 -3l5 4l5 -2`);
+      else if (v < 0.64) bk.add(fillA('#9a6538', 0.18), ellR(x, y, 11, 6, v * 300));
     } else if (region === 4) {
       if (v < 0.42) bk.add(strokeA(oD, 2, 0.55), `M${f(x - 2)} ${f(y)}q-2 -5 0 -8M${f(x + 2)} ${f(y)}q2 -4 4 -6`);
       else if (v < 0.5) bk.add(fillA('#f3ead6', 0.9), `M${f(x - 3)} ${f(y + 1.5)}q3 -6 6 0Z`);
@@ -1434,8 +1478,8 @@
     } else if (region === 3) {
       if (v < 0.5) bk.add(strokeA('#c79254', 2, 0.9), tuftD(x, y + 2, 0.7));
       else pebble(bk, PAL[3], x, y, 2.4);
-    } else {
-      pebble(bk, PAL[5], x, y, 2.2 + v * 1.6);
+    } else if (v < 0.4) {
+      pebble(bk, PAL[5], x, y, 2.2 + v * 2.4);
     }
   }
 
@@ -1489,14 +1533,16 @@
       `<path d="${joints}" ${strokeA(P.roadL, 1.8, 0.6)} transform="translate(1.5 1.5)"/><path d="${joints}" ${strokeA(P.roadEdge, 2.4, 0.55)}/>`;
   }
 
-  /** 건설지 축대: 이어진 건설 칸 = 하나의 낮은 돌 축대(그림자 → 앞면 → 윗면 테두리 빛).
-   *  윗면은 칸마다 큰 판석 한 장 — 줄눈은 가늘게, 판석마다 결·금·이끼가 달라 손으로 깐 느낌 */
+  /** 건설지 축대: 이어진 건설 칸 = 하나의 낮은 돌 축대(그림자 → 앞면 → 윗면).
+   *  윗면은 크기·모양이 제각각인 판석을 칸 경계와 상관없이 깐 하나의 바닥(보로노이 돌깔기).
+   *  칸은 아주 옅은 모서리 십자·가장자리 눈금으로만 표시 → 바둑판처럼 보이지 않지만 탑 자리는 보임 */
   function drawTerrace(A, G, cells, P, region, rnd, def, clip, kAt, CM, val) {
     const EO = 'fill-rule="evenodd"';
     const HT = 6;
     const L0 = 1.5;
     const loops = G.loops(A, L0);
     const base = pathD(loops, 0.3);
+    const BIG = `M-60 -60H${G.nx * GS + 60}V${G.ny * GS + 60}H-60Z`;
     let s = '';
     // 그림자(오른쪽 아래) + 접지 그늘
     s += `<path d="${base}" ${EO} fill="${P.shadow}" fill-opacity="${f(P.shadowOp * 0.75)}" transform="translate(7 6)"/>`;
@@ -1504,114 +1550,168 @@
     // 앞면
     s += `<path d="${base}" ${EO} fill="${P.slabSide}" stroke="${OL}" stroke-width="2.6" stroke-opacity="0.75"/>`;
     s += `<path d="${base}" ${EO} fill="${h.mix(P.slabSide, P.slabD, 0.45)}" transform="translate(0 ${-HT * 0.5})"/>`;
-    // 윗면
+    // ---- 판석 깔기 (세상 좌표, 칸과 무관한 엇갈린 격자 + 흔들림, 군데군데 돌을 더하거나 빼서 크기가 들쭉날쭉) ----
+    const SX = 40;
+    const SY = 34;
+    let minC = 1e9; let maxC = -1e9; let minR = 1e9; let maxR = -1e9;
+    for (const [c, r] of cells) { minC = Math.min(minC, c); maxC = Math.max(maxC, c); minR = Math.min(minR, r); maxR = Math.max(maxR, r); }
+    const gx0 = Math.floor((minC * 100 - 80) / SX);
+    const gx1 = Math.ceil((maxC * 100 + 180) / SX);
+    const gy0 = Math.floor((minR * 100 - 80) / SY);
+    const gy1 = Math.ceil((maxR * 100 + 180) / SY);
+    const GW = gx1 - gx0 + 1;
+    const sites = [];
+    const at = [];
+    for (let gy = gy0; gy <= gy1; gy++) {
+      for (let gx = gx0; gx <= gx1; gx++) {
+        const list = [];
+        const v = rnd(gx, gy, 1501);
+        const bx = gx * SX + (gy & 1 ? SX / 2 : 0);
+        const by = gy * SY;
+        if (v > 0.1) list.push(sites.push([bx + (rnd(gx, gy, 1502) - 0.5) * SX * 0.7, by + (rnd(gx, gy, 1503) - 0.5) * SY * 0.7, gx, gy, 0]) - 1);
+        if (v > 0.8) list.push(sites.push([bx + (rnd(gx, gy, 1504) - 0.5) * SX * 0.8 + SX * 0.3, by + (rnd(gx, gy, 1505) - 0.5) * SY * 0.6 + SY * 0.25, gx, gy, 1]) - 1);
+        at[(gy - gy0) * GW + (gx - gx0)] = list;
+      }
+    }
+    const clipHP = (poly, nx, ny, d) => {
+      const out = [];
+      for (let i = 0; i < poly.length; i++) {
+        const p0 = poly[i];
+        const p1 = poly[(i + 1) % poly.length];
+        const d0 = nx * p0[0] + ny * p0[1] - d;
+        const d1 = nx * p1[0] + ny * p1[1] - d;
+        if (d0 <= 0) out.push(p0);
+        if ((d0 <= 0) !== (d1 <= 0)) { const t = d0 / (d0 - d1); out.push([p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t]); }
+      }
+      return out;
+    };
+    const tones = [h.mix(P.slab, P.slabL, 0.45), P.slab, h.mix(P.slab, P.slabD, 0.3), h.mix(P.slab, P.slabD, 0.55)];
+    const toneB = tones.map(() => '');
+    let lit = '';
+    let shd = '';
+    const det = Buckets();
+    const joints = [];
+    for (let i = 0; i < sites.length; i++) {
+      const [sx, sy, gx, gy] = sites[i];
+      if (G.at(A, sx, sy) < -24) continue;
+      let poly = [[sx - SX * 1.5, sy - SY * 1.5], [sx + SX * 1.5, sy - SY * 1.5], [sx + SX * 1.5, sy + SY * 1.5], [sx - SX * 1.5, sy + SY * 1.5]];
+      for (let dy = -2; dy <= 2 && poly.length; dy++) {
+        for (let dx = -2; dx <= 2 && poly.length; dx++) {
+          const yy = gy + dy - gy0;
+          const xx = gx + dx - gx0;
+          if (yy < 0 || xx < 0 || xx >= GW || yy > gy1 - gy0) continue;
+          for (const q of at[yy * GW + xx]) {
+            if (q === i) continue;
+            const nx = sites[q][0] - sx;
+            const ny = sites[q][1] - sy;
+            poly = clipHP(poly, nx, ny, nx * (sx + sites[q][0]) / 2 + ny * (sy + sites[q][1]) / 2);
+          }
+        }
+      }
+      if (poly.length < 3) continue;
+      let cx = 0; let cy = 0;
+      for (const [x, y] of poly) { cx += x; cy += y; }
+      cx /= poly.length; cy /= poly.length;
+      // 줄눈만큼 안쪽으로
+      const pts = poly.map(([x, y]) => { const dx = x - cx; const dy = y - cy; const L = Math.hypot(dx, dy) || 1; const k = Math.max(0.2, 1 - 2.3 / L); return [cx + dx * k, cy + dy * k]; });
+      for (const p of poly) if (rnd(Math.round(p[0]), Math.round(p[1]), 1510) < 0.04) joints.push(p);
+      const tv = Math.floor(rnd(gx * 3 + sites[i][4], gy, 1506) * 4) % 4;
+      toneB[tv] += roundPolyI(pts, 4.5);
+      // 돌마다 빛: 왼쪽 위를 향한 변은 밝게, 오른쪽 아래를 향한 변은 어둡게
+      for (let e = 0; e < pts.length; e++) {
+        const p0 = pts[e];
+        const p1 = pts[(e + 1) % pts.length];
+        const ex = p1[0] - p0[0];
+        const ey = p1[1] - p0[1];
+        const L = Math.hypot(ex, ey);
+        if (L < 6) continue;
+        const nx = ey / L;
+        const ny = -ex / L;
+        const dot = (nx * cx > nx * p0[0] ? -1 : 1) * (-nx - ny) * 0.7071; // 바깥 법선 · 빛 방향
+        const ins = (p) => [p[0] + (cx - p[0]) * 0.12, p[1] + (cy - p[1]) * 0.12];
+        const a0 = ins([p0[0] + ex * 0.15, p0[1] + ey * 0.15]);
+        const a1 = ins([p1[0] - ex * 0.15, p1[1] - ey * 0.15]);
+        const seg = `M${Math.round(a0[0])} ${Math.round(a0[1])}L${Math.round(a1[0])} ${Math.round(a1[1])}`;
+        if (dot > 0.3) lit += seg; else if (dot < -0.3) shd += seg;
+      }
+      // 판석 장식: 금·이끼·눈·모래·금빛 맥
+      const m = rnd(gx * 3 + sites[i][4], gy, 1507);
+      if (m < 0.12) {
+        const d = `M${f(cx - 8)} ${f(cy - 4)}l5 4l4 -2l6 5`;
+        det.add(strokeA(P.slabLine, 1.6, 0.65), d);
+      } else if (m < 0.2) {
+        if (region === 1 || region === 4) { det.add(fillA(P.moss, 0.85), circ(cx - 3, cy + 2, 4) + circ(cx + 2, cy + 3, 3)); det.add(fillA(P.mossL, 0.85), circ(cx - 4, cy, 1.6)); }
+        else if (region === 2) det.add(fillA('#ffffff', 0.92), ellR(cx - 2, cy - 3, 9, 3.6, -8));
+        else if (region === 3) det.add(fillA(P.moss, 0.8), ellR(cx, cy + 2, 10, 4, -12));
+        else det.add(strokeA(P.moss, 1.6, 0.8), `M${f(cx - 7)} ${f(cy + 3)}l4 -5l3 3l5 -6`);
+      }
+    }
+    // 윗면 조립
     const up = `translate(0 ${-HT})`;
     const topClip = clip(base, up);
-    const inClip = clip(base, `translate(2.5 ${-HT + 2.5})`);
-    let t = `<path d="${base}" ${EO} fill="${P.slabL}" transform="${up}"/>`;
-    t += `<path d="${base}" ${EO} fill="${P.slabD}" transform="translate(2.5 ${-HT + 2.5})"/>`;
-    t += `<g clip-path="${inClip}"><path d="${base}" ${EO} fill="${P.slab}" transform="translate(-2.5 ${-HT - 2.5})"/></g>`;
-    // 큰 얼룩(돌 색 변화 / 눈·모래 덮임)
-    if (region === 2) {
-      t += `<path d="${pathD(G.loops(CM, 0.64), 0.4)}" ${EO} fill="${P.slabL}" fill-opacity="0.4" transform="${up}"/>`;
-    } else if (region === 3) {
-      t += `<path d="${pathD(G.loops(CM, 0.7), 0.4)}" ${EO} fill="${P.moss}" fill-opacity="0.7" transform="${up}"/>`;
-    } else {
-      t += `<path d="${pathD(G.loops(CM, 0.62), 0.4)}" ${EO} fill="${P.slabL}" fill-opacity="0.35" transform="${up}"/>`;
+    const jointC = region === 5 ? h.mix(P.moss, P.slabSide, 0.35) : h.mix(P.slabD, P.slabSide, 0.28);
+    let t = `<path d="${base}" ${EO} fill="${jointC}" transform="${up}"/>`;
+    let pav = '';
+    tones.forEach((col, k) => { if (toneB[k]) pav += `<path d="${toneB[k]}" fill="${col}"/>`; });
+    pav += `<path d="${lit}" ${strokeA(P.slabL, 2, 0.75)}/><path d="${shd}" ${strokeA(P.slabD, 2, 0.6)}/>`;
+    pav += det.out();
+    // 큰 얼룩(색 변화 / 눈·모래 쌓임)
+    if (region === 2) pav += `<path d="${pathD(G.loops(CM, 0.74), 0.4)}" ${EO} fill="#ffffff" fill-opacity="0.6"/>`;
+    else if (region === 3) pav += `<path d="${pathD(G.loops(CM, 0.68), 0.4)}" ${EO} fill="${P.moss}" fill-opacity="0.55"/>`;
+    else pav += `<path d="${pathD(G.loops(CM, 0.64), 0.4)}" ${EO} fill="${P.slabL}" fill-opacity="0.25"/>`;
+    pav += `<path d="${pathD(G.loops(CM.map((v) => (v === -9 ? 9 : v)), 0.36, true), 0.4)}" ${EO} fill="${P.slabD}" fill-opacity="0.2"/>`;
+    // 줄눈 사이 풀/눈
+    const jb = Buckets();
+    for (const [x, y] of joints) {
+      if (region === 1 || region === 4) jb.add(strokeA(region === 1 ? '#5c8a30' : P.tuft, 1.9, 0.9), tuftD(x, y + 2, 0.55));
+      else if (region === 2) jb.add(fillA('#ffffff', 0.9), ell(x, y, 4, 2));
     }
-    t += `<path d="${pathD(G.loops(CM.map((v) => (v === -9 ? 9 : v)), 0.36, true), 0.4)}" ${EO} fill="${P.slabD}" fill-opacity="0.22" transform="${up}"/>`;
-    const tint = Buckets();
-    const jt = Buckets();
-    const det = Buckets();
+    pav += jb.out();
+    // 칸 표시: 네 칸이 만나는 모서리엔 작은 십자, 축대 가장자리에 걸친 칸 경계엔 짧은 눈금 (아주 옅게)
     const isB = (c, r) => kAt(c, r) === K.BUILD;
-    const jointCol = region === 5 ? P.moss : P.slabLine;
+    let tick = '';
     for (const [c, r] of cells) {
-      const x0 = c * 100;
-      const y0 = r * 100 - HT;
-      const j = (k, a) => (rnd(c, r, k) - 0.5) * a;
-      // 판석마다 살짝 다른 색
-      const tv = rnd(c, r, 9);
-      if (tv < 0.3) tint.add(fillA(P.slabL, 0.16), `M${x0} ${y0}h100v100h-100Z`);
-      else if (tv > 0.72) tint.add(fillA(P.slabD, 0.16), `M${x0} ${y0}h100v100h-100Z`);
-      // 칸 사이 줄눈(오른쪽·아래 이웃이 건설지일 때) — 빛 받는 쪽 가는 밝은 선
-      const jx = x0 + 100 + j(1, 2);
-      const jy = y0 + 100 + j(2, 2);
-      if (isB(c + 1, r)) {
-        jt.add(strokeA(jointCol, region === 5 ? 2.2 : 2.6, 0.8), `M${f(jx)} ${y0 - 2}L${f(jx + j(3, 2))} ${y0 + 102}`);
-        jt.add(strokeA(P.slabL, 1.5, 0.6), `M${f(jx + 2)} ${y0 + 2}L${f(jx + 2 + j(3, 2))} ${y0 + 98}`);
+      const x = c * 100 + 100;
+      const y = r * 100 + 100;
+      const R = isB(c + 1, r);
+      const D = isB(c, r + 1);
+      if (R && D && isB(c + 1, r + 1)) tick += `M${x - 9} ${y}h18M${x} ${y - 9}v18`;
+      if (R) {
+        if (!(isB(c, r - 1) && isB(c + 1, r - 1))) tick += `M${x} ${y - 100 + 7}v9`;
+        if (!(D && isB(c + 1, r + 1))) tick += `M${x} ${y - 7}v-9`;
       }
-      if (isB(c, r + 1)) {
-        jt.add(strokeA(jointCol, region === 5 ? 2.2 : 2.6, 0.8), `M${x0 - 2} ${f(jy)}L${x0 + 102} ${f(jy + j(4, 2))}`);
-        jt.add(strokeA(P.slabL, 1.5, 0.6), `M${x0 + 2} ${f(jy + 2)}L${x0 + 98} ${f(jy + 2 + j(4, 2))}`);
-      }
-      // 판석 테두리 빛(이웃 판석과 맞닿은 변): 위·왼쪽 밝게, 아래·오른쪽 어둡게 → 판석 한 장 = 한 칸
-      if (isB(c - 1, r)) det.add(strokeA(P.slabL, 2.2, 0.7), `M${x0 + 3.5} ${y0 + 6}V${y0 + 94}`);
-      if (isB(c, r - 1)) det.add(strokeA(P.slabL, 2.2, 0.7), `M${x0 + 6} ${y0 + 3.5}H${x0 + 94}`);
-      if (isB(c + 1, r)) det.add(strokeA(P.slabD, 2.2, 0.55), `M${x0 + 96.5} ${y0 + 6}V${y0 + 94}`);
-      if (isB(c, r + 1)) det.add(strokeA(P.slabD, 2.2, 0.55), `M${x0 + 6} ${y0 + 96.5}H${x0 + 94}`);
-      if (region === 5) {
-        // 금빛 상감: 판석 안쪽 테
-        det.add(strokeA(P.slabLine, 2, 0.4), `M${x0 + 14} ${y0 + 14}h72v72h-72Z`);
-        det.add(strokeA(P.moss, 1.4, 0.55), `M${x0 + 15.5} ${y0 + 15.5}h72v72h-72Z`);
-      }
-      // 판석 안의 이음매(한 장 / 둘 / 셋)
-      const kind = rnd(c, r, 20);
-      const seam = (ax, ay, bx, by) => {
-        det.add(strokeA(P.slabL, 1.2, 0.45), `M${f(ax + 1.2)} ${f(ay + 1.2)}L${f(bx + 1.2)} ${f(by + 1.2)}`);
-        det.add(strokeA(P.slabLine, 1.6, 0.42), `M${f(ax)} ${f(ay)}L${f(bx)} ${f(by)}`);
-      };
-      const sx = x0 + 34 + rnd(c, r, 21) * 32;
-      const sy = y0 + 34 + rnd(c, r, 22) * 32;
-      if (kind > 0.6 && kind < 0.76) seam(sx, y0 + 8, sx + j(23, 8), y0 + 92);
-      else if (kind >= 0.76 && kind < 0.88) seam(x0 + 3, sy, x0 + 97, sy + j(24, 8));
-      else if (kind >= 0.88) { seam(sx, y0 + 8, sx + j(23, 6), y0 + 97); seam(rnd(c, r, 25) < 0.5 ? x0 + 3 : sx, sy, rnd(c, r, 25) < 0.5 ? sx : x0 + 97, sy + j(24, 6)); }
-      // 금
-      if (rnd(c, r, 30) < 0.45) {
-        let px = x0 + 15 + rnd(c, r, 31) * 70;
-        let py = y0 + 10 + rnd(c, r, 32) * 40;
-        let d = `M${f(px)} ${f(py)}`;
-        for (let i = 0; i < 3; i++) { px += j(33 + i, 18); py += 6 + rnd(c, r, 36 + i) * 8; d += `L${f(px)} ${f(py)}`; }
-        det.add(strokeA(P.slabL, 1.3, 0.5), d.replace(/(-?[\d.]+) (-?[\d.]+)/g, (m, a1, b1) => `${f(+a1 + 1.2)} ${f(+b1 + 1.2)}`));
-        det.add(strokeA(P.slabLine, 1.7, 0.7), d);
-      }
-      // 모서리 이 빠짐(이웃 판석과 만나는 모서리)
-      if (rnd(c, r, 40) < 0.3 && isB(c + 1, r) && isB(c, r + 1)) {
-        const x = jx;
-        const y = jy;
-        det.add(fillA(P.slabLine, 0.75), `M${f(x - 7)} ${f(y)}L${f(x)} ${f(y - 6)}L${f(x + 6)} ${f(y)}L${f(x)} ${f(y + 7)}Z`);
-      }
-      // 지역 장식
-      const m = rnd(c, r, 50);
-      if (region === 1 || region === 4) {
-        if (m < 0.45) {
-          const x = x0 + 10 + rnd(c, r, 51) * 80;
-          const y = y0 + (rnd(c, r, 52) < 0.5 ? 8 : 92) + j(53, 6);
-          det.add(fillA(P.moss, 0.85), circ(x, y, 4.5) + circ(x + 5, y + 1, 3.4) + circ(x - 4, y + 1.5, 3));
-          det.add(fillA(P.mossL, 0.85), circ(x - 1, y - 1.5, 2));
-        }
-        if (m > 0.55 && isB(c + 1, r)) {
-          const y = y0 + 20 + rnd(c, r, 54) * 60;
-          det.add(strokeA(region === 1 ? '#5c8a30' : P.tuft, 1.9, 0.9), tuftD(jx, y, 0.55));
-        }
-      } else if (region === 3) {
-        if (m < 0.5) det.add(strokeA(P.slabL, 1.8, 0.45), `M${x0 + 12} ${f(y0 + 30 + m * 30)}h${f(30 + m * 40)}`);
+      if (D) {
+        if (!(isB(c - 1, r) && isB(c - 1, r + 1))) tick += `M${x - 100 + 7} ${y}h9`;
+        if (!(R && isB(c + 1, r + 1))) tick += `M${x - 7} ${y}h-9`;
       }
     }
-    t += `<g transform="translate(0 0)">${tint.out()}${det.out()}${jt.out()}</g>`;
+    pav += `<path d="${tick}" ${strokeA(P.slabL, 2.2, 0.7)} transform="translate(1.5 1.5)"/><path d="${tick}" ${strokeA(P.slabSide, 3.4, 0.7)}/>`;
+    t += `<g transform="${up}">${pav}</g>`;
+    // 테두리 빛: 바깥(여집합)을 오른쪽 아래로 밀면 왼쪽 위 안쪽 테가, 왼쪽 위로 밀면 오른쪽 아래 안쪽 테가 됨
+    t += `<path d="${BIG}${base}" ${EO} fill="${P.slabL}" fill-opacity="0.75" transform="translate(3 ${-HT + 3})"/>`;
+    t += `<path d="${BIG}${base}" ${EO} fill="${P.slabD}" fill-opacity="0.6" transform="translate(-3 ${-HT - 3})"/>`;
     s += `<g clip-path="${topClip}">${t}</g>`;
     s += `<path d="${base}" ${EO} fill="none" stroke="${OL}" stroke-width="2.2" stroke-opacity="0.55" transform="${up}"/>`;
-    // 축대 가장자리 풀·눈
+    // 축대 가장자리: 덮어 자란 풀·눈, 굴러 나온 돌
     const bk = Buckets();
     let q = 0;
     for (const L of loops) {
-      for (let i = 0; i < L.length; i += 4) {
+      for (let i = 0; i < L.length; i += 3) {
         q++;
         const x = L[i];
         const y = L[i + 1];
-        if (rnd(q, 5, 1401) > 0.4) continue;
-        if (val('road', x, y, -99) > -6 || val('water', x, y, -99) > -4 || val('open', x, y, -99) > -4) continue;
-        const below = G.at(A, x, y + 4) < L0; // 남쪽 가장자리면 앞면 아래에
-        edgeDeco(bk, region, P, x + 1, below ? y + 2 : y - HT + 1, rnd(q, 6, 1402));
+        const v = rnd(q, 5, 1401);
+        if (v > 0.5) continue;
+        if (val('road', x, y, -99) > -6 || val('water', x, y, -99) > -4 || val('open', x, y, -99) > -4 || val('cliff', x, y, -99) > -6) continue;
+        const gx = G.at(A, x + 3, y) - G.at(A, x - 3, y);
+        const gy = G.at(A, x, y + 3) - G.at(A, x, y - 3);
+        const gl = Math.hypot(gx, gy) || 1;
+        const below = gy < -0.5 * gl; // 남쪽 가장자리(앞면 아래)
+        if (v < 0.12) {
+          const ox = x - (gx / gl) * 7;
+          const oy = y - (gy / gl) * 7 + (below ? 3 : 0);
+          pebble(bk, { stone: P.slab, stoneL: P.slabL, stoneD: P.slabSide }, ox, oy, 2.2 + rnd(q, 7, 1403) * 2.2);
+        } else edgeDeco(bk, region, P, x + 1, below ? y + 2 : y - HT + 1, rnd(q, 6, 1402));
       }
     }
     s += bk.out();

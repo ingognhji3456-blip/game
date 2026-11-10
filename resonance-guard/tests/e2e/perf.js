@@ -26,6 +26,10 @@ async function loadFps(page) {
     for (let r = 0; r < g.map.rows && n < 40; r++) for (let c = 0; c < g.map.cols && n < 40; c++) if (ui.doCmd({ type: 'build', tower: RG.data.towerOrder[n % 18], c, r }, true).ok) n++;
     ui.doCmd({ type: 'callWave' }, true);
     const pool = ['mist_rat', 'ash_boar', 'frost_wolf', 'spray_sprite', 'rock_crab', 'echo_shade'];
+    // 실제 판에서는 그 맵의 적 그림(모든 동작)을 불러오는 화면에서 미리 준비함(sprites.prepareForGame).
+    // 이 시험은 맵에 없는 적을 부르므로 같은 방식으로 미리 준비해, 첫 등장 때 그림을 만드는 시간 대신 실제 전투 부하를 잽니다.
+    const S = RG.art.sprites;
+    await Promise.all(pool.flatMap((e) => RG.art.ENEMY_FRAMES.map((f) => S.load(S.enemyKey(e, f), () => RG.art.enemy(e, f), 168, 168))));
     for (let i = 0; i < 300; i++) { const e = g.api.spawnEnemy(pool[i % pool.length], i % 3); e.hp = e.maxHp = 1e9; }
     ui.setSpeed(3);
     await new Promise((r) => setTimeout(r, 1000));

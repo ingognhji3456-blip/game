@@ -17,6 +17,10 @@ RG.render = (() => {
   let bg = null;         // 바탕 오프스크린 캔버스
   let bgFor = '';
   let time = 0;
+  let shadeLayer = null;  // 바탕 + 탑 그림자 (탑이 바뀔 때만 다시 그림)
+  let shadeFor = '';
+  let shadeBaked = false; // 이번 프레임에 탑 그림자를 층에서 그렸는지
+  let manyEnemies = false; // 적이 아주 많으면 적의 드리운 그림자 대신 발밑 그늘만 (성능)
   const overlay = { hover: null, selectedTower: null, ghost: null, selectedEnemy: null, heroSelected: false, skill: null, rally: null, showPaths: true };
   const REGION_BASE = { 1: '#5d7a3c', 2: '#c9d8e6', 3: '#b9774a', 4: '#3f7f86', 5: '#5d5672' };
 
@@ -30,6 +34,7 @@ RG.render = (() => {
     game = g;
     corpses = [];
     projStart.clear();
+    shadeFor = '';
     bg = null;
     bgFor = '';
     resize();
@@ -83,16 +88,18 @@ RG.render = (() => {
   function sprite(key, cx, cy, w, h, ax, ay, flip, alpha) {
     const s = RG.art.sprites.get(key);
     if (!s) return false;
-    ctx.save();
-    if (alpha != null) ctx.globalAlpha *= alpha;
+    const a0 = ctx.globalAlpha;
+    if (alpha != null && alpha !== 1) ctx.globalAlpha = a0 * alpha;
     if (flip) {
+      ctx.save();
       ctx.translate(cx, cy);
       ctx.scale(-1, 1);
       ctx.drawImage(s.canvas, -w * ax, -h * ay, w, h);
+      ctx.restore();
     } else {
       ctx.drawImage(s.canvas, cx - w * ax, cy - h * ay, w, h);
     }
-    ctx.restore();
+    ctx.globalAlpha = a0;
     return true;
   }
 
@@ -111,12 +118,12 @@ RG.render = (() => {
     return blobCanvas;
   }
   function shadow(x, y, rx, ry, a = 0.32) {
-    ctx.save();
-    ctx.globalAlpha *= Math.min(1, a * 1.6);
+    const a0 = ctx.globalAlpha;
+    ctx.globalAlpha = a0 * Math.min(1, a * 1.6);
     const w = Math.max(4, rx * T * 2.2);
     const h = Math.max(2, ry * T * 2.2);
     ctx.drawImage(blob(), X(x) - w / 2 + T * 0.03, Y(y) - h / 2 + T * 0.01, w, h);
-    ctx.restore();
+    ctx.globalAlpha = a0;
   }
   // 드리운 그림자: 그림 모양 그대로 오른쪽 아래로 눕힘 (그림마다 한 번 만들어 둠)
   const shadowCache = new Map();
@@ -124,13 +131,13 @@ RG.render = (() => {
     if (shadowCache.has(key)) return shadowCache.get(key);
     const s = RG.art.sprites.get(key);
     if (!s) return null;
+    // 흐림 필터 대신 작게 줄여 두었다가 늘려 그려 가장자리를 부드럽게 (필터는 느리고 일부 브라우저에 없음)
     const cv = document.createElement('canvas');
-    cv.width = Math.max(1, Math.round(s.canvas.width / 2));
-    cv.height = Math.max(1, Math.round(s.canvas.height / 2));
+    cv.width = Math.max(1, Math.round(s.canvas.width / 3));
+    cv.height = Math.max(1, Math.round(s.canvas.height / 3));
     const c2 = cv.getContext('2d');
-    try { c2.filter = 'blur(1.5px)'; } catch (e) { /* 흐림을 못 쓰는 브라우저 */ }
+    c2.imageSmoothingQuality = 'high';
     c2.drawImage(s.canvas, 0, 0, cv.width, cv.height);
-    c2.filter = 'none';
     c2.globalCompositeOperation = 'source-in';
     c2.fillStyle = '#140c1e';
     c2.fillRect(0, 0, cv.width, cv.height);
@@ -144,9 +151,8 @@ RG.render = (() => {
     if (!cv) return;
     ctx.save();
     ctx.globalAlpha *= alpha;
-    ctx.translate(cx + lift * 0.55, by);
-    ctx.transform(1, 0, -0.6, -0.4, 0, 0); // 높이 H인 점 → 오른쪽으로 0.6H, 아래로 0.4H
-    if (flip) ctx.scale(-1, 1);
+    // (cx+lift·0.55, by)로 옮긴 뒤 기울임: 높이 H인 점 → 오른쪽으로 0.6H, 아래로 0.4H (좌우 반전이면 x축을 뒤집음)
+    ctx.transform(flip ? -1 : 1, 0, -0.6, -0.4, cx + lift * 0.55, by);
     ctx.drawImage(cv, -w * ax, -h * ay, w, h);
     ctx.restore();
   }
@@ -177,9 +183,48 @@ RG.render = (() => {
   function elColor(el) { return (RG.data.elements[el] || { color: '#fff' }).color; }
 
   /* ---------------- 바탕·경로 ---------------- */
+  /*
+   * 탑 그림자 층: 탑은 움직이지 않으므로 발밑 그늘·드리운 그림자(쉬는 자세 모양)를 바탕과 한 장에 구워 둠.
+   * 탑을 짓고·올리고·팔 때만 다시 그림 → 매 프레임 탑 40개의 그림자를 그리지 않음.
+   */
+  function towerShadeLayer() {
+    const st = game.state;
+    const m = game.map;
+    const A = RG.art.sprites;
+    let key = `${bgFor}|${shadowsOn ? 1 : 0}`;
+    for (const t of st.towers) key += `|${t.id}:${t.type}:${t.level}:${t.branch || ''}:${t.building ? 1 : 0}:${A.get(A.towerKey(t.type, t.level, t.branch, 'idle')) ? 1 : 0}`;
+    if (key === shadeFor && shadeLayer) return shadeLayer;
+    shadeFor = key;
+    if (!shadeLayer || shadeLayer.width !== bg.width || shadeLayer.height !== bg.height) {
+      shadeLayer = document.createElement('canvas');
+      shadeLayer.width = bg.width;
+      shadeLayer.height = bg.height;
+    }
+    const c2 = shadeLayer.getContext('2d');
+    c2.setTransform(1, 0, 0, 1, 0, 0);
+    c2.globalAlpha = 1;
+    c2.clearRect(0, 0, shadeLayer.width, shadeLayer.height);
+    c2.drawImage(bg, 0, 0);
+    c2.setTransform(bg.width / (m.cols * T), 0, 0, bg.height / (m.rows * T), 0, 0);
+    const keep = { ctx, ox, oy };
+    ctx = c2; ox = 0; oy = 0;
+    try {
+      for (const t of st.towers) shadow(t.x, t.r + 0.8, 0.36, 0.12, 0.28);
+      for (const t of st.towers) castShadow(A.towerKey(t.type, t.level, t.branch, 'idle'), X(t.x), Y(t.r + 0.82), T, T * 1.3, 0.5, 112 / 130, false, t.building ? 0.2 : 0.42);
+    } finally {
+      ctx = keep.ctx; ox = keep.ox; oy = keep.oy;
+    }
+    return shadeLayer;
+  }
+
   function drawBackground() {
     const m = game.map;
-    if (bg) ctx.drawImage(bg, X(0), Y(0), m.cols * T, m.rows * T);
+    shadeBaked = false;
+    if (bg) {
+      const layer = towerShadeLayer();
+      ctx.drawImage(layer || bg, X(0), Y(0), m.cols * T, m.rows * T);
+      shadeBaked = !!layer;
+    }
     else {
       ctx.fillStyle = REGION_BASE[m.def.region] || '#556';
       ctx.fillRect(X(0), Y(0), m.cols * T, m.rows * T);
@@ -522,7 +567,7 @@ RG.render = (() => {
     const pose = towerPose(t);
     const key = poseSprite(RG.art.sprites.towerKey(t.type, t.level, t.branch, pose), RG.art.sprites.towerKey(t.type, t.level, t.branch, 'idle'),
       () => RG.art.tower(t.type, t.level, t.branch, pose), RG.art.sprites.TW, RG.art.sprites.TH);
-    castShadow(key, cx, baseY, w, h, 0.5, 112 / 130, false, t.building ? 0.2 : 0.42);
+    if (!shadeBaked) castShadow(key, cx, baseY, w, h, 0.5, 112 / 130, false, t.building ? 0.2 : 0.42);
     ctx.save();
     if (t.building) ctx.globalAlpha = 0.55;
     if (sy !== 1) { ctx.translate(cx, baseY); ctx.scale(1 + (1 - sy) * 0.5, sy); ctx.translate(-cx, -baseY); }
@@ -620,7 +665,7 @@ RG.render = (() => {
     const lift = c.flying ? c.hover * T * Math.max(0, 1 - k / 0.6) : 0; // 비행 적은 떨어짐
     const big = (RG.data.enemies[c.type] || {}).size >= 1.4 ? 288 : 168;
     const key = poseSprite(RG.art.sprites.enemyKey(c.type, frame), RG.art.sprites.enemyKey(c.type, 'walk0'), () => RG.art.enemy(c.type, frame), big, big);
-    castShadow(key, cx, groundY, size, size, 0.5, 0.9, c.dir < 0, 0.22 * alpha, lift);
+    if (!manyEnemies) castShadow(key, cx, groundY, size, size, 0.5, 0.9, c.dir < 0, 0.22 * alpha, lift);
     sprite(key, cx, groundY - lift, size, size, 0.5, 0.9, c.dir < 0, alpha);
   }
 
@@ -664,7 +709,7 @@ RG.render = (() => {
     else if (moving) {
       if (mo.hop) lift = Math.pow(Math.max(0, Math.sin(ph / 2)), 0.7) * mo.hop * T;
       else lift = Math.abs(Math.sin(ph)) * (mo.bob != null ? mo.bob : 0.05) * T;
-      if (mo.tilt) rot = Math.sin(ph) * mo.tilt * Math.PI / 180;
+      if (mo.tilt && !manyEnemies) rot = Math.sin(ph) * mo.tilt * Math.PI / 180; // 기울인 그림은 그리기 비용이 커서, 적이 아주 많을 땐 생략
       if (mo.sway) dx = Math.sin(ph / 2) * mo.sway * T;
     }
     if (mo.squash) { syk = 1 + Math.sin(ph * (moving || e.flying ? 1 : 0.3) + (moving ? 0 : time * 2)) * mo.squash; sxk = 1 / syk; }
@@ -676,7 +721,7 @@ RG.render = (() => {
     const flip = e.dir < 0;
     const big = ed.size >= 1.4 ? 288 : 168;
     const key = poseSprite(RG.art.sprites.enemyKey(e.type, frame), RG.art.sprites.enemyKey(e.type, 'walk0'), () => RG.art.enemy(e.type, frame), big, big);
-    castShadow(key, cx + dx, groundY, size, size, 0.5, 0.9, flip, (e.flying ? 0.16 : 0.32) * alphaS, lift);
+    if (!manyEnemies || ed.boss || ed.size >= 1.4) castShadow(key, cx + dx, groundY, size, size, 0.5, 0.9, flip, (e.flying ? 0.16 : 0.32) * alphaS, lift);
     const motion = rot || sxk !== 1 || syk !== 1 || dx;
     if (motion) { ctx.save(); ctx.translate(cx + dx, cy); ctx.rotate(rot); ctx.scale(sxk, syk); ctx.translate(-cx, -cy); }
     const ok = sprite(key, cx, cy, size, size, 0.5, 0.9, flip, alphaS);
@@ -984,7 +1029,10 @@ RG.render = (() => {
 
     const st = game.state;
     // 그림자
-    for (const t of st.towers) shadow(t.x, t.r + 0.8, 0.36, 0.12, 0.28);
+    if (!shadeBaked) for (const t of st.towers) shadow(t.x, t.r + 0.8, 0.36, 0.12, 0.28);
+    let alive = 0;
+    for (const e of st.enemies) if (!e.dead) alive++;
+    manyEnemies = alive > 60;
     for (const e of st.enemies) {
       if (e.burrowed) continue;
       const p = enemyScreen(e, alpha);
