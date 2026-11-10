@@ -163,12 +163,12 @@
       head += c.p(TP('M-4.2 -25Q-7.6 -25.4 -8.6 -21.6Q-6.6 -22.6 -5.4 -21.6Z'), h.shade(gc, -0.15), 2);
       head += c.p(TP('M-5.8 -16Q0 -18 5.2 -15.6Q6 -13.2 4.2 -12.2Q0 -13.4 -5.8 -12.4Q-6.6 -14.2 -5.8 -16Z'), c.vg(gc, 0.15, -0.25), 2.2);
     } else if (gear === 'helm') {
-      head += c.p(TP('M-3.8 -22.4Q-3.8 -27.6 1.4 -27.6Q6.6 -27.6 6.4 -22.4Z'), c.vg(gc, 0.45, -0.2), 2.4);
-      head += c.p(TP('M-4.4 -23.1L6.8 -23.1L6.8 -21.6L-4.4 -21.6Z'), c.dk(gc, 0.15), 1.8);
-      head += c.p(TP('M5 -21.8L6.1 -21.8L5.9 -19L5.2 -19Z'), c.dk(gc, 0.1), 1.1, c.ink(gc));
-      head += c.ci(...W(-2.6, -22.35), 0.45 * k, c.lt(gc, 0.6), 0) + c.ci(...W(1.2, -22.35), 0.45 * k, c.lt(gc, 0.6), 0);
-      head += c.ln(TP('M-1.8 -25.6Q0 -26.8 2.2 -26.8'), '#fff', 1.5, 0.6);
-      if (P.plume) head += c.p(TP('M0.4 -27.2Q-3 -31.6 -8.4 -29.8Q-5.2 -28.8 -4.2 -26.6Z'), c.vg(P.plume, 0.2, -0.2), 1.8);
+      head += c.p(TP('M-3.8 -23.4Q-3.8 -28.6 1.4 -28.6Q6.6 -28.6 6.4 -23.4Z'), c.vg(gc, 0.45, -0.2), 2.4);
+      head += c.p(TP('M-4.4 -24.1L6.8 -24.1L6.8 -22.6L-4.4 -22.6Z'), c.dk(gc, 0.15), 1.8);
+      head += c.p(TP('M5 -22.8L6.1 -22.8L5.9 -20L5.2 -20Z'), c.dk(gc, 0.1), 1.1, c.ink(gc));
+      head += c.ci(...W(-2.6, -23.35), 0.45 * k, c.lt(gc, 0.6), 0) + c.ci(...W(1.2, -23.35), 0.45 * k, c.lt(gc, 0.6), 0);
+      head += c.ln(TP('M-1.8 -26.6Q0 -27.8 2.2 -27.8'), '#fff', 1.5, 0.6);
+      if (P.plume) head += c.p(TP('M0.4 -28.2Q-3 -32.6 -8.4 -30.8Q-5.2 -29.8 -4.2 -27.6Z'), c.vg(P.plume, 0.2, -0.2), 1.8);
     } else if (gear === 'cap') {
       head += c.p(TP('M-3.9 -21.8Q-3.6 -26.7 1.3 -26.6Q5.8 -26.4 6 -22.8L7.8 -22L-3.9 -21.4Z'), c.vg(gc, 0.25, -0.25), 2.2);
       head += c.ln(TP('M-2 -25.2Q0.6 -26 3.4 -25.4'), c.lt(gc, 0.4), 1.2, 0.7);
@@ -178,10 +178,10 @@
       const g1 = W(4.3, -23.6);
       head += c.ci(g1[0], g1[1], 1.7 * k, c.sg('#ffd27a'), 1.6) + c.ci(g1[0] - 0.5 * k, g1[1] - 0.5 * k, 0.45 * k, '#ffffff', 0);
     } else if (gear === 'fur') {
-      head += c.p(TP('M-4.4 -23.4Q-4.6 -29.8 1.2 -29.6Q6.8 -29.4 6.4 -23.4Z'), c.vg(gc, 0.25, -0.25), 2.4);
-      head += c.p(TP('M-5.6 -24.4Q-5.8 -22.4 -4.6 -21.7Q1 -22.7 6.8 -21.9Q7.8 -23 7.2 -24.6Q1 -25.8 -5.6 -24.4Z'), c.vg(P.furCol || '#f2ece0', 0.2, -0.2), 2);
-      head += c.p(TP('M-4.8 -21.8Q-6 -17 -4.4 -14.8L-1.8 -15.4Q-2.4 -18 -2 -21.6Z'), c.vg(P.furCol || '#f2ece0', 0.2, -0.2), 1.4, c.ink(P.furCol || '#f2ece0', 0.45));
-      head += c.ln(TP('M-3.6 -24.2L-3.2 -22.8M-0.8 -24.6L-0.6 -23M2.2 -24.6L2.2 -23M5 -24.2L4.8 -22.8'), c.inkc(P.furCol || '#f2ece0', 0.3), 0.9, 0.8);
+      head += c.p(TP('M-4.4 -25Q-4.6 -31.4 1.2 -31.2Q6.8 -31 6.4 -25Z'), c.vg(gc, 0.25, -0.25), 2.4);
+      head += c.p(TP('M-5.6 -26Q-5.8 -24 -4.6 -23.3Q1 -24.3 6.8 -23.5Q7.8 -24.6 7.2 -26.2Q1 -27.4 -5.6 -26Z'), c.vg(P.furCol || '#f2ece0', 0.2, -0.2), 2);
+      head += c.p(TP('M-4.8 -23.4Q-6 -17 -4.4 -14.8L-1.8 -15.4Q-2.4 -18 -2 -23.2Z'), c.vg(P.furCol || '#f2ece0', 0.2, -0.2), 1.4, c.ink(P.furCol || '#f2ece0', 0.45));
+      head += c.ln(TP('M-3.6 -25.8L-3.2 -24.4M-0.8 -26.2L-0.6 -24.6M2.2 -26.2L2.2 -24.6M5 -25.8L4.8 -24.4'), c.inkc(P.furCol || '#f2ece0', 0.3), 0.9, 0.8);
     } else if (gear === 'band') {
       head += c.p(TP('M-3.8 -19.4Q-4.8 -25.8 1.2 -25.8Q5.8 -25.8 6 -22.6Q3 -23.2 0.4 -22.6Q-1.4 -21.6 -1.6 -18.6Z'), c.vg(gc, 0.2, -0.25), 2.2);
       head += c.p(TP('M-4.2 -23.5L5.8 -24.3L5.9 -22.8L-4.1 -22Z'), P.bandCol || '#c23a22', 1.2, c.ink(P.bandCol || '#c23a22')) + c.p(TP('M-4 -22.9Q-6.6 -22.3 -7.4 -19.7Q-5.6 -20.5 -4.2 -21.7Z'), P.bandCol || '#c23a22', 1.6);
@@ -2186,9 +2186,41 @@
     return s + c.ci(x, y, r * 0.24, c.sg(M.bronze), 1.8);
   }
 
+  /**
+   * 축전기 꼭대기: 뚜껑(capY)과 단자. lift>0이면 뚜껑이 들려 틈에 번개가 보이고, 단자가 솟아 구리 갈래 둘이 펼쳐짐.
+   * 작은 크기에서도 "충전 중"이 모양으로 읽히게 (docs/design/animation.md §7.5)
+   */
+  function dynamoTop(c, x, tubeTop, capY, cr, lift, rodH, ballR, pose, opt = {}) {
+    let o = '';
+    const cy = capY - lift;
+    if (lift > 0) {
+      // 틈: 구리 기둥 둘 + 가운데 번개
+      o += c.ol(`M${f(x - cr * 0.7)} ${f(cy + 2)}V${f(tubeTop + 1)}M${f(x + cr * 0.7)} ${f(cy + 2)}V${f(tubeTop + 1)}`, COPPER, 1.6);
+      o += aura(c, x, (cy + tubeTop) / 2, cr * 1.3, lift + 4, '#ffffff', 0.6);
+      o += zapArc(c, x - 1, tubeTop, x + 1, cy + 2, { n: 3, j: cr * 0.35, w: 1.8, seed: opt.seed || 211 });
+    }
+    o += capRing(c, x, cy, cr);
+    const top = cy - 3;
+    const ballY = top - rodH;
+    o += c.ol(`M${x} ${f(top)}V${f(ballY + ballR * 0.6)}`, COPPER, 2.1);
+    if (lift > 0) {
+      // 펼친 갈래 (opt.flat이면 옆으로 — 위 틀에 닿지 않게)
+      const sp = opt.spread || 9;
+      const up = opt.flat ? 1 : sp * 0.75;
+      const lx = x - sp;
+      const rx = x + sp;
+      const py = ballY - up;
+      o += c.ol(`M${x} ${f(ballY)}L${f(lx)} ${f(py)}M${x} ${f(ballY)}L${f(rx)} ${f(py)}`, COPPER, 1.9);
+      o += c.ci(lx, py, ballR * 0.55, c.sg(COPPER), 1.6) + c.ci(rx, py, ballR * 0.55, c.sg(COPPER), 1.6);
+      if (pose === 'aim') o += zapArc(c, lx + 1, py, rx - 1, py - 1, { n: 4, j: 2.2, w: 1.6, seed: (opt.seed || 211) + 2 });
+    }
+    o += c.ci(x, ballY, ballR, c.sg(COPPER), 2);
+    return { svg: o, ballY };
+  }
+
   T.dynamo = {
     /* 이웃으로 흘려보내는 전기가 나가는 점(꼭대기 단자) */
-    muzzle: [[50, 47], [50, 22], [50, 22], [50, 24], [50, 14]],
+    muzzle: [[50, 46], [50, 13], [50, 13], [50, 24], [50, 14]],
     draw(c, v, pose = 'idle') {
       const h = c.h;
       const E = c.E;
@@ -2205,14 +2237,15 @@
         o += planks(c, 24, 35, 52, 7, M.plank, { n: 1 });
         o += aura(c, 50, 80, 22, 24, E.color, pose === 'idle' ? 0.4 : 0.65);
         o += c.ol('M50 42V48', COPPER, 2);
-        o += capRing(c, 50, 101, 17) + glassTube(c, 50, 62, 99, 15, k) + capRing(c, 50, 61, 17);
-        o += c.ol('M50 58V52', COPPER, 2) + c.ci(50, 50, 4, c.sg(COPPER), 2);
+        o += capRing(c, 50, 101, 17) + glassTube(c, 50, 62, 99, 15, k);
+        const top1 = dynamoTop(c, 50, 62, 61, 17, spin ? 5 : 0, spin ? 4 : 6, 4, pose, { flat: true, spread: 13, seed: 221 });
+        o += top1.svg;
         o += coilWind(c, 50, 64, 72, 15.5, 2, pose === 'aim' ? 1 : 0);
         /* 바퀴(오른쪽 앞) + 띠 */
         o += c.ol('M74 100Q66 104 62 101M74 88Q66 86 62 96', '#5a3a24', 1.4);
         o += flywheel(c, 80, 94, 9, spin, rot);
         o += c.ol('M80 94L86 86', M.iron, 1.6) + c.ci(86, 86, 1.8, M.wood, 1.4);
-        if (pose === 'fire') o += outArcs(50, 50, 30, 61);
+        if (pose === 'fire') o += outArcs(50, top1.ballY, 30, 61);
         return o;
       }
       if (v === 2 || v === 3) {
@@ -2227,15 +2260,16 @@
         if (L3) o += bandI(c, 50, 93, 97, 24.4, 7.3, M.gold);
         o += c.ol('M82 72L70 90', '#5a3a24', 1.4);
         const side = L3
-          ? (x) => capRing(c, x, 90, 7) + glassTube(c, x, 64, 88, 6, k * 0.8) + capRing(c, x, 63, 7) + c.ol(`M${x} 60V55`, COPPER, 1.8) + c.ci(x, 54, 2.6, c.sg(COPPER), 1.8)
+          ? (x) => capRing(c, x, 90, 7) + glassTube(c, x, 64, 88, 6, k * 0.8) + (spin ? zapArc(c, x, 64, x, 59, { n: 2, j: 2, w: 1.4, seed: x }) : '') + capRing(c, x, spin ? 59 : 63, 7) + c.ol(`M${x} ${spin ? 56 : 60}V${spin ? 51 : 55}`, COPPER, 1.8) + c.ci(x, spin ? 50 : 54, 2.6, c.sg(COPPER), 1.8)
           : (x) => cyl(c, x, 66, 90, 6, 1.8, c.cg(M.iron), c.vg(M.ironL)) + coilWind(c, x, 68, 88, 6.4, 5, pose === 'aim' ? 1 : 0, COPPER, 2);
         o += side(25) + side(75);
         o += c.ol('M31 72H38M62 72H69', COPPER, 2);
-        o += capRing(c, 50, 88, 15) + glassTube(c, 50, 38, 86, 12, k) + capRing(c, 50, 37, 15);
-        o += c.ol('M50 34V27', COPPER, 2.2) + c.ci(50, 24, 4.2, c.sg(COPPER), 2.2);
+        o += capRing(c, 50, 88, 15) + glassTube(c, 50, 38, 86, 12, k);
+        const top2 = dynamoTop(c, 50, 38, 37, 15, spin ? 7 : 0, 7, 4.2, pose, { spread: L3 ? 12 : 10, seed: L3 ? 231 : 241 });
+        o += top2.svg;
         if (pose === 'aim') o += zapArc(c, 31, 66, 38, 58, { n: 3, j: 2, w: 1.5, seed: 71 }) + zapArc(c, 69, 66, 62, 58, { n: 3, j: 2, w: 1.5, seed: 73 });
-        if (pose === 'fire') o += outArcs(50, 24, 34, 75);
-        else if (L3) o += spark(c, 50, 24, 6, E.light, 1.6);
+        if (pose === 'fire') o += outArcs(50, top2.ballY, 34, 75);
+        else if (L3) o += spark(c, 50, top2.ballY, 6, E.light, 1.6);
         return o;
       }
       if (v === 'A') {
