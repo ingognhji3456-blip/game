@@ -261,7 +261,6 @@
       const marks = el('div', { class: 'brief-marks' });
       const mk = (c, r, cls, text) => { const m = el('span', { class: `bm ${cls}`, text }); m.style.left = `${((c + 0.5) / pm.cols) * 100}%`; m.style.top = `${((r + 0.5) / pm.rows) * 100}%`; marks.appendChild(m); };
       for (const s of pm.spawns) mk(s.c, s.r, 'bm-spawn', '입구');
-      for (const s of pm.airSpawns) mk(s.c, s.r, 'bm-air', '하늘');
       mk(pm.lantern.c, pm.lantern.r, 'bm-lantern', '등불');
       preview.appendChild(marks);
 

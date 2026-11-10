@@ -85,19 +85,32 @@ for (const [id, td] of Object.entries(D.towers)) {
 }
 
 /* =============== 적 특성 18가지 =============== */
-test('특성 flying: 지상 전용 탑에 안 맞고, 길을 무시하고 등불로 곧게', () => {
+test('특성 flying: 지상 전용 탑에 안 맞고, 붙잡히지 않으며, 지상 적과 같은 길을 따라 날아감', () => {
   const g = game();
   build(g, 'flame_mortar', 5, 2);
   const e = spawn(g, 'mist_crow', 5.5, 1.5, { hp: 1e6, root: true });
   run(g, 6);
   assert.strictEqual(e.hp, e.maxHp);
+  // 길 따라가기: 지상 입구에서 나와, 지나가는 칸이 모두 적이 걸을 수 있는 칸(길)이어야 함
   const g2 = game();
-  const f = spawn(g2, 'mist_crow', 0.5, 1.5);
-  const L = g2.map.lantern;
-  const d0 = Math.hypot(L.x - f.x, L.y - f.y);
-  run(g2, 1);
-  const moved = d0 - Math.hypot(L.x - f.x, L.y - f.y);
-  assert.ok(Math.abs(moved - D.enemies.mist_crow.speed) < 0.05, `직선 이동 ${moved}`);
+  const f = g2.api.spawnEnemy('mist_crow', 0);
+  const s0 = g2.map.spawns[0];
+  assert.ok(Math.abs(f.x - s0.x) < 0.01 && Math.abs(f.y - s0.y) < 0.01, '지상 입구에서 나옴');
+  const cells = new Set();
+  for (let i = 0; i < 30 * 20 && !f.dead && !f.leaked; i++) { g2.step(); cells.add(`${Math.floor(f.x)},${Math.floor(f.y)}`); }
+  for (const k of cells) {
+    const [c, r] = k.split(',').map(Number);
+    assert.ok(RG.grid.enemyWalkable(g2.map, g2.blocked, c, r) || (c === g2.map.lantern.c && r === g2.map.lantern.r), `길이 아닌 칸 (${k})을 지남`);
+  }
+  // 병사에게 붙잡히지 않음
+  const g3 = game();
+  const bar = build(g3, 'stone_barracks', 5, 2);
+  run(g3, 3);
+  const f3 = g3.api.spawnEnemy('mist_crow', 0);
+  f3.hp = f3.maxHp = 1e6;
+  run(g3, 8);
+  assert.ok(!f3.blockedBy, '비행 적은 붙잡히지 않음');
+  void bar;
 });
 test('특성 armor: 갑옷만큼 피해가 줄고, 지속 피해는 갑옷 무시', () => {
   const g = game();

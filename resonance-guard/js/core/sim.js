@@ -444,10 +444,8 @@ RG.sim = (() => {
         // 겹치지 않게 살짝 흩뿌림 (같은 칸 안에서)
         const a = (from.index / Math.max(1, (ed.traits.split ? 3 : 3))) * Math.PI * 2;
         x += Math.cos(a) * 0.15; y += Math.sin(a) * 0.15;
-      } else if (flying && map.airSpawns.length) {
-        const s = map.airSpawns[(spawnIdx || 0) % map.airSpawns.length];
-        x = s.x; y = s.y; c = s.c; r = s.r;
       } else {
+        // 비행 적도 지상 입구에서 나와 길을 따라 날아감 (2026-11-10 개정: 예전엔 하늘 입구에서 등불까지 곧게)
         const s = map.spawns[(spawnIdx || 0) % map.spawns.length];
         x = s.x; y = s.y; c = s.c; r = s.r;
       }
@@ -475,7 +473,7 @@ RG.sim = (() => {
       if (from && from.from) {
         e.trail = from.from.trail.slice(-6);
         e.tc = from.from.tc; e.tr = from.from.tr;
-      } else if (!flying) {
+      } else {
         const nx = RG.grid.nextStep(map, flow, blocked, c, r, e.lane);
         if (nx) { e.tc = nx.c; e.tr = nx.r; }
       }
@@ -486,7 +484,6 @@ RG.sim = (() => {
     }
 
     function updateProg(e) {
-      if (e.flying) { e.prog = dist(e.x, e.y, map.lantern.x, map.lantern.y); return; }
       const ti = e.tr * map.cols + e.tc;
       const fd = flow[ti];
       e.prog = (isFinite(fd) ? fd : 99) + dist(e.x, e.y, e.tc + 0.5, e.tr + 0.5);
@@ -556,17 +553,6 @@ RG.sim = (() => {
         }
       }
       return best;
-    }
-
-    function moveFlying(e, step) {
-      const tx = map.lantern.x;
-      const ty = map.lantern.y;
-      const dd = dist(e.x, e.y, tx, ty);
-      if (dd <= step + 0.05) { e.x = tx; e.y = ty; leak(e); return; }
-      e.x += ((tx - e.x) / dd) * step;
-      e.y += ((ty - e.y) / dd) * step;
-      if (Math.abs(tx - e.x) > 0.01) e.dir = tx > e.x ? 1 : -1;
-      e.c = Math.floor(e.x); e.r = Math.floor(e.y);
     }
 
     /** 지나온 칸을 따라 뒤로 밀기 (DESIGN §7.2.7) */
@@ -1595,7 +1581,7 @@ RG.sim = (() => {
         if (e.blockedBy || !canMove(e)) { updateProg(e); continue; }
         const sp = enemySpeed(e) * DT;
         e.walkT += sp;
-        if (e.flying) moveFlying(e, sp); else moveGround(e, sp);
+        moveGround(e, sp); // 비행 적도 길을 따라감(붙잡히지 않을 뿐)
         if (!e.dead) updateProg(e);
       }
 

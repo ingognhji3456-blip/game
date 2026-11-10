@@ -292,21 +292,10 @@ RG.render = (() => {
       }
       ctx.restore();
     }
-    for (const s of m.airSpawns) {
-      const cx = X(s.x);
-      const cy = Y(s.y);
-      ctx.save();
-      ctx.strokeStyle = 'rgba(235,235,255,0.55)';
-      ctx.lineWidth = Math.max(1, T * 0.05);
-      for (let i = 0; i < 3; i++) {
-        const a = -time * 2 + (i * Math.PI * 2) / 3;
-        ctx.beginPath(); ctx.arc(cx, cy, T * (0.2 + 0.09 * i), a, a + 2); ctx.stroke();
-      }
-      ctx.restore();
-    }
+
   }
 
-  /** 준비 단계: 지상 경로 화살표와 비행 경로 점선 */
+  /** 준비 단계: 적이 갈 길 화살표 (지상·비행 모두 같은 길) */
   function drawPathPreview() {
     const st = game.state;
     const m = game.map;
@@ -345,14 +334,6 @@ RG.render = (() => {
         }
         c = nx.c; r = nx.r; k += 1;
       }
-    }
-    // 비행 경로
-    const air = m.airSpawns.length ? m.airSpawns : [];
-    ctx.setLineDash([T * 0.15, T * 0.15]);
-    ctx.strokeStyle = 'rgba(235,240,255,0.75)';
-    ctx.lineWidth = Math.max(1.5, T * 0.04);
-    for (const a of air) {
-      ctx.beginPath(); ctx.moveTo(X(a.x), Y(a.y)); ctx.lineTo(X(m.lantern.x), Y(m.lantern.y)); ctx.stroke();
     }
     ctx.restore();
   }

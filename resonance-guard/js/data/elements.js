@@ -127,7 +127,7 @@ RG.data.rules = {
 
 /** 적 특성 — DESIGN.md §8 */
 RG.data.traits = {
-  flying: { name: '비행', icon: 'flying', desc: '지형을 무시하고 곧게 날아옵니다. 저지할 수 없고, 지상 전용 탑에 맞지 않습니다.' },
+  flying: { name: '비행', icon: 'flying', desc: '길을 따라 날아옵니다. 붙잡을 수 없고, 지상 전용 탑에 맞지 않습니다.' },
   armor: { name: '갑옷', icon: 'armor', desc: '받는 피해가 갑옷 수치만큼 줄어듭니다. 갑옷 파쇄로 깎을 수 있습니다.' },
   regen: { name: '재생', icon: 'regen', desc: '2초 동안 피해를 받지 않으면 매초 최대 체력의 일부를 회복합니다.' },
   split: { name: '분열', icon: 'split', desc: '죽으면 작은 적 여러 마리로 갈라집니다.' },

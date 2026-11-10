@@ -67,14 +67,13 @@ test('맵: 과제·도전 종류가 엔진 목록에 있음, 새 탑·적·영�
   }
 });
 
-test('비행 적이 있는 맵: 비행 경로 평균 8칸 이상 (가운데를 질러 바로 오지 않게)', () => {
-  for (const def of D.maps) {
-    const flyers = RG.grid.parseWaves(def.waves).some((w) => w.groups.some((g) => D.enemies[g.e].traits.flying));
-    if (!flyers) continue;
-    const m = RG.grid.parseMap(def);
-    const src = m.airSpawns.length ? m.airSpawns : m.spawns;
-    const avg = src.reduce((a, s) => a + Math.hypot(s.x - m.lantern.x, s.y - m.lantern.y), 0) / src.length;
-    assert.ok(avg >= 8, `${def.id} 비행 경로 평균 ${avg.toFixed(1)}칸`);
+test('비행 적은 지상 입구에서 나와 길을 따라감 (하늘 입구 A는 그림 장식만)', () => {
+  // 2026-11-10 개정: 비행 적이 가운데를 질러 오지 않도록 길을 따라 날게 바꿈 — 모든 맵에서 입구→등불 길이 이어져 있어야 함
+  for (const def of D.maps.concat(D.endless)) {
+    const flyers = RG.grid.parseWaves(def.waves || []).some((w) => w.groups.some((g) => D.enemies[g.e].traits.flying));
+    if (!flyers && !def.endless) continue;
+    const g = RG.sim.create({ mapId: def.id, seed: 1, heroId: null, mode: def.endless ? 'endless' : 'normal' });
+    for (const s of g.map.spawns) assert.ok(isFinite(g.flow[s.r * g.map.cols + s.c]), `${def.id} 입구 (${s.c},${s.r})에서 등불까지 길이 이어짐`);
   }
 });
 

@@ -31,10 +31,8 @@ function makeEnv(RG) {
     return [...set.keys()].map((k) => ({ c: k % m.cols, r: Math.floor(k / m.cols) }));
   }
 
-  function airSegs(g) {
-    const m = g.map;
-    return m.airSpawns.map((a) => [a.x, a.y, m.lantern.x, m.lantern.y]);
-  }
+  // 비행 적도 지상 길을 따라가므로(2026-11-10 개정) 따로 셀 비행 경로가 없음
+  function airSegs() { return []; }
 
   function segDist(px, py, ax, ay, bx, by) {
     const vx = bx - ax; const vy = by - ay; const L = vx * vx + vy * vy;
@@ -47,7 +45,7 @@ function makeEnv(RG) {
     if (!range) return 0;
     let n = 0;
     const x = c + 0.5; const y = r + 0.5;
-    if (targets !== 'air') for (const t of route) if ((t.c + 0.5 - x) ** 2 + (t.r + 0.5 - y) ** 2 <= range * range) n += 1;
+    for (const t of route) if ((t.c + 0.5 - x) ** 2 + (t.r + 0.5 - y) ** 2 <= range * range) n += 1; // 지상·비행 모두 같은 길
     if (targets !== 'ground') for (const s of air) if (segDist(x, y, ...s) <= range) n += 2 * Math.min(range, 3);
     return n;
   }
