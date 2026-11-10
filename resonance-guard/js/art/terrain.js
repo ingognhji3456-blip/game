@@ -1293,7 +1293,7 @@
     }
     /* 지상 입구: 맵 가장자리 바위 언덕 + 어두운 동굴 */
     for (const s of map.spawns || []) {
-      const o = drawCave(s, cols, rows, kAt, isRoad, P, def, rnd);
+      const o = drawCave(s, cols, rows, kAt, isRoad, P, def, rnd, region);
       objs.push({ y: s.r * 100 + 60, s: o.svg });
       shadowD += o.shadow;
     }
@@ -1824,7 +1824,7 @@
   }
 
   /** 지상 입구 동굴 */
-  function drawCave(s, cols, rows, kAt, isRoad, P, def, rnd) {
+  function drawCave(s, cols, rows, kAt, isRoad, P, def, rnd, region) {
     const cx = s.c * 100 + 50;
     const cy = s.r * 100 + 50;
     let ox = 0;
@@ -1839,24 +1839,29 @@
     }
     // u = 바깥 방향, v = 옆 방향
     const T = (u, v) => [cx + ox * u - oy * v, cy + oy * u + ox * v];
-    const rockG = def('caveRock', (id) => h.rg(id, [[0, P.stoneL], [0.45, P.stone], [1, P.stoneD]], 0.32, 0.25, 0.85));
     const mouthG = def('mouth', (id) => h.rg(id, [[0, '#06040b'], [0.55, '#140f1e'], [0.85, P.mist], [1, h.shade(P.mist, 0.25)]], 0.5, 0.5, 0.6));
     const hazeG = def('haze', (id) => h.rg(id, [[0, '#cfc6e8', 0.5], [1, '#cfc6e8', 0]], 0.5, 0.5, 0.5));
     // 바위 언덕: 원 여럿 (바깥쪽에 몰림)
     const blobs = [[46, -40, 24], [40, 40, 24], [30, -26, 22], [26, 28, 22], [52, 0, 28], [20, -44, 14], [18, 46, 14]];
-    let mound = '';
     let moundO = '';
+    let dark = '';
+    let mid = '';
     let hi = '';
+    let cap = '';
     let sh = '';
     for (const [u, v, r] of blobs) {
       const [x, y] = T(u, v);
-      mound += circ(x, y, r);
       moundO += circ(x, y, r + 3.5);
-      hi += `M${f(x - r * 0.75)} ${f(y - r * 0.15)}A${r * 0.8} ${r * 0.8} 0 0 1 ${f(x - r * 0.1)} ${f(y - r * 0.78)}`;
-      sh += circ(x + 8, y + 7, r);
+      dark += circ(x, y, r);
+      mid += circ(x - r * 0.13, y - r * 0.16, r * 0.84);
+      hi += circ(x - r * 0.36, y - r * 0.4, r * 0.34);
+      cap += ell(x - r * 0.2, y - r * 0.55, r * 0.55, r * 0.28);
+      sh += circ(x + 9, y + 8, r);
     }
-    let svg = `<path d="${moundO}" fill="${OL}"/><path d="${mound}" fill="${rockG}"/>`;
-    svg += `<path d="${hi}" ${strokeA(P.stoneL, 3, 0.65)}/>`;
+    const capCol = { 1: P.accent, 2: '#ffffff', 4: '#5f9c6a' }[region];
+    let svg = `<path d="${moundO}" fill="${OL}"/><path d="${dark}" fill="${P.stoneD}"/><path d="${mid}" fill="${P.stone}"/>`;
+    svg += `<path d="${hi}" fill="${P.stoneL}" fill-opacity="0.6"/>`;
+    if (capCol) svg += `<path d="${cap}" fill="${capCol}" fill-opacity="${region === 2 ? 0.95 : 0.8}"/>`;
     // 입구(어두운 구멍) — 안쪽(−u)을 향함
     const [mx, my] = T(16, 0);
     const rx = oy ? 30 : 20;

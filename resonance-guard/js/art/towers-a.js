@@ -12,7 +12,7 @@
  *  - 빛은 늘 왼쪽 위. 처마·난간 아래와 땅에 닿는 곳은 짙게. 땅 그림자는 그리지 않음(렌더러 몫).
  * ========================================================= */
 (() => {
-  const { OL, f, M, STONE, poly, cyl, frus, ring, band, vseam, flame, crystal, orb, aura, spark, bolt, flag, cone, house, plat, shard } = RG.art._tw;
+  const { f, M, STONE, poly, cyl, frus, ring, band, vseam, flame, crystal, orb, aura, spark, bolt, flag, plat, shard } = RG.art._tw;
   const T = RG.art._tw.T;
   const OLC = RG.art._tw.OL;
 
@@ -121,7 +121,7 @@
     if (P.quiver) {
       back += c.p(TP('M-10.6 -6.4L-8.4 -20.4L-5.2 -19.8L-7.4 -5.8Z'), c.cg(P.quiver), 2.2)
         + c.ln(TP('M-10 -9.4L-7 -8.9M-8.9 -17L-5.8 -16.5'), h.shade(P.quiver, -0.4), 1.5)
-        + c.ol(TP('M-7.6 -20L-8.6 -24.6M-6.2 -19.8L-5.8 -24.8'), '#e8cf9a', 1.2)
+        + c.ol(TP('M-7.6 -20L-8.6 -24.6M-6.2 -19.8L-5.8 -24.8'), '#e8cf9a', 1.5)
         + c.p(TP('M-8.4 -23.4L-10.6 -26.4L-9 -27.6L-8.2 -25.2ZM-6 -23.6L-6.6 -27.4L-4.6 -27.6L-5.2 -24.2Z'), P.fletch || '#e0442a', 1.6);
     }
     /* 몸통 */
@@ -690,7 +690,7 @@
     b += frus(c, x, t + 4, y, r * 0.86, r, c.cg(col), null);
     (o.bands || [0.45]).forEach((k) => { b += band(c, x, y - L * k - 2, y - L * k + 2, r * (0.9 + 0.1 * (1 - k)), r * 0.3, c.vg(o.trim || h.shade(col, 0.25), 0.3, -0.3), 2); });
     b += c.ln(`M${f(x - r * 0.62)} ${f(y - L * 0.2)}L${f(x - r * 0.55)} ${f(t + 8)}`, '#ffffff', 1.6, 0.35);
-    b += c.ci(x - r * 0.45, y - r * 0.72, r * 0.16, '#2a1610', 1.2);
+    b += c.ci(x - r * 0.45, y - r * 0.72, r * 0.16, '#2a1610', 1.5);
     if (o.dragon) {
       const R = r;
       const D = o.dragon;
@@ -723,8 +723,8 @@
     const bx = hx - ux * 7;
     const by = hy - uy * 7;
     let s = c.ol(`M${f(bx)} ${f(by)}L${f(tx - ux * 2)} ${f(ty - uy * 2)}`, M.wood, 1.8);
-    s += c.ol(`M${f(tx - ux * 3 - uy * 2.2)} ${f(ty - uy * 3 + ux * 2.2)}L${f(tx - uy * 1.6)} ${f(ty + ux * 1.6)}`, M.iron, 1.2);
-    if (lit) s += aura(c, tx, ty, 5, 5, '#ff9a3d', 0.8) + c.ci(tx, ty, 1.6, '#ffd94a', 1.2);
+    s += c.ol(`M${f(tx - ux * 3 - uy * 2.2)} ${f(ty - uy * 3 + ux * 2.2)}L${f(tx - uy * 1.6)} ${f(ty + ux * 1.6)}`, M.iron, 1.5);
+    if (lit) s += aura(c, tx, ty, 5, 5, '#ff9a3d', 0.8) + c.ci(tx, ty, 1.8, '#ffd94a', 1.5);
     return s;
   }
   /** 포수 + 화승대 — 엉덩이 (x,y), 발 높이 gy. tgt: 점화구(aim) */
@@ -895,7 +895,7 @@
     /* 포탑 몸통(쇠 드럼, 리벳) */
     o += cyl(c, 58, 72, 99, 26, 7.8, c.cg(iron), null);
     o += c.ln([-60, -30, 0, 30, 60].map((d) => vseam(58, 74, 98, 26, 7.8, d + (pose === 'idle' ? 0 : 15))).join(''), h.shade(iron, -0.45), 1.6);
-    o += [-70, -35, 0, 35, 70].map((d) => { const a = (d + (pose === 'idle' ? 0 : 15)) * D2R; return c.ci(58 + 26 * Math.sin(a), 77 + 7.8 * Math.cos(a), 1.1, M.ironL, 0.9); }).join('');
+    o += [-70, -35, 0, 35, 70].map((d) => { const a = (d + (pose === 'idle' ? 0 : 15)) * D2R; return c.ci(58 + 26 * Math.sin(a), 77 + 7.8 * Math.cos(a), 1.2, M.ironL, 0); }).join('');
     o += band(c, 58, 86, 90, 26, 7.8, c.vg(M.gold, 0.35, -0.25));
     o += c.e(58, 72, 26, 7.8, c.vg(h.shade(iron, 0.3), 0.2, -0.05), 2.6) + c.e(58, 72, 18, 5.4, '#2c2430', 0);
     /* 포신 셋(뒤 → 앞) */
@@ -926,7 +926,7 @@
       tunic: '#b8643c', head: 'goggles', headCol: '#5a3a24', apron: '#6a4a30', glove: '#7a5a3a', pants: '#4a3a34', boot: '#3a2a24', squint: pose !== 'idle', shout: pose === 'fire',
     });
     o += P.draw();
-    if (pose === 'aim') o += gs.map((g) => spark(c, g.hole[0], g.hole[1] - 1, 3.6, '#ffd94a', 1.2)).join('');
+    if (pose === 'aim') o += gs.map((g) => spark(c, g.hole[0], g.hole[1] - 1, 3.6, '#ffd94a', 1.5)).join('');
     if (pose === 'fire') o += gs.map((g, i) => mortarBlast(c, g, i === 2 ? 0.9 : 0.75, true)).join('');
     return o;
   }
@@ -965,7 +965,7 @@
     const L = Math.hypot(tx - hx, ty - hy);
     const nx = -(ty - hy) / L;
     const ny = (tx - hx) / L;
-    return c.ol(`M${f(hx - nx * 1.2)} ${f(hy - ny * 1.2)}L${f(tx - nx * 0.6)} ${f(ty - ny * 0.6)}M${f(hx + nx * 1.2)} ${f(hy + ny * 1.2)}L${f(tx + nx * 1.6)} ${f(ty + ny * 1.6)}`, M.iron, 1.3);
+    return c.ol(`M${f(hx - nx * 1.2)} ${f(hy - ny * 1.2)}L${f(tx - nx * 0.6)} ${f(ty - ny * 0.6)}M${f(hx + nx * 1.2)} ${f(hy + ny * 1.2)}L${f(tx + nx * 1.6)} ${f(ty + ny * 1.6)}`, M.iron, 1.5);
   }
   /** 불티가 터지는 모양(내리친 곳) */
   function strikeSparks(c, x, y, r = 1) {
@@ -1242,7 +1242,7 @@
       let d = '';
       [-10, 5, 20, 35, 50].forEach((a, i) => { const L2 = 12 + (i % 2) * 6; d += `M${f(tip[0] + 1)} ${f(tip[1] + 1)}L${f(tip[0] + 1 + Math.cos(a * D2R) * L2)} ${f(tip[1] + 1 + Math.sin(a * D2R) * L2)}`; });
       o += aura(c, tip[0] + 6, tip[1] + 4, 14, 11, '#ffb347', 0.75) + c.ln(d, '#ff9a3d', 3) + c.ln(d, '#fff3b0', 1.5);
-      o += spark(c, tip[0] - 9, tip[1] - 3, 5, '#fff8d0', 1.4) + spark(c, 52, 44, 4, M.gold, 1.2);
+      o += spark(c, tip[0] - 9, tip[1] - 3, 5, '#fff8d0', 1.4) + spark(c, 52, 44, 4, M.gold, 1.5);
     }
     return o;
   }
@@ -1835,7 +1835,7 @@
       s += zapArc(c, x - r * 2.6, y + r * 0.6, x - r * 0.8, y - r * 0.4, { n: 3, j: 2, w: 1.6, seed: 3 }) + zapArc(c, x + r * 2.6, y + r * 0.2, x + r * 0.9, y - r * 0.5, { n: 3, j: 2, w: 1.6, seed: 5 }) + zapArc(c, x - r * 0.4, y - r * 2.2, x, y - r, { n: 3, j: 2, w: 1.6, seed: 8 });
     } else if (pose === 'idle') s += aura(c, x, y, r * 2.2, r * 2, E.color, 0.55);
     s += orb(c, x, y, r, o.col || COPPER, 2.2);
-    if (pose === 'idle') s += spark(c, x + r * 0.9, y - r * 0.9, r * 0.9, E.light, 1.2);
+    if (pose === 'idle') s += spark(c, x + r * 0.9, y - r * 0.9, r * 0.9, E.light, 1.5);
     if (pose === 'aim') s += c.ci(x, y, r * 0.55, '#ffffff', 0, ' opacity="0.85"');
     if (pose === 'fire') s += aura(c, x, y, r * 4, r * 3.6, '#ffffff', 0.75) + spark(c, x, y, r * 2, '#ffffff', 1.6);
     return s;
@@ -1914,7 +1914,7 @@
       o += aura(c, 50, 22, 32, 28, E.color, pose === 'aim' ? 0.85 : 0.5);
       o += frus(c, 50, 42, 99, 14, 24, c.cg(M.iron), null);
       o += c.ln([-50, -15, 20, 55].map((d) => vseam(50, 50, 96, 19, 5, d)).join(''), h.shade(M.iron, -0.45), 1.5);
-      o += [56, 72, 88].map((y) => c.ci(36 + (y - 42) * 0.12, y, 1.2, M.ironL, 0.9) + c.ci(64 - (y - 42) * 0.12, y, 1.2, M.ironL, 0.9)).join('');
+      o += [56, 72, 88].map((y) => c.ci(36 + (y - 42) * 0.12, y, 1.3, M.ironL, 0) + c.ci(64 - (y - 42) * 0.12, y, 1.3, M.ironL, 0)).join('');
       o += coilWind(c, 50, 54, 90, 18, 6, glow, COPPER, 3.4);
       o += c.e(50, 42, 24, 7.5, c.vg(h.shade(COPPER, 0.1)), 3) + c.e(50, 41, 15, 4.2, h.shade(COPPER, -0.45), 0);
       o += c.p('M44 40V34H56V40Z', M.iron, 2.4);
@@ -2073,7 +2073,7 @@
         const lines = pose === 'idle' ? [16, 30, 44] : [14, 22, 30, 38, 46, 52];
         o += c.ln(lines.map((y) => { const t = (60 - y) / (60 - top); const w2 = 6 + (wTop - 6) * t; return `M${f(50 - w2)} ${f(y)}Q50 ${f(y + 5)} ${f(50 + w2 * 0.9)} ${f(y - 2)}`; }).join(''), E.color, 2.4);
         o += c.ln(`M${f(50 - wTop * 0.6)} ${top + 6}Q50 ${top + 11} ${f(50 + wTop * 0.4)} ${top + 7}`, '#ffffff', 1.8, 0.9);
-        if (pose !== 'idle') o += c.r(50 - wTop * 0.7, 30, 5, 4, M.woodD, 1, 1.4) + c.r(50 + wTop * 0.5, 22, 4, 4, M.rough, 1, 1.4) + c.p(`M${f(50 - wTop * 0.4)} 16q3 -2 4 1q-3 2 -4 -1Z`, '#8ac06a', 1.2);
+        if (pose !== 'idle') o += c.r(50 - wTop * 0.7, 30, 5, 4, M.woodD, 1, 1.4) + c.r(50 + wTop * 0.5, 22, 4, 4, M.rough, 1, 1.4) + c.p(`M${f(50 - wTop * 0.4)} 16q3 -2 4 1q-3 2 -4 -1Z`, '#8ac06a', 1.5);
         if (pose === 'aim') o += motion(c, `M${f(50 + wTop + 4)} 20Q${f(50 + wTop + 8)} 30 ${f(50 + wTop - 2)} 40M${f(50 - wTop - 4)} 24Q${f(50 - wTop - 8)} 34 ${f(50 - wTop + 2)} 44`, '#ffffff', 2, 0.85);
         if (pose === 'fire') {
           /* 떨어져 나가는 작은 회오리 */
