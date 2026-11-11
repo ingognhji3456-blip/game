@@ -235,8 +235,9 @@ test('강화 단계가 있어도 이어하기(명령 재현)가 같은 결과', 
   const { RG } = fresh();
   const opts = { mapId: '1-2', seed: 7, heroId: 'kara', towers: ['ember_archer', 'frost_crystal', 'stone_barracks'], towerRanks: { ember_archer: 3, frost_crystal: 5, stone_barracks: 1 } };
   const g = RG.sim.create(opts); // 골드는 손대지 않음(재현에는 명령만 들어가므로)
-  const cmds = [[10, { type: 'build', tower: 'ember_archer', c: 5, r: 2 }], [40, { type: 'build', tower: 'frost_crystal', c: 6, r: 2 }], [70, { type: 'callWave' }], [400, { type: 'build', tower: 'stone_barracks', c: 7, r: 4 }]];
-  for (let i = 0; i < 1200; i++) { for (const [at, c] of cmds) if (at === i) g.cmd(c); g.step(); }
+  const cmds = [[10, { type: 'build', tower: 'ember_archer', c: 5, r: 1 }], [40, { type: 'build', tower: 'frost_crystal', c: 6, r: 1 }], [70, { type: 'callWave' }], [400, { type: 'build', tower: 'stone_barracks', c: 7, r: 4 }]];
+  for (let i = 0; i < 1200; i++) { for (const [at, c] of cmds) if (at === i) assert.ok(g.cmd(c).ok, JSON.stringify(c)); g.step(); }
+  assert.strictEqual(g.state.towers.length, 3);
   const ref = RG.sim.replay(opts, g.log, g.state.tick);
   assert.strictEqual(ref.hash(), g.hash());
   // 강화가 다르면 결과도 달라짐 (강화가 실제로 판에 들어갔는지)
@@ -247,7 +248,7 @@ test('강화 단계가 있어도 이어하기(명령 재현)가 같은 결과', 
 test('최종 강화 탑은 Lv1 값 그대로 Lv2로 지어짐: 낸 돈만 투자액, 다음 강화는 Lv3 값, 팔면 낸 만큼만', () => {
   const { RG } = fresh();
   const F = RG.gacha.FINAL_RANK;
-  const mk = (ranks, mode = 'normal') => { const g = RG.sim.create({ mapId: '1-1', seed: 1, heroId: null, mode, towerRanks: ranks }); g.state.gold = 1000; return g; };
+  const mk = (ranks, mode = 'normal') => { const g = RG.sim.create({ mapId: '1-1', seed: 1, heroId: null, mode, towerRanks: ranks, finalLv2: true }); g.state.gold = 1000; return g; };
   const build = (g, type, c = 5, r = 2) => { const res = g.cmd({ type: 'build', tower: type, c, r }); assert.ok(res.ok, res.reason); return g.state.towers.find((t) => t.id === res.id); };
   const td = RG.data.towers.ember_archer;
   const lv1Cost = RG.stats.costOf('ember_archer', 1, null, {});
@@ -288,14 +289,20 @@ test('최종 강화 탑은 Lv1 값 그대로 Lv2로 지어짐: 낸 돈만 투자
   // 도전 모드는 뽑기 강화를 쓰지 않음 → Lv1
   const gc = mk({ ember_archer: F }, 'challenge');
   assert.strictEqual(gc.startLevel('ember_archer'), 1);
+  // 이 규칙 전에 시작한 판(설정에 finalLv2 없음)은 Lv1 그대로 — 저장해 둔 판을 이어 해도 기록 재현이 같음
+  const old = RG.sim.create({ mapId: '1-1', seed: 1, heroId: null, mode: 'normal', towerRanks: { ember_archer: F } });
+  old.state.gold = 1000;
+  assert.strictEqual(old.startLevel('ember_archer'), 1);
+  assert.strictEqual(build(old, 'ember_archer').level, 1);
 });
 
 test('최종 강화 병영은 Lv2 병사로, 광산은 Lv2 수입으로 시작', () => {
   const { RG } = fresh();
   const F = RG.gacha.FINAL_RANK;
-  const mk = (ranks) => { const g = RG.sim.create({ mapId: '1-1', seed: 1, heroId: null, mode: 'normal', towerRanks: ranks }); g.state.gold = 1e6; return g; };
+  const mk = (ranks) => { const g = RG.sim.create({ mapId: '1-1', seed: 1, heroId: null, mode: 'normal', towerRanks: ranks, finalLv2: true }); g.state.gold = 1e6; return g; };
   const calcOf = (g, type) => { const res = g.cmd({ type: 'build', tower: type, c: 5, r: 2 }); assert.ok(res.ok, res.reason); RG.stats.computeAll(g); return g.state.towers.find((t) => t.id === res.id); };
-  const b = calcOf(mk({ stone_barracks: F }), 'stone_barracks');
+  const gf = mk({ stone_barracks: F });
+  const b = calcOf(gf, 'stone_barracks');
   assert.strictEqual(b.level, 2);
   // 비교: 강화 없는 병영을 Lv1로 지어 한 번 강화
   const gb = mk({});
@@ -305,6 +312,11 @@ test('최종 강화 병영은 Lv2 병사로, 광산은 Lv2 수입으로 시작',
   assert.strictEqual(b.calc.soldiers.count, bb.calc.soldiers.count, 'Lv2 병사 수');
   assert.ok(Math.abs(b.calc.soldiers.hp / bb.calc.soldiers.hp - RG.gacha.rankMult(F)) < 1e-9, 'Lv2 병사 체력 × 최종 강화');
   assert.strictEqual(b.soldiers.length, b.calc.soldiers.count, '실제 병사 수 = Lv2 계산값');
+  // 실제로 나온 병사도 Lv2 × 최종 강화 체력 (Lv1 병사를 낸 뒤 단계만 올리는 실수를 잡음)
+  const units = gf.state.units.filter((u) => b.soldiers.includes(u.id));
+  assert.strictEqual(units.length, b.soldiers.length);
+  const lv2hp = RG.data.towers.stone_barracks.levels[1].soldiers.hp;
+  for (const u of units) assert.ok(Math.abs(u.maxHp - b.calc.soldiers.hp) < 1e-9 && u.maxHp > lv2hp, `병사 체력 ${u.maxHp} (Lv2 ${lv2hp} × 최종)`);
   const m = calcOf(mk({ crystal_mine: F }), 'crystal_mine');
   assert.strictEqual(m.level, 2);
   const gm = mk({});
@@ -317,10 +329,11 @@ test('최종 강화 병영은 Lv2 병사로, 광산은 Lv2 수입으로 시작',
 test('최종 강화 탑(Lv2로 지음)이 있어도 이어하기(명령 재현)가 같은 결과', () => {
   const { RG } = fresh();
   const F = RG.gacha.FINAL_RANK;
-  const opts = { mapId: '1-2', seed: 11, heroId: 'kara', towers: ['ember_archer', 'frost_crystal', 'stone_barracks'], towerRanks: { ember_archer: F, frost_crystal: 2, stone_barracks: F } };
+  const opts = { mapId: '1-2', seed: 11, heroId: 'kara', towers: ['ember_archer', 'frost_crystal', 'stone_barracks'], towerRanks: { ember_archer: F, frost_crystal: 2, stone_barracks: F }, finalLv2: true };
   const g = RG.sim.create(opts);
-  const cmds = [[10, { type: 'build', tower: 'ember_archer', c: 5, r: 2 }], [40, { type: 'build', tower: 'stone_barracks', c: 7, r: 4 }], [70, { type: 'callWave' }]];
-  for (let i = 0; i < 900; i++) { for (const [at, c] of cmds) if (at === i) g.cmd(c); g.step(); }
+  const cmds = [[10, { type: 'build', tower: 'ember_archer', c: 5, r: 1 }], [40, { type: 'build', tower: 'stone_barracks', c: 7, r: 4 }], [70, { type: 'callWave' }]];
+  for (let i = 0; i < 900; i++) { for (const [at, c] of cmds) if (at === i) assert.ok(g.cmd(c).ok, JSON.stringify(c)); g.step(); }
+  assert.strictEqual(g.state.towers.length, 2);
   assert.ok(g.state.towers.every((t) => t.level === 2), '두 탑 모두 Lv2');
   const ref = RG.sim.replay(opts, g.log, g.state.tick);
   assert.strictEqual(ref.hash(), g.hash());

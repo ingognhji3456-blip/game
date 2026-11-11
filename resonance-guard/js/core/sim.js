@@ -96,9 +96,10 @@ RG.sim = (() => {
 
     // 뽑기 중복 강화 단계 {탑: 0~5, 6 = 최종} — 도전 모드는 기술 나무처럼 쓰지 않음(순수 실력)
     const ranks = o.mode === 'challenge' ? {} : Object.assign({}, o.towerRanks || {});
-    /** 지을 때의 단계: 뽑기 최종 강화 탑은 Lv1 값 그대로 Lv2로 지어짐(도전의 최대 단계 제한은 지킴) */
+    /** 지을 때의 단계: 뽑기 최종 강화 탑은 Lv1 값 그대로 Lv2로 지어짐(도전의 최대 단계 제한은 지킴).
+     *  o.finalLv2: 이 규칙이 생긴 뒤 시작한 판만 켬 — 그 전에 저장한 판을 이어 할 때 기록 재현이 어긋나지 않게 */
     function startLevel(type) {
-      if (!(RG.gacha && RG.gacha.isFinal(ranks[type]))) return 1;
+      if (!o.finalLv2 || !(RG.gacha && RG.gacha.isFinal(ranks[type]))) return 1;
       if (challenge && challenge.type === 'maxLevel' && challenge.value < 2) return 1;
       return 2;
     }

@@ -515,7 +515,7 @@
         if (hero) { P().get().lastHero = hero; P().save(); }
         const opts = {
           mapId: def.id, mode, heroId: noHero ? null : hero, skills: P().get().skills.slice(),
-          seed: (Math.random() * 1e9) >>> 0, towers, towerRanks: P().towerRanks(), branches: P().branchesUnlocked(),
+          seed: (Math.random() * 1e9) >>> 0, towers, towerRanks: P().towerRanks(), finalLv2: true, branches: P().branchesUnlocked(),
         };
         const go = () => UI.show('game', { opts });
         const story = def.story && def.story.before;

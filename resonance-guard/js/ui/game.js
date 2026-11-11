@@ -987,7 +987,7 @@
       L.className = `place-label ${cls}`;
       L.innerHTML = '';
       const card = R.cards.find((b) => b.dataset.type === pick.type);
-      const img = card ? card.querySelector('.tc-img').cloneNode(false) : UI.towerImg(pick.type, 1, null);
+      const img = card ? card.querySelector('.tc-img').cloneNode(false) : UI.towerImg(pick.type, startLv(pick.type), null);
       img.className = 'pl-img';
       L.append(img, el('div', { class: 'pl-text' }, [
         el('div', { class: 'pl-head' }, [el('b', { text: td.name }), el('span', { class: 'pl-cost' }, [UI.icon('gold', 'tiny'), String(costOf(pick.type))])]),

@@ -94,7 +94,7 @@
             nextBatch.length ? el('span', { class: 'dim', text: ` · ${D().regions[nextR - 2].name}${josa(D().regions[nextR - 2].name, '을', '를')} 깨면 새 탑 ${nextBatch.length}종이 한꺼번에 들어옴` }) : null]),
           el('div', { class: 'gc-rates' }, ['common', 'rare', 'epic'].map((r) => el('span', { class: rates[r] ? '' : 'off' }, [rarityBadge(r), ` ${rates[r] ? `${Math.round(rates[r] * 1000) / 10}%` : '아직 없음'}`]))),
           rates.epic ? el('p', {}, [`영웅 등급 확정까지 `, el('b', { text: `${toEpic}회` })]) : el('p', { class: 'dim', text: epicLocked.length ? `영웅 등급 탑은 ${openText(epicLocked[0]).replace('뽑기에 들어옵니다', '뽑기에 들어옵니다.')}` : '' }),
-          el('p', { class: 'dim', text: `같은 탑이 또 나오면 그 탑이 강화됩니다(+1~+${G().MAX_RANK}, 단계마다 +${Math.round(G().RANK_PCT * 100)}%). +${G().MAX_RANK}에서 한 번 더 나오면 ★최종 강화(+${Math.round(G().FINAL_BONUS * 100)}%)가 되고, 그 탑은 뽑기에서 빠집니다. 최종 강화한 탑은 맵에 지을 때 같은 값으로 Lv2부터 지어집니다.` }),
+          el('p', { class: 'dim', text: `같은 탑이 또 나오면 그 탑이 강화됩니다(+1~+${G().MAX_RANK}, 단계마다 +${Math.round(G().RANK_PCT * 100)}%). +${G().MAX_RANK}에서 한 번 더 나오면 ★최종 강화(+${Math.round(G().FINAL_BONUS * 100)}%)가 되고, 그 탑은 뽑기에서 빠집니다. 최종 강화한 탑은 맵에 지을 때 같은 값으로 Lv2부터 지어집니다(강화는 도전 모드에서는 쓰지 않음).` }),
           el('p', { class: 'dim', text: `공명석은 맵 첫 클리어 ${G().REWARD.firstClear}, 새 별마다 ${G().REWARD.perStar}, 승리 ${G().REWARD.win}로 모입니다. 솔빛 들판의 탑은 처음부터 뽑기에 있고, 지역을 다 깨면 다음 지역의 탑이 한꺼번에 들어옵니다(바로 주지는 않습니다).` }),
         ]),
       ]);
@@ -145,7 +145,7 @@
         el('span', { class: 'gc-face back' }, [UI.svgImg(RG.art.icon('crystal'), 'gc-back-icon', '')]),
         el('span', { class: 'gc-face front' }, [
           rarityBadge(r.rarity),
-          UI.towerImg(r.type, r.isFinal ? 2 : 1, null, 'gc-rimg'),
+          UI.towerImg(r.type, r.isFinal ? 4 : 1, r.isFinal ? 'A' : null, 'gc-rimg'),
           el('b', { class: 'gc-rname', text: td.name }),
           tag,
           r.isFinal ? el('small', { class: 'gc-rsub', text: '이제 Lv2부터 지어요' }) : null,
