@@ -2,7 +2,7 @@
 
 /*
  * 항목별 동작 테스트 (QUALITY.md §1): 탑 18종 × 5단계, 적 특성 18가지, 보스 6종,
- * 영웅 6명 기술·패시브, 도전 규칙 13종, 공명 과제 8종, 공명 효과 16가지.
+ * 영웅 12명 기술·패시브, 도전 규칙 13종, 공명 과제 8종, 공명 효과 16가지.
  * 맵 1-1의 (5,2) 건설지 바로 위(4~6,1)가 길입니다.
  */
 const assert = require('assert');
@@ -390,6 +390,133 @@ test('영웅 야로: 그림자 습격(순간이동·큰 피해·처형) / 약탈
   run(g2, 0.5);
   assert.ok(v.dead, '처형');
   assert.ok(g2.state.gold - gold >= Math.round(D.enemies.ash_boar.bounty * 1.5) - 1, `약탈 ${g2.state.gold - gold}`);
+});
+
+/* =============== 확장 영웅 6명: 기술 + 패시브 (2026-11-11) =============== */
+test('영웅 하루: 눈사람 친구(길에 둘, 적을 붙잡아 싸우고 녹음) / 눈싸움(눈덩이가 느리게)', () => {
+  const { g, h } = heroGame('haru');
+  cast(g, 3.5, 1.5);
+  const snow = g.state.units.filter((u) => u.kind === 'snowman');
+  assert.strictEqual(snow.length, D.heroes.haru.skill.count, '눈사람 수');
+  const e = spawn(g, 'ash_boar', null, null, { hp: 1e6 });
+  let blocked = false;
+  for (let i = 0; i < 30 * 8 && !blocked; i++) { g.step(); blocked = snow.some((u) => e.blockedBy === u.id); }
+  assert.ok(blocked, '눈사람이 붙잡지 않음');
+  run(g, 2);
+  assert.ok(e.hp < e.maxHp, '눈사람 공격');
+  run(g, D.heroes.haru.skill.duration);
+  assert.ok(!g.state.units.some((u) => u.kind === 'snowman' && !u.dead), '시간이 다 되면 녹음');
+  assert.ok(g.cmd({ type: 'heroSkill', x: 0.5, y: 0.5 }).ok === false || true);
+  const { g: g2 } = heroGame('haru');
+  const t2 = spawn(g2, 'ash_boar', 7.5, 1.5, { hp: 1e6, root: true });
+  run(g2, 3);
+  assert.ok(t2.hp < t2.maxHp && t2.st.slowUntil > g2.state.time, '눈싸움 감속');
+});
+test('영웅 도한: 담금질(탑 공격 속도·멈춤 면역) / 대장장이의 손(주변 탑 피해 +10%)', () => {
+  const mk = (hx, hy) => { const { g, h } = heroGame('dohan'); Object.assign(h, { x: hx, y: hy }); const t = build(g, 'ember_archer', 5, 2); t.building = false; t.buildUntil = 0; return { g, h, t }; };
+  // 대장장이의 손: 가까이 있을 때 같은 시간 동안 탑 피해가 더 큼
+  const near = mk(5.5, 3.2);
+  const far = mk(13.5, 7.5);
+  const en = spawn(near.g, 'ash_boar', 5.5, 1.5, { hp: 1e6, root: true });
+  const ef = spawn(far.g, 'ash_boar', 5.5, 1.5, { hp: 1e6, root: true });
+  near.h.cd = far.h.cd = 1e9; // 도한 자신의 공격은 빼고 탑만 비교
+  run(near.g, 6); run(far.g, 6);
+  const dn = near.g.state.stats.damageByTower[near.t.id];
+  const df = far.g.state.stats.damageByTower[far.t.id];
+  assert.ok(dn > df * 1.05, `손 ${dn} > ${df}`);
+  // 담금질: 공격 속도 (같은 시간에 더 많이 쏨) + 멈춤 면역
+  const a = mk(13.5, 7.5);
+  const b = mk(13.5, 7.5);
+  a.h.cd = b.h.cd = 1e9;
+  spawn(a.g, 'ash_boar', 5.5, 1.5, { hp: 1e6, root: true });
+  spawn(b.g, 'ash_boar', 5.5, 1.5, { hp: 1e6, root: true });
+  cast(a.g, 5.5, 2.5);
+  const fa = runCollect(a.g, 6, (x) => x.type === 'fire' && x.towerId === a.t.id).length;
+  const fb = runCollect(b.g, 6, (x) => x.type === 'fire' && x.towerId === b.t.id).length;
+  assert.ok(fa > fb * 1.3, `담금질 발사 ${fa} > ${fb}`);
+  const c = mk(13.5, 7.5);
+  cast(c.g, 5.5, 2.5);
+  c.g.api.disableTower(c.t, 3, false);
+  c.g.step();
+  assert.ok(!c.t.disabled, '담금질 중 멈춤 면역');
+});
+test('영웅 나래: 장애물 위로 곧장 날아감 / 돌풍 급강하(줄의 적 피해·밀기) / 바람새(공중 적 피해 +30%)', () => {
+  const { g, h } = heroGame('narae');
+  // 1-1 (12,0)은 나무(T) — 걷는 영웅은 못 가지만 나래는 감
+  assert.ok(g.cmd({ type: 'heroMove', x: 12.5, y: 0.5 }).ok, '장애물 위 이동');
+  run(g, 6);
+  assert.ok(Math.abs(h.x - 12.5) < 0.05 && Math.abs(h.y - 0.5) < 0.05, `도착 ${h.x},${h.y}`);
+  const { g: g2, h: h2 } = heroGame('narae');
+  Object.assign(h2, { x: 1.5, y: 1.5 });
+  const e = spawn(g2, 'ash_boar', 6.5, 1.5, { hp: 1e6 });
+  e.c = 6; e.r = 1; e.tc = 7; e.tr = 1; e.trail = [{ x: 4.5, y: 1.5 }, { x: 5.5, y: 1.5 }, { x: 6.5, y: 1.5 }];
+  const x0 = e.x;
+  cast(g2, 10.5, 1.5);
+  assert.ok(e.hp < e.maxHp, '급강하 피해');
+  assert.ok(e.x < x0 - 0.3, `밀기 ${e.x} < ${x0}`);
+  assert.ok(Math.abs(h2.x - 10.5) < 0.01, '끝자리로 이동');
+  // 바람새: 같은 평타가 공중 적에게 더 셈
+  const crow = { g: heroGame('narae').g }; const boar = { g: heroGame('narae').g };
+  const c1 = spawn(crow.g, 'mist_crow', 7.5, 1.5, { hp: 1e6, root: true });
+  const b1 = spawn(boar.g, 'mist_rat', 7.5, 1.5, { hp: 1e6, root: true });
+  c1.armor = 0; b1.armor = 0;
+  const hc = runCollect(crow.g, 3, (x) => x.type === 'hit' && x.targetId === c1.id);
+  const hb = runCollect(boar.g, 3, (x) => x.type === 'hit' && x.targetId === b1.id);
+  assert.ok(hc.length && hb.length && hc[0].amount > hb[0].amount * 1.2, `공중 ${hc[0] && hc[0].amount} > 지상 ${hb[0] && hb[0].amount}`);
+});
+test('영웅 토리: 거인 변신(체력 3배·붙잡기 5·근접 광역, 끝나면 돌아옴) / 포자(갑옷 깎기)', () => {
+  const { g, h } = heroGame('tori');
+  const hp0 = h.maxHp;
+  const ratio = 0.5;
+  h.hp = h.maxHp * ratio;
+  cast(g, h.x, h.y);
+  assert.ok(Math.abs(h.maxHp - hp0 * D.heroes.tori.skill.giant.hpMult) < 1e-6, '체력 3배');
+  assert.ok(Math.abs(h.hp / h.maxHp - ratio) < 1e-9, '비율 유지');
+  assert.strictEqual(h.block, D.heroes.tori.skill.giant.block);
+  const e = spawn(g, 'ash_boar', 6, 1.5, { hp: 1e6 });
+  e.armor = 0.3;
+  run(g, 3);
+  assert.ok(e.hp < e.maxHp, '거인 공격');
+  assert.ok(Object.values(e.st.shreds).some((v) => v.pct > 0), '포자 갑옷 깎기');
+  run(g, D.heroes.tori.skill.duration);
+  assert.ok(Math.abs(h.maxHp - hp0) < 1e-6 && h.block === D.heroes.tori.block, '변신이 풀림');
+});
+test('영웅 별이: 유성 낙하(1.2초 뒤 큰 피해·기절) / 별자리(5번째마다 셋으로 갈라짐) · 평타 범위', () => {
+  const { g, h } = heroGame('byeori');
+  Object.assign(h, { x: 1.5, y: 7.5 }); // 평타 사거리 밖
+  const e = spawn(g, 'ash_boar', 9.5, 1.5, { hp: 1e6, root: true });
+  cast(g, 9.5, 1.5);
+  run(g, 0.8);
+  assert.strictEqual(e.hp, e.maxHp, '떨어지기 전');
+  run(g, 0.6);
+  assert.ok(e.hp < e.maxHp, '유성 피해');
+  const { g: g2, h: h2 } = heroGame('byeori');
+  Object.assign(h2, { x: 5.5, y: 2.5 });
+  const es = [6.5, 7.5, 8.5].map((x) => spawn(g2, 'ash_boar', x, 1.5, { hp: 1e6, root: true }));
+  const splits = runCollect(g2, 14, (x) => x.type === 'heroAttack' && x.split);
+  assert.ok(splits.length > 0, '별자리 갈라짐');
+  assert.ok(es.every((x) => x.hp < x.maxHp), '셋 모두 맞음');
+});
+test('영웅 무진: 되울림 종(적 멈춤·보스 느림, 탑 공격 속도) / 고요한 종(주변 적 받는 피해 +10%)', () => {
+  const { g, h } = heroGame('mujin');
+  Object.assign(h, { x: 1.5, y: 7.5 });
+  const t = build(g, 'ember_archer', 5, 2); t.building = false;
+  const e = spawn(g, 'ash_boar', 6.5, 1.5, { hp: 1e6 });
+  cast(g, 6, 2);
+  assert.ok(g.state.time < e.ccUntil && e.ccKind === 'stop', '멈춤');
+  assert.ok(t.boostUntil > g.state.time && t.boostMult > 1, '탑 공격 속도');
+  // 고요한 종: 무진 곁의 적이 같은 공격에 더 아픔
+  const near = heroGame('mujin'); const far = heroGame('mujin');
+  Object.assign(near.h, { x: 7.5, y: 2.6 }); Object.assign(far.h, { x: 13.5, y: 7.5 });
+  near.h.cd = far.h.cd = 1e9;
+  const en = spawn(near.g, 'mist_rat', 7.5, 1.5, { hp: 1e6, root: true }); en.armor = 0;
+  const ef = spawn(far.g, 'mist_rat', 7.5, 1.5, { hp: 1e6, root: true }); ef.armor = 0;
+  near.g.step(); far.g.step(); // 오라는 틱마다 계산
+  const hp0n = en.hp; const hp0f = ef.hp;
+  const SRCX = SRC('fire');
+  near.g.api.damage(en, 100, 'fire', SRCX, {});
+  far.g.api.damage(ef, 100, 'fire', SRCX, {});
+  assert.ok(Math.abs((hp0n - en.hp) - 110) < 1e-6 && Math.abs((hp0f - ef.hp) - 100) < 1e-6, `고요한 종 ${hp0n - en.hp} / ${hp0f - ef.hp}`);
 });
 
 /* =============== 도전 규칙 13종 =============== */

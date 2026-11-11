@@ -130,11 +130,30 @@ RG.sim = (() => {
       const hd = D().heroes[h.heroId];
       const lv = h.level - 1;
       const k = 1 + D().heroLevelBonus.stat * lv;
+      const gi = h.giantUntil > st.time && hd.skill.giant ? hd.skill.giant : null; // 토리: 거인 변신 중
       return {
-        maxHp: hd.hp * k * (1 + (meta.heroHpPct || 0)),
-        damage: hd.damage * k * (1 + (meta.heroDamagePct || 0)),
+        maxHp: hd.hp * k * (1 + (meta.heroHpPct || 0)) * (gi ? gi.hpMult : 1),
+        damage: hd.damage * k * (1 + (meta.heroDamagePct || 0)) * (gi ? gi.damageMult : 1),
         skillK: (1 + D().heroLevelBonus.skill * lv) * (1 + (meta.heroDamagePct || 0)),
       };
+    }
+    /** 영웅의 지금 전투 방식 (토리 거인 변신 중이면 거인의 근접 광역) */
+    function heroForm(h, hd) {
+      const gi = h.giantUntil > st.time && hd.skill.giant ? hd.skill.giant : null;
+      if (!gi) return hd;
+      return { melee: true, range: gi.range, splash: gi.splash, speed: gi.speed, targets: 'ground', interval: hd.interval, element: hd.element };
+    }
+
+    /* 영웅 패시브 오라 (틱마다 한 번 계산 — 피해 계산에서 매번 찾지 않게) */
+    let auraSmith = null; let auraSmithR2 = 0; let auraSmithPct = 0;
+    let auraQuiet = null; let auraQuietR2 = 0; let auraQuietPct = 0;
+    function refreshHeroAuras() {
+      auraSmith = null; auraQuiet = null;
+      const h = st.hero;
+      if (!h || h.dead) return;
+      const ps = D().heroes[h.heroId].passive;
+      if (ps.id === 'smith_hand') { auraSmith = h; auraSmithR2 = ps.radius * ps.radius; auraSmithPct = ps.damagePct; }
+      else if (ps.id === 'quiet_bell') { auraQuiet = h; auraQuietR2 = ps.radius * ps.radius; auraQuietPct = ps.vulnPct; }
     }
 
     function heroStartTile() {
@@ -334,8 +353,16 @@ RG.sim = (() => {
         if (mods.bonusVsFlying && e.flying) bonus += mods.bonusVsFlying;
         if (mods.bonusVsGround && !e.flying) bonus += mods.bonusVsGround;
         if (mods.bonusVsElite && (ed.elite || ed.boss)) bonus += mods.bonusVsElite;
+        const tw = src.tower;
+        if (tw) {
+          // 도한: 대장장이의 손 (주변 탑 피해 +), 담금질·되울림 종을 받은 '계속 쏘는' 탑은 피해로 대신
+          if (auraSmith && d2(tw.x, tw.y, auraSmith.x, auraSmith.y) <= auraSmithR2) bonus += auraSmithPct;
+          if (o2.beamTick && tw.boostUntil > st.time) bonus += (tw.boostMult - 1) * 0.5;
+        }
       }
       let vuln = 0;
+      // 무진: 고요한 종 (주변 적이 모든 피해를 더 받음)
+      if (auraQuiet && d2(e.x, e.y, auraQuiet.x, auraQuiet.y) <= auraQuietR2) vuln += auraQuietPct;
       const curse = e.st.curse;
       if (curse && st.time < curse.until) vuln += curse.pct;
       const veil = e.st.veil;
@@ -1746,6 +1773,14 @@ RG.sim = (() => {
       if (h.dead) return fail('영웅이 쓰러져 있습니다');
       const c = Math.floor(cmd.x);
       const r = Math.floor(cmd.y);
+      if (D().heroes[h.heroId].flying) {
+        // 나래: 바람새를 타고 장애물 위로 곧장 (맵 안 어디든)
+        if (!RG.grid.inBounds(map, c, r)) return fail('맵 밖입니다');
+        releaseUnit(h);
+        h.path = [{ x: c + 0.5, y: r + 0.5 }];
+        ev('heroMove', { heroId: h.heroId, x: c + 0.5, y: r + 0.5 });
+        return { ok: true };
+      }
       const path = RG.grid.heroPath(map, blocked, Math.floor(h.x), Math.floor(h.y), c, r);
       if (!path) return fail('영웅이 갈 수 없는 곳입니다');
       releaseUnit(h);
@@ -1834,6 +1869,87 @@ RG.sim = (() => {
           h.path = [];
           if (!ed.boss && target.hp / target.maxHp <= sk.execute) { ev('execute', { x: target.x, y: target.y }); kill(target, src, { executed: true }); } else damage(target, sk.damage * k * (ed.boss ? sk.bossMult : 1), 'dark', src, {});
           ev('splash', { x: target.x, y: target.y, radius: 0.6, element: 'dark' });
+          break;
+        }
+        case 'snow_friends': {
+          // 하루: 고른 길 칸에 눈사람 친구들
+          const c = Math.floor(x);
+          const r = Math.floor(y);
+          if (!RG.grid.enemyWalkable(map, blocked, c, r)) return fail('눈사람은 길 위에만 세울 수 있습니다');
+          const sm = sk.snowman;
+          for (let i = 0; i < sk.count; i++) {
+            const ox = (i - (sk.count - 1) / 2) * 0.42;
+            const ux = c + 0.5 + ox;
+            const uy = r + 0.5 + (i % 2 ? 0.12 : -0.12);
+            st.units.push({ id: nextId++, kind: 'snowman', x: ux, y: uy, px: ux, py: uy, homeX: ux, homeY: uy, hp: sm.hp * k, maxHp: sm.hp * k, armor: sm.armor, blocking: [], block: sm.block, dead: false, until: st.time + sk.duration, cd: 0, damage: sm.damage * k, interval: sm.interval, dir: 1, attackAnim: 0 });
+          }
+          ev('snowmen', { x: c + 0.5, y: r + 0.5 });
+          break;
+        }
+        case 'temper': {
+          // 도한: 고른 탑을 담금질 (누른 칸의 탑, 없으면 가장 가까운 탑 1.2칸 안)
+          let best = st.towers.find((t) => t.c === Math.floor(x) && t.r === Math.floor(y));
+          if (!best) { let bd = 1.2 * 1.2; for (const t of st.towers) { const dd = d2(t.x, t.y, x, y); if (dd <= bd) { bd = dd; best = t; } } }
+          if (!best) return fail('담금질할 탑을 골라 주세요');
+          boostTower(best, 1 + sk.speedPct * k, sk.duration, true);
+          ev('temper', { towerId: best.id, x: best.x, y: best.y });
+          break;
+        }
+        case 'gale_dive': {
+          // 나래: 지금 자리에서 고른 곳까지 한 줄로 내리꽂음 — 줄의 적에게 피해 + 밀기
+          const tx = Math.max(0.5, Math.min(map.cols - 0.5, x));
+          const ty = Math.max(0.5, Math.min(map.rows - 0.5, y));
+          const ox = h.x;
+          const oy = h.y;
+          const half = sk.width / 2;
+          const L = Math.hypot(tx - ox, ty - oy);
+          const ps = hd.passive;
+          for (const e of enemiesInRadius((ox + tx) / 2, (oy + ty) / 2, L / 2 + half + 0.5, null)) {
+            if (!targetable(e)) continue;
+            if (segDist(e.x, e.y, ox, oy, tx, ty) > half + e.size * 0.3) continue;
+            hitEnemy(e, sk.damage * k * (e.flying && ps.flyingBonus ? 1 + ps.flyingBonus : 1), src, { area: true, noCrit: true });
+            if (!e.dead) push(e, sk.push);
+          }
+          releaseUnit(h);
+          h.x = tx; h.y = ty; h.px = tx; h.py = ty; h.path = [];
+          ev('galeDive', { x1: ox, y1: oy, x2: tx, y2: ty, width: sk.width });
+          break;
+        }
+        case 'giant_form': {
+          // 토리: 거인 변신 (체력 비율 유지)
+          const ratio = h.hp / h.maxHp;
+          h.giantUntil = st.time + sk.duration;
+          const s2 = heroStat(h);
+          h.maxHp = s2.maxHp; h.hp = h.maxHp * ratio;
+          h.block = sk.giant.block; h.armor = sk.giant.armor;
+          ev('giantForm', { heroId: h.heroId, x: h.x, y: h.y });
+          break;
+        }
+        case 'meteor': {
+          // 별이: 1.2초 뒤 유성
+          ev('warnArea', { x, y, radius: sk.radius, dur: sk.delay, element: 'light' });
+          ev('meteorCall', { x, y, delay: sk.delay });
+          delayed.push({
+            at: st.time + sk.delay,
+            fn: () => {
+              for (const e of enemiesInRadius(x, y, sk.radius)) {
+                damage(e, sk.damage * k, 'light', src, { area: true });
+                if (!e.dead) hardCC(e, 'stun', sk.stun);
+              }
+              ev('splash', { x, y, radius: sk.radius, element: 'light', big: true });
+              ev('meteor', { x, y, radius: sk.radius });
+            },
+          });
+          break;
+        }
+        case 'echo_bell': {
+          // 무진: 되울림 종 — 적 멈춤(보스는 느림) + 탑 공격 속도
+          for (const e of enemiesInRadius(x, y, sk.radius)) {
+            if (D().enemies[e.type].boss) applySlow(e, sk.bossSlow, sk.stop * 2);
+            else hardCC(e, 'stop', sk.stop);
+          }
+          for (const t of st.towers) if (d2(t.x, t.y, x, y) <= sk.radius * sk.radius) boostTower(t, 1 + sk.towerSpeed * k, sk.towerDur, false);
+          ev('echoBell', { x, y, radius: sk.radius });
           break;
         }
         default:
@@ -1937,6 +2053,7 @@ RG.sim = (() => {
       st.time = st.tick * DT;
       const time = st.time;
 
+      refreshHeroAuras();
       for (let i = 0; i < st.enemies.length; i++) { const e = st.enemies[i]; e.px = e.x; e.py = e.y; }
       for (const u of st.units) { u.px = u.x; u.py = u.y; }
       for (const p of st.projectiles) { p.px = p.x; p.py = p.y; }
@@ -1981,7 +2098,7 @@ RG.sim = (() => {
         if (t.building && time >= t.buildUntil) { t.building = false; changed = true; }
         let sil = false;
         for (let i = 0; i < silencers.length; i += 2) { const e = silencers[i]; const R = silencers[i + 1]; if (d2(e.x, e.y, t.x, t.y) <= R * R) { sil = true; break; } }
-        const dis = sil || time < t.disabledUntil;
+        const dis = (sil || time < t.disabledUntil) && !(t.temperUntil > time); // 담금질 중엔 멈추지 않음
         let dmp = freezeLinks;
         if (!dmp) for (let i = 0; i < dampeners.length; i += 2) { const e = dampeners[i]; const R = dampeners[i + 1]; if (d2(e.x, e.y, t.x, t.y) <= R * R) { dmp = true; break; } }
         if (dis !== t.disabled || dmp !== t.dampened) { t.disabled = dis; t.dampened = dmp; t.silenced = sil; changed = true; }
@@ -2271,10 +2388,17 @@ RG.sim = (() => {
           }
         }
       }
-      t.cd -= DT;
+      t.cd -= t.boostUntil > time ? DT * t.boostMult : DT; // 담금질·되울림 종: 공격 속도
       if (t.cd <= 0) {
         if (fireTower(t)) { t.cd += c.interval; t.anim = 0.25; } else t.cd = 0;
       }
+    }
+    /** 탑 강화 효과(영웅 기술): 같은 시간이면 큰 배율을 남김. temper면 멈춤·침묵 면역 */
+    function boostTower(t, mult, dur, temper) {
+      const until = st.time + dur;
+      if (!(t.boostUntil > st.time) || mult >= t.boostMult) { t.boostMult = mult; t.boostUntil = Math.max(until, t.boostUntil > st.time && mult === t.boostMult ? t.boostUntil : 0); }
+      if (temper) t.temperUntil = Math.max(t.temperUntil || 0, until);
+      if (temper && t.disabled) { t.disabled = false; t.silenced = false; statsDirty = true; }
     }
 
     function updateProjectiles() {
@@ -2355,7 +2479,18 @@ RG.sim = (() => {
       const hd = D().heroes[h.heroId];
       const src = { heroHit: true, unit: h, element: hd.element, calc: { element: hd.element, dmgBonus: 0, mods: {}, onHit: {} } };
       if (hd.passive.id === 'cold_aim') src.heroCrit = { chance: hd.passive.critChance, mult: hd.passive.critMult };
-      hitEnemy(e, p.base, src, { noCrit: true });
+      const ps = hd.passive;
+      const base = p.base * (ps.flyingBonus && e.flying ? 1 + ps.flyingBonus : 1);
+      hitEnemy(e, base, src, { noCrit: true });
+      heroOnHit(e, hd);
+      if (hd.splash) for (const o3 of enemiesInRadius(e.x, e.y, hd.splash, hd.targets === 'ground' ? 'ground' : null)) if (o3 !== e) { hitEnemy(o3, base * 0.6, src, { area: true, noCrit: true, procMult: 0 }); heroOnHit(o3, hd); }
+    }
+    /** 영웅 패시브의 명중 효과: 하루 눈싸움(감속), 토리 포자(갑옷 깎기) */
+    function heroOnHit(e, hd) {
+      if (e.dead) return;
+      const ps = hd.passive;
+      if (ps.slow) applySlow(e, ps.slow.pct, ps.slow.dur);
+      if (ps.shred) addShred(e, 'spores', ps.shred.pct, ps.shred.max, ps.shred.dur);
     }
 
     function updateUnits(time) {
@@ -2404,6 +2539,7 @@ RG.sim = (() => {
           }
           continue;
         }
+        if (u.kind === 'snowman') { updateSnowman(u, time); continue; }
         if (u.kind !== 'soldier' || u.dead) continue;
         if (u.stunUntil > time) continue;
         const t = st.towers.find((x) => x.id === u.owner);
@@ -2437,6 +2573,34 @@ RG.sim = (() => {
       }
     }
 
+    /** 하루의 눈사람: 붙잡은 적과 싸우고, 시간이 다 되면 녹음 */
+    const SNOW_SRC_CALC = Object.freeze({ element: 'frost', dmgBonus: 0, mods: {}, onHit: {} });
+    function updateSnowman(u, time) {
+      if (u.dead) return;
+      if (time >= u.until) { u.dead = true; u.remove = true; releaseUnit(u); ev('unitDown', { unitId: u.id, x: u.x, y: u.y, melt: true }); return; }
+      u.attackAnim = Math.max(0, (u.attackAnim || 0) - DT);
+      if (u.stunUntil > time) return;
+      const target = u.blocking.length ? enemyById(u.blocking[0]) : null;
+      if (target && !target.dead) {
+        const reach = 0.42 + target.size * 0.2;
+        u.engaged = dist(u.x, u.y, target.x, target.y) <= reach;
+        if (!u.engaged) moveUnitToward(u, target.x, target.y, 1.6);
+        else {
+          u.dir = target.x > u.x ? 1 : -1;
+          u.cd -= DT;
+          if (u.cd <= 0) {
+            u.cd = u.interval;
+            u.attackAnim = 0.25;
+            hitEnemy(target, u.damage, { heroHit: true, unit: u, element: 'frost', calc: SNOW_SRC_CALC }, { noCrit: true });
+            if (!target.dead) applySlow(target, 0.2, 1);
+          }
+        }
+      } else {
+        u.engaged = false;
+        moveUnitToward(u, u.homeX, u.homeY, 1.4);
+      }
+    }
+
     function updateHero(h, time) {
       const hd = D().heroes[h.heroId];
       h.attackAnim = Math.max(0, h.attackAnim - DT);
@@ -2453,6 +2617,17 @@ RG.sim = (() => {
         }
         return;
       }
+      // 토리: 거인 변신이 끝나면 원래대로 (체력 비율 유지)
+      if (h.giantUntil && time >= h.giantUntil) {
+        const ratio = h.hp / h.maxHp;
+        h.giantUntil = 0;
+        const s0 = heroStat(h);
+        h.maxHp = s0.maxHp; h.hp = h.maxHp * ratio;
+        h.block = hd.block; h.armor = hd.armor;
+        releaseUnit(h);
+        ev('giantEnd', { heroId: h.heroId, x: h.x, y: h.y });
+      }
+      const form = heroForm(h, hd);
       // 회복: 패시브, 성소
       if (hd.passive.regen) h.hp = Math.min(h.maxHp, h.hp + h.maxHp * hd.passive.regen * DT);
       for (const s of st.towers) {
@@ -2462,7 +2637,7 @@ RG.sim = (() => {
       // 이동
       if (h.path.length) {
         const p = h.path[0];
-        if (moveUnitToward(h, p.x, p.y, hd.speed)) h.path.shift();
+        if (moveUnitToward(h, p.x, p.y, form.speed)) h.path.shift();
         h.walking = true;
         return;
       }
@@ -2475,28 +2650,28 @@ RG.sim = (() => {
       if (h.blocking.length) target = enemyById(h.blocking[0]);
       if (!target || target.dead) {
         let bd = Infinity;
-        const R = hd.melee ? hd.range + 0.35 : hd.range;
+        const R = form.melee ? form.range + 0.35 : form.range;
         for (const e of st.enemies) {
           if (e.dead || e.burrowed) continue;
           if (!targetable(e) && e.blockedBy !== h.id) continue;
-          if (hd.targets === 'ground' && e.flying) continue;
+          if (form.targets === 'ground' && e.flying) continue;
           if (!attackable(e, hd.element)) continue;
           const dd = d2(e.x, e.y, h.x, h.y);
           if (dd > R * R) continue;
-          const key = hd.melee ? dd : e.prog;
+          const key = form.melee ? dd : e.prog;
           if (key < bd) { bd = key; target = e; }
         }
       }
       if (!target) { h.cd = 0; return; }
-      h.cd = hd.interval;
+      h.cd = form.interval || hd.interval;
       h.attackAnim = 0.3;
       h.dir = target.x > h.x ? 1 : -1;
       const src = { heroHit: true, unit: h, element: hd.element, calc: { element: hd.element, dmgBonus: 0, mods: {}, onHit: {}, crit: hd.crit || null } };
-      if (hd.melee) {
-        if (hd.splash) {
-          for (const e of enemiesInRadius(target.x, target.y, hd.splash, 'ground')) hitEnemy(e, stat.damage, src, {});
-        } else hitEnemy(target, stat.damage, src, {});
-        ev('heroAttack', { heroId: h.heroId, x: target.x, y: target.y, element: hd.element, melee: true });
+      if (form.melee) {
+        if (form.splash) {
+          for (const e of enemiesInRadius(target.x, target.y, form.splash, 'ground')) { hitEnemy(e, stat.damage, src, {}); heroOnHit(e, hd); }
+        } else { hitEnemy(target, stat.damage, src, {}); heroOnHit(target, hd); }
+        ev('heroAttack', { heroId: h.heroId, x: target.x, y: target.y, element: hd.element, melee: true, giant: form !== hd });
       } else if (hd.chain) {
         const pts = [[h.x, h.y - 0.5], [target.x, target.y]];
         hitEnemy(target, stat.damage, src, { noCrit: true });
@@ -2520,8 +2695,19 @@ RG.sim = (() => {
         }
         ev('chain', { points: pts, element: hd.element });
       } else {
-        st.projectiles.push({ id: nextId++, kind: 'heroShot', heroId: h.heroId, element: hd.element, x: h.x, y: h.y - 0.45, px: h.x, py: h.y - 0.45, targetId: target.id, tx: target.x, ty: target.y, speed: hd.projSpeed || 9, base: stat.damage, heroHit: true });
-        ev('heroAttack', { heroId: h.heroId, x: target.x, y: target.y, element: hd.element });
+        // 별이: 다섯 번째 공격마다 별빛이 셋으로 갈라짐 (서로 다른 적 — 앞선 적부터)
+        let targets = [target];
+        const cst = hd.passive.id === 'constellation' ? hd.passive : null;
+        if (cst) {
+          h.shotN = (h.shotN || 0) + 1;
+          if (h.shotN % cst.every === 0) {
+            const R2 = hd.range * hd.range;
+            const more = st.enemies.filter((e) => e !== target && !e.dead && targetable(e) && attackable(e, hd.element) && d2(e.x, e.y, h.x, h.y) <= R2).sort((a, b) => a.prog - b.prog || a.id - b.id);
+            targets = targets.concat(more.slice(0, cst.split - 1));
+          }
+        }
+        for (const tg of targets) st.projectiles.push({ id: nextId++, kind: 'heroShot', heroId: h.heroId, element: hd.element, x: h.x, y: h.y - 0.45, px: h.x, py: h.y - 0.45, targetId: tg.id, tx: tg.x, ty: tg.y, speed: hd.projSpeed || 9, base: stat.damage, heroHit: true, split: targets.length > 1 });
+        ev('heroAttack', { heroId: h.heroId, x: target.x, y: target.y, element: hd.element, split: targets.length > 1 });
       }
     }
 

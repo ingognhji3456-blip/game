@@ -48,7 +48,7 @@ test('특성마다 대표 적이 하나 이상', () => {
 });
 
 test('영웅: 대사 6종, 기술 구현', () => {
-  const SK = ['flame_slam', 'dawn_prayer', 'frost_volley', 'thunder_drone', 'earth_wall', 'shadow_strike'];
+  const SK = ['flame_slam', 'dawn_prayer', 'frost_volley', 'thunder_drone', 'earth_wall', 'shadow_strike', 'snow_friends', 'temper', 'gale_dive', 'giant_form', 'meteor', 'echo_bell'];
   for (const [id, h] of Object.entries(D.heroes)) {
     for (const k of ['select', 'move', 'skill', 'down', 'revive', 'win']) assert.ok(h.lines[k] && h.lines[k].length, `${id} 대사 ${k}`);
     assert.ok(SK.includes(h.skill.id), `${id} 기술`);

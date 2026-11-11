@@ -1,7 +1,7 @@
 'use strict';
 
 /* =========================================================
- * 영웅 6명 — 설계: docs/design/heroes.md
+ * 영웅 12명 — 설계: docs/design/heroes.md (확장 6명: docs/design/expansion.md §2)
  * 필드 뜻: docs/ARCHITECTURE.md §3.4
  * lines(대사)는 heroes.md 대사표와 같아야 합니다(테스트 검사).
  * ========================================================= */
@@ -130,6 +130,130 @@ RG.data.heroes = {
       win: ['…나쁘지 않았어. 너희 말이야.'],
     },
   },
+
+  /* ===================== 확장 영웅 6명 (2026-11-11) — 6지역에서 합류, docs/design/expansion.md §2 ===================== */
+
+  haru: {
+    name: '하루', element: 'frost', title: '눈사람 친구', color: '#9fe4ff', unlock: '6-1',
+    hp: 220, damage: 10, interval: 1.0, range: 2.4, melee: false, block: 0, speed: 1.6, armor: 0.05,
+    projSpeed: 9, targets: 'both',
+    skill: {
+      id: 'snow_friends', name: '눈사람 친구', cooldown: 22, target: 'path', count: 2, duration: 15,
+      snowman: { hp: 240, damage: 6, interval: 1.0, block: 2, armor: 0.1 },
+      desc: '고른 길에 눈사람 친구 둘을 15초 동안 세웁니다. 눈사람은 지상 적을 둘씩 붙잡아 싸웁니다.',
+    },
+    passive: { id: 'snowball_fight', name: '눈싸움', slow: { pct: 0.2, dur: 1.5 }, desc: '하루의 눈덩이에 맞은 적은 1.5초 동안 20% 느려집니다.' },
+    bio: '형 시오를 따라 수호대에 들어온, 눈사람 만들기를 좋아하는 밝은 아이.',
+    lines: {
+      select: ['하루예요! 형, 나도 할 수 있어!', '눈사람 친구들, 준비됐지?', '눈 오는 날은 내가 제일 세!'],
+      move: ['응, 거기!', '달려간다~!', '형보다 빨리 갈게!'],
+      skill: ['눈사람 친구들, 나와라!', '여기는 우리가 지킨다!'],
+      down: ['으앙… 차가워… 금방 일어날게…'],
+      revive: ['다시 왔어! 아까는 미끄러진 거야!'],
+      win: ['이겼다! 형, 봤어? 봤지?'],
+    },
+  },
+
+  dohan: {
+    name: '도한', element: 'fire', title: '솔빛 대장장이', color: '#e8743a', unlock: '6-2',
+    hp: 320, damage: 18, interval: 1.3, range: 1.8, melee: false, block: 1, speed: 1.4, armor: 0.15,
+    projSpeed: 10, targets: 'ground',
+    skill: {
+      id: 'temper', name: '담금질', cooldown: 20, target: 'tower', duration: 8, speedPct: 0.6,
+      desc: '고른 탑을 8초 동안 담금질합니다. 그 탑은 공격 속도 +60%(계속 쏘는 탑은 피해 +30%)가 되고, 멈춤·침묵에 걸리지 않습니다.',
+    },
+    passive: { id: 'smith_hand', name: '대장장이의 손', radius: 2.0, damagePct: 0.1, desc: '도한 주변 2칸 안의 탑은 피해 +10%.' },
+    bio: '말수는 적지만 망치 소리로 마음을 전하는, 카라의 아버지이자 솔빛 마을 대장장이.',
+    lines: {
+      select: ['도한이다. 쇠는 뜨거울 때 두드리지.', '망루 하나쯤은 금방 손봐 주마.', '카라 녀석, 무리하지 마라.'],
+      move: ['간다.', '그리 가지.', '알았다.'],
+      skill: ['불 좀 더 지펴라!', '담금질이다. 버텨라.'],
+      down: ['허… 나이를 먹긴 했나 보군.'],
+      revive: ['쉬었다. 다시 하지.'],
+      win: ['좋은 쇳소리였다.'],
+    },
+  },
+
+  narae: {
+    name: '나래', element: 'storm', title: '바람새 기수', color: '#7ad8ff', unlock: '6-3',
+    hp: 200, damage: 13, interval: 0.8, range: 2.8, melee: false, block: 0, speed: 2.2, armor: 0.05,
+    projSpeed: 12, targets: 'both', flying: true,
+    skill: {
+      id: 'gale_dive', name: '돌풍 급강하', cooldown: 18, target: 'point', damage: 90, width: 0.7, push: 1.2,
+      desc: '고른 곳까지 한 줄로 내리꽂습니다. 지나가는 줄의 적에게 피해를 주고 뒤로 밀어냅니다(보스·큰 적은 밀리지 않음).',
+    },
+    passive: { id: 'gale_rider', name: '바람새', flyingBonus: 0.3, desc: '공중 적에게 피해 +30%. 바람새를 타고 장애물 위로 곧장 날아갑니다(붙잡기는 못 함).' },
+    bio: '구름 바다를 건너는 바람새 "솔개"와 함께 사는, 시원시원한 하늘 나루의 기수.',
+    lines: {
+      select: ['나래 왔어! 솔개야, 날자고!', '바람 좋다! 오늘은 이기는 날이거든!', '하늘길은 나한테 맡겨!'],
+      move: ['날아간다!', '바람 타고 슝!', '거기 금방이야!'],
+      skill: ['급강하다, 꽉 잡아!', '바람아, 밀어 버려!'],
+      down: ['으아, 솔개야… 잠깐 내려가자…'],
+      revive: ['다시 떴어! 하늘은 안 놓쳐!'],
+      win: ['봤지? 바람은 우리 편이거든!'],
+    },
+  },
+
+  tori: {
+    name: '토리', element: 'earth', title: '이끼 숲 정령', color: '#9ad060', unlock: '6-4',
+    hp: 240, damage: 9, interval: 0.9, range: 2.2, melee: false, block: 0, speed: 1.5, armor: 0.05,
+    projSpeed: 8, targets: 'ground',
+    skill: {
+      id: 'giant_form', name: '거인 변신', cooldown: 26, target: 'self', duration: 10,
+      giant: { hpMult: 3, damageMult: 2.5, block: 5, range: 0.9, splash: 0.8, armor: 0.35, speed: 1.0 },
+      desc: '10초 동안 이끼 거인으로 변신합니다. 체력 3배, 공격력 2.5배, 지상 적을 다섯씩 붙잡고 주변을 내려찍습니다.',
+    },
+    passive: { id: 'spores', name: '포자', shred: { pct: 0.05, max: 0.2, dur: 3 }, desc: '토리의 공격(포자·거인 주먹)은 적의 갑옷을 5%p씩 깎습니다(최대 20%p, 3초).' },
+    bio: '오래된 이끼 숲에서 깨어난 작은 정령. 화나면 숲만큼 커진다.',
+    lines: {
+      select: ['…토리야아. 같이 가도 돼?', '이끼는 천천히 자라. 그래도 단단해.', '…숲 냄새, 좋아.'],
+      move: ['…응.', '천천히… 가아.', '…저기?'],
+      skill: ['…화났어. 커질 거야아!', '쿵. 쿵. 쿵.'],
+      down: ['…조금만… 잘게…'],
+      revive: ['…다시, 싹 텄어.'],
+      win: ['…다 같이 해서, 좋아아.'],
+    },
+  },
+
+  byeori: {
+    name: '별이', element: 'light', title: '첨탑의 별지기', color: '#ffe7a8', unlock: '6-5',
+    hp: 190, damage: 30, interval: 1.8, range: 3.6, melee: false, block: 0, speed: 1.4, armor: 0.05,
+    projSpeed: 7, targets: 'both', splash: 0.7,
+    skill: {
+      id: 'meteor', name: '유성 낙하', cooldown: 24, target: 'point', delay: 1.2, radius: 1.6, damage: 220, stun: 0.5,
+      desc: '고른 곳에 1.2초 뒤 유성이 떨어집니다. 반경 1.6칸에 큰 피해를 주고 잠깐 기절시킵니다(보스 제외).',
+    },
+    passive: { id: 'constellation', name: '별자리', every: 5, split: 3, desc: '다섯 번째 공격마다 별빛이 셋으로 갈라져 서로 다른 적 셋을 맞힙니다.' },
+    bio: '별울림 첨탑에서 별의 길을 기록해 온 수줍은 별지기. 별 이야기만 나오면 말이 많아진다.',
+    lines: {
+      select: ['별이에요… 오늘 별자리가 좋은 것 같아요.', '계산은 끝났어요. 아마도요.', '저, 저도 도울게요!'],
+      move: ['네, 그쪽으로요.', '관측 위치로 갈게요.', '조금만 기다려 주세요.'],
+      skill: ['별이 떨어져요, 피하세요!', '궤도 계산… 완료!'],
+      down: ['별이… 흐려져요…'],
+      revive: ['다시 반짝일게요.'],
+      win: ['오늘 밤 별은… 꺼지지 않을 것 같아요.'],
+    },
+  },
+
+  mujin: {
+    name: '무진', element: 'dark', title: '돌아온 종지기', color: '#b08ad8', unlock: '6-6',
+    hp: 260, damage: 12, interval: 1.0, range: 2.6, melee: false, block: 1, speed: 1.4, armor: 0.1,
+    projSpeed: 9, targets: 'both', splash: 0.5,
+    skill: {
+      id: 'echo_bell', name: '되울림 종', cooldown: 24, target: 'point', radius: 2.0, stop: 1.5, bossSlow: 0.5, towerSpeed: 0.3, towerDur: 6,
+      desc: '고른 곳에서 작은 종을 울립니다. 반경 2칸의 적은 1.5초 동안 멈추고(보스는 크게 느려짐), 그 안의 탑은 6초 동안 공격 속도 +30%.',
+    },
+    passive: { id: 'quiet_bell', name: '고요한 종', radius: 2.0, vulnPct: 0.1, desc: '무진 주변 2칸 안의 적은 모든 피해를 10% 더 받습니다.' },
+    bio: '대종을 지키지 못한 슬픔에 침묵의 편에 섰다가 돌아온 옛 종지기. 이제는 조용히 하늘의 별종을 지킨다.',
+    lines: {
+      select: ['무진이네. …이번에는 지키겠네.', '종소리는 다시 들리지. 반드시.', '야로, 고맙네.'],
+      move: ['가지.', '그쪽이로군.', '조용히 가겠네.'],
+      skill: ['울려라, 작은 종이여.', '멈추게. 잠시만.'],
+      down: ['…또 놓치는 것인가…'],
+      revive: ['아직이네. 아직 울릴 수 있어.'],
+      win: ['좋은 울림이었네. 모두의 것이지.'],
+    },
+  },
 };
 
-RG.data.heroOrder = ['kara', 'sera', 'sio', 'zena', 'bawi', 'yaro'];
+RG.data.heroOrder = ['kara', 'sera', 'sio', 'zena', 'bawi', 'yaro', 'haru', 'dohan', 'narae', 'tori', 'byeori', 'mujin'];
