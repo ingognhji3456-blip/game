@@ -32,23 +32,28 @@ RG.fx = (() => {
 
   // 화면에 적이 아주 많을 때(렌더러가 알려 줌) 조각·글자 수를 줄여 느린 기기에서도 매끄럽게
   let lite = false;
-  function setLite(v) { lite = !!v; }
+  let lite2 = false; // 느린 기기의 가벼운 단계: 더 적게
+  function setLite(v) { lite = !!v; lite2 = v === 2; }
   let gameSpeed = 1; // 판 배속 (판 시간에 맞춰야 하는 효과 — 고드름 낙하)
   function setSpeed(v) { gameSpeed = v > 0 ? v : 1; }
   function burst(x, y, color, n, speed = 2.2, life = 0.5, size = 0.06, gravity = 0) {
-    const cap = lite ? 160 : MAX_PARTS; // 적이 아주 많으면 조각 수를 줄임(그래도 화면은 충분히 붐빔)
+    const cap = lite2 ? 70 : lite ? 160 : MAX_PARTS; // 적이 아주 많으면 조각 수를 줄임(그래도 화면은 충분히 붐빔)
     for (let i = 0; i < n && parts.length < cap; i++) {
       const a = rnd() * Math.PI * 2;
       const s = speed * (0.3 + rnd() * 0.7);
       parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - speed * 0.3, life, max: life, size: size * (0.6 + rnd() * 0.8), color, g: gravity });
     }
   }
-  function ring(x, y, radius, color, life = 0.45, width = 0.08) { rings.push({ x, y, r: radius, color, life, max: life, w: width }); }
+  // 적이 아주 많으면(가벼운 모드) 고리·번개는 한꺼번에 몇 개까지만 — 고리마다 선 긋기 호출이 따로 들어 휴대폰에서 비쌌음
+  const LITE_RINGS = 18;
+  const LITE_BOLTS = 10;
+  function ring(x, y, radius, color, life = 0.45, width = 0.08) { if (lite && rings.length >= (lite2 ? 8 : LITE_RINGS)) return; rings.push({ x, y, r: radius, color, life, max: life, w: width }); }
   function text(x, y, str, color, big) {
     if (texts.length >= MAX_TEXTS) texts.shift();
     texts.push({ x: x + (rnd() - 0.5) * 0.2, y, str, color, life: big ? 1.1 : 0.8, max: big ? 1.1 : 0.8, big: !!big });
   }
   function bolt(points, color, life = 0.16, width = 0.06, jag = 0.16) {
+    if (lite && bolts.length >= (lite2 ? 5 : LITE_BOLTS)) return;
     // 지그재그 미리 계산
     const pts = [];
     for (let i = 0; i < points.length - 1; i++) {
@@ -66,7 +71,7 @@ RG.fx = (() => {
     }
     bolts.push({ pts, color, life, max: life, w: width });
   }
-  function line(ax, ay, bx, by, color, life = 0.14, width = 0.07) { bolts.push({ pts: [[ax, ay], [bx, by]], color, life, max: life, w: width, straight: true }); }
+  function line(ax, ay, bx, by, color, life = 0.14, width = 0.07) { if (lite && bolts.length >= LITE_BOLTS) return; bolts.push({ pts: [[ax, ay], [bx, by]], color, life, max: life, w: width, straight: true }); }
 
   /** 시뮬레이션 이벤트 처리 */
   function onEvents(events, game) {
@@ -104,7 +109,7 @@ RG.fx = (() => {
           const spread = (full ? 360 : e.cone) * (Math.PI / 180);
           const n = lite ? (full ? 8 : 6) : (full ? 18 : 12);
           const cols = ['#fff1a8', '#ffc85a', '#ff8a3d', '#ff5a2a'];
-          for (let i = 0; i < n && parts.length < (lite ? 160 : MAX_PARTS); i++) {
+          for (let i = 0; i < n && parts.length < (lite2 ? 70 : lite ? 160 : MAX_PARTS); i++) {
             const a = e.angle + (rnd() - 0.5) * spread;
             const sp = e.range * (2.2 + rnd() * 1.4);
             const life = 0.32 + rnd() * 0.12;
@@ -375,7 +380,7 @@ RG.fx = (() => {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const from = lite ? Math.max(0, texts.length - 24) : 0; // 적이 아주 많으면 최근 글자만
+    const from = lite ? Math.max(0, texts.length - (lite2 ? 6 : 12)) : 0; // 적이 아주 많으면 최근 글자만
     for (let i = from; i < texts.length; i++) {
       const t = texts[i];
       const a = Math.min(1, t.life / t.max * 2);

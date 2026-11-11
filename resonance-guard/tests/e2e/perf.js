@@ -13,6 +13,8 @@ const { chromium, devices } = require('playwright');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const file = process.argv.includes('--dist') ? 'dist/resonance-guard.html' : 'index.html';
+// --rate N: 휴대폰 시험의 CPU 느리게 배수(기본 4). 더 느린 기기를 흉내 내 여유를 확인할 때
+const RATE = process.argv.includes('--rate') ? +process.argv[process.argv.indexOf('--rate') + 1] : 4;
 const URL = `file://${path.join(ROOT, file)}`;
 
 async function loadFps(page) {
@@ -36,9 +38,12 @@ async function loadFps(page) {
     for (let i = 0; i < 300; i++) { const e = g.api.spawnEnemy(pool[i % pool.length], i % 3); e.hp = e.maxHp = 1e9; g.api.advance(e, (i * 7) % 20); }
     ui.setSpeed(3);
     await new Promise((r) => setTimeout(r, 1000));
-    let frames = 0; const t0 = performance.now();
+    let frames = 0; const t0 = performance.now(); const tick0 = g.state.tick;
     await new Promise((resolve) => { const f = () => { frames++; if (performance.now() - t0 < 5000) requestAnimationFrame(f); else resolve(); }; requestAnimationFrame(f); });
-    return { fps: Math.round(frames / ((performance.now() - t0) / 1000)), enemies: g.state.enemies.filter((e) => !e.dead && !e.leaked).length, towers: g.state.towers.length, running: !g.state.result };
+    const secs = (performance.now() - t0) / 1000;
+    // 실제 판 속도: 아주 느리면 한 프레임의 시뮬 시간 상한 때문에 3배속보다 느리게 흐름(game.js SIM_BUDGET_MS) — 숨기지 않고 함께 적음
+    const speed = (g.state.tick - tick0) / secs / 30;
+    return { fps: Math.round(frames / secs), speed: Math.round(speed * 10) / 10, enemies: g.state.enemies.filter((e) => !e.dead && !e.leaked).length, towers: g.state.towers.length, running: !g.state.result };
   });
 }
 
@@ -62,9 +67,9 @@ async function loadFps(page) {
   {
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     const r = await loadFps(page);
-    const ok = r.fps >= 55 && r.running && r.enemies >= 200;
+    const ok = r.fps >= 55 && r.speed >= 2.8 && r.running && r.enemies >= 200;
     if (!ok) fail++;
-    out.push(`${ok ? '✓' : '✗'} 데스크톱 3배속 부하(탑 ${r.towers}, 적 ${r.enemies}): ${r.fps}fps (기준 55 이상)`);
+    out.push(`${ok ? '✓' : '✗'} 데스크톱 3배속 부하(탑 ${r.towers}, 적 ${r.enemies}): ${r.fps}fps, 실제 판 속도 ${r.speed}배 (기준 55 이상)`);
     await page.close();
   }
   // 휴대폰 가로 + CPU 4배 느리게
@@ -72,11 +77,12 @@ async function loadFps(page) {
     const ctx = await browser.newContext({ ...devices['Pixel 7 landscape'] });
     const page = await ctx.newPage();
     const cdp = await ctx.newCDPSession(page);
-    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: RATE });
     const r = await loadFps(page);
-    const ok = r.fps >= 30 && r.running && r.enemies >= 200;
+    // 판 속도가 너무 느려져서 fps를 번 것이면 실패 (2배속 이상은 유지해야 함)
+    const ok = r.fps >= 30 && r.speed >= 2 && r.running && r.enemies >= 200;
     if (!ok) fail++;
-    out.push(`${ok ? '✓' : '✗'} 휴대폰 가로·CPU 4배 느리게 3배속 부하(탑 ${r.towers}, 적 ${r.enemies}): ${r.fps}fps (기준 30 이상)`);
+    out.push(`${ok ? '✓' : '✗'} 휴대폰 가로·CPU ${RATE}배 느리게 3배속 부하(탑 ${r.towers}, 적 ${r.enemies}): ${r.fps}fps, 실제 판 속도 ${r.speed}배 (기준 30fps 이상·2배 이상)`);
     await ctx.close();
   }
   await browser.close();

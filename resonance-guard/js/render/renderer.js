@@ -56,7 +56,7 @@ RG.render = (() => {
     game = g;
     corpses = [];
     projStart.clear();
-    dprCap = 2; perfT = 0; perfN = 0; perfSlow = 0; perfLast = 0; perfWin = 0; perfRaised = false; perfNoRaise = false;
+    dprCap = 2; perfT = 0; perfN = 0; perfSlow = 0; perfLast = 0; perfWin = 0; perfRaised = false; perfNoRaise = false; slowFx = false;
     shadeFor = '';
     ambientFor = '';
     bg = null;
@@ -154,8 +154,22 @@ RG.render = (() => {
       c2.drawImage(s.canvas, 0, 0, pw, ph);
       cv = cropOpaque(cv);
       m.set(k, cv);
+      toBitmap(m, k, cv);
     }
     return cv;
+  }
+  /*
+   * 줄여 둔 그림을 ImageBitmap(바뀌지 않는 그림)으로 바꿔 둠: 캔버스를 찍으면 찍을 때마다 그 캔버스의
+   * 스냅숏을 확인하는 비용이 드는데(적 300마리면 프레임마다 수백 번), ImageBitmap은 그 과정이 없음.
+   * 바꾸는 동안에는 캔버스를 그대로 쓰고, 끝나면 같은 자리를 바꿔 끼움(그림은 같음).
+   */
+  function toBitmap(m, k, cv) {
+    if (typeof createImageBitmap !== 'function') return;
+    createImageBitmap(cv).then((bm) => {
+      if (m.get(k) !== cv) { bm.close(); return; } // 그 사이 캐시가 비워졌으면 버림
+      bm._ox = cv._ox; bm._oy = cv._oy; bm._fw = cv._fw; bm._fh = cv._fh;
+      m.set(k, bm);
+    }, () => {});
   }
   /*
    * 투명한 여백 잘라내기: 그림 캔버스는 동작(점프·기울기)을 위해 둘레에 여백이 넉넉한데,
@@ -220,6 +234,7 @@ RG.render = (() => {
       c2.drawImage(s.canvas, 0, 0, pw, ph);
       cv = cropOpaque(cv);
       m.set(k, cv);
+      toBitmap(m, k, cv);
     }
     return cv;
   }
@@ -523,9 +538,15 @@ RG.render = (() => {
 
   function drawPortals() {
     const m = game.map;
+    const lite = lowFx();
     for (const s of m.spawns) {
       const cx = X(s.x);
       const cy = Y(s.y);
+      if (lite) { // 가벼운 단계: 그라데이션·도는 고리 없이 어두운 원 하나
+        ctx.fillStyle = 'rgba(30,24,40,0.6)';
+        ctx.beginPath(); ctx.arc(cx, cy, T * 0.4, 0, Math.PI * 2); ctx.fill();
+        continue;
+      }
       ctx.save();
       const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, T * 0.55);
       g.addColorStop(0, 'rgba(30,24,40,0.9)');
@@ -588,13 +609,22 @@ RG.render = (() => {
   }
 
   /* ---------------- 장판·덫 ---------------- */
+  const ZONE_FLAT = { fire: 'rgba(255,120,60,0.4)', void: 'rgba(110,31,102,0.5)', thorn: 'rgba(74,122,38,0.4)' };
   function drawZones() {
     const st = game.state;
+    const lite = lowFx();
     for (const z of st.zones) {
       const cx = X(z.x);
       const cy = Y(z.y);
       const R = z.radius * T;
       const fade = Math.min(1, (z.until - st.time) / 0.4);
+      if (lite && ZONE_FLAT[z.kind]) { // 가벼운 단계: 무늬 없이 색 타원 하나
+        ctx.globalAlpha = fade;
+        ctx.fillStyle = ZONE_FLAT[z.kind];
+        ctx.beginPath(); ctx.ellipse(cx, cy, R, R * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+        continue;
+      }
       ctx.save();
       ctx.globalAlpha = 0.85 * fade;
       if (z.kind === 'fire') {
@@ -624,13 +654,16 @@ RG.render = (() => {
         ctx.fillStyle = '#9fd36a';
         ctx.strokeStyle = '#2b4a17';
         ctx.lineWidth = 1;
+        // 가시 12개를 한 경로로 — 칠하기·선 긋기 호출을 24번 → 2번으로
+        ctx.beginPath();
         for (let i = 0; i < 12; i++) {
           const a = (i / 12) * Math.PI * 2;
           const rr = R * (0.45 + 0.4 * ((i * 37) % 10) / 10);
           const sx = cx + Math.cos(a) * rr;
           const sy = cy + Math.sin(a) * rr * 0.8;
-          ctx.beginPath(); ctx.moveTo(sx - T * 0.05, sy); ctx.lineTo(sx, sy - T * 0.16); ctx.lineTo(sx + T * 0.05, sy); ctx.closePath(); ctx.fill(); ctx.stroke();
+          ctx.moveTo(sx - T * 0.05, sy); ctx.lineTo(sx, sy - T * 0.16); ctx.lineTo(sx + T * 0.05, sy); ctx.closePath();
         }
+        ctx.fill(); ctx.stroke();
       }
       ctx.restore();
     }
@@ -726,7 +759,7 @@ RG.render = (() => {
   function drawLinks() {
     if (!shadeBaked) bakeLinks(ctx);
     const pairs = linkPairs();
-    if (!pairs.length) return;
+    if (!pairs.length || lowFx()) return; // 가벼운 단계: 선 위를 도는 빛은 생략(선 자체는 바탕에 구워져 있음)
     const r = Math.max(1.5, T * 0.05);
     ctx.save();
     ctx.fillStyle = '#ffffff';
@@ -913,15 +946,18 @@ RG.render = (() => {
     const key = poseSprite(RG.art.sprites.towerKey(t.type, t.level, t.branch, pose), RG.art.sprites.towerKey(t.type, t.level, t.branch, 'idle'),
       () => RG.art.tower(t.type, t.level, t.branch, pose), RG.art.sprites.TW, RG.art.sprites.TH);
     if (!shadeBaked) castShadow(key, cx, baseY, w, h, 0.5, 112 / 130, false, t.building ? 0.2 : 0.42);
-    ctx.save();
+    // 쏠 때 눌림은 적이 아주 많으면 생략 — 늘이기 변환이 끼면 줄여 둔 그림을 못 써서 느린 길로 그려짐(자세 그림이 동작을 보여 줌)
+    const squish = sy !== 1 && !manyEnemies;
+    const saved = t.building || squish;
+    if (saved) ctx.save();
     if (t.building) ctx.globalAlpha = 0.55;
-    if (sy !== 1) { ctx.translate(cx, baseY); ctx.scale(1 + (1 - sy) * 0.5, sy); ctx.translate(-cx, -baseY); }
+    if (squish) { ctx.translate(cx, baseY); ctx.scale(1 + (1 - sy) * 0.5, sy); ctx.translate(-cx, -baseY); }
     const ok = sprite(key, cx, baseY, w, h, 0.5, 112 / 130, false);
     if (!ok) {
       ctx.fillStyle = elColor(RG.data.towers[t.type].element);
       ctx.fillRect(cx - T * 0.3, baseY - T * 0.7, T * 0.6, T * 0.7);
     }
-    ctx.restore();
+    if (saved) ctx.restore();
     if (t.disabled) {
       ctx.save();
       ctx.globalAlpha = 0.5;
@@ -948,6 +984,32 @@ RG.render = (() => {
       ctx.beginPath(); ctx.ellipse(cx, baseY, T * 0.46, T * 0.18, 0, 0, Math.PI * 2); ctx.stroke();
       ctx.restore();
     }
+  }
+
+  const isFrozenNow = (e) => game.state.time < e.ccUntil && e.ccKind === 'freeze';
+  /** 공포 표시 '!!' — 칸 크기·화면 배율마다 한 번 구워 둠 (적이 많을 때 글자 그리기 수백 번을 피함) */
+  let fearCv = null;
+  function fearMark() {
+    const fs = Math.max(10, Math.round(T * 0.3));
+    const k = `${fs}|${dpr}`;
+    if (fearCv && fearCv._k === k) return fearCv;
+    const w = Math.ceil(fs * 1.3);
+    const h = Math.ceil(fs * 1.3);
+    const cv = document.createElement('canvas');
+    cv.width = Math.ceil(w * dpr); cv.height = Math.ceil(h * dpr);
+    const c2 = cv.getContext('2d');
+    c2.scale(dpr, dpr);
+    c2.font = `900 ${fs}px system-ui, sans-serif`;
+    c2.textAlign = 'center';
+    c2.textBaseline = 'alphabetic';
+    c2.lineWidth = Math.max(2, T * 0.06);
+    c2.lineJoin = 'round';
+    c2.strokeStyle = '#2a0f30';
+    c2.fillStyle = '#e9a6ff';
+    c2.strokeText('!!', w / 2, h * 0.72); c2.fillText('!!', w / 2, h * 0.72);
+    cv._k = k; cv._w = w; cv._h = h;
+    fearCv = cv;
+    return cv;
   }
 
   const iconCache = new Map();
@@ -1132,15 +1194,9 @@ RG.render = (() => {
     }
     if (st.time < e.ccUntil && e.ccKind === 'fear') {
       // 공포: 머리 위 보랏빛 '!' 두 개가 떨림
-      ctx.save();
-      ctx.font = `900 ${Math.max(10, Math.round(T * 0.3))}px system-ui, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.lineWidth = Math.max(2, T * 0.06);
-      ctx.strokeStyle = '#2a0f30';
-      ctx.fillStyle = '#e9a6ff';
       const jx = Math.sin(time * 30 + e.id) * T * 0.03;
-      ctx.strokeText('!!', cx + jx, top - 2); ctx.fillText('!!', cx + jx, top - 2);
-      ctx.restore();
+      const fm = fearMark();
+      ctx.drawImage(fm, Math.round((cx + jx - fm._w / 2) * dpr) / dpr, Math.round((top - 2 - fm._h * 0.72) * dpr) / dpr, fm._w, fm._h);
     }
     if (st.time < e.ccUntil && e.ccKind === 'root') {
       ctx.save();
@@ -1158,7 +1214,7 @@ RG.render = (() => {
       ctx.beginPath(); ctx.ellipse(cx, cy - size * 0.42, size * 0.5, size * 0.52, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       ctx.restore();
     }
-    if (st.time < e.st.slowUntil && !frozen) {
+    if (st.time < e.st.slowUntil && !frozen && !manyEnemies) { // 적이 많으면 그늘 단계에서 한 번에 그림
       ctx.save();
       ctx.strokeStyle = 'rgba(140,220,255,0.8)';
       ctx.lineWidth = Math.max(1, T * 0.03);
@@ -1511,6 +1567,13 @@ RG.render = (() => {
 
   /* ---------------- 한 프레임 ---------------- */
   let perfWin = 0;
+  /*
+   * 가벼운 효과 단계: 가장 낮은 화질(배율 1)에서도 2초 동안 프레임의 60% 넘게 늦으면 이 판에서 켬.
+   * 적이 많을 때(manyEnemies)만 적용 — 꾸밈 효과(공명 선 위를 도는 빛, 적 발밑 그늘·감속 고리, 장판 무늬,
+   * 출구 소용돌이, 터지는 조각 수)를 줄이고 게임 정보(체력 막대·빛줄기·상태 표시)는 그대로 둠.
+   */
+  let slowFx = false;
+  const lowFx = () => (window.__lowFxForce != null ? window.__lowFxForce : slowFx) && manyEnemies;
   let perfRaised = false; // 이 판에서 화질을 다시 높인 적이 있는가
   let perfNoRaise = false; // 높였다가 다시 느려짐 → 이 판에서는 더 높이지 않음
   function watchSpeed() {
@@ -1534,6 +1597,9 @@ RG.render = (() => {
       perfN = 0; perfSlow = 0; perfWin = 0;
     } else if (dprCap < 2 && !perfNoRaise && perfWin >= 20) {
       if (perfSlow / perfN < 0.03) { dprCap = Math.min(2, dprCap + 0.5); perfRaised = true; resize(); }
+      perfN = 0; perfSlow = 0; perfWin = 0;
+    } else if (perfWin >= 2 && perfN >= 12 && perfSlow / perfN > 0.6 && (dprCap <= 1 || (window.devicePixelRatio || 1) <= 1) && manyEnemies && !slowFx) {
+      slowFx = true; // 화질을 더 낮출 수 없는데도 늦음 → 꾸밈 효과를 줄임
       perfN = 0; perfSlow = 0; perfWin = 0;
     } else if ((dprCap >= 2 || perfNoRaise) && perfWin >= 2) {
       perfN = 0; perfSlow = 0; perfWin = 0;
@@ -1621,8 +1687,10 @@ RG.render = (() => {
     let alive = 0;
     for (const e of st.enemies) if (!e.dead) alive++;
     manyEnemies = alive > 60;
-    RG.fx.setLite(alive > 120);
-    if (manyEnemies) {
+    RG.fx.setLite(alive > 120 ? (lowFx() ? 2 : 1) : 0);
+    if (manyEnemies && lowFx()) {
+      // 가벼운 단계: 그늘을 그림에 구운 적 말고는 발밑 그늘·감속 고리를 생략
+    } else if (manyEnemies) {
       // 적이 아주 많을 때: 발밑 그늘을 한 경로로 모아 한 번에 칠함 (땅·비행 두 번)
       // (그늘 그림 300장을 찍는 것보다 이쪽이 조금 빠름 — 그리기 호출 하나하나의 고정 비용이 큼)
       for (const fly of [false, true]) {
@@ -1638,6 +1706,24 @@ RG.render = (() => {
         }
         ctx.fillStyle = fly ? 'rgba(12,7,20,0.22)' : 'rgba(12,7,20,0.36)';
         ctx.fill();
+      }
+      // 감속 고리도 한 경로로 (발밑에 깔림)
+      ctx.beginPath();
+      let slowN = 0;
+      for (const e of st.enemies) {
+        if (e.dead || e.burrowed || !(st.time < e.st.slowUntil) || isFrozenNow(e)) continue;
+        const p = enemyScreen(e, alpha);
+        const size = e.size * T;
+        const ex = X(p.x);
+        const ey = Y(p.y) + 1;
+        ctx.moveTo(ex + size * 0.36, ey);
+        ctx.ellipse(ex, ey, size * 0.36, size * 0.12, 0, 0, Math.PI * 2);
+        slowN++;
+      }
+      if (slowN) {
+        ctx.strokeStyle = 'rgba(140,220,255,0.8)';
+        ctx.lineWidth = Math.max(1, T * 0.03);
+        ctx.stroke();
       }
     } else {
       for (const e of st.enemies) {
@@ -1701,5 +1787,5 @@ RG.render = (() => {
     ctx.restore();
   }
 
-  return { attach, detach, resize, frame, onEvents, muzzleOf, setShadows: (on) => { shadowsOn = !!on; }, setQuality: (cap) => { dprCap = Math.max(1, Math.min(2, cap)); resize(); }, get quality() { return dprCap; }, screenToWorld, worldToScreen, overlay, tileSize, get T() { return T; } };
+  return { attach, detach, resize, frame, onEvents, muzzleOf, setShadows: (on) => { shadowsOn = !!on; }, setQuality: (cap) => { dprCap = Math.max(0.25, Math.min(2, cap)); resize(); }, get quality() { return dprCap; }, screenToWorld, worldToScreen, overlay, tileSize, get T() { return T; } };
 })();

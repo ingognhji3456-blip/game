@@ -50,6 +50,7 @@
     mode = 'idle';
     sel = null; pick = null; drag = null; skillAim = null; bossTrackOn = false; keyCursor = null;
     speed = UI.getSettings().speed || 1;
+    simBudget = SIM_BUDGET_MAX;
     if (data.resume) {
       opts = data.resume.opts;
       game = RG.sim.replay(opts, data.resume.log, data.resume.tick);
@@ -163,22 +164,32 @@
   /* =====================================================
    * 루프
    * ===================================================== */
+  // 한 프레임의 시뮬 시간 상한(ms): 프레임이 늦으면(34ms 초과) 줄이고, 여유 있으면 천천히 늘림 — 보통 기기에서는 최대치에 머물러 닿지 않음
+  const SIM_BUDGET_MAX = 12;
+  const SIM_BUDGET_MIN = 3;
+  let simBudget = SIM_BUDGET_MAX;
   function loop(ts) {
     raf = requestAnimationFrame(loop);
     if (!game) return;
     const dt = Math.min(0.1, Math.max(0, (ts - last) / 1000));
     last = ts;
+    if (dt > 0.034) simBudget = Math.max(SIM_BUDGET_MIN, simBudget * 0.85); else if (dt < 0.03) simBudget = Math.min(SIM_BUDGET_MAX, simBudget + 0.3);
     const st = game.state;
     const events = [];
     const running = !paused && !UI.modalOpen() && !st.result && !root.classList.contains('loading');
     if (running) {
       acc += dt * speed;
       let n = 0;
+      const t0 = performance.now();
       while (acc >= DT() && n < 16) {
         game.step();
         if (st.events.length) events.push(...st.events);
         acc -= DT();
         n += 1;
+        // 한 프레임의 시뮬 시간 상한: 아주 느린 기기에서 높은 배속 + 적이 아주 많으면, 프레임이 느려질수록 한 프레임에
+        // 돌릴 틱이 늘어 더 느려지는 악순환이 생김. 상한을 넘으면 남은 시간은 버림 — 판이 잠깐 느리게 흐르는 대신 화면은 부드러움.
+        // (보통 기기는 한 틱이 1ms 안팎이라 닿지 않음. 결과는 틱 단위라 재현에는 영향 없음)
+        if (acc >= DT() && performance.now() - t0 > simBudget) { acc = 0; break; }
       }
       if (n >= 16) acc = 0;
     }
@@ -303,27 +314,33 @@
   /* =====================================================
    * 정보 띠 갱신
    * ===================================================== */
+  /* HUD 쓰기: 값이 바뀔 때만 DOM을 건드림 — 0.1초마다 같은 글자를 다시 써도 레이아웃을 다시 계산했음(휴대폰에서 프레임마다 1~3ms) */
+  const setT = (n, v) => { if (n && n.textContent !== v) n.textContent = v; };
+  const setH = (n, v) => { if (n && n._html !== v) { n._html = v; n.innerHTML = v; } };
+  const setC = (n, c, on) => { if (n && n.classList.contains(c) !== !!on) n.classList.toggle(c, !!on); };
+  const setW = (n, prop, pct) => { const v = `${Math.round(pct * 10) / 10}%`; if (n && n['_' + prop] !== v) { n['_' + prop] = v; n.style[prop] = v; } };
+
   function updateHud(force) {
     if (!game) return;
     const st = game.state;
-    R.lives.children[1].textContent = String(st.lives);
-    R.lives.children[2].textContent = `/${st.maxLives}`;
-    R.lives.classList.toggle('danger', st.lives <= 3);
-    R.gold.children[1].textContent = String(Math.floor(st.gold));
+    setT(R.lives.children[1], String(st.lives));
+    setT(R.lives.children[2], `/${st.maxLives}`);
+    setC(R.lives, 'danger', st.lives <= 3);
+    setT(R.gold.children[1], String(Math.floor(st.gold)));
     const w = st.wave;
-    R.wave.children[1].textContent = isFinite(w.total) ? `${w.index}/${w.total}` : `${w.index}`;
+    setT(R.wave.children[1], isFinite(w.total) ? `${w.index}/${w.total}` : `${w.index}`);
     // 호출 버튼
     const canCall = !st.result && w.index < w.total && (w.index === 0 || w.countdown !== null);
-    R.call.disabled = !canCall;
+    if (R.call.disabled !== !canCall) R.call.disabled = !canCall;
     const sub = R.call.querySelector('.call-sub');
     const label = R.call.querySelector('.call-label');
-    if (w.index === 0) { label.textContent = '전투 시작'; sub.textContent = 'Space'; } else if (w.countdown !== null) {
+    if (w.index === 0) { setT(label, '전투 시작'); setT(sub, 'Space'); } else if (w.countdown !== null) {
       const cd = game.challenge && game.challenge.type === 'countdown' ? game.challenge.value : D().rules.countdown;
       const bonus = Math.ceil(Math.max(0, w.countdown) * ((8 + 2 * w.index) / cd) * (1 + ((game.meta && game.meta.earlyBonusPct) || 0)));
-      label.textContent = '다음 웨이브';
-      sub.textContent = `${Math.ceil(w.countdown)}초 · +${bonus}`;
-    } else if (w.index >= w.total) { label.textContent = '마지막 웨이브'; sub.textContent = ''; } else { label.textContent = '적이 오는 중'; sub.textContent = ''; }
-    R.call.classList.toggle('pulse', canCall && (w.index === 0 || (w.countdown !== null && w.countdown < 6)));
+      setT(label, '다음 웨이브');
+      setT(sub, `${Math.ceil(w.countdown)}초 · +${bonus}`);
+    } else if (w.index >= w.total) { setT(label, '마지막 웨이브'); setT(sub, ''); } else { setT(label, '적이 오는 중'); setT(sub, ''); }
+    setC(R.call, 'pulse', canCall && (w.index === 0 || (w.countdown !== null && w.countdown < 6)));
     // 다음 웨이브 미리보기
     if (force || R.nextFor !== w.index) {
       R.nextFor = w.index;
@@ -343,42 +360,42 @@
     // 과제
     if (st.task && game.opts.mode === 'normal') {
       const tk = st.task;
-      R.task.classList.toggle('done', tk.done);
-      R.task.innerHTML = `<span class="task-head">공명 과제${tk.done ? ' ✓' : ''}</span><span>${esc(tk.def.text)}</span>${!tk.done && tk.need ? `<span class="dim">최고 ${Math.floor(tk.best)}/${tk.need}</span>` : ''}`;
+      setC(R.task, 'done', tk.done);
+      setH(R.task, `<span class="task-head">공명 과제${tk.done ? ' ✓' : ''}</span><span>${esc(tk.def.text)}</span>${!tk.done && tk.need ? `<span class="dim">최고 ${Math.floor(tk.best)}/${tk.need}</span>` : ''}`);
     } else if (game.challenge) {
-      R.task.innerHTML = `<span class="task-head">도전</span><span>${esc(game.challenge.text)}</span>`;
-    } else R.task.innerHTML = '';
+      setH(R.task, `<span class="task-head">도전</span><span>${esc(game.challenge.text)}</span>`);
+    } else setH(R.task, '');
     // 배속
-    R.speed.querySelector('.speed-label').textContent = `${speed}×`;
-    R.pause.classList.toggle('on', paused);
+    setT(R.speed.querySelector('.speed-label'), `${speed}×`);
+    setC(R.pause, 'on', paused);
     // 영웅
     const h = st.hero;
     if (h) {
-      R.heroLv.textContent = `Lv${h.level}`;
-      R.heroHp.firstChild.style.width = `${h.dead ? 0 : (h.hp / h.maxHp) * 100}%`;
+      setT(R.heroLv, `Lv${h.level}`);
+      setW(R.heroHp.firstChild, 'width', h.dead ? 0 : (h.hp / h.maxHp) * 100);
       const xpT = D().heroXp;
       const cur = xpT[h.level - 1] || 0;
       const nxt = xpT[h.level] || cur;
-      R.heroXp.firstChild.style.width = `${h.level >= xpT.length ? 100 : ((h.xp - cur) / Math.max(1, nxt - cur)) * 100}%`;
-      R.heroCard.classList.toggle('down', !!h.dead);
-      R.heroCard.classList.toggle('selected', mode === 'hero');
+      setW(R.heroXp.firstChild, 'width', h.level >= xpT.length ? 100 : ((h.xp - cur) / Math.max(1, nxt - cur)) * 100);
+      setC(R.heroCard, 'down', !!h.dead);
+      setC(R.heroCard, 'selected', mode === 'hero');
       const mood = h.dead || h.hp / h.maxHp < 0.35 ? 'worried' : 'normal';
       if (mood !== R.heroMood) { R.heroMood = mood; R.heroPortrait.src = RG.art.sprites.dataUrl(RG.art.portrait(h.heroId, mood)); }
       const hd = D().heroes[h.heroId];
       const cdMax = hd.skill.cooldown;
-      R.skill.disabled = !!h.dead;
-      R.skill.classList.toggle('ready', h.skillCd <= 0 && !h.dead);
-      R.skill.classList.toggle('aiming', mode === 'skill');
-      R.skillCd.style.height = `${Math.min(100, (h.skillCd / cdMax) * 100)}%`;
-      R.skillCd.textContent = h.dead ? `${Math.ceil(Math.max(0, h.downUntil - st.time))}` : (h.skillCd > 0 ? `${Math.ceil(h.skillCd)}` : '');
+      if (R.skill.disabled !== !!h.dead) R.skill.disabled = !!h.dead;
+      setC(R.skill, 'ready', h.skillCd <= 0 && !h.dead);
+      setC(R.skill, 'aiming', mode === 'skill');
+      setW(R.skillCd, 'height', Math.min(100, (h.skillCd / cdMax) * 100));
+      setT(R.skillCd, h.dead ? `${Math.ceil(Math.max(0, h.downUntil - st.time))}` : (h.skillCd > 0 ? `${Math.ceil(h.skillCd)}` : ''));
     }
     // 보스 막대
     const boss = st.enemies.find((e) => !e.dead && D().enemies[e.type].boss);
     if (boss) {
-      R.boss.classList.remove('hidden');
-      R.boss.querySelector('.boss-name').textContent = D().enemies[boss.type].name;
-      R.boss.querySelector('.boss-hp i').style.width = `${(boss.hp / boss.maxHp) * 100}%`;
-    } else R.boss.classList.add('hidden');
+      setC(R.boss, 'hidden', false);
+      setT(R.boss.querySelector('.boss-name'), D().enemies[boss.type].name);
+      setW(R.boss.querySelector('.boss-hp i'), 'width', (boss.hp / boss.maxHp) * 100);
+    } else setC(R.boss, 'hidden', true);
     // 열린 정보 창 갱신
     if (sel && sel.kind === 'tower') refreshTowerPanel();
     if (sel && sel.kind === 'enemy') refreshEnemyPanel();
