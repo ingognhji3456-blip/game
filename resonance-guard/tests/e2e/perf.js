@@ -25,7 +25,7 @@ async function loadFps(page) {
     // 측정 중 판이 끝나지 않게 (예전 시험은 적이 새어 2초 만에 패배 → 멈춘 화면을 재는 꼴이었음)
     g.state.lives = g.state.maxLives = 1e9;
     let n = 0;
-    for (let r = 0; r < g.map.rows && n < 40; r++) for (let c = 0; c < g.map.cols && n < 40; c++) if (ui.doCmd({ type: 'build', tower: RG.data.towerOrder[n % 18], c, r }, true).ok) n++;
+    for (let r = 0; r < g.map.rows && n < 40; r++) for (let c = 0; c < g.map.cols && n < 40; c++) if (ui.doCmd({ type: 'build', tower: RG.data.towerOrder[n % RG.data.towerOrder.length], c, r }, true).ok) n++;
     ui.doCmd({ type: 'callWave' }, true);
     const pool = ['mist_rat', 'ash_boar', 'frost_wolf', 'spray_sprite', 'rock_crab', 'echo_shade'];
     // 실제 판에서는 그 맵의 적 그림(모든 동작)을 불러오는 화면에서 미리 준비함(sprites.prepareForGame).

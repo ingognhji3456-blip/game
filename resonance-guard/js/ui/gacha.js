@@ -74,7 +74,7 @@
       const locked = D().towerOrder.filter((t) => !P().towerOpen(t));
       const nextR = locked.length ? Math.min(...locked.map((t) => P().towerRegion(t))) : 0;
       const nextBatch = locked.filter((t) => P().towerRegion(t) === nextR);
-      const epicLocked = D().towerOrder.filter((t) => G().rarityOf(t) === 'epic' && !P().towerOpen(t));
+      const epicLocked = D().towerOrder.filter((t) => G().rarityOf(t) === 'epic' && !P().towerOpen(t)).sort((a, b) => P().towerRegion(a) - P().towerRegion(b)); // 가장 먼저 열리는 것부터
       const finals = D().towerOrder.filter((t) => P().towerFinal(t)).length;
       const empty = pool.length === 0;
       const altar = el('div', { class: 'gc-altar' }, [
@@ -117,7 +117,7 @@
           const card = el('div', { class: `gc-card rar-${r} el-${td.element} ${state}`, tabindex: '0', 'aria-label': `${has || open ? td.name : '잠긴 탑'} ${fin ? '최종 강화 · 뽑기에서 빠짐' : has ? `강화 ${rlabel}` : open ? '뽑기에서 나올 수 있음' : openText(t)}` }, [
             UI.towerImg(t, fin ? 4 : has ? Math.min(3, 1 + Math.floor(rank / 2)) : 1, fin ? 'A' : null, 'gc-img'),
             el('span', { class: 'gc-name', text: has || open ? td.name : '???' }),
-            has ? pips(rank) : open ? el('span', { class: 'gc-q in', text: '뽑기에 있음' }) : el('span', { class: 'gc-q' }, [UI.icon('lock', 'tiny'), ` ${D().regions[P().towerRegion(t) - 2] ? D().regions[P().towerRegion(t) - 2].name : ''}`]),
+            has ? pips(rank) : open ? el('span', { class: 'gc-q in', text: '뽑기에 있음' }) : el('span', { class: 'gc-q' }, [UI.icon('lock', 'tiny'), ` ${D().regions[P().towerRegion(t) - 2] ? `${D().regions[P().towerRegion(t) - 2].name} 클리어` : ''}`]),
             has && rank > 0 ? el('em', { class: `gc-rank ${fin ? 'fin' : ''}`, text: fin ? '★' : `+${rank}` }) : null,
           ]);
           UI.tooltipFor(card, () => (has || open ? `<b>${td.name}</b> <span style="color:${G().RARITIES[r].color}">${G().RARITIES[r].name}</span><br>${td.desc}<br>` : `<b>잠긴 탑</b> <span style="color:${G().RARITIES[r].color}">${G().RARITIES[r].name}</span><br>`)

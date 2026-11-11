@@ -674,19 +674,20 @@ RG.render = (() => {
       for (let b = 0; b < n; b++) {
         const a = a0 + (b * Math.PI * 2) / n;
         const h = S.width / 2;
-        const g = ctx.createRadialGradient(ox0, oy0, 1, X(t.x), Y(t.y), R * T);
-        g.addColorStop(0, S.mark ? 'rgba(255,236,170,0.55)' : 'rgba(255,246,200,0.5)');
-        g.addColorStop(1, 'rgba(255,230,140,0)');
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.moveTo(ox0, oy0);
-        const steps = 6;
-        for (let k = 0; k <= steps; k++) {
-          const aa = a - h + (2 * h * k) / steps;
-          ctx.lineTo(X(t.x + Math.cos(aa) * R), Y(t.y + Math.sin(aa) * R * 0.92));
+        // 그라데이션 대신 단색 부채꼴 두 겹(긴 것은 옅게, 짧은 것은 진하게) — 매 프레임 그라데이션 칠하기보다 가벼움
+        for (let layer = 0; layer < 2; layer++) {
+          const rr = layer ? R * 0.55 : R;
+          const hh = layer ? h * 0.7 : h;
+          ctx.fillStyle = layer ? 'rgba(255,248,214,0.22)' : (S.mark ? 'rgba(255,226,150,0.2)' : 'rgba(255,240,190,0.17)');
+          ctx.beginPath();
+          ctx.moveTo(ox0, oy0);
+          for (let k = 0; k <= 4; k++) {
+            const aa = a - hh + (2 * hh * k) / 4;
+            ctx.lineTo(X(t.x + Math.cos(aa) * rr), Y(t.y + Math.sin(aa) * rr * 0.92));
+          }
+          ctx.closePath();
+          ctx.fill();
         }
-        ctx.closePath();
-        ctx.fill();
       }
     }
     if (any) ctx.restore();
