@@ -2317,4 +2317,11 @@
     const d0 = T[id].draw;
     T[id].draw = (c, v, pose) => d0(fine(c), v, pose);
   });
+  /* 2차 탑 그림 파일(js/art/tower-<id>.js, 2026-11-11)이 같은 부품·같은 마감을 쓰도록 내보냄 */
+  RG.art._tw.A = {
+    rotP, P2, lerp, pl, G, OP, rnd, tpath, joint, limb, man, stoneWall, ringWall, stoneRect, beam, lash, planks, tileCone, litWindow, lantern,
+    footShade, bandI, smoke, muzzleFlash, embers, soundRings, motion, torch, parapet, gather, frostMotes, burstRing, iceBolt, frostCore, h2, snowCap,
+    bellBody, swingBell, icicleRow, snowGable, ringer, ringerRope, ringOut, COPPER, coilWind, arcPath, zapArc, rodTip, insulator, archer,
+    gableHouse, chimney, smith, hammerArt, anvilArt,
+  };
 })();
