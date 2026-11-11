@@ -35,11 +35,13 @@ const ENEMIES = ['mist_rat', 'ash_boar', 'mist_crow', 'straw_husk', 'vine_leech'
   'cinder_lizard', 'sand_burrower', 'magma_brute', 'thermal_vulture', 'dune_raider', 'obsidian_beetle', 'flame_spirit', 'canyon_slinger',
   'rock_crab', 'volt_jelly', 'spray_sprite', 'drowned_corsair', 'coral_colossus', 'volt_eel', 'mist_mariner', 'tide_caller',
   'grey_legionnaire', 'hush_monk', 'void_stalker', 'ashen_paladin', 'echo_shade', 'bellshard_golem', 'silent_drake', 'resonance_eater',
-  'hollow_elder', 'whitehorn', 'pyre_worm', 'tempest_whale', 'bellkeeper', 'the_silence'];
+  'hollow_elder', 'whitehorn', 'pyre_worm', 'tempest_whale', 'bellkeeper', 'the_silence',
+  'stardust_moth', 'cloud_sheep', 'comet_knight', 'nebula_jelly', 'umbral_stargazer', 'eclipse_priest', 'meteor_golem', 'phase_wraith', 'gloom_monarch'];
 const ENEMY_SIZE = {
   mist_rat: 0.5, sporeling: 0.5, mist_crow: 0.5, snow_wisp: 0.5, snowball_golem: 0.5, cinder_lizard: 0.5, flame_spirit: 0.5, spray_sprite: 0.5,
   ice_tortoise: 0.9, avalanche_golem: 0.9, yeti_shaman: 0.9, magma_brute: 0.9, coral_colossus: 0.9, ashen_paladin: 0.9, bellshard_golem: 0.9, silent_drake: 0.9,
   hollow_elder: 1.8, whitehorn: 1.8, pyre_worm: 1.8, tempest_whale: 2.0, bellkeeper: 1.6, the_silence: 2.0,
+  stardust_moth: 0.5, cloud_sheep: 0.9, meteor_golem: 0.9, gloom_monarch: 2.0,
 };
 const HEROES = ['kara', 'sera', 'sio', 'zena', 'bawi', 'yaro', 'haru', 'dohan', 'narae', 'tori', 'byeori', 'mujin'];
 const PORTRAITS = [...HEROES, 'elder', 'bellkeeper'];

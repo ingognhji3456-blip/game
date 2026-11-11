@@ -264,7 +264,22 @@ test('특성 unstoppable: 병사에게 붙잡히지 않음', () => {
   for (let i = 0; i < 30 * 10; i++) { g.step(); if (e.blockedBy != null) blocked = true; }
   assert.ok(!blocked);
 });
-test('특성 18가지 모두 이 파일에서 다룸', () => {
+test('특성 fluffy: 범위 피해를 절반만 받음', () => {
+  const g = game();
+  const a = spawn(g, 'cloud_sheep', 5.5, 1.5, { hp: 1e6, root: true });
+  const b = spawn(g, 'cloud_sheep', 6.5, 1.5, { hp: 1e6, root: true });
+  const da = g.api.damage(a, 100, 'fire', SRC('fire'), { area: true });
+  const db = g.api.damage(b, 100, 'fire', SRC('fire'), {});
+  assert.ok(Math.abs(da / db - 0.5) < 1e-6);
+});
+test('특성 phase: 일렁인 뒤 길을 따라 앞으로 순간이동', () => {
+  const g = game();
+  const e = spawn(g, 'phase_wraith', null, null, { hp: 1e6 });
+  const evs = runCollect(g, 4.2, (x) => x.type === 'phase');
+  assert.strictEqual(evs.length, 1);
+  assert.ok(Math.hypot(evs[0].x - evs[0].fromX, evs[0].y - evs[0].fromY) > 1.2 && !e.dead);
+});
+test('특성 20가지 모두 이 파일에서 다룸', () => {
   const src = require('fs').readFileSync(__filename, 'utf8');
   for (const k of Object.keys(D.traits)) assert.ok(src.includes(`특성 ${k}`), k);
 });

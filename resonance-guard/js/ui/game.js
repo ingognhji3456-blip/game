@@ -229,6 +229,8 @@
         case 'soulStorm': UI.sfx('hex', { vol: 0.6, pitch: -8 }); break;
         case 'chrono': UI.sfx('bell', { vol: 0.5, pitch: 7 }); break;
         case 'temper': UI.sfx('upgrade', { vol: 0.5, pitch: -4 }); break;
+        case 'bridges': UI.sfx('bell', { vol: 0.35, pitch: 9 }); break;
+        case 'phase': UI.sfx('hex', { vol: 0.25, pitch: 6 }); break;
         case 'galeDive': UI.sfx('chain', { vol: 0.45, pitch: 5 }); break;
         case 'giantForm': UI.sfx('slam', { vol: 0.6, pitch: -6 }); break;
         case 'meteor': UI.sfx('explosion', { vol: 0.6, pitch: -3 }); break;
@@ -1571,6 +1573,10 @@
     silence: { title: '침묵', text: '침묵 수도사 근처의 탑은 공격·지원·공명을 모두 멈춥니다. 사거리 긴 탑으로 멀리서 잡거나, 병영으로 붙잡아 한곳에 묶어 두세요.' },
     adaptive: { title: '적응', text: '종 조각 골렘은 같은 원소에 계속 맞으면 그 원소에 강해집니다. 여러 원소의 탑을 섞어 두면 저항이 계속 초기화됩니다.' },
     dampen: { title: '공명 차단', text: '울림 포식자 주변의 탑은 공명이 끊깁니다. 공명 없이도 버틸 기본 화력을 갖추고, 먼저 잡으세요.' },
+    star: { title: '별빛 건설지', text: '금빛 별이 반짝이는 건설지에 지은 탑은 사거리가 15% 늘어납니다. 길목을 넓게 덮는 탑을 올려 보세요.' },
+    fluffy: { title: '푹신한 구름 양', text: '구름 양은 폭발·파동·장판 같은 범위 공격을 절반만 받습니다. 궁수탑·햇살 렌즈·빙창 쇠뇌처럼 한 대상을 노리는 탑이 좋아요.' },
+    bridges: { title: '별다리', text: '별다리는 일정 시간마다 번갈아 놓입니다. 닫히기 3초 전부터 깜박이고 남은 초가 보여요. 적은 열린 다리로만 다니니 두 길 모두 대비하세요. 다리 위에는 지을 수 없고, 다리가 바뀌어도 길이 막히지 않게만 지을 수 있습니다.' },
+    phase: { title: '위상 망령', text: '위상 망령은 4초마다 일렁이다가 길을 따라 2칸 앞으로 순간이동합니다. 병사가 붙잡아도 빠져나가니, 길 끝까지 화력을 이어 두세요.' },
     support: { title: '지원 탑', text: '성소는 직접 공격하지 않지만 이웃 탑의 사거리를 늘리고 숨은 적을 드러내며 병사를 치료합니다. 지원 탑은 공명할수록 효과가 커집니다.' },
   };
   function nextTip() {

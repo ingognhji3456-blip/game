@@ -332,6 +332,14 @@ RG.fx = (() => {
         case 'burrow': case 'unburrow':
           burst(e.x, e.y, '#c9a47a', 12, 1.6, 0.5, 0.07, 2);
           break;
+        case 'phase':
+          // 위상 망령: 사라진 자리와 나타난 자리에 보랏빛 일렁임 + 잇는 잔상
+          burst(e.fromX, e.fromY - 0.4, '#c8b8ff', lite ? 4 : 12, 1.6, 0.5, 0.06, -0.6);
+          ring(e.x, e.y, 0.6, '#e8d8ff', 0.4, 0.08);
+          line(e.fromX, e.fromY - 0.4, e.x, e.y - 0.4, 'rgba(200,184,255,0.55)', 0.25, 0.08);
+          break;
+        case 'bridges':
+          break;
         case 'cyclone':
           ring(e.x, e.y, e.radius, '#e7e4ff', 0.5, 0.12);
           burst(e.x, e.y, '#ffffff', 16, 2.4, 0.6, 0.05, -1);

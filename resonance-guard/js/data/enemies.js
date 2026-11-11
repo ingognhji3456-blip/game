@@ -1,7 +1,7 @@
 'use strict';
 
 /* =========================================================
- * 적 40종 + 보스 6종 — 설계: docs/design/enemies.md
+ * 적 48종 + 보스 7종 — 설계: docs/design/enemies.md (6지역: docs/design/region6.md)
  * 필드 뜻: docs/ARCHITECTURE.md §3.3
  *  hp, speed(칸/초), armor(0~1), bounty(골드), lives(등불 불꽃), size(칸)
  *  melee: 붙잡혔을 때의 공격, traits: 특성, affinity: 원소 친화
@@ -259,6 +259,60 @@ RG.data.enemies = {
     },
     desc: '안개의 근원. 페이즈마다 면역 원소가 바뀝니다.',
   },
+
+  /* ============ 6지역 · 별울림 첨탑 (확장) ============ */
+  stardust_moth: {
+    name: '별가루 나방', region: 6, size: 0.5, hp: 300, speed: 1.75, armor: 0, bounty: 8, lives: 1,
+    melee: null, traits: { flying: true }, affinity: { frost: 'weak' },
+    desc: '별가루를 흩뿌리며 떼로 날아오는 빠른 나방. 얼음에 약합니다.',
+  },
+  cloud_sheep: {
+    name: '구름 양', region: 6, size: 0.9, hp: 2300, speed: 0.6, armor: 0, bounty: 60, lives: 2, elite: true,
+    melee: { damage: 36, interval: 1.4 }, traits: { fluffy: { pct: 0.5 } }, affinity: { storm: 'weak' },
+    desc: '푹신한 털이 폭발·범위 공격을 절반 흡수합니다. 바람(폭풍)에 약합니다.',
+  },
+  comet_knight: {
+    name: '혜성 기사', region: 6, size: 0.7, hp: 1250, speed: 0.85, armor: 0.4, bounty: 44, lives: 1,
+    melee: { damage: 42, interval: 1.1 }, traits: { dash: { mult: 2.2, dur: 2.5 } }, affinity: { fire: 'resist' },
+    desc: '두꺼운 갑옷. 처음 맞으면 혜성처럼 돌진합니다.',
+  },
+  nebula_jelly: {
+    name: '성운 해파리', region: 6, size: 0.7, hp: 1000, speed: 0.85, armor: 0, bounty: 36, lives: 1,
+    melee: null, traits: { flying: true, split: { into: 'nebula_jelly', n: 3, hpPct: 0.2, fragment: true } }, affinity: { light: 'weak' },
+    desc: '하늘을 떠다니다 죽으면 작은 해파리 셋으로 갈라집니다(작은 것은 더 갈라지지 않음).',
+  },
+  umbral_stargazer: {
+    name: '그림자 별지기', region: 6, size: 0.7, hp: 900, speed: 0.85, armor: 0, bounty: 38, lives: 1,
+    melee: { damage: 18, interval: 1.2 }, traits: { stealth: true, ranged: { range: 3.0, damage: 32, interval: 1.8 } }, affinity: { light: 'weak', dark: 'resist' },
+    desc: '숨어서 망원경으로 겨누고 영웅·병사에게 별빛 화살을 쏩니다.',
+  },
+  eclipse_priest: {
+    name: '일식 사제', region: 6, size: 0.7, hp: 980, speed: 0.75, armor: 0, bounty: 40, lives: 1,
+    melee: { damage: 16, interval: 1.2 }, traits: { healer: { radius: 2.0, pct: 0.06, every: 5 }, shielder: { radius: 2.0, pct: 0.15, every: 7 } }, affinity: {},
+    desc: '주변 적을 치유하고 보호막을 씌웁니다. 먼저 잡으세요.',
+  },
+  meteor_golem: {
+    name: '유성 골렘', region: 6, size: 0.9, hp: 2900, speed: 0.55, armor: 0.2, bounty: 85, lives: 3, elite: true,
+    melee: { damage: 60, interval: 1.6 }, traits: { deathburst: { radius: 1.4, damage: 150 } }, affinity: { frost: 'weak', fire: 'immune' },
+    desc: '불타는 운석 덩어리. 죽을 때 터져 주변 영웅·병사에게 큰 피해. 불에 면역, 얼음에 약합니다.',
+  },
+  phase_wraith: {
+    name: '위상 망령', region: 6, size: 0.7, hp: 950, speed: 0.9, armor: 0, bounty: 40, lives: 1,
+    melee: { damage: 26, interval: 1.0 }, traits: { phase: { every: 4, tiles: 2, warn: 0.6 } }, affinity: { dark: 'resist', light: 'weak' },
+    desc: '4초마다 일렁이다가 길을 따라 2칸 앞으로 순간이동합니다(붙잡혀 있어도 빠져나감).',
+  },
+  gloom_monarch: {
+    name: '그믐달 군주', region: 6, size: 2.0, hp: 52000, speed: 0.38, armor: 0.1, bounty: 0, lives: 99, boss: true, elite: true,
+    melee: { damage: 220, interval: 1.5 }, traits: {}, affinity: {},
+    bossData: {
+      veil: { every: 12, radius: 2.6, pct: 0.4, dur: 5 }, trackEls: true,
+      phases: [
+        { at: 0.7, summon: { type: 'stardust_moth', n: 6 } },
+        { at: 0.35, blink: 3, adaptImmune: true, summon: { type: 'phase_wraith', n: 2 } },
+      ],
+    },
+    desc: '별빛을 삼킨 그믐달. 12초마다 주변 탑의 별빛을 가려 사거리를 줄이고, 체력이 줄면 나방을 부르고 가장 많이 맞은 원소에 면역이 됩니다.',
+  },
 };
 
 /** 설계서 순서 */
@@ -268,4 +322,5 @@ RG.data.enemyOrder = [
   'cinder_lizard', 'sand_burrower', 'magma_brute', 'thermal_vulture', 'dune_raider', 'obsidian_beetle', 'flame_spirit', 'canyon_slinger', 'pyre_worm',
   'rock_crab', 'volt_jelly', 'spray_sprite', 'drowned_corsair', 'coral_colossus', 'volt_eel', 'mist_mariner', 'tide_caller', 'tempest_whale',
   'grey_legionnaire', 'hush_monk', 'void_stalker', 'ashen_paladin', 'echo_shade', 'bellshard_golem', 'silent_drake', 'resonance_eater', 'bellkeeper', 'the_silence',
+  'stardust_moth', 'cloud_sheep', 'comet_knight', 'nebula_jelly', 'umbral_stargazer', 'eclipse_priest', 'meteor_golem', 'phase_wraith', 'gloom_monarch',
 ];

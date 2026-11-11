@@ -2002,4 +2002,10 @@
   // 땅을 미끄러지듯 흘러옴: 위아래보다 크게 일렁이고 늘었다 줄었다 함
   MOTION.the_silence = { gait: 'float', bob: 0.015, tilt: 1.5, sway: 0.03, squash: 0.03, deathFx: 'sparks', deathTime: 1.2 };
   /* ==== END the_silence ==== */
+
+  /* 다른 파일(enemies-r6.js — 6지역)이 같은 도구로 그리도록 공개 */
+  RG.art._en5 = {
+    H, OL, g, n, D, MOTION, mk, make, sh, dk, lt, lineC, rimC, SHADE, TH, RAD, pt, pol, mid, angOf, tr,
+    ik, seg, segN, frameOf, fist, boot, groundAnkle, leg, arm, bez, ribbon, streaks, swoosh, motes, fin, flat, spec, rimL, ao, inl, bloom,
+  };
 })();

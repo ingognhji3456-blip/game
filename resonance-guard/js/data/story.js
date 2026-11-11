@@ -10,6 +10,7 @@ RG.data.speakers = {
   narration: { name: '' },
   kara: { name: '카라' }, sera: { name: '세라' }, sio: { name: '시오' }, zena: { name: '제나' }, bawi: { name: '바위' }, yaro: { name: '야로' },
   elder: { name: '모아 할머니' }, bellkeeper: { name: '종지기' }, haru: { name: '하루' },
+  dohan: { name: '도한' }, narae: { name: '나래' }, tori: { name: '토리' }, byeori: { name: '별이' }, mujin: { name: '무진' },
 };
 
 RG.data.story = {
@@ -229,6 +230,87 @@ RG.data.story = {
       { who: 'bawi', mood: 'normal', text: '한 가지 울림만으로는 저것을 채울 수 없소. 모두 함께 울려야 하오.' },
       { who: 'yaro', mood: 'happy', text: '흥, 한 원소에만 기대면 그때마다 막힌다는 거지. 알겠어.' },
       { who: 'kara', mood: 'happy', text: '좋아! 공명 수호대, 마지막 전투다!' },
+    ],
+  },
+
+  /* ===================== 6막 · 별울림 첨탑 (확장) ===================== */
+  s6_1: {
+    title: '구름 위의 대답', region: 6,
+    lines: [
+      { who: 'narration', text: '대종이 다시 울린 지 사흘째 밤. 종소리가 하늘로 올라가더니, 구름 위에서 대답하듯 맑은 소리가 돌아왔다.' },
+      { who: 'zena', mood: 'happy', text: '들었어요? 저건 메아리가 아니에요. 다른 종이에요! 대종이랑 음이 똑같은 쌍둥이 종!' },
+      { who: 'elder', mood: 'worried', text: '옛이야기에 하늘에 걸린 별종이 있다고 했지. 그런데… 저기 별이 하나 꺼졌구나.' },
+      { who: 'sio', mood: 'worried', text: '땅에서 쫓겨난 안개가 사라진 게 아니었다. 하늘로 올라갔다.' },
+      { who: 'haru', mood: 'happy', text: '형! 나도 갈래! 구름 위는 눈이 제일 먼저 오는 데잖아. 나 눈사람 진짜 잘 만들어!' },
+      { who: 'sio', mood: 'normal', text: '…위험하다. 그래도 너는 말려도 따라오겠지. 내 옆에서 떨어지지 마라.' },
+      { who: 'kara', mood: 'happy', text: '좋아! 하루도 오늘부터 공명 수호대야. 구름 나루로 가자!' },
+    ],
+  },
+  s6_2: {
+    title: '하늘 다리의 닻', region: 6,
+    lines: [
+      { who: 'narration', text: '구름과 구름 사이에는 별빛으로 엮은 다리가 놓여 있었다. 다리는 숨 쉬듯 번갈아 사라졌다 나타났다.' },
+      { who: 'dohan', mood: 'normal', text: '다리 닻이 녹슬었군. 별빛은 쇠에 걸어야 오래 버티는 법이다.' },
+      { who: 'kara', mood: 'worried', text: '아빠?! 여긴 어떻게 왔어? 대장간은?' },
+      { who: 'dohan', mood: 'normal', text: '망치 소리가 하늘까지 들렸다. 네가 두드리는 소리가 아직 서툴러서 말이다.' },
+      { who: 'dohan', mood: 'happy', text: '닻은 내가 벼린다. 너희는 다리가 바뀌는 때를 잘 봐라. 깜박이면 곧 닫힌다.' },
+      { who: 'kara', mood: 'happy', text: '…응! 아빠 망치 소리, 오랜만이다.' },
+    ],
+  },
+  s6_3: {
+    title: '바람새 기수', region: 6,
+    lines: [
+      { who: 'narration', text: '바람 정원. 구름이 끝나는 곳에서 커다란 하늘색 새가 날아와 내려앉았다.' },
+      { who: 'narae', mood: 'happy', text: '안녕! 하늘 나루의 나래야. 얘는 솔개! 너희가 땅에서 종을 울린 애들이구나?' },
+      { who: 'narae', mood: 'worried', text: '요즘 바람이 이상해. 성운 해파리들이 별빛을 먹고 떼로 몰려다녀. 죽이면 셋으로 갈라지고.' },
+      { who: 'zena', mood: 'happy', text: '분열하는 공중 개체라니! 범위 공격으로 한 번에… 아, 연구는 나중에.' },
+      { who: 'narae', mood: 'happy', text: '하늘길은 나한테 맡겨. 막힌 데도 솔개는 곧장 날아가거든!' },
+    ],
+  },
+  s6_4: {
+    title: '이끼 숲의 작은 정령', region: 6,
+    lines: [
+      { who: 'narration', text: '유성 폭포. 떨어진 별똥별이 바위가 되어 쌓이고, 그 틈에 오래된 이끼 숲이 자라 있었다.' },
+      { who: 'tori', mood: 'worried', text: '…누구야아. 숲을 밟으면, 아파.' },
+      { who: 'bawi', mood: 'happy', text: '오, 이끼 정령이로군. 나와 같은 돌과 이끼의 아이요. 무서워하지 마시오.' },
+      { who: 'tori', mood: 'normal', text: '…바위 할아버지 냄새 나. 그럼, 좋은 사람.' },
+      { who: 'tori', mood: 'worried', text: '불타는 돌이 숲을 태워. 망령도… 갑자기 앞으로 뛰어.' },
+      { who: 'tori', mood: 'happy', text: '…같이 가도 돼? 화나면, 나 숲만큼 커져.' },
+    ],
+  },
+  s6_5: {
+    title: '별지기의 기록', region: 6,
+    lines: [
+      { who: 'narration', text: '별지기의 탑. 계단마다 별의 길을 적은 두루마리가 쌓여 있었다. 꼭대기에서 커다란 안경을 쓴 아이가 망원경을 들여다보고 있었다.' },
+      { who: 'byeori', mood: 'worried', text: '아, 안녕하세요… 별이예요. 별이 하나씩 꺼지는 걸 백 일째 기록하고 있어요.' },
+      { who: 'byeori', mood: 'normal', text: '계산해 보면… 별종이 멈추는 날, 마지막 별이 꺼져요. 남은 건 엿새.' },
+      { who: 'sera', mood: 'normal', text: '스승님 일지에도 하늘의 등불 이야기가 있었어요. 별종이 하늘의 울림등이었구나.' },
+      { who: 'byeori', mood: 'happy', text: '그림자 별지기들이 꼭대기 길을 막고 있어요. 그리고 일식 사제들이 그들을 지켜요. 사제부터예요!' },
+    ],
+  },
+  s6_6: {
+    title: '별종의 방', region: 6,
+    lines: [
+      { who: 'narration', text: '첨탑 꼭대기, 별종의 방. 별종 앞에 회보라 두루마기를 입은 노인이 홀로 서서 종메를 쥐고 있었다.' },
+      { who: 'yaro', mood: 'worried', text: '…무진 스승님?' },
+      { who: 'mujin', mood: 'normal', text: '야로로구나. 대종이 다시 울리는 소리를 들었네. 그래서 나는 여기로 왔지. 이번에는… 지키려고.' },
+      { who: 'mujin', mood: 'worried', text: '별빛을 삼킨 것이 오네. 그믐달 군주. 별종이 멈추면 밤하늘이 영영 꺼지네.' },
+      { who: 'byeori', mood: 'worried', text: '군주는 가장 많이 맞은 원소를 배워서 막아요! 여러 원소로… 고르게요!' },
+      { who: 'kara', mood: 'happy', text: '열두 울림이 다 모였어. 땅의 종도, 하늘의 종도 우리가 지킨다!' },
+    ],
+  },
+  ending2: {
+    title: '두 종의 울림', region: 6,
+    lines: [
+      { who: 'narration', text: '그믐달이 깨지고, 삼켰던 별빛이 쏟아져 나왔다. 무진이 종메를 들어 별종을 두드렸다.' },
+      { who: 'narration', text: '하늘의 별종과 땅의 대종이 함께 울렸다. 꺼졌던 별이 하나씩 다시 켜졌다.' },
+      { who: 'mujin', mood: 'happy', text: '좋은 울림이었네. 이것은 내 것이 아니라, 모두의 것이지.' },
+      { who: 'byeori', mood: 'happy', text: '기록 마지막 줄… "별은 꺼지지 않았다. 열두 울림이 함께 켰다."' },
+      { who: 'narae', mood: 'happy', text: '솔개야, 다 같이 태우고 땅까지 내려가자! 축제 해야지!' },
+      { who: 'dohan', mood: 'happy', text: '돌아가면 대장간 불부터 지피마. 너희 이름을 종에 새겨 주지.' },
+      { who: 'tori', mood: 'happy', text: '…다 같이 해서, 좋아아.' },
+      { who: 'haru', mood: 'happy', text: '형! 구름 위에 눈사람 세워 놓고 왔어! 별이 지켜 줄 거야!' },
+      { who: 'kara', mood: 'happy', text: '하늘과 땅이 이어졌어. 이제 진짜, 모두 함께야!' },
     ],
   },
 

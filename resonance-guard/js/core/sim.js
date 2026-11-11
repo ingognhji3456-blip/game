@@ -408,8 +408,10 @@ RG.sim = (() => {
       let affMult = aff === 'weak' ? 1.5 : aff === 'resist' ? 0.5 : 1;
       if (e.adapt && e.adapt.el === element) affMult *= 1 - Math.min(ed.traits.adaptive.max, e.adapt.stacks * ed.traits.adaptive.per);
       lastAttackSide = base * (1 + bonus) * (o2.crit || 1); // 받는 쪽 배율 전 (잿불 화상 등 파생 화상의 기준)
+      if (e.boss && ed.bossData && ed.bossData.trackEls) e.boss.els = Object.assign(e.boss.els || {}, { [element]: ((e.boss.els && e.boss.els[element]) || 0) + base }); // 그믐달 군주: 많이 맞은 원소 기록
       let final = base * (1 + bonus) * (1 + vuln) * (1 - armorEff) * affMult;
       if (o2.crit) final *= o2.crit;
+      if (o2.area && ed.traits.fluffy) final *= 1 - ed.traits.fluffy.pct; // 구름 양: 푹신(범위 피해 절반)
       if (final <= 0) return 0;
 
       let dealt = final;
@@ -2177,6 +2179,7 @@ RG.sim = (() => {
 
       refreshHeroAuras();
       if (st.bridge && time >= st.bridge.next) flipBridges();
+      if (st.veilEnd && time >= st.veilEnd) { st.veilEnd = 0; statsDirty = true; } // 그믐달 군주 '별 가리기'가 끝남
       for (let i = 0; i < st.enemies.length; i++) { const e = st.enemies[i]; e.px = e.x; e.py = e.y; }
       for (const u of st.units) { u.px = u.x; u.py = u.y; }
       for (const p of st.projectiles) { p.px = p.x; p.py = p.y; }
@@ -2412,6 +2415,20 @@ RG.sim = (() => {
       if (tr.burrow) {
         e.burrowT += DT;
         if (!e.burrowed && e.burrowT >= tr.burrow.every) { e.burrowed = true; e.burrowT = 0; releaseEnemy(e); ev('burrow', { enemyId: e.id, x: e.x, y: e.y }); } else if (e.burrowed && e.burrowT >= tr.burrow.dur) { e.burrowed = false; e.burrowT = 0; ev('unburrow', { enemyId: e.id, x: e.x, y: e.y }); }
+      }
+      // 위상 이동 (위상 망령): 일렁임(경고) 뒤 길을 따라 앞으로 순간이동 — 붙잡혀 있어도 빠져나감
+      if (tr.phase && canMove(e) && !e.burrowed) {
+        e.phaseT = (e.phaseT || 0) + DT;
+        e.phaseWarn = e.phaseT >= tr.phase.every - tr.phase.warn;
+        if (e.phaseT >= tr.phase.every) {
+          e.phaseT = 0;
+          e.phaseWarn = false;
+          const fx = e.x;
+          const fy = e.y;
+          e.cross = null;
+          advance(e, tr.phase.tiles);
+          ev('phase', { enemyId: e.id, x: e.x, y: e.y, fromX: fx, fromY: fy });
+        }
       }
       // 보스
       if (e.boss && RG.bosses) RG.bosses.update(game, e, api);
@@ -2987,6 +3004,7 @@ RG.sim = (() => {
     /** 보스 모듈에 넘기는 내부 기능 */
     const api = {
       ev, damage, hardCC, applySlow, advance, spawnEnemy, disableTower, releaseEnemy, hurtUnit, enemiesInRadius,
+      markStats: () => { statsDirty = true; },
       rng, get flow() { return flow; }, blocked, unitById,
       freezeLinks: (dur) => { st.linksFrozenUntil = Math.max(st.linksFrozenUntil, st.time + dur); },
     };

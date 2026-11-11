@@ -32,11 +32,11 @@ test('탑 설계서 ↔ 데이터: 32종, 이름·id·원소·해금', () => {
   for (const id of Object.keys(D.towers)) for (const b of ['A', 'B']) assert.ok(md.includes(`\`${D.towers[id].branches[b].id}\``), `분기 id ${D.towers[id].branches[b].id}`);
 });
 
-test('적 설계서 ↔ 데이터: 46종, 이름·id', () => {
+test('적 설계서 ↔ 데이터: 55종, 이름·id', () => {
   const md = doc('design/enemies.md');
   const heads = [...md.matchAll(/^### (?:\d\d|👑 [^·]+) · (.+?) `([a-z_]+)`$/gm)].map((m) => ({ name: m[1], id: m[2] }));
-  assert.strictEqual(heads.length, 46, `설계서 적 수 ${heads.length}`);
-  assert.strictEqual(Object.keys(D.enemies).length, 46);
+  assert.strictEqual(heads.length, 55, `설계서 적 수 ${heads.length}`);
+  assert.strictEqual(Object.keys(D.enemies).length, 55);
   for (const h of heads) {
     assert.ok(D.enemies[h.id], `데이터에 없음: ${h.id}`);
     assert.strictEqual(D.enemies[h.id].name, h.name, `${h.id} 이름`);

@@ -146,6 +146,8 @@ RG.data.traits = {
   adaptive: { name: '적응', icon: 'adaptive', desc: '같은 원소에 연속으로 맞으면 그 원소에 대한 저항이 쌓입니다. 다른 원소에 맞으면 사라집니다.' },
   dampen: { name: '공명 차단', icon: 'dampen', desc: '주변 탑의 공명 연결을 끊습니다.' },
   unstoppable: { name: '붙잡기 불가', icon: 'unstoppable', desc: '영웅과 병사에게 붙잡히지 않습니다.' },
+  fluffy: { name: '푹신', icon: 'fluffy', desc: '폭발·파동·장판 같은 범위 공격의 피해를 절반만 받습니다. 한 대상을 노리는 공격이 좋습니다.' },
+  phase: { name: '위상 이동', icon: 'phase', desc: '주기적으로 일렁이다가 길을 따라 몇 칸 앞으로 순간이동합니다. 붙잡혀 있어도 빠져나갑니다.' },
 };
 
 /** 원소 친화 */

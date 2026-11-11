@@ -44,6 +44,15 @@ RG.bosses = (() => {
     if (!st.alerts.length) return;
     st.alerts = st.alerts.filter((a) => {
       if (st.time < a.at) return true;
+      if (a.veil) { // 별 가리기: 그 순간 원 안의 탑 사거리 감소
+        const R2 = a.veil.radius * a.veil.radius;
+        const hit = [];
+        for (const t of st.towers) if ((t.x - a.x) ** 2 + (t.y - a.y) ** 2 <= R2) { t.veilUntil = st.time + a.dur; t.veilPct = a.veil.pct; hit.push(t.id); }
+        st.veilEnd = Math.max(st.veilEnd || 0, st.time + a.dur);
+        if (api.markStats) api.markStats();
+        api.ev('bossAbility', { ability: 'veil', x: a.x, y: a.y, targets: hit, radius: a.veil.radius });
+        return false;
+      }
       for (const id of a.towerIds) {
         const t = st.towers.find((x) => x.id === id);
         if (t) api.disableTower(t, a.dur, a.ability);
@@ -141,6 +150,33 @@ RG.bosses = (() => {
         api.ev('enemyShield', { x: e.x, y: e.y, radius: bd.ward.radius });
       }
       if (phaseCheck(game, e, api, bd.phase)) summon(game, e, api, bd.phase.summon);
+    },
+
+    gloom_monarch(game, e, api, bd) {
+      const st = game.state;
+      // ① 별 가리기: 경고(원) 뒤 반경 안 탑의 사거리 −40% (5초)
+      if (timer(e, 'veil', bd.veil.every, 6)) {
+        const V = bd.veil;
+        const alert = { id: `${e.id}:${st.tick}`, towerIds: [], at: st.time + D().rules.bossWarn, dur: V.dur, ability: 'veil', x: e.x, y: e.y, veil: V };
+        st.alerts.push(alert);
+        api.ev('warnArea', { x: e.x, y: e.y, radius: V.radius, dur: D().rules.bossWarn, element: 'dark' });
+        api.ev('bossAbility', { enemyId: e.id, ability: 'veilWarn', x: e.x, y: e.y });
+      }
+      // ② 70%: 나방 떼 · ③ 35%: 순간이동 + 가장 많이 맞은 원소에 면역
+      const phases = bd.phases;
+      const idx = e.boss.phase;
+      if (idx < phases.length && e.hp / e.maxHp <= phases[idx].at) {
+        const ph = phases[idx];
+        e.boss.phase = idx + 1;
+        if (ph.blink) { const fx = e.x; const fy = e.y; api.advance(e, ph.blink); api.ev('bossAbility', { enemyId: e.id, ability: 'blink', x: e.x, y: e.y, fromX: fx, fromY: fy }); }
+        let immune = null;
+        if (ph.adaptImmune && e.boss.els) {
+          immune = Object.keys(e.boss.els).sort((a, b) => e.boss.els[b] - e.boss.els[a] || (a < b ? -1 : 1))[0] || null;
+          if (immune) e.immuneEls = [immune];
+        }
+        if (ph.summon) summon(game, e, api, ph.summon);
+        api.ev('bossPhase', { enemyId: e.id, phase: idx + 2, x: e.x, y: e.y, immune: immune ? [immune] : undefined });
+      }
     },
 
     the_silence(game, e, api, bd) {

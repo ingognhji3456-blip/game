@@ -1231,6 +1231,21 @@ RG.render = (() => {
     } else if (t.dampened) {
       icon('dampen', cx + T * 0.32, baseY - T * 0.95, T * 0.3);
     }
+    if (t.veilUntil > game.state.time) {
+      // 그믐달 군주 '별 가리기': 사거리가 줄어든 탑 위에 어두운 초승달
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = '#1a1238';
+      ctx.strokeStyle = '#c8b8ff';
+      ctx.lineWidth = Math.max(1, T * 0.03);
+      const mx = cx + T * 0.3;
+      const my = baseY - T * 1.0;
+      const R = T * 0.16;
+      ctx.beginPath(); ctx.arc(mx, my, R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#ffe7a8';
+      ctx.beginPath(); ctx.arc(mx - R * 0.35, my, R * 0.7, Math.PI * 0.5, Math.PI * 1.5); ctx.arc(mx - R * 0.1, my, R * 0.5, Math.PI * 1.5, Math.PI * 0.5, true); ctx.fill();
+      ctx.restore();
+    }
     if (t.boostUntil > game.state.time && !t.building) {
       // 도한의 담금질(주황 불티 고리) · 무진의 되울림 종(보랏빛 고리) — 공격 속도가 오른 탑
       const temper = t.temperUntil > game.state.time;
@@ -1448,7 +1463,8 @@ RG.render = (() => {
     if (lifted) lift += T * 0.35 + Math.sin(time * 10) * T * 0.04;
     const groundY = cy;
     cy -= lift;
-    const alphaS = (e.stealth && !e.revealed) ? 0.35 + 0.1 * Math.sin(time * 6) : 1;
+    let alphaS = (e.stealth && !e.revealed) ? 0.35 + 0.1 * Math.sin(time * 6) : 1;
+    if (e.phaseWarn) { alphaS *= 0.45 + 0.4 * Math.abs(Math.sin(time * 22)); dx += Math.sin(time * 40) * T * 0.04; } // 위상 망령: 순간이동 직전 일렁임
     const hurt = st.time - e.lastHurt < 0.08;
     const flip = e.dir < 0;
     const big = ed.size >= 1.4 ? 288 : 168;

@@ -39,6 +39,7 @@ const ART = [
   'js/art/enemies-r12.js',
   'js/art/enemies-r34.js',
   'js/art/enemies-r5.js',
+  'js/art/enemies-r6.js',
   'js/art/enemies-api.js',
   'js/art/heroes.js',
   'js/art/heroes-ext.js',

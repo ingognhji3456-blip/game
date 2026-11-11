@@ -112,6 +112,8 @@ RG.stats = (() => {
       c.rangeBonus = meta.rangePct || 0;
       // 6지역 별빛 건설지: 사거리 +15%
       if (game.map && game.map.kinds[t.r * game.map.cols + t.c] === RG.grid.T.STAR) c.rangeBonus += RG.data.rules.starRange || 0.15;
+      // 그믐달 군주 '별 가리기': 잠시 사거리 감소
+      if (t.veilUntil > game.state.time) c.rangeBonus -= t.veilPct || 0;
       c.critBonus = 0;
       c.mods = {};
       c.resIds = [];
