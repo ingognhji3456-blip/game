@@ -639,16 +639,18 @@
       const cost = costOf(type);
       const ban = banReason(type);
       if (ban) R.banned[type] = ban;
+      const lv0 = startLv(type);
       const card = el('button', {
         class: `tower-card el-${td.element}${ban ? ' banned' : ''}`,
         type: 'button',
         dataset: { type, cost: String(cost) },
-        'aria-label': `${td.name} ${cost} 골드${key ? ` (단축키 ${key})` : ''}`,
+        'aria-label': `${td.name} ${cost} 골드${lv0 > 1 ? ` · 최종 강화로 Lv${lv0}부터` : ''}${key ? ` (단축키 ${key})` : ''}`,
         'aria-pressed': 'false',
       }, [
         key ? el('kbd', { text: key }) : null,
         (game.ranks && game.ranks[type]) ? el('em', { class: `tc-rank ${RG.gacha.isFinal(game.ranks[type]) ? 'fin' : ''}`, text: RG.gacha.isFinal(game.ranks[type]) ? '★' : `+${game.ranks[type]}` }) : null,
-        UI.towerImg(type, 1, null, 'tc-img'),
+        UI.towerImg(type, lv0, null, 'tc-img'),
+        lv0 > 1 ? el('em', { class: 'tc-lv', text: `Lv${lv0}` }) : null,
         el('span', { class: 'tc-name', text: td.name }),
         el('span', { class: 'tc-cost' }, [UI.icon('gold', 'tiny'), String(cost)]),
         ban ? el('span', { class: 'tc-ban' }, [UI.icon('lock', 'tiny')]) : null,
@@ -975,6 +977,7 @@
       if (!pick.res.ok) { status = pick.res.reason; cls = 'bad'; } else {
         const names = [...new Set((pick.links || []).map((l) => l.res.name))];
         status = names.length ? `공명: ${names.join(', ')}` : td.noResonance ? '공명하지 않는 탑' : '여기에 짓기';
+        if (startLv(pick.type) > 1) status += ` · ★ Lv${startLv(pick.type)}로`;
         cls = names.length ? 'ok res' : 'ok';
       }
     } else status = '맵 위에서 놓으세요';
@@ -1313,10 +1316,15 @@
     }
   }
 
+  /** 지을 때 단계(뽑기 최종 강화 탑은 Lv2) */
+  const startLv = (type) => (game && game.startLevel ? game.startLevel(type) : 1);
+
   function towerTip(type) {
     const td = D().towers[type];
-    const s = td.levels[0];
-    return `<b>${esc(td.name)}</b> · ${esc(D().elements[td.element].name)}<br>${esc(td.desc)}${s.range ? `<br><span class="dim">사거리 ${s.range}칸</span>` : ''}`;
+    const lv0 = startLv(type);
+    const s = td.levels[lv0 - 1];
+    const fin = lv0 > 1 ? `<br><span class="fin-line">★ 최종 강화 — 같은 값으로 Lv${lv0}부터 지어집니다</span>` : '';
+    return `<b>${esc(td.name)}</b> · ${esc(D().elements[td.element].name)}<br>${esc(td.desc)}${s.range ? `<br><span class="dim">사거리 ${s.range}칸</span>` : ''}${fin}`;
   }
 
   /* =====================================================

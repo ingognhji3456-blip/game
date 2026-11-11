@@ -253,3 +253,10 @@ body.rg-dragging, body.rg-dragging * { cursor: grabbing !important; }
 /* 최종 강화(뽑기 +5 다음) 표시 */
 .ip-rank.fin { color: #ffe08a; text-shadow: 0 0 6px #ffcf6a, 0 1px 2px #000; }
 .tower-card .tc-rank.fin { background: linear-gradient(180deg, #fff6c8, #f4b84a); color: #3a1e06; box-shadow: 0 0 8px #ffcf6a; }
+/* 최종 강화 탑은 같은 값으로 Lv2부터 지어짐 */
+.tower-card .tc-lv { position: absolute; top: 18px; right: 4px; font-style: normal; font-weight: 900; font-size: 0.58rem; color: #ffe08a; background: #2a1a08d9; border: 1px solid #f4b84a99; border-radius: 5px; padding: 0 3px; line-height: 1.25; pointer-events: none; }
+.fin-line { color: #ffe08a; font-weight: 700; }
+@media (max-height: 520px), (max-width: 900px) {
+  /* 좁은 화면 카드: 그림 오른쪽 아래 작은 배지 (위쪽 ★ 칩과 겹치지 않게) */
+  .tower-card .tc-lv { top: auto; bottom: 17px; right: 2px; font-size: 0.5rem; padding: 0 2px; }
+}

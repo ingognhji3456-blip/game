@@ -488,8 +488,11 @@
       const towerRow = el('div', { class: 'chip-row' });
       for (const t of towers) {
         const rank = P().towerRank(t);
-        const chip = el('span', { class: `t-chip rar-${RG.gacha.rarityOf(t)}` }, [UI.towerImg(t, 1, null, 'mini'), rank > 0 ? el('em', { class: 'rank', text: `+${rank}` }) : null]);
-        UI.tooltipFor(chip, () => `<b>${esc(D().towers[t].name)}</b>${rank > 0 ? ` <span class="good">${RG.gacha.rankLabel(rank)} (${esc(rankText(t, rank))})</span>` : ''}<br>${esc(D().towers[t].desc)}`);
+        const fin = RG.gacha.isFinal(rank);
+        const chip = el('span', { class: `t-chip rar-${RG.gacha.rarityOf(t)}` }, [UI.towerImg(t, fin && mode !== 'challenge' ? 2 : 1, null, 'mini'), rank > 0 ? el('em', { class: `rank${fin ? ' fin' : ''}`, text: fin ? '★' : `+${rank}` }) : null]);
+        // 도전 모드는 뽑기 강화를 쓰지 않음(sim.js ranks)
+        const rankNote = mode === 'challenge' ? (rank > 0 ? '<br><span class="dim">도전에서는 뽑기 강화가 적용되지 않습니다</span>' : '') : fin ? '<br><span class="good">맵에 같은 값으로 Lv2부터 지어집니다</span>' : '';
+        UI.tooltipFor(chip, () => `<b>${esc(D().towers[t].name)}</b>${rank > 0 ? ` <span class="good">${RG.gacha.rankLabel(rank)} (${esc(rankText(t, rank))})</span>` : ''}${rankNote}<br>${esc(D().towers[t].desc)}`);
         towerRow.appendChild(chip);
       }
       const missing = D().towerOrder.length - towers.length;

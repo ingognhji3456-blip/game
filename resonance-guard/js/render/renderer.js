@@ -819,7 +819,7 @@ RG.render = (() => {
     const gh = overlay.ghost;
     if (gh) {
       const td = RG.data.towers[gh.type];
-      const spec = td.levels[0];
+      const spec = td.levels[(game.startLevel ? game.startLevel(gh.type) : 1) - 1];
       const x = gh.c + 0.5;
       const y = gh.r + 0.5;
       ctx.save();
@@ -1685,7 +1685,7 @@ RG.render = (() => {
     const gh = overlay.ghost;
     if (gh) {
       ctx.save();
-      const key = RG.art.sprites.towerKey(gh.type, 1, null, 'idle');
+      const key = RG.art.sprites.towerKey(gh.type, game.startLevel ? game.startLevel(gh.type) : 1, null, 'idle');
       const tinted = ghostImage(key, gh.ok);
       ctx.globalAlpha = gh.ok ? 0.82 : 0.7;
       if (tinted) ctx.drawImage(tinted, X(gh.c + 0.5) - T * 0.5, Y(gh.r + 0.82) - T * 1.3 * (112 / 130), T, T * 1.3);

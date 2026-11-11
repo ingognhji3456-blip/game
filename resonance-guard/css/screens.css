@@ -660,6 +660,7 @@
 .gc-tag.up { background: linear-gradient(#fff2b0, #f0a020); color: #3a1e06; }
 .gc-tag.refund { background: #b48aff; color: #1a0e2e; }
 .gc-tag.final { background: linear-gradient(90deg, #fff6c8, #ffc44a, #fff6c8); color: #3a1e06; box-shadow: 0 0 14px #ffd56acc, 0 0 0 2px #5a2e0c; animation: gc-final 1.2s ease-in-out infinite; }
+.gc-rsub { font-size: 0.66rem; font-weight: 800; color: #ffe08a; text-shadow: 0 1px 2px #000; text-align: center; line-height: 1.15; }
 @keyframes gc-final { 50% { box-shadow: 0 0 22px #ffe08a, 0 0 0 2px #5a2e0c; } }
 .gc-rcard.is-final .gc-face.front { box-shadow: 0 0 0 3px #ffd56a, 0 0 30px #ffcf6aaa, inset 0 0 30px #ffd56a40; }
 .rank-final { display: inline-flex; align-items: center; padding: 0 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 900; color: #3a1e06; background: linear-gradient(180deg, #fff3c4, #f4b84a); box-shadow: 0 0 8px #ffcf6a99, 0 0 0 1px #5a2e0c; }
@@ -679,6 +680,7 @@
 .t-chip { position: relative; }
 .t-chip.rar-rare { box-shadow: inset 0 -3px 0 #5fb4ff; } .t-chip.rar-epic { box-shadow: inset 0 -3px 0 #ffc44a; }
 .t-chip em.rank { position: absolute; top: -4px; right: -4px; font-style: normal; font-weight: 900; font-size: 0.7rem; color: #3a1e06; background: var(--gold2); border-radius: 6px; padding: 0 4px; }
+.t-chip em.rank.fin { background: linear-gradient(180deg, #fff6c8, #f4b84a); box-shadow: 0 0 8px #ffcf6a; }
 .t-chip.more { appearance: none; border: 2px dashed #b48aff; background: #2a1d40; color: #e8d0ff; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; cursor: pointer; border-radius: 10px; }
 .t-chip.more small { font-size: 0.62rem; }
 .reward-box { margin: 8px 0; padding: 8px 12px; border-radius: 12px; background: linear-gradient(180deg, #3a2468, #22163e); border: 1px solid #c8a6ff66; }

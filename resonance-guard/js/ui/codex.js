@@ -48,7 +48,7 @@
       const card = el('button', { class: `codex-card el-${td.element} ${open ? '' : 'locked'}`, onclick: () => open && towerDetail(t) }, [
         open ? UI.towerImg(t, 3, null, 'cc-img') : el('span', { class: 'cc-q', text: '?' }),
         el('b', { text: open ? td.name : '???' }),
-        el('span', { class: 'dim small', text: open ? `${D().elements[td.element].name}${P().towerFinal(t) ? ' · ★최종 강화' : P().towerRank(t) > 0 ? ` · 강화 +${P().towerRank(t)}` : ''}` : P().towerOpen(t) ? '뽑기에서 얻을 수 있음' : `${(D().regions[P().towerRegion(t) - 2] || {}).name || ''} 클리어 후 뽑기에` }),
+        el('span', { class: 'dim small', text: open ? `${D().elements[td.element].name}${P().towerFinal(t) ? ' · ★최종 강화(Lv2부터 지음)' : P().towerRank(t) > 0 ? ` · 강화 +${P().towerRank(t)}` : ''}` : P().towerOpen(t) ? '뽑기에서 얻을 수 있음' : `${(D().regions[P().towerRegion(t) - 2] || {}).name || ''} 클리어 후 뽑기에` }),
       ]);
       grid.appendChild(card);
     }

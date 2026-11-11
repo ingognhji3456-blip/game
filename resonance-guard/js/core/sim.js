@@ -94,8 +94,14 @@ RG.sim = (() => {
     const unlocked = o.towers ? new Set(o.towers) : null;  // null = 전부
     const branchesOk = o.branches !== false;
 
-    // 뽑기 중복 강화 단계 {탑: 0~5} — 도전 모드는 기술 나무처럼 쓰지 않음(순수 실력)
+    // 뽑기 중복 강화 단계 {탑: 0~5, 6 = 최종} — 도전 모드는 기술 나무처럼 쓰지 않음(순수 실력)
     const ranks = o.mode === 'challenge' ? {} : Object.assign({}, o.towerRanks || {});
+    /** 지을 때의 단계: 뽑기 최종 강화 탑은 Lv1 값 그대로 Lv2로 지어짐(도전의 최대 단계 제한은 지킴) */
+    function startLevel(type) {
+      if (!(RG.gacha && RG.gacha.isFinal(ranks[type]))) return 1;
+      if (challenge && challenge.type === 'maxLevel' && challenge.value < 2) return 1;
+      return 2;
+    }
     const game = {
       opts: o, def, map, rules, meta, ranks, challenge, state: st, log, DT,
       tileTower: (c, r) => (c >= 0 && r >= 0 && c < map.cols && r < map.rows ? tileTowers[r * map.cols + c] : null),
@@ -1379,7 +1385,7 @@ RG.sim = (() => {
       const i = cmd.r * map.cols + cmd.c;
       const td = D().towers[cmd.tower];
       const t = {
-        id: nextId++, type: cmd.tower, level: 1, branch: null, c: cmd.c, r: cmd.r, x: cmd.c + 0.5, y: cmd.r + 0.5,
+        id: nextId++, type: cmd.tower, level: startLevel(cmd.tower), branch: null, c: cmd.c, r: cmd.r, x: cmd.c + 0.5, y: cmd.r + 0.5,
         invested: ok.cost, targetMode: 'first', cd: 0, calc: null, links: [], effects: [], disabledUntil: 0, disabled: false,
         dampened: false, silenced: false, building: st.wave.started, buildUntil: st.wave.started ? st.time + rules.buildTime : 0,
         builtBeforeStart: !st.wave.started, rally: null, soldiers: [], growth: 0, anim: 0,
@@ -1394,7 +1400,7 @@ RG.sim = (() => {
       RG.stats.computeAll(game);
       if (td.role === 'barracks') { t.rally = defaultRally(t); syncSoldiers(t); }
       statsDirty = true;
-      ev('build', { towerId: t.id, c: t.c, r: t.r, towerType: t.type });
+      ev('build', { towerId: t.id, c: t.c, r: t.r, towerType: t.type, level: t.level });
       return { ok: true, id: t.id };
     }
 
@@ -2359,7 +2365,7 @@ RG.sim = (() => {
     RG.stats.computeAll(game);
 
     Object.assign(game, {
-      step, cmd, canBuild, previewLinks, towerInfo, hash, upgradeCost, sellValue,
+      step, cmd, canBuild, previewLinks, towerInfo, hash, upgradeCost, sellValue, startLevel,
       checkTask, resonanceSnapshot, api, blocked,
     });
     Object.defineProperty(game, 'flow', { get: () => flow, enumerable: true });
