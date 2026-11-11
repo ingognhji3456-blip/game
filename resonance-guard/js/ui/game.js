@@ -1051,8 +1051,15 @@
       if (calc.kind === 'beam') out.push(['damage', '초당 피해', `${k(calc.dps)} → 최대 ×${calc.beam.maxMult}`, calc.dmgBonus]);
       else if (calc.kind === 'orb') out.push(['damage', '장판 초당 피해', `${k(calc.zone.dps)}`, calc.dmgBonus]);
       else if (calc.kind === 'snare') out.push(['damage', '덫 피해', `${k(calc.snare.damage)}`, calc.dmgBonus]);
+      else if (calc.kind === 'spikes') out.push(['damage', '가시밭 초당 피해', `${k(calc.spikes.dps)} · ${calc.spikes.max}곳 · 감속 ${round(calc.spikes.slowPct * 100)}%`, calc.dmgBonus]);
+      else if (calc.kind === 'sweep') out.push(['damage', '빛 초당 피해', `${k(calc.sweepDps || calc.sweep.dps)}${calc.sweep.beams > 1 ? ` · ${calc.sweep.beams}갈래` : ''}${calc.sweep.mark ? ` · 표식 +${round(calc.sweep.mark.pct * 100)}%` : ''}`, calc.dmgBonus]);
+      else if (calc.kind === 'cone') out.push(['damage', '불길 피해', `${k(calc.damage)} · ${calc.cone >= 360 ? '사방' : `부채꼴 ${calc.cone}°`}`, calc.dmgBonus]);
+      else if (calc.kind === 'rain') out.push(['damage', '고드름 피해', `${k(calc.damage)} × ${calc.rain.count}명`, calc.dmgBonus]);
+      else if (calc.kind === 'strike') out.push(['damage', '번개 피해', `${k(calc.damage)}${calc.strike.count > 1 ? ` × ${calc.strike.count}명` : ''}`, calc.dmgBonus]);
       else out.push(['damage', '피해', `${k(calc.damage)}${calc.multishot ? ` ×${calc.multishot}발` : ''}`, calc.dmgBonus]);
-      if (calc.interval) out.push(['speed', calc.kind === 'snare' ? '덫 간격' : '공격 간격', `${k(calc.interval)}초`]);
+      if (calc.fear) out.push(['curse', '공포', `${calc.fear.dur}초 (보스 제외)`]);
+      if (calc.kind === 'sweep' && calc.detect) out.push(['stealth', '탐지', `${k(calc.detect)}칸`]);
+      if (calc.interval) out.push(['speed', calc.kind === 'snare' ? '덫 간격' : calc.kind === 'spikes' ? '가시밭 간격' : '공격 간격', `${k(calc.interval)}초`]);
       if (calc.range) out.push(['range', calc.kind === 'pulse' ? '범위' : '사거리', `${k(calc.range)}칸`]);
       out.push(['target', '대상', calc.targets === 'both' ? '지상·공중' : calc.targets === 'air' ? '공중만' : '지상만']);
     }
@@ -1211,6 +1218,12 @@
     const cur = t.calc;
     const parts = [];
     if (spec.damage != null && cur.damage != null) parts.push(`피해 ${round(cur.damage, 1)} → ${spec.damage}`);
+    if (spec.spikes && cur.spikes) parts.push(`가시밭 초당 ${cur.spikes.dps} → ${spec.spikes.dps}, ${cur.spikes.max}곳 → ${spec.spikes.max}곳`);
+    if (spec.sweep && cur.sweep) parts.push(`빛 초당 ${cur.sweep.dps} → ${spec.sweep.dps}${spec.sweep.beams > 1 ? `, ${spec.sweep.beams}갈래` : ''}`);
+    if (spec.rain && cur.rain && spec.rain.count !== cur.rain.count) parts.push(`고드름 ${cur.rain.count}명 → ${spec.rain.count}명`);
+    if (spec.strike && cur.strike && spec.strike.count !== cur.strike.count) parts.push(`번개 ${cur.strike.count}명 → ${spec.strike.count}명`);
+    if (spec.fear && cur.fear) parts.push(`공포 ${cur.fear.dur} → ${spec.fear.dur}초`);
+    if (spec.cone && cur.cone && spec.cone !== cur.cone) parts.push(spec.cone >= 360 ? '사방으로 불길' : `부채꼴 ${cur.cone}° → ${spec.cone}°`);
     if (spec.interval && cur.interval) parts.push(`간격 ${round(RG.stats.specOf(t.type, t.level, t.branch).interval, 2)} → ${spec.interval}초`);
     if (spec.range && cur.range) parts.push(`사거리 ${round(RG.stats.specOf(t.type, t.level, t.branch).range, 1)} → ${spec.range}칸`);
     if (spec.income) parts.push(`수입 ${cur.income} → ${spec.income}`);

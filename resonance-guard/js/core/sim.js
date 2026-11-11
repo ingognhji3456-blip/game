@@ -1054,7 +1054,11 @@ RG.sim = (() => {
               at: st.time + R.delay,
               fn: () => {
                 const hit = enemiesInRadius(x, y, R.radius, c.targets === 'ground' ? 'ground' : null);
-                for (const o3 of hit) hitEnemy(o3, c.damage, src, { area: true });
+                // 떨어진 자리에 가장 가까운 적은 전부, 곁에 있던 적은 절반 (튀는 얼음 조각)
+                let near = null;
+                let nd = Infinity;
+                for (const o3 of hit) { const dd = d2(o3.x, o3.y, x, y); if (dd < nd) { nd = dd; near = o3; } }
+                for (const o3 of hit) hitEnemy(o3, o3 === near ? c.damage : c.damage * 0.5, src, o3 === near ? {} : { area: true, procMult: 0.5 });
                 ev('icicleHit', { x, y, radius: R.radius, big: R.count === 1, element: c.element });
               },
             });
