@@ -36,6 +36,7 @@
     hex_spire: 'dark', void_orb: 'dark', shadow_snare: 'dark',
     // 2차 6종 (2026-11-11) — 그림은 js/art/tower-<id>.js
     flame_jet: 'fire', thorn_garden: 'earth', icicle_cloud: 'frost', thunder_cloud: 'storm', lighthouse: 'light', dread_bell: 'dark',
+    phoenix_nest: 'fire', blizzard_keep: 'frost', storm_eye: 'storm', titan_boulder: 'earth', judgment_spire: 'light', soul_reaper: 'dark', chrono_spire: 'light', shadow_dragon: 'dark',
   };
 
   /* ---------------- 섬세한 명암 (docs/design/animation.md §7) ----------------

@@ -17,7 +17,7 @@ test('탑: 3단계 + 분기 2개, 공격 방식에 맞는 필드', () => {
       assert.ok(s.cost > 0, `${id} 비용`);
       if (t.role === 'attack') {
         assert.ok(s.range > 0, `${id} 사거리`);
-        if (t.kind !== 'beam' && t.kind !== 'sweep') assert.ok(s.interval > 0, `${id} 간격`); // 빛줄기·도는 빛은 계속 쏨
+        if (t.kind !== 'beam' && t.kind !== 'sweep' && t.kind !== 'orbit') assert.ok(s.interval > 0, `${id} 간격`); // 빛줄기·도는 빛·불사조는 계속 쏨
       }
       if (t.role === 'barracks') assert.ok(s.soldiers && s.rallyRange, `${id} 병사`);
       if (t.role === 'economy') assert.ok(s.income > 0, `${id} 수입`);

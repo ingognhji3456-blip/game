@@ -612,6 +612,10 @@
 .rar-badge.rar-common { background: linear-gradient(#f0ecf8, #b8b0cc); }
 .rar-badge.rar-rare { background: linear-gradient(#bfe6ff, #4aa0f0); }
 .rar-badge.rar-epic { background: linear-gradient(#fff2b0, #f0a020); box-shadow: 0 0 8px #ffc44a99; }
+/* 전설(붉은 금빛)·신화(무지갯빛) — 2026-11-11 */
+.rar-badge.rar-legendary { background: linear-gradient(#ffd0a0, #ff5a2a); color: #2a0a04; box-shadow: 0 0 10px #ff6a3dcc; }
+.rar-badge.rar-mythic { background: linear-gradient(90deg, #ff9ae8, #b48aff, #7ad8ff, #ffe08a); color: #1a0a2a; box-shadow: 0 0 12px #ff5ad6cc; animation: rar-mythic 3s linear infinite; background-size: 200% 100%; }
+@keyframes rar-mythic { to { background-position: 200% 0; } }
 
 /* 모음 */
 .gc-collection { min-height: 0; overflow-y: auto; padding: 4px 6px 10px; background: #0005; border: 1px solid #ffffff12; border-radius: 16px; }
@@ -620,7 +624,8 @@
 .gc-sec-title { padding: 4px 6px; }
 .gc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; padding: 2px 4px; }
 .gc-card { --rc: #c9c3d8; position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px 7px; border-radius: 12px; background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--rc) 22%, transparent), transparent 70%), linear-gradient(#2a2040, #18122a); border: 2px solid color-mix(in srgb, var(--rc) 55%, #000); box-shadow: 0 3px 0 #0008; outline: none; }
-.gc-card.rar-rare { --rc: #5fb4ff; } .gc-card.rar-epic { --rc: #ffc44a; }
+.gc-card.rar-rare { --rc: #5fb4ff; } .gc-card.rar-epic { --rc: #ffc44a; } .gc-card.rar-legendary { --rc: #ff6a3d; } .gc-card.rar-mythic { --rc: #ff5ad6; }
+.gc-card.rar-legendary.owned { box-shadow: 0 0 16px #ff6a3d66, 0 3px 0 #0008; } .gc-card.rar-mythic.owned { box-shadow: 0 0 18px #ff5ad677, 0 0 6px #7ad8ff55, 0 3px 0 #0008; }
 .gc-card.rar-epic.owned { box-shadow: 0 0 14px #ffc44a55, 0 3px 0 #0008; }
 .gc-card:focus-visible { outline: 2px solid var(--gold2); }
 .gc-img { width: 58px; height: 68px; object-fit: contain; filter: drop-shadow(1px 2px 1px #0008); }
@@ -643,7 +648,7 @@
 .gc-rtitle { font-size: 1.3rem; font-weight: 900; color: var(--gold2); text-shadow: 0 2px 6px #000; }
 .gc-rcards { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: min(820px, 100%); }
 .gc-rcard { --rc: #c9c3d8; position: relative; width: clamp(92px, 13vw, 140px); aspect-ratio: 3 / 4; appearance: none; border: 0; padding: 0; background: none; cursor: pointer; perspective: 700px; animation: gc-deal 0.35s calc(var(--i) * 0.05s) ease-out both; }
-.gc-rcard.rar-rare { --rc: #5fb4ff; } .gc-rcard.rar-epic { --rc: #ffc44a; }
+.gc-rcard.rar-rare { --rc: #5fb4ff; } .gc-rcard.rar-epic { --rc: #ffc44a; } .gc-rcard.rar-legendary { --rc: #ff6a3d; } .gc-rcard.rar-mythic { --rc: #ff5ad6; }
 @keyframes gc-deal { from { opacity: 0; transform: translateY(30px) scale(0.85); } }
 .gc-face { position: absolute; inset: 0; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; backface-visibility: hidden; transition: transform 0.45s cubic-bezier(.3,1.4,.5,1); }
 .gc-face.back { background: repeating-linear-gradient(45deg, #3a2470 0 8px, #2c1a58 8px 16px); border: 3px solid #c8a6ff; box-shadow: 0 6px 16px #000a, inset 0 0 18px #a070ff66; }
@@ -652,6 +657,12 @@
 .gc-rcard.open .gc-face.back { transform: rotateY(-180deg); }
 .gc-rcard.open .gc-face.front { transform: rotateY(0deg); }
 .gc-rcard.rar-epic.open .gc-face.front { animation: gc-epic 1.6s ease-in-out infinite; }
+.gc-rcard.rar-legendary.open .gc-face.front { animation: gc-legend 1.2s ease-in-out infinite; }
+.gc-rcard.rar-mythic.open .gc-face.front { animation: gc-mythic 1.6s linear infinite; }
+@keyframes gc-legend { 0%, 100% { box-shadow: 0 0 14px #ff6a3d, inset 0 0 0 2px #ffb08a; } 50% { box-shadow: 0 0 30px #ff6a3d, 0 0 50px #ffb34777, inset 0 0 0 2px #fff0d0; } }
+@keyframes gc-mythic { 0% { box-shadow: 0 0 22px #ff5ad6, inset 0 0 0 2px #ffc0f0; } 33% { box-shadow: 0 0 26px #b48aff, inset 0 0 0 2px #e0d0ff; } 66% { box-shadow: 0 0 26px #7ad8ff, inset 0 0 0 2px #d0f4ff; } 100% { box-shadow: 0 0 22px #ff5ad6, inset 0 0 0 2px #ffc0f0; } }
+.gc-flash.fl-legendary { background: radial-gradient(circle, #ffd8b0cc, #ff6a3d55 40%, transparent 70%); }
+.gc-flash.fl-mythic { background: radial-gradient(circle, #ffffffdd, #ff5ad677 35%, #7ad8ff44 55%, transparent 75%); }
 @keyframes gc-epic { 50% { box-shadow: 0 0 36px #ffd77a, 0 6px 16px #000a; } }
 .gc-rimg { width: 70%; height: 52%; object-fit: contain; filter: drop-shadow(1px 3px 2px #000a); }
 .gc-rname { font-size: 0.82rem; text-align: center; line-height: 1.15; }
@@ -678,7 +689,7 @@
 .btn-gacha.ready { border-color: #c8a6ff; box-shadow: 0 0 12px #a070ff88; animation: gc-ready 2.4s ease-in-out infinite; }
 @keyframes gc-ready { 50% { box-shadow: 0 0 20px #c890ffcc; } }
 .t-chip { position: relative; }
-.t-chip.rar-rare { box-shadow: inset 0 -3px 0 #5fb4ff; } .t-chip.rar-epic { box-shadow: inset 0 -3px 0 #ffc44a; }
+.t-chip.rar-rare { box-shadow: inset 0 -3px 0 #5fb4ff; } .t-chip.rar-epic { box-shadow: inset 0 -3px 0 #ffc44a; } .t-chip.rar-legendary { box-shadow: inset 0 -3px 0 #ff6a3d, 0 0 8px #ff6a3d55; } .t-chip.rar-mythic { box-shadow: inset 0 -3px 0 #ff5ad6, 0 0 10px #ff5ad655; }
 .t-chip em.rank { position: absolute; top: -4px; right: -4px; font-style: normal; font-weight: 900; font-size: 0.7rem; color: #3a1e06; background: var(--gold2); border-radius: 6px; padding: 0 4px; }
 .t-chip em.rank.fin { background: linear-gradient(180deg, #fff6c8, #f4b84a); box-shadow: 0 0 8px #ffcf6a; }
 .t-chip.more { appearance: none; border: 2px dashed #b48aff; background: #2a1d40; color: #e8d0ff; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; cursor: pointer; border-radius: 10px; }
@@ -706,7 +717,7 @@
   .gc-collection { overflow: visible; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .gc-rays, .gc-ring, .gc-core, .gc-orbit, .gc-back-icon, .btn-gacha.ready, .gc-rcard, .gc-rcard.rar-epic.open .gc-face.front { animation: none !important; }
+  .gc-rays, .gc-ring, .gc-core, .gc-orbit, .gc-back-icon, .btn-gacha.ready, .gc-rcard, .gc-rcard.rar-epic.open .gc-face.front, .gc-rcard.rar-legendary.open .gc-face.front, .gc-rcard.rar-mythic.open .gc-face.front, .rar-badge.rar-mythic { animation: none !important; }
   .gc-face { transition: none; }
 }
 /* 키 작은 화면(휴대폰 가로): 제단 그림을 작게, 결과 카드는 한 줄로 */
@@ -739,7 +750,7 @@
 .rw-pool { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 6px; padding-top: 6px; border-top: 1px solid #ffffff1a; }
 .rw-pool-t { width: 100%; font-weight: 800; color: #e8d0ff; font-size: 0.85rem; }
 .rw-pool-tower { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 2px; border-radius: 10px; background: #0005; border: 1px solid #ffffff22; font-size: 0.82rem; }
-.rw-pool-tower.rar-rare { border-color: #5fb4ff; } .rw-pool-tower.rar-epic { border-color: #ffc44a; }
+.rw-pool-tower.rar-rare { border-color: #5fb4ff; } .rw-pool-tower.rar-epic { border-color: #ffc44a; } .rw-pool-tower.rar-legendary { border-color: #ff6a3d; } .rw-pool-tower.rar-mythic { border-color: #ff5ad6; }
 .rw-pool-tower small { color: var(--dim); }
 .rw-pool-tower .tower-img { width: 30px; height: 36px; flex: none; object-fit: contain; }
 .rw-pool-tower b { white-space: nowrap; }

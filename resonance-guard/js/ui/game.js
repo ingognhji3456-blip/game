@@ -223,6 +223,11 @@
         case 'strike': UI.sfx(e.big ? 'explosion' : 'chain', { vol: 0.5, pitch: e.big ? -4 : 0 }); break;
         case 'thorns': UI.sfx('trap', { vol: 0.35, pitch: 3 }); break;
         case 'fear': UI.sfx('hex', { vol: 0.25, pitch: -5 }); break;
+        case 'shatter': UI.sfx('hit_frost', { vol: 0.55, pitch: -3 }); break;
+        case 'crush': UI.sfx('slam', { vol: 0.25, pitch: 4 }); break;
+        case 'smite': UI.sfx('explosion', { vol: 0.45, pitch: 6 }); break;
+        case 'soulStorm': UI.sfx('hex', { vol: 0.6, pitch: -8 }); break;
+        case 'chrono': UI.sfx('bell', { vol: 0.5, pitch: 7 }); break;
         case 'pulse': if (e.towerId) { const t = game.state.towers.find((q) => q.id === e.towerId); UI.sfx(t ? PULSE_SFX[t.type] || 'bell' : 'bell', { vol: 0.5 }); } break;
         case 'chain': if (!e.small) UI.sfx('chain', { vol: 0.5 }); break;
         case 'splash': if (e.element === 'fire' || e.big) UI.sfx('explosion', { vol: 0.55 }); break;
@@ -256,7 +261,7 @@
     if (sel && sel.kind === 'enemy' && !game.state.enemies.find((t) => t.id === sel.id)) closePanels();
   }
 
-  const FIRE_SFX = { arrow: 'arrow', bolt: 'bolt', gust: 'gust', mortar: 'mortar', orb: 'orb', ballista: 'ballista', rain: 'bolt', strike: 'chain' };
+  const FIRE_SFX = { arrow: 'arrow', bolt: 'bolt', gust: 'gust', mortar: 'mortar', orb: 'orb', ballista: 'ballista', rain: 'bolt', strike: 'chain', blizzard: 'hit_frost', roller: 'slam', smite: 'flash', breath: 'explosion' };
   const PULSE_SFX = { winter_bell: 'bell', quake_hammer: 'slam', radiance_spire: 'flash', dread_bell: 'hex' };
 
   function bossPhaseText(e) {
@@ -658,7 +663,7 @@
       if (ban) R.banned[type] = ban;
       const lv0 = startLv(type);
       const card = el('button', {
-        class: `tower-card el-${td.element}${ban ? ' banned' : ''}`,
+        class: `tower-card el-${td.element} rar-${RG.gacha.rarityOf(type)}${ban ? ' banned' : ''}`,
         type: 'button',
         dataset: { type, cost: String(cost) },
         'aria-label': `${td.name} ${cost} 골드${lv0 > 1 ? ` · 최종 강화로 Lv${lv0}부터` : ''}${key ? ` (단축키 ${key})` : ''}`,
@@ -1076,10 +1081,21 @@
       else if (calc.kind === 'cone') out.push(['damage', '불길 피해', `${k(calc.damage)} · ${calc.cone >= 360 ? '사방' : `부채꼴 ${calc.cone}°`}`, calc.dmgBonus]);
       else if (calc.kind === 'rain') out.push(['damage', '고드름 피해', `${k(calc.damage)} × ${calc.rain.count}명`, calc.dmgBonus]);
       else if (calc.kind === 'strike') out.push(['damage', '번개 피해', `${k(calc.damage)}${calc.strike.count > 1 ? ` × ${calc.strike.count}명` : ''}`, calc.dmgBonus]);
+      else if (calc.kind === 'orbit') out.push(['damage', '불사조 초당 피해', `${k(calc.orbit.dps)}${calc.orbit.birds > 1 ? ` × ${calc.orbit.birds}마리` : ''}`, calc.dmgBonus]);
+      else if (calc.kind === 'blizzard') out.push(['damage', '눈보라', `초당 ${k(calc.blizzard.dps)} · ${calc.blizzard.dur}초 · 감속 ${round(calc.blizzard.slowPct * 100)}%${calc.blizzard.count > 1 ? ` · ${calc.blizzard.count}곳` : ''}`, calc.dmgBonus]);
+      else if (calc.kind === 'roller' && calc.roller.type === 'tornado') out.push(['damage', '회오리', `초당 ${k(calc.roller.dps)} · ${calc.roller.length}칸 · 밀기 ${calc.roller.push}칸/초`, calc.dmgBonus]);
+      else if (calc.kind === 'roller') out.push(['damage', '바위 깔기', `${k(calc.roller.crush)}${calc.roller.count > 1 ? ` × ${calc.roller.count}개` : ''} · ${calc.roller.length}칸`, calc.dmgBonus]);
+      else if (calc.kind === 'smite') out.push(['damage', '빛기둥', `${k(calc.damage)} + 최대 체력 ${round(calc.smite.pct * 100)}%${calc.smite.count > 1 ? ` · ${calc.smite.count}명` : ''}`, calc.dmgBonus]);
+      else if (calc.kind === 'breath') out.push(['damage', '불길(관통)', `${k(calc.damage)}${calc.breath.count > 1 ? ` × ${calc.breath.count}줄` : ''}`, calc.dmgBonus]);
       else out.push(['damage', '피해', `${k(calc.damage)}${calc.multishot ? ` ×${calc.multishot}발` : ''}`, calc.dmgBonus]);
       if (calc.fear) out.push(['curse', '공포', `${calc.fear.dur}초 (보스 제외)`]);
+      if (calc.blizzard) out.push(['freeze', '얼음 터짐', `${k(calc.blizzard.shatter)} (언 적 ×2)${calc.blizzard.freeze ? ` · 빙결 ${calc.blizzard.freeze}초` : ''}`]);
+      if (calc.roller && calc.roller.stun) out.push(['stun', '기절', `${calc.roller.stun}초 (보스 제외)`]);
+      if (calc.smite) out.push(['damage', '보스에게', `최대 체력 ${round(calc.smite.bossPct * 100, 1)}%`]);
+      if (calc.harvest) out.push(['curse', '영혼', `최대 ${calc.harvest.max}개 · 하나마다 +${round(calc.harvest.per * 100)}% · 폭풍 ${k(calc.harvest.storm)}`]);
+      if (calc.chrono) out.push(['freeze', '시간 멈춤', `${calc.chrono.every}초마다 ${calc.chrono.stop}초 · 되감기 ${calc.chrono.rewind}칸 · ${calc.chrono.radius}칸`]);
       if (calc.kind === 'sweep' && calc.detect) out.push(['stealth', '탐지', `${k(calc.detect)}칸`]);
-      if (calc.interval) out.push(['speed', calc.kind === 'snare' ? '덫 간격' : calc.kind === 'spikes' ? '가시밭 간격' : '공격 간격', `${k(calc.interval)}초`]);
+      if (calc.interval) out.push(['speed', calc.kind === 'snare' ? '덫 간격' : calc.kind === 'spikes' ? '가시밭 간격' : calc.kind === 'roller' ? '굴리는 간격' : calc.kind === 'blizzard' ? '눈보라 간격' : '공격 간격', `${k(calc.interval)}초`]);
       if (calc.range) out.push(['range', calc.kind === 'pulse' ? '범위' : '사거리', `${k(calc.range)}칸`]);
       out.push(['target', '대상', calc.targets === 'both' ? '지상·공중' : calc.targets === 'air' ? '공중만' : '지상만']);
     }
@@ -1243,6 +1259,13 @@
     if (spec.rain && cur.rain && spec.rain.count !== cur.rain.count) parts.push(`고드름 ${cur.rain.count}명 → ${spec.rain.count}명`);
     if (spec.strike && cur.strike && spec.strike.count !== cur.strike.count) parts.push(`번개 ${cur.strike.count}명 → ${spec.strike.count}명`);
     if (spec.fear && cur.fear) parts.push(`공포 ${cur.fear.dur} → ${spec.fear.dur}초`);
+    if (spec.orbit && cur.orbit) parts.push(`불사조 초당 ${cur.orbit.dps} → ${spec.orbit.dps}${spec.orbit.birds > cur.orbit.birds ? `, ${spec.orbit.birds}마리` : ''}`);
+    if (spec.blizzard && cur.blizzard) parts.push(`눈보라 초당 ${cur.blizzard.dps} → ${spec.blizzard.dps}, 터짐 ${cur.blizzard.shatter} → ${spec.blizzard.shatter}${spec.blizzard.count > cur.blizzard.count ? `, ${spec.blizzard.count}곳` : ''}`);
+    if (spec.roller && cur.roller) parts.push(spec.roller.type === 'tornado' ? `회오리 초당 ${cur.roller.dps} → ${spec.roller.dps}, ${cur.roller.length} → ${spec.roller.length}칸` : `깔기 ${cur.roller.crush} → ${spec.roller.crush}${spec.roller.count > cur.roller.count ? `, 바위 ${spec.roller.count}개` : ''}`);
+    if (spec.smite && cur.smite) parts.push(`체력 비례 ${round(cur.smite.pct * 100)}% → ${round(spec.smite.pct * 100)}%${spec.smite.count > cur.smite.count ? `, ${spec.smite.count}명` : ''}`);
+    if (spec.harvest && cur.harvest) parts.push(`영혼 폭풍 ${cur.harvest.storm} → ${spec.harvest.storm}`);
+    if (spec.chrono && cur.chrono) parts.push(`시간 멈춤 ${cur.chrono.stop} → ${spec.chrono.stop}초, 범위 ${cur.chrono.radius} → ${spec.chrono.radius}칸`);
+    if (spec.breath && cur.breath && spec.breath.count > cur.breath.count) parts.push(`불길 ${spec.breath.count}줄`);
     if (spec.cone && cur.cone && spec.cone !== cur.cone) parts.push(spec.cone >= 360 ? '사방으로 불길' : `부채꼴 ${cur.cone}° → ${spec.cone}°`);
     if (spec.interval && cur.interval) parts.push(`간격 ${round(RG.stats.specOf(t.type, t.level, t.branch).interval, 2)} → ${spec.interval}초`);
     if (spec.range && cur.range) parts.push(`사거리 ${round(RG.stats.specOf(t.type, t.level, t.branch).range, 1)} → ${spec.range}칸`);

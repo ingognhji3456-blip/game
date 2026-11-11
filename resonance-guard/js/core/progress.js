@@ -88,7 +88,8 @@ RG.progress = (() => {
     return ms.length > 0 && !!mapRec(ms[ms.length - 1].id).cleared;
   }
   /** 이 탑이 뽑기에 들어오는 지역 (그 탑이 처음 나오는 맵의 지역) */
-  const towerRegion = (t) => (D().towers[t] && D().towers[t].unlock ? mapRegion(D().towers[t].unlock) : 1);
+  // region을 따로 적은 탑(흑룡의 둥지 = 6)은 그 지역 번호를 씀 — 6은 '마지막 지역(5)을 깬 뒤'
+  const towerRegion = (t) => { const td = D().towers[t]; if (!td) return 1; if (td.region) return td.region; return td.unlock ? mapRegion(td.unlock) : 1; };
   /** 뽑기에 열렸나 (최종 강화 여부와 상관없이) */
   function towerOpen(t) {
     if (RG.gacha.BASIC.includes(t)) return true;

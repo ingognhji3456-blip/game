@@ -609,7 +609,7 @@ RG.render = (() => {
   }
 
   /* ---------------- 장판·덫 ---------------- */
-  const ZONE_FLAT = { fire: 'rgba(255,120,60,0.4)', void: 'rgba(110,31,102,0.5)', thorn: 'rgba(74,122,38,0.4)' };
+  const ZONE_FLAT = { fire: 'rgba(255,120,60,0.4)', void: 'rgba(110,31,102,0.5)', thorn: 'rgba(74,122,38,0.4)', blizzard: 'rgba(200,236,255,0.35)' };
   function drawZones() {
     const st = game.state;
     const lite = lowFx();
@@ -627,7 +627,28 @@ RG.render = (() => {
       }
       ctx.save();
       ctx.globalAlpha = 0.85 * fade;
-      if (z.kind === 'fire') {
+      if (z.kind === 'blizzard') {
+        // 눈보라: 옅은 하늘색 타원 + 도는 눈송이(한 경로) + 가장자리 바람 고리
+        ctx.fillStyle = 'rgba(200,236,255,0.28)';
+        ctx.beginPath(); ctx.ellipse(cx, cy, R, R * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(235,248,255,0.7)';
+        ctx.lineWidth = Math.max(1, T * 0.035);
+        for (let i = 0; i < 2; i++) {
+          const a = time * (2.2 + i) + i * 2;
+          ctx.beginPath(); ctx.ellipse(cx, cy, R * (0.7 + 0.25 * i), R * 0.8 * (0.7 + 0.25 * i), 0, a, a + 2.2); ctx.stroke();
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        const s0 = Math.max(1.5, T * 0.06);
+        for (let i = 0; i < 18; i++) {
+          const a = time * (1.6 + (i % 3) * 0.5) + i * 2.399;
+          const rr = R * (0.15 + 0.8 * ((i * 53) % 17) / 17);
+          const fx = cx + Math.cos(a) * rr;
+          const fy = cy + Math.sin(a) * rr * 0.8 - T * 0.25 * ((i * 7) % 5) / 5;
+          ctx.rect(fx - s0 / 2, fy - s0 / 2, s0, s0);
+        }
+        ctx.fill();
+      } else if (z.kind === 'fire') {
         const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, R);
         g.addColorStop(0, 'rgba(255,214,120,0.75)');
         g.addColorStop(0.55, 'rgba(255,107,61,0.45)');
@@ -724,6 +745,96 @@ RG.render = (() => {
       }
     }
     if (any) ctx.restore();
+  }
+
+  /* ---------------- 불사조 (불사조 둥지) ---------------- */
+  /** 불사조: 시뮬과 같은 꽃잎 길(RG.sim.orbitPos)로 그리고, 날아가는 쪽을 보며 날갯짓, 뒤로 불꽃 조각 */
+  function drawOrbits(alpha) {
+    const st = game.state;
+    for (const t of st.towers) {
+      const c = t.calc;
+      if (!c || c.kind !== 'orbit' || !c.orbit || t.building) continue;
+      const O = c.orbit;
+      const a0 = (t.orbitA || 0) + (t.disabled ? 0 : O.speed * DT_SIM * alpha);
+      const n = O.birds || 1;
+      const sz = T * (0.85 + O.radius * 0.9);
+      for (let i = 0; i < n; i++) {
+        const [bx, by] = RG.sim.orbitPos(t, c, i, a0);
+        const [nx, ny] = RG.sim.orbitPos(t, c, i, a0 + 0.08);
+        const ang = Math.atan2(ny - by, nx - bx);
+        const hy = by - 0.55; // 땅에서 조금 떠서 남
+        const key = `fx:phoenix:${Math.floor(time * 9 + i * 2) % 2}`;
+        const S = RG.art.sprites;
+        if (!S.get(key)) { if (RG.art.fxSprite) S.load(key, () => RG.art.fxSprite('phoenix', key.endsWith('1') ? 1 : 0), 120, 120); continue; }
+        // 땅 그림자
+        ctx.fillStyle = 'rgba(30,10,10,0.22)';
+        ctx.beginPath(); ctx.ellipse(X(bx), Y(by), sz * 0.3, sz * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.save();
+        ctx.translate(X(bx), Y(hy));
+        const flip = Math.cos(ang) < 0;
+        ctx.rotate(flip ? ang + Math.PI : ang);
+        if (flip) ctx.scale(-1, 1);
+        sprite(key, 0, 0, sz, sz, 0.5, 0.5, false);
+        ctx.restore();
+        if (!t.disabled && Math.random() < (manyEnemies ? 0.25 : 0.7)) RG.fx.burst(bx - Math.cos(ang) * 0.25, hy - Math.sin(ang) * 0.25, Math.random() < 0.5 ? '#ffb347' : '#ffe08a', 1, 0.5, 0.45, 0.06, -0.8);
+      }
+    }
+  }
+
+  /* ---------------- 구르는 것 (폭풍의 눈·거인의 바위) ---------------- */
+  function drawRoller(R, alpha) {
+    const x = lerp(R.px, R.x, alpha);
+    const y = lerp(R.py, R.y, alpha);
+    const cx = X(x);
+    const cy = Y(y);
+    const fadeIn = Math.min(1, (game.state.time - R.startAt) / 0.2);
+    const left = R.length - R.travelled;
+    const fade = Math.min(fadeIn, Math.max(0, left / 0.4));
+    if (R.type === 'tornado') {
+      // 회오리: 위로 넓어지는 타원 고리를 겹쳐 쌓고 돌림
+      const H = T * (1.4 + R.radius * 1.2);
+      const W = T * R.radius * 1.15;
+      ctx.save();
+      ctx.globalAlpha = 0.85 * fade;
+      ctx.fillStyle = 'rgba(30,40,60,0.25)';
+      ctx.beginPath(); ctx.ellipse(cx, cy, W * 0.9, W * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = Math.max(1.5, T * 0.06);
+      const n = 6;
+      const spin = time * 9;
+      for (let i = 0; i < n; i++) {
+        const k = i / (n - 1);
+        const ry = cy - H * k;
+        const rx = W * (0.35 + 0.85 * k) * (1 + 0.08 * Math.sin(spin + i));
+        const sway = Math.sin(time * 3 + i * 0.7) * T * 0.12 * k;
+        ctx.strokeStyle = i % 2 ? 'rgba(220,232,255,0.85)' : 'rgba(150,170,210,0.8)';
+        const a = (spin + i * 1.3) % (Math.PI * 2);
+        ctx.beginPath(); ctx.ellipse(cx + sway, ry, rx, rx * 0.3, 0, a, a + Math.PI * 1.5); ctx.stroke();
+      }
+      if (R.stun) { // 번개 회오리: 감기는 번개
+        ctx.strokeStyle = 'rgba(200,180,255,0.9)';
+        ctx.beginPath();
+        for (let i = 0; i <= 5; i++) { const k = i / 5; const px = cx + Math.sin(spin * 1.7 + k * 9) * W * (0.4 + 0.6 * k); const py = cy - H * k; if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); }
+        ctx.stroke();
+      }
+      ctx.restore();
+      if (Math.random() < (manyEnemies ? 0.2 : 0.6)) RG.fx.burst(x + (Math.random() - 0.5) * R.radius, y, '#d8dfe8', 1, 1.4, 0.4, 0.05, -1);
+      return;
+    }
+    // 바위·철구: 구르는 그림(돌아감) + 그림자
+    const size = T * R.radius * 2.1;
+    const key = R.shred ? 'fx:ironball' : 'fx:boulder';
+    const S = RG.art.sprites;
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = 'rgba(20,12,24,0.32)';
+    ctx.beginPath(); ctx.ellipse(cx + T * 0.05, cy + size * 0.02, size * 0.5, size * 0.17, 0, 0, Math.PI * 2); ctx.fill();
+    if (!S.get(key)) { if (RG.art.fxSprite) S.load(key, () => RG.art.fxSprite(R.shred ? 'ironball' : 'boulder', 0), 120, 120); ctx.fillStyle = '#8a7a66'; ctx.beginPath(); ctx.arc(cx, cy - size * 0.45, size * 0.45, 0, Math.PI * 2); ctx.fill(); ctx.restore(); return; }
+    ctx.translate(cx, cy - size * 0.45);
+    const dir = R.path[Math.min(R.path.length - 1, R.seg + 1)];
+    const sgn = dir && dir.x < x - 0.01 ? -1 : 1;
+    ctx.rotate(sgn * (R.spin / (R.radius * 1.05)));
+    sprite(key, 0, 0, size, size, 0.5, 0.5, false);
+    ctx.restore();
   }
 
   /* ---------------- 공명 선 ---------------- */
@@ -909,6 +1020,7 @@ RG.render = (() => {
     }
     if (td.kind === 'beam') return t.beamState && t.beamState.length ? 'fire' : 'idle';
     if (td.kind === 'sweep') { const ph = (time * 1.1 + t.id * 0.37) % 2; return t.anim > 0 ? (ph < 1 ? 'fire' : 'aim') : ph < 1.4 ? 'idle' : 'aim'; } // 등대: 렌즈가 돌며 번쩍
+    if (td.kind === 'orbit') return t.anim > 0 ? 'fire' : ((time * 0.9 + t.id * 0.37) % 2 < 1.3 ? 'idle' : 'aim'); // 불사조 둥지: 불사조가 적을 스치면 불꽃이 솟음
     if (t.anim > 0.11) return 'fire';
     const iv = (t.calc && t.calc.interval) || 1;
     if (t.cd > 0 && t.cd <= Math.max(0.22, iv * 0.4)) return 'aim';
@@ -969,6 +1081,22 @@ RG.render = (() => {
     } else if (t.dampened) {
       icon('dampen', cx + T * 0.32, baseY - T * 0.95, T * 0.3);
     }
+    if (t.calc && t.calc.harvest && t.souls > 0 && !t.building) {
+      // 영혼 수확자: 모은 영혼을 탑 위에 도는 작은 보랏빛 점으로
+      const H = t.calc.harvest;
+      const r0 = T * 0.42;
+      const dot = Math.max(1.5, T * 0.05);
+      ctx.fillStyle = t.souls >= H.max - 2 ? '#f0d8ff' : '#c890ff';
+      ctx.beginPath();
+      for (let i = 0; i < t.souls; i++) {
+        const a = time * 1.8 + (i / H.max) * Math.PI * 2;
+        const px = cx + Math.cos(a) * r0;
+        const py = baseY - T * 1.05 + Math.sin(a) * r0 * 0.35;
+        ctx.moveTo(px + dot, py);
+        ctx.arc(px, py, dot, 0, Math.PI * 2);
+      }
+      ctx.fill();
+    }
     if (t.building) {
       const k = 1 - Math.max(0, t.buildUntil - game.state.time) / game.rules.buildTime;
       ctx.save();
@@ -1009,6 +1137,27 @@ RG.render = (() => {
     c2.strokeText('!!', w / 2, h * 0.72); c2.fillText('!!', w / 2, h * 0.72);
     cv._k = k; cv._w = w; cv._h = h;
     fearCv = cv;
+    return cv;
+  }
+
+  /** 시간 멈춤 표시(모래시계) — 칸 크기·배율마다 한 번 구움 */
+  let clockCv = null;
+  function clockMark() {
+    const s0 = Math.max(10, Math.round(T * 0.34));
+    const k = `${s0}|${dpr}`;
+    if (clockCv && clockCv._k === k) return clockCv;
+    const w = s0;
+    const h = Math.round(s0 * 1.25);
+    const cv = document.createElement('canvas');
+    cv.width = Math.ceil(w * dpr); cv.height = Math.ceil(h * dpr);
+    const c2 = cv.getContext('2d');
+    c2.scale(dpr, dpr);
+    c2.lineJoin = 'round';
+    c2.fillStyle = '#ffe39a'; c2.strokeStyle = '#4a3010'; c2.lineWidth = Math.max(1.2, s0 * 0.09);
+    c2.beginPath(); c2.moveTo(w * 0.15, h * 0.1); c2.lineTo(w * 0.85, h * 0.1); c2.lineTo(w * 0.5, h * 0.5); c2.lineTo(w * 0.85, h * 0.9); c2.lineTo(w * 0.15, h * 0.9); c2.lineTo(w * 0.5, h * 0.5); c2.closePath(); c2.fill(); c2.stroke();
+    c2.fillStyle = '#fff8e0'; c2.beginPath(); c2.moveTo(w * 0.32, h * 0.82); c2.lineTo(w * 0.68, h * 0.82); c2.lineTo(w * 0.5, h * 0.62); c2.closePath(); c2.fill();
+    cv._k = k; cv._w = w; cv._h = h;
+    clockCv = cv;
     return cv;
   }
 
@@ -1197,6 +1346,11 @@ RG.render = (() => {
       const jx = Math.sin(time * 30 + e.id) * T * 0.03;
       const fm = fearMark();
       ctx.drawImage(fm, Math.round((cx + jx - fm._w / 2) * dpr) / dpr, Math.round((top - 2 - fm._h * 0.72) * dpr) / dpr, fm._w, fm._h);
+    }
+    if (st.time < e.ccUntil && e.ccKind === 'stop') {
+      // 시간 멈춤: 금빛 모래시계 표시 (구워 둔 그림)
+      const cm = clockMark();
+      ctx.drawImage(cm, Math.round((cx - cm._w / 2) * dpr) / dpr, Math.round((top - cm._h * 0.9) * dpr) / dpr, cm._w, cm._h);
     }
     if (st.time < e.ccUntil && e.ccKind === 'root') {
       ctx.save();
@@ -1745,6 +1899,7 @@ RG.render = (() => {
     for (let i = 0; i < corpses.length; i++) { const c = corpses[i]; c.t += dt; if (c.t < c.dur) corpses[cn++] = c; }
     corpses.length = cn;
     for (let i = 0; i < corpses.length; i++) dlAdd(corpses[i].y - 0.001, 4, corpses[i]);
+    for (const R of st.rollers) if (st.time >= R.startAt && !R.done) dlAdd(lerp(R.py, R.y, alpha) + 0.05, 5, R);
     dlOrder.length = dlN;
     for (let i = 0; i < dlN; i++) dlOrder[i] = dlPool[i];
     dlOrder.sort(byY);
@@ -1756,6 +1911,7 @@ RG.render = (() => {
       else if (kind === 1) drawLantern();
       else if (kind === 2) drawEnemy(obj, alpha);
       else if (kind === 4) drawCorpse(obj);
+      else if (kind === 5) drawRoller(obj, alpha);
       else drawUnit(obj, alpha);
       it.o = null;
     }
@@ -1766,6 +1922,7 @@ RG.render = (() => {
     for (let i = 0; i < flyQ.length; i++) drawEnemy(flyQ[i], alpha);
     flyQ.length = 0;
     drawSweeps(alpha);
+    drawOrbits(alpha);
     flushBars();
     // 건설 미리보기 탑 그림
     const gh = overlay.ghost;

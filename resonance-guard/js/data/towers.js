@@ -404,6 +404,120 @@ RG.data.towers = {
       B: { id: 'soul_bell', name: '영혼의 종', desc: '자주 울리고 피해가 크며, 울린 적은 3초 동안 받는 피해 +15%.', cost: 290, range: 2.2, interval: 2.6, damage: 70, fear: { dur: 0.7 }, onHit: { curse: { pct: 0.15, dur: 3 } } },
     },
   },
+
+  /* ===================== ✦ 전설 6종·신화 2종 (2026-11-11) — 뽑기 높은 등급, 모두 새 공격 방식 ===================== */
+
+  phoenix_nest: {
+    name: '불사조 둥지', element: 'fire', role: 'attack', targets: 'both', kind: 'orbit', unlock: '3-2',
+    desc: '불사조가 탑 둘레를 쉬지 않고 날며, 날개에 닿는 적(공중 포함)을 태웁니다.',
+    levels: [
+      { cost: 150, range: 2.4, orbit: { birds: 1, speed: 2.4, radius: 0.55, dps: 60 }, onHit: { burn: { dps: 6, dur: 2 } } },
+      { cost: 150, range: 2.5, orbit: { birds: 1, speed: 2.4, radius: 0.55, dps: 88 }, onHit: { burn: { dps: 9, dur: 2 } } },
+      { cost: 220, range: 2.7, orbit: { birds: 1, speed: 2.5, radius: 0.6, dps: 128 }, onHit: { burn: { dps: 13, dur: 2 } } },
+    ],
+    branches: {
+      A: { id: 'sun_phoenix', name: '태양 불사조', desc: '불사조가 커지고 훨씬 뜨거워집니다. 큰 원을 그리며 납니다.', cost: 380, range: 3.0, orbit: { birds: 1, speed: 2.2, radius: 0.85, dps: 230 }, onHit: { burn: { dps: 24, dur: 2.5 } } },
+      B: { id: 'twin_phoenix', name: '쌍둥이 불사조', desc: '불사조 둘이 마주 보며 돕니다.', cost: 370, range: 2.8, orbit: { birds: 2, speed: 2.6, radius: 0.6, dps: 150 }, onHit: { burn: { dps: 15, dur: 2 } } },
+    },
+  },
+
+  blizzard_keep: {
+    name: '눈보라 성채', element: 'frost', role: 'attack', targets: 'both', kind: 'blizzard', unlock: '4-2',
+    desc: '적이 몰린 곳에 눈보라를 일으켜 계속 피해를 주고 크게 느리게 합니다. 눈보라가 끝날 때 얼음이 터집니다(언 적은 2배).',
+    levels: [
+      { cost: 150, range: 3.0, interval: 5.0, blizzard: { count: 1, radius: 1.1, dur: 3, dps: 10, slowPct: 0.35, shatter: 40 } },
+      { cost: 150, range: 3.1, interval: 4.8, blizzard: { count: 1, radius: 1.2, dur: 3, dps: 15, slowPct: 0.38, shatter: 60 } },
+      { cost: 220, range: 3.3, interval: 4.5, blizzard: { count: 1, radius: 1.3, dur: 3.2, dps: 22, slowPct: 0.4, shatter: 90 } },
+    ],
+    branches: {
+      A: { id: 'eternal_winter', name: '영원한 겨울', desc: '눈보라가 아주 넓고 길어지며, 터질 때 남은 적을 얼립니다(1초).', cost: 380, range: 3.5, interval: 5.0, blizzard: { count: 1, radius: 1.7, dur: 4, dps: 30, slowPct: 0.5, shatter: 140, freeze: 1.0 } },
+      B: { id: 'ice_storm', name: '얼음 폭풍', desc: '눈보라를 두 곳에 한꺼번에 일으킵니다.', cost: 370, range: 3.4, interval: 4.2, blizzard: { count: 2, radius: 1.2, dur: 3, dps: 26, slowPct: 0.4, shatter: 110 } },
+    },
+  },
+
+  storm_eye: {
+    name: '폭풍의 눈', element: 'storm', role: 'attack', targets: 'both', kind: 'roller', unlock: '4-4',
+    desc: '회오리를 일으켜 길을 거슬러 보냅니다. 회오리에 걸린 적은 피해를 입으며 뒤로 밀려납니다(보스·큰 적은 밀리지 않음).',
+    levels: [
+      { cost: 150, range: 2.6, interval: 6.0, roller: { type: 'tornado', count: 1, speed: 1.6, length: 5, radius: 0.6, dps: 16, push: 1.2 } },
+      { cost: 150, range: 2.7, interval: 5.7, roller: { type: 'tornado', count: 1, speed: 1.6, length: 5.5, radius: 0.6, dps: 24, push: 1.3 } },
+      { cost: 220, range: 2.9, interval: 5.4, roller: { type: 'tornado', count: 1, speed: 1.7, length: 6, radius: 0.65, dps: 34, push: 1.4 } },
+    ],
+    branches: {
+      A: { id: 'typhoon', name: '태풍', desc: '회오리가 거대해져 더 멀리 가고 더 세게 밀어냅니다.', cost: 380, range: 3.2, interval: 5.5, roller: { type: 'tornado', count: 1, speed: 1.5, length: 8, radius: 0.9, dps: 52, push: 1.6 } },
+      B: { id: 'thunder_twister', name: '번개 회오리', desc: '덜 밀어내는 대신 번개가 감겨 피해가 크고, 처음 닿은 적을 기절시킵니다(0.4초, 보스 제외).', cost: 370, range: 3.0, interval: 5.0, roller: { type: 'tornado', count: 1, speed: 2.0, length: 7, radius: 0.65, dps: 80, push: 0.7, stun: 0.4 } },
+    },
+  },
+
+  titan_boulder: {
+    name: '거인의 바위', element: 'earth', role: 'attack', targets: 'ground', kind: 'roller', unlock: '3-3',
+    desc: '커다란 바위를 길 위로 굴려 보냅니다. 바위는 길을 거슬러 구르며 닿는 지상 적을 한 번씩 깔아뭉개고 잠깐 기절시킵니다(보스 제외).',
+    levels: [
+      { cost: 150, range: 2.6, interval: 5.5, roller: { type: 'boulder', count: 1, speed: 2.4, length: 6, radius: 0.55, crush: 40, stun: 0.5 } },
+      { cost: 150, range: 2.7, interval: 5.3, roller: { type: 'boulder', count: 1, speed: 2.4, length: 6.5, radius: 0.55, crush: 60, stun: 0.55 } },
+      { cost: 220, range: 2.9, interval: 5.0, roller: { type: 'boulder', count: 1, speed: 2.5, length: 7, radius: 0.6, crush: 90, stun: 0.6 } },
+    ],
+    branches: {
+      A: { id: 'landslide', name: '산사태', desc: '바위 셋을 줄지어 굴립니다. 길게 늘어선 떼용.', cost: 380, range: 3.0, interval: 5.5, roller: { type: 'boulder', count: 3, speed: 2.5, length: 7, radius: 0.55, crush: 85, stun: 0.5 } },
+      B: { id: 'iron_ball', name: '거인의 철구', desc: '쇠공 하나가 아주 세게 깔아뭉개고, 맞은 적의 갑옷을 4초 동안 25%p 깎습니다.', cost: 370, range: 2.9, interval: 5.0, roller: { type: 'boulder', count: 1, speed: 2.2, length: 7, radius: 0.7, crush: 280, stun: 0.6, shred: 0.25 } },
+    },
+  },
+
+  judgment_spire: {
+    name: '심판의 첨탑', element: 'light', role: 'attack', targets: 'both', kind: 'smite', unlock: '5-2',
+    desc: '적 하나에 빛의 표식을 새기고, 잠시 뒤 하늘에서 빛기둥을 내립니다. 기본 피해에 최대 체력의 일부만큼 더 줍니다(보스는 덜). 큰 적일수록 아픕니다.',
+    levels: [
+      { cost: 150, range: 3.6, interval: 3.2, damage: 60, smite: { count: 1, delay: 0.8, pct: 0.06, bossPct: 0.02, splash: 0.6, splashPct: 0.3 } },
+      { cost: 150, range: 3.8, interval: 3.0, damage: 90, smite: { count: 1, delay: 0.8, pct: 0.07, bossPct: 0.025, splash: 0.6, splashPct: 0.3 } },
+      { cost: 220, range: 4.0, interval: 2.8, damage: 135, smite: { count: 1, delay: 0.8, pct: 0.08, bossPct: 0.03, splash: 0.65, splashPct: 0.3 } },
+    ],
+    branches: {
+      A: { id: 'divine_verdict', name: '신의 심판', desc: '빛기둥 하나가 아주 셉니다(최대 체력 12%, 보스 4%).', cost: 380, range: 4.4, interval: 3.0, damage: 300, smite: { count: 1, delay: 0.9, pct: 0.12, bossPct: 0.04, splash: 0.7, splashPct: 0.3 } },
+      B: { id: 'light_rain', name: '빛의 비', desc: '한 번에 적 셋에게 표식을 새깁니다.', cost: 370, range: 4.2, interval: 2.6, damage: 120, smite: { count: 3, delay: 0.8, pct: 0.06, bossPct: 0.02, splash: 0.55, splashPct: 0.3 } },
+    },
+  },
+
+  soul_reaper: {
+    name: '영혼 수확자', element: 'dark', role: 'attack', targets: 'both', kind: 'bolt', unlock: '5-3',
+    desc: '어둠 화살을 쏩니다. 근처에서 적이 죽을 때마다 영혼을 모아 점점 세지고(영혼마다 공격력 +%), 영혼이 가득 차면 영혼 폭풍으로 주변을 휩씁니다.',
+    levels: [
+      { cost: 150, range: 2.8, interval: 1.0, damage: 26, projSpeed: 9, harvest: { max: 12, per: 0.05, storm: 120, radius: 2.2 } },
+      { cost: 150, range: 3.0, interval: 1.0, damage: 39, projSpeed: 9, harvest: { max: 12, per: 0.05, storm: 180, radius: 2.3 } },
+      { cost: 220, range: 3.1, interval: 0.9, damage: 57, projSpeed: 9, harvest: { max: 12, per: 0.06, storm: 260, radius: 2.4 } },
+    ],
+    branches: {
+      A: { id: 'death_scythe', name: '죽음의 낫', desc: '화살이 매우 세지고, 영혼 10개로 아주 센 폭풍을 일으킵니다.', cost: 380, range: 3.2, interval: 0.8, damage: 105, projSpeed: 9, harvest: { max: 10, per: 0.07, storm: 520, radius: 2.6 } },
+      B: { id: 'soul_legion', name: '영혼 군단', desc: '영혼을 20개까지 모으고, 폭풍이 넓으며 휩쓸린 적은 4초 동안 받는 피해 +20%.', cost: 370, range: 3.3, interval: 0.9, damage: 78, projSpeed: 9, harvest: { max: 20, per: 0.06, storm: 300, radius: 3.0, curse: { pct: 0.2, dur: 4 } } },
+    },
+  },
+
+  chrono_spire: {
+    name: '시간의 탑', element: 'light', role: 'attack', targets: 'both', kind: 'bolt', unlock: '5-4',
+    desc: '시계 바늘 같은 빛 화살을 쏘고, 주기적으로 넓은 범위의 시간을 멈춥니다. 멈춘 적은 조금 뒤로 되감깁니다. 보스는 멈추지 않고 크게 느려집니다.',
+    levels: [
+      { cost: 200, range: 3.0, interval: 0.9, damage: 30, projSpeed: 10, chrono: { every: 7, radius: 2.4, stop: 1.2, rewind: 0.6, bossSlow: 0.5 } },
+      { cost: 200, range: 3.1, interval: 0.85, damage: 45, projSpeed: 10, chrono: { every: 6.8, radius: 2.5, stop: 1.3, rewind: 0.7, bossSlow: 0.5 } },
+      { cost: 300, range: 3.3, interval: 0.8, damage: 66, projSpeed: 10, chrono: { every: 6.5, radius: 2.7, stop: 1.4, rewind: 0.8, bossSlow: 0.5 } },
+    ],
+    branches: {
+      A: { id: 'frozen_world', name: '멈춘 세계', desc: '시간을 아주 넓게, 오래 멈추고 더 많이 되감습니다.', cost: 480, range: 3.6, interval: 0.8, damage: 85, projSpeed: 10, chrono: { every: 6, radius: 3.4, stop: 2.0, rewind: 1.0, bossSlow: 0.6 } },
+      B: { id: 'haste_clock', name: '가속 시계', desc: '시간을 빠르게 돌려 화살을 아주 빨리 쏩니다.', cost: 470, range: 3.4, interval: 0.35, damage: 60, projSpeed: 10, chrono: { every: 7, radius: 2.6, stop: 1.2, rewind: 0.8, bossSlow: 0.5 } },
+    },
+  },
+
+  shadow_dragon: {
+    name: '흑룡의 둥지', element: 'dark', role: 'attack', targets: 'both', kind: 'breath', unlock: '5-6', region: 6,
+    desc: '흑룡이 가장 앞선 적 쪽으로 어둠의 불길을 일직선으로 뿜습니다. 줄 위의 적(공중 포함)을 모두 꿰뚫고, 받는 피해를 늘립니다.',
+    levels: [
+      { cost: 200, range: 3.2, interval: 2.2, damage: 70, breath: { count: 1, width: 0.5 }, onHit: { curse: { pct: 0.1, dur: 3 } } },
+      { cost: 200, range: 3.3, interval: 2.1, damage: 105, breath: { count: 1, width: 0.5 }, onHit: { curse: { pct: 0.1, dur: 3 } } },
+      { cost: 300, range: 3.5, interval: 2.0, damage: 155, breath: { count: 1, width: 0.55 }, onHit: { curse: { pct: 0.12, dur: 3 } } },
+    ],
+    branches: {
+      A: { id: 'doom_breath', name: '멸망의 숨결', desc: '불길이 길고 굵어지며 한 번이 아주 셉니다. 받는 피해 +20%.', cost: 480, range: 4.2, interval: 2.2, damage: 380, breath: { count: 1, width: 0.65 }, onHit: { curse: { pct: 0.2, dur: 4 } } },
+      B: { id: 'twin_dragon', name: '쌍두 흑룡', desc: '머리 둘이 서로 다른 적에게 한꺼번에 뿜습니다.', cost: 470, range: 3.6, interval: 1.9, damage: 170, breath: { count: 2, width: 0.5 }, onHit: { curse: { pct: 0.12, dur: 3 } } },
+    },
+  },
 };
 
 /** 설계서 순서 (도감·건설 메뉴 정렬용) */
@@ -414,4 +528,6 @@ RG.data.towerOrder = [
   'stone_barracks', 'quake_hammer', 'crystal_mine', 'thorn_garden',
   'sun_lens', 'sanctuary', 'radiance_spire', 'lighthouse',
   'hex_spire', 'void_orb', 'shadow_snare', 'dread_bell',
+  // 전설·신화 (2026-11-11) — 원소 차례로
+  'phoenix_nest', 'blizzard_keep', 'storm_eye', 'titan_boulder', 'judgment_spire', 'soul_reaper', 'chrono_spire', 'shadow_dragon',
 ];

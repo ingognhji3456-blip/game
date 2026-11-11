@@ -28,7 +28,8 @@ const SCRIPTS = [
 const TOWERS = ['ember_archer', 'flame_mortar', 'forge', 'frost_crystal', 'ice_ballista', 'winter_bell',
   'lightning_rod', 'gale_cannon', 'dynamo', 'stone_barracks', 'quake_hammer', 'crystal_mine',
   'sun_lens', 'sanctuary', 'radiance_spire', 'hex_spire', 'void_orb', 'shadow_snare',
-  'flame_jet', 'thorn_garden', 'icicle_cloud', 'thunder_cloud', 'lighthouse', 'dread_bell'];
+  'flame_jet', 'thorn_garden', 'icicle_cloud', 'thunder_cloud', 'lighthouse', 'dread_bell',
+  'phoenix_nest', 'blizzard_keep', 'storm_eye', 'titan_boulder', 'judgment_spire', 'soul_reaper', 'chrono_spire', 'shadow_dragon'];
 const ENEMIES = ['mist_rat', 'ash_boar', 'mist_crow', 'straw_husk', 'vine_leech', 'spore_sac', 'sporeling', 'rust_knight',
   'frost_wolf', 'snow_wisp', 'ice_tortoise', 'avalanche_golem', 'snowball_golem', 'yeti_shaman', 'rime_wraith', 'ice_shieldbearer',
   'cinder_lizard', 'sand_burrower', 'magma_brute', 'thermal_vulture', 'dune_raider', 'obsidian_beetle', 'flame_spirit', 'canyon_slinger',

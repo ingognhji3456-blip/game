@@ -31,7 +31,13 @@ test('처음 시작: 기본 탑 3종만 가지고, 뽑기에는 솔빛 들판(1�
 
 test('모든 탑에 등급이 있고, 기본 등급 확률 합은 1', () => {
   const { RG } = fresh();
-  for (const t of RG.data.towerOrder) assert.ok(['common', 'rare', 'epic'].includes(RG.gacha.RARITY[t]), t);
+  for (const t of RG.data.towerOrder) assert.ok(RG.gacha.ORDER.includes(RG.gacha.RARITY[t]), t);
+  assert.strictEqual(js(RG.gacha.ORDER), js(['common', 'rare', 'epic', 'legendary', 'mythic']));
+  // 전설 6종(원소마다 하나)·신화 2종
+  const of = (r) => RG.data.towerOrder.filter((t) => RG.gacha.RARITY[t] === r);
+  assert.strictEqual(of('legendary').length, 6);
+  assert.strictEqual(new Set(of('legendary').map((t) => RG.data.towers[t].element)).size, 6, '전설은 원소마다 하나');
+  assert.strictEqual(of('mythic').length, 2);
   const sum = Object.values(RG.gacha.RARITIES).reduce((a, r) => a + r.rate, 0);
   assert.ok(Math.abs(sum - 1) < 1e-9);
 });
@@ -112,11 +118,14 @@ test('10회 뽑기 도중 최종 강화가 되면 그 뒤로 바로 빠지고, �
 test('뽑기에 없는 등급의 확률은 있는 등급에 비율대로 나뉨', () => {
   const { RG } = fresh();
   const r1 = RG.gacha.ratesFor(RG.gacha.BASIC);
-  assert.deepStrictEqual(js(r1), js({ common: 1, rare: 0, epic: 0 }));
+  assert.deepStrictEqual(js(r1), js({ common: 1, rare: 0, epic: 0, legendary: 0, mythic: 0 }));
   const r2 = RG.gacha.ratesFor(['ember_archer', 'winter_bell']);
-  assert.ok(Math.abs(r2.common - 2 / 3) < 1e-9 && Math.abs(r2.rare - 1 / 3) < 1e-9 && r2.epic === 0);
+  assert.ok(Math.abs(r2.common - 0.58 / 0.86) < 1e-9 && Math.abs(r2.rare - 0.28 / 0.86) < 1e-9 && r2.epic === 0);
   const r3 = RG.gacha.ratesFor(RG.data.towerOrder);
-  assert.ok(Math.abs(r3.common - 0.6) < 1e-9 && Math.abs(r3.rare - 0.3) < 1e-9 && Math.abs(r3.epic - 0.1) < 1e-9);
+  assert.ok(Math.abs(r3.common - 0.58) < 1e-9 && Math.abs(r3.rare - 0.28) < 1e-9 && Math.abs(r3.epic - 0.1) < 1e-9 && Math.abs(r3.legendary - 0.032) < 1e-9 && Math.abs(r3.mythic - 0.008) < 1e-9);
+  // 전설·신화가 아직 없는 뽑기: 일반·희귀·영웅이 60/30/10 정도로 나눠 가짐(그 몫을 비율대로)
+  const r4 = RG.gacha.ratesFor(RG.data.towerOrder.filter((t) => RG.gacha.TIER[RG.gacha.RARITY[t]] <= 2));
+  assert.ok(Math.abs(r4.common - 0.58 / 0.96) < 1e-9 && r4.legendary === 0 && r4.mythic === 0);
 });
 
 test('중복이 나오면 그 탑 강화 +1씩 (+5까지는 +6%씩)', () => {
@@ -167,12 +176,53 @@ test('천장: 영웅 탑이 뽑기에 들어온 뒤 30회 안에 영웅 확정, 
   assert.strictEqual(st.pity, 0, '영웅이 나오면 천장 초기화');
 });
 
-test('확률은 대략 60/30/10 (모든 탑이 뽑기에 있을 때, 시드 고정 2만 회)', () => {
+test('확률은 대략 58/28/10/3.2/0.8 (모든 탑이 뽑기에 있을 때, 시드 고정 5만 회)', () => {
   const { RG } = fresh();
   const rng = seeded(11);
-  const n = { common: 0, rare: 0, epic: 0 };
-  for (let i = 0; i < 20000; i++) n[RG.gacha.rollRarity(rng, null, RG.data.towerOrder)]++;
-  assert.ok(Math.abs(n.common / 20000 - 0.6) < 0.02 && Math.abs(n.rare / 20000 - 0.3) < 0.02 && Math.abs(n.epic / 20000 - 0.1) < 0.015, JSON.stringify(n));
+  const N = 50000;
+  const n = { common: 0, rare: 0, epic: 0, legendary: 0, mythic: 0 };
+  for (let i = 0; i < N; i++) n[RG.gacha.rollRarity(rng, null, RG.data.towerOrder)]++;
+  assert.ok(Math.abs(n.common / N - 0.58) < 0.015 && Math.abs(n.rare / N - 0.28) < 0.015 && Math.abs(n.epic / N - 0.1) < 0.01, JSON.stringify(n));
+  assert.ok(Math.abs(n.legendary / N - 0.032) < 0.005 && Math.abs(n.mythic / N - 0.008) < 0.003, JSON.stringify(n));
+});
+
+test('전설 천장: 전설 탑이 뽑기에 있으면 80회 안에 전설 이상 확정 (전설:신화 = 4:1), 영웅 천장은 영웅 이상', () => {
+  const { RG } = fresh();
+  const allCommon = () => 0.999; // 늘 가장 낮은 등급이 나오는 rng
+  const pool = RG.data.towerOrder;
+  const st = { owned: {}, crystals: 1e9, pity: 0, pityL: 0 };
+  let at = -1;
+  let epics = 0;
+  for (let i = 1; i <= 80; i++) {
+    st.owned = {};
+    const r = RG.gacha.pull(st, 'one', allCommon, pool).results[0];
+    if (r.rarity === 'epic') epics++;
+    if (RG.gacha.TIER[r.rarity] >= RG.gacha.TIER.legendary) { at = i; break; }
+  }
+  assert.strictEqual(at, RG.gacha.PITY_LEGEND, '80번째에 전설 이상');
+  assert.ok(epics >= 2, '그 사이 영웅 천장(30회)도 따로 돎');
+  assert.strictEqual(st.pityL, 0, '전설 이상이 나오면 전설 천장 초기화');
+  // 전설이 없는 뽑기는 전설 천장을 세지 않음
+  const st2 = { owned: {}, crystals: 1e9, pity: 0, pityL: 0 };
+  const noLegend = pool.filter((t) => RG.gacha.TIER[RG.gacha.RARITY[t]] <= 2);
+  for (let i = 0; i < 40; i++) { st2.owned = {}; RG.gacha.pull(st2, 'one', allCommon, noLegend); }
+  assert.strictEqual(st2.pityL || 0, 0);
+  // 천장에서 고르는 등급 비율: 전설 0.032 : 신화 0.008
+  const rng = seeded(5);
+  const k = { legendary: 0, mythic: 0 };
+  for (let i = 0; i < 5000; i++) k[RG.gacha.rollRarity(rng, 'legendary', pool)]++;
+  assert.ok(Math.abs(k.mythic / 5000 - 0.2) < 0.03, JSON.stringify(k));
+});
+
+test('전설·신화 탑은 지역을 깨면 열림: 거인의 바위·불사조(3지역), 눈보라·폭풍의 눈(4지역), 심판·영혼·시간(5지역), 흑룡은 캠페인을 다 깬 뒤', () => {
+  const { RG } = fresh();
+  const P = RG.progress;
+  const reg = (t) => P.towerRegion(t);
+  assert.strictEqual(js(['phoenix_nest', 'titan_boulder', 'blizzard_keep', 'storm_eye', 'judgment_spire', 'soul_reaper', 'chrono_spire', 'shadow_dragon'].map(reg)), js([3, 3, 4, 4, 5, 5, 5, 6]));
+  assert.ok(!P.towerOpen('shadow_dragon'));
+  const last = RG.data.maps.filter((m) => m.region === 5).slice(-1)[0].id;
+  P.get().maps[last] = { cleared: true, stars: 3 };
+  assert.ok(P.towerOpen('shadow_dragon'), '5지역 마지막 맵을 깨면 흑룡이 뽑기에');
 });
 
 test('판 결과로 공명석: 첫 클리어 100 + 새 별 30씩 + 승리 15 (패배 5)', () => {

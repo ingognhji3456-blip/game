@@ -11,6 +11,11 @@ RG.fx = (() => {
   const texts = [];      // 떠오르는 글자
   const areas = [];      // 바닥 경고 원
   const drops = [];      // 떨어지는 고드름 (고드름 구름)
+  const marks = [];      // 심판의 표식 (적을 따라감)
+  const pillars = [];    // 빛기둥 (심판의 첨탑)
+  const wisps = [];      // 영혼 (죽은 자리 → 영혼 수확자)
+  const breaths = [];    // 어둠 불길 (흑룡의 둥지)
+  let curGame = null;    // 표식이 적을 따라가도록
   let shake = 0;
   const settings = { numbers: true, shake: true };
   const MAX_PARTS = 900;
@@ -75,8 +80,69 @@ RG.fx = (() => {
 
   /** 시뮬레이션 이벤트 처리 */
   function onEvents(events, game) {
+    curGame = game || curGame;
     for (const e of events) {
       switch (e.type) {
+        case 'blizzard':
+          ring(e.x, e.y, e.radius, '#dff6ff', 0.5, 0.1);
+          burst(e.x, e.y - 0.3, '#f4fcff', lite ? 6 : 16, 2.2, 0.6, 0.06, 0.6);
+          break;
+        case 'shatter':
+          // 눈보라가 끝나며 얼음이 터짐
+          ring(e.x, e.y, e.radius, '#bfeaff', 0.45, 0.14);
+          ring(e.x, e.y, e.radius * 0.6, '#ffffff', 0.35, 0.08);
+          burst(e.x, e.y - 0.2, '#dff6ff', lite ? 10 : 30, 3.2, 0.5, 0.08, 2.4);
+          addShake(0.12);
+          break;
+        case 'roller':
+          burst(e.x, e.y, e.type === 'boulder' ? '#b8a88a' : '#dfe8ff', lite ? 5 : 12, 2, 0.5, 0.07, 1);
+          break;
+        case 'crush':
+          if (!lite) burst(e.x, e.y, '#c8b898', 5, 1.6, 0.35, 0.06, 2.2);
+          break;
+        case 'rollerEnd':
+          burst(e.x, e.y, e.type === 'boulder' ? '#b8a88a' : '#e8f0ff', lite ? 4 : 12, 2.4, 0.5, 0.07, 1.2);
+          break;
+        case 'smiteMark': {
+          const life = Math.max(0.2, (e.delay || 0.8) / gameSpeed);
+          marks.push({ id: e.enemyId, x: e.x, y: e.y, life, max: life });
+          break;
+        }
+        case 'smite':
+          pillars.push({ x: e.x, y: e.y, life: 0.45, max: 0.45, w: Math.max(0.45, e.radius) });
+          ring(e.x, e.y, Math.max(0.6, e.radius + 0.2), '#fff3b0', 0.4, 0.12);
+          burst(e.x, e.y - 0.3, '#fff6c8', lite ? 8 : 22, 2.6, 0.5, 0.07, -0.6);
+          addShake(0.12);
+          break;
+        case 'soul': {
+          const tw = game && game.state.towers.find((q) => q.id === e.towerId);
+          if (tw && wisps.length < (lite ? 10 : 30)) wisps.push({ x: e.x, y: e.y - 0.3, tx: tw.x, ty: tw.y - 0.9, life: 0.6, max: 0.6 });
+          break;
+        }
+        case 'soulStorm':
+          ring(e.x, e.y, e.radius, '#c890ff', 0.7, 0.16);
+          ring(e.x, e.y, e.radius * 0.7, '#7a3ab8', 0.55, 0.1);
+          burst(e.x, e.y - 0.4, '#d9b0ff', lite ? 12 : 40, 3.4, 0.7, 0.08, -0.4);
+          addShake(0.3);
+          break;
+        case 'chrono':
+          // 시간의 탑: 금빛 시계 고리 두 겹
+          ring(e.x, e.y, e.radius, '#ffe39a', 0.8, 0.12);
+          ring(e.x, e.y, e.radius * 0.55, '#fff6d8', 0.6, 0.06);
+          burst(e.x, e.y - 0.6, '#ffe8a8', lite ? 8 : 20, 2, 0.8, 0.05, -0.3);
+          break;
+        case 'breath': {
+          breaths.push({ x1: e.x1, y1: e.y1, x2: e.x2, y2: e.y2, w: e.width, life: 0.35, max: 0.35 });
+          const n = lite ? 6 : 16;
+          for (let i = 0; i < n && parts.length < (lite2 ? 70 : lite ? 160 : MAX_PARTS); i++) {
+            const k = rnd();
+            const x = e.x1 + (e.x2 - e.x1) * k;
+            const y = e.y1 + (e.y2 - e.y1) * k;
+            const life = 0.35 + rnd() * 0.2;
+            parts.push({ x, y, vx: (rnd() - 0.5) * 0.8, vy: -0.6 - rnd() * 0.8, life, max: life, size: 0.08 + rnd() * 0.08, color: i % 3 ? '#9a4ae8' : '#e0b8ff', g: -0.4 });
+          }
+          break;
+        }
         case 'hit':
           if (e.dot) break;
           burst(e.x, e.y - 0.2, colorOf(e.element), e.beam ? 2 : 4, 1.6, 0.3, 0.05);
@@ -249,7 +315,7 @@ RG.fx = (() => {
     }
   }
 
-  const TIMED = [rings, bolts, texts, areas];
+  const TIMED = [rings, bolts, texts, areas, marks, pillars, wisps, breaths];
   // 조각 묶음: 색마다 투명도 7단계 칸을 한 번 만들어 두고 매 프레임 다시 씀 (문자열 키·배열을 새로 만들지 않음)
   const pBuckets = new Map();
   const pOrder = [];
@@ -325,6 +391,65 @@ RG.fx = (() => {
       ctx.lineWidth = Math.max(1, b.w * T * 0.35);
       ctx.stroke();
     }
+    // 어둠 불길(흑룡): 굵은 보랏빛 줄기 + 가는 흰 속불, 점점 가늘어지며 사라짐
+    for (const b of breaths) {
+      const a = b.life / b.max;
+      ctx.globalAlpha = a;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#7a2ad8';
+      ctx.lineWidth = Math.max(3, b.w * T * (0.6 + 0.6 * a));
+      ctx.beginPath(); ctx.moveTo(X(b.x1), Y(b.y1)); ctx.lineTo(X(b.x2), Y(b.y2)); ctx.stroke();
+      ctx.strokeStyle = '#f0dcff';
+      ctx.lineWidth = Math.max(1.5, b.w * T * 0.25 * (0.5 + a));
+      ctx.stroke();
+    }
+    // 빛기둥(심판): 하늘에서 내려오는 두 겹 기둥
+    for (const p of pillars) {
+      const a = p.life / p.max;
+      const cx = X(p.x);
+      const by = Y(p.y);
+      const w = p.w * T * (0.5 + 0.5 * a);
+      ctx.globalAlpha = 0.55 * a;
+      ctx.fillStyle = '#ffe9a0';
+      ctx.fillRect(cx - w / 2, by - T * 6, w, T * 6);
+      ctx.globalAlpha = 0.9 * a;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(cx - w * 0.18, by - T * 6, w * 0.36, T * 6);
+    }
+    // 영혼: 죽은 자리에서 수확자 쪽으로 휘어 날아감
+    if (wisps.length) {
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = '#d9b0ff';
+      ctx.beginPath();
+      for (const w of wisps) {
+        const k = 1 - w.life / w.max;
+        const e2 = k * k * (3 - 2 * k);
+        const x = w.x + (w.tx - w.x) * e2 + Math.sin(k * Math.PI) * 0.4;
+        const y = w.y + (w.ty - w.y) * e2 - Math.sin(k * Math.PI) * 0.6;
+        const r = Math.max(1.5, T * 0.07);
+        ctx.moveTo(X(x) + r, Y(y));
+        ctx.arc(X(x), Y(y), r, 0, Math.PI * 2);
+      }
+      ctx.fill();
+    }
+    // 심판의 표식: 적을 따라다니는 금빛 원과 내려오는 십자
+    if (marks.length) {
+      ctx.globalCompositeOperation = 'source-over';
+      for (const m of marks) {
+        const e = curGame && curGame.state.enemies.find((q) => q.id === m.id && !q.dead);
+        if (e) { m.x = e.x; m.y = e.y; }
+        const k = 1 - m.life / m.max;
+        const cx = X(m.x);
+        const cy = Y(m.y);
+        ctx.globalAlpha = 0.9;
+        ctx.strokeStyle = '#ffe066';
+        ctx.lineWidth = Math.max(1.5, T * 0.05);
+        ctx.beginPath(); ctx.ellipse(cx, cy, T * (0.55 - 0.2 * k), T * (0.22 - 0.08 * k), 0, 0, Math.PI * 2); ctx.stroke();
+        const yy = cy - T * (1.6 - 1.1 * k);
+        ctx.beginPath(); ctx.moveTo(cx, yy - T * 0.25); ctx.lineTo(cx, yy + T * 0.25); ctx.moveTo(cx - T * 0.15, yy - T * 0.08); ctx.lineTo(cx + T * 0.15, yy - T * 0.08); ctx.stroke();
+      }
+      ctx.globalCompositeOperation = 'lighter';
+    }
     // 떨어지는 고드름: 하늘(2.6칸 위)에서 맞을 자리로 가속하며 떨어짐
     if (drops.length) {
       ctx.globalCompositeOperation = 'source-over';
@@ -398,7 +523,7 @@ RG.fx = (() => {
     ctx.restore();
   }
 
-  function clear() { parts.length = 0; rings.length = 0; bolts.length = 0; texts.length = 0; areas.length = 0; drops.length = 0; shake = 0; }
+  function clear() { parts.length = 0; rings.length = 0; bolts.length = 0; texts.length = 0; areas.length = 0; drops.length = 0; marks.length = 0; pillars.length = 0; wisps.length = 0; breaths.length = 0; shake = 0; curGame = null; }
 
   return { onEvents, update, draw, drawUnder, drawTexts, shakeOffset, clear, settings, burst, ring, text, colorOf, lightOf, setLite, setSpeed };
 })();

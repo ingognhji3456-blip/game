@@ -36,6 +36,8 @@
     const prev = D().regions[r - 2];
     return prev ? `${prev.name}${josa(prev.name, '을', '를')} 깨면 뽑기에 들어옵니다` : '처음부터 뽑기에 있습니다';
   }
+  /** 잠긴 탑 카드의 짧은 글: '<앞 지역> 클리어' */
+  function lockText(t) { const prev = D().regions[P().towerRegion(t) - 2]; return prev ? `${prev.name} 클리어` : ''; }
   const josa = (w, a, b) => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c <= 11171 && c % 28 ? a : b; };
 
   UI.register('gacha', {
@@ -70,6 +72,8 @@
       const pool = P().gachaPool();
       const rates = G().ratesFor(pool);
       const toEpic = Math.max(1, G().PITY - (g.pity || 0));
+      const toLegend = Math.max(1, G().PITY_LEGEND - (g.pityL || 0));
+      const legendLocked = D().towerOrder.filter((t) => G().TIER[G().rarityOf(t)] >= G().TIER.legendary && !P().towerOpen(t)).sort((a, b) => P().towerRegion(a) - P().towerRegion(b));
       // 아직 잠긴 탑 중 가장 먼저 열리는 지역 묶음
       const locked = D().towerOrder.filter((t) => !P().towerOpen(t));
       const nextR = locked.length ? Math.min(...locked.map((t) => P().towerRegion(t))) : 0;
@@ -92,8 +96,9 @@
         el('div', { class: 'gc-rules' }, [
           el('p', { class: 'gc-pool' }, ['뽑기에 든 탑 ', el('b', { text: `${pool.length}종` }), ` / ${D().towerOrder.length}`, finals ? el('span', { class: 'gc-finals', text: ` · 최종 강화 ${finals}종(뽑기에서 빠짐)` }) : null,
             nextBatch.length ? el('span', { class: 'dim', text: ` · ${D().regions[nextR - 2].name}${josa(D().regions[nextR - 2].name, '을', '를')} 깨면 새 탑 ${nextBatch.length}종이 한꺼번에 들어옴` }) : null]),
-          el('div', { class: 'gc-rates' }, ['common', 'rare', 'epic'].map((r) => el('span', { class: rates[r] ? '' : 'off' }, [rarityBadge(r), ` ${rates[r] ? `${Math.round(rates[r] * 1000) / 10}%` : '아직 없음'}`]))),
-          rates.epic ? el('p', {}, [`영웅 등급 확정까지 `, el('b', { text: `${toEpic}회` })]) : el('p', { class: 'dim', text: epicLocked.length ? `영웅 등급 탑은 ${openText(epicLocked[0]).replace('뽑기에 들어옵니다', '뽑기에 들어옵니다.')}` : '' }),
+          el('div', { class: 'gc-rates' }, G().ORDER.map((r) => el('span', { class: rates[r] ? '' : 'off' }, [rarityBadge(r), ` ${rates[r] ? `${Math.round(rates[r] * 1000) / 10}%` : '아직 없음'}`]))),
+          rates.epic ? el('p', {}, [`영웅 이상 확정까지 `, el('b', { text: `${toEpic}회` })]) : el('p', { class: 'dim', text: epicLocked.length ? `영웅 등급 탑은 ${openText(epicLocked[0]).replace('뽑기에 들어옵니다', '뽑기에 들어옵니다.')}` : '' }),
+          rates.legendary || rates.mythic ? el('p', {}, [`전설 이상 확정까지 `, el('b', { class: 'gc-legend-pity', text: `${toLegend}회` })]) : el('p', { class: 'dim', text: legendLocked.length ? `전설·신화 탑은 ${openText(legendLocked[0]).replace('뽑기에 들어옵니다', '뽑기에 들어옵니다.')}` : '' }),
           el('p', { class: 'dim', text: `같은 탑이 또 나오면 그 탑이 강화됩니다(+1~+${G().MAX_RANK}, 단계마다 +${Math.round(G().RANK_PCT * 100)}%). +${G().MAX_RANK}에서 한 번 더 나오면 ★최종 강화(+${Math.round(G().FINAL_BONUS * 100)}%)가 되고, 그 탑은 뽑기에서 빠집니다. 최종 강화한 탑은 맵에 지을 때 같은 값으로 Lv2부터 지어집니다(강화는 도전 모드에서는 쓰지 않음).` }),
           el('p', { class: 'dim', text: `공명석은 맵 첫 클리어 ${G().REWARD.firstClear}, 새 별마다 ${G().REWARD.perStar}, 승리 ${G().REWARD.win}로 모입니다. 솔빛 들판의 탑은 처음부터 뽑기에 있고, 지역을 다 깨면 다음 지역의 탑이 한꺼번에 들어옵니다(바로 주지는 않습니다).` }),
         ]),
@@ -103,7 +108,7 @@
       const coll = el('div', { class: 'gc-collection' });
       const owned = P().ownedTowers().length;
       coll.appendChild(el('div', { class: 'gc-coll-head' }, [el('b', { text: '내 탑' }), el('span', { class: 'dim', text: ` ${owned}/${D().towerOrder.length}` })]));
-      for (const r of ['epic', 'rare', 'common']) {
+      for (const r of G().ORDER.slice().reverse()) {
         const list = D().towerOrder.filter((t) => G().rarityOf(t) === r);
         const grid = el('div', { class: 'gc-grid' });
         for (const t of list) {
@@ -117,7 +122,7 @@
           const card = el('div', { class: `gc-card rar-${r} el-${td.element} ${state}`, tabindex: '0', 'aria-label': `${has || open ? td.name : '잠긴 탑'} ${fin ? '최종 강화 · 뽑기에서 빠짐' : has ? `강화 ${rlabel}` : open ? '뽑기에서 나올 수 있음' : openText(t)}` }, [
             UI.towerImg(t, fin ? 4 : has ? Math.min(3, 1 + Math.floor(rank / 2)) : 1, fin ? 'A' : null, 'gc-img'),
             el('span', { class: 'gc-name', text: has || open ? td.name : '???' }),
-            has ? pips(rank) : open ? el('span', { class: 'gc-q in', text: '뽑기에 있음' }) : el('span', { class: 'gc-q' }, [UI.icon('lock', 'tiny'), ` ${D().regions[P().towerRegion(t) - 2] ? `${D().regions[P().towerRegion(t) - 2].name} 클리어` : ''}`]),
+            has ? pips(rank) : open ? el('span', { class: 'gc-q in', text: '뽑기에 있음' }) : el('span', { class: 'gc-q' }, [UI.icon('lock', 'tiny'), ` ${lockText(t)}`]),
             has && rank > 0 ? el('em', { class: `gc-rank ${fin ? 'fin' : ''}`, text: fin ? '★' : `+${rank}` }) : null,
           ]);
           UI.tooltipFor(card, () => (has || open ? `<b>${td.name}</b> <span style="color:${G().RARITIES[r].color}">${G().RARITIES[r].name}</span><br>${td.desc}<br>` : `<b>잠긴 탑</b> <span style="color:${G().RARITIES[r].color}">${G().RARITIES[r].name}</span><br>`)
@@ -134,7 +139,7 @@
   /* ---------- 뽑기 결과: 카드 뒤집기 ---------- */
   function reveal(sec, results, done) {
     clearTimers();
-    const best = results.some((r) => r.rarity === 'epic') ? 'epic' : results.some((r) => r.rarity === 'rare') ? 'rare' : 'common';
+    const best = results.reduce((b, r) => (G().TIER[r.rarity] > G().TIER[b] ? r.rarity : b), 'common');
     const ov = el('div', { class: `gc-reveal best-${best} n${results.length > 1 ? 'many' : 'one'}`, role: 'dialog', 'aria-label': '뽑기 결과' });
     const flash = el('div', { class: 'gc-flash' });
     const row = el('div', { class: 'gc-rcards' });
@@ -165,8 +170,9 @@
       if (card.classList.contains('open')) return;
       card.classList.add('open');
       opened++;
-      UI.sfx(r.isFinal || r.rarity === 'epic' ? 'unlock' : r.isNew ? 'star' : r.rarity === 'rare' ? 'upgrade' : 'build', { vol: 0.6 });
-      if (r.rarity === 'epic' || r.isFinal) { flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go'); }
+      const tier = G().TIER[r.rarity];
+      UI.sfx(tier >= G().TIER.legendary ? 'win' : r.isFinal || tier === G().TIER.epic ? 'unlock' : r.isNew ? 'star' : r.rarity === 'rare' ? 'upgrade' : 'build', { vol: tier >= G().TIER.legendary ? 0.7 : 0.6 });
+      if (tier >= G().TIER.epic || r.isFinal) { flash.className = `gc-flash fl-${r.rarity}`; void flash.offsetWidth; flash.classList.add('go'); }
       if (opened === cards.length) finish();
     }
     function finish() {

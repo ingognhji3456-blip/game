@@ -36,6 +36,13 @@ function specSpecial(s) {
   if (s.sweep) out.push(`빛줄기 ${s.sweep.beams}갈래 ${s.sweep.dps}/초${s.sweep.mark ? ` 표식 +${pct(s.sweep.mark.pct)}` : ''}`);
   if (s.detect) out.push(`탐지 ${s.detect}칸`);
   if (s.fear) out.push(`공포 ${s.fear.dur}초`);
+  if (s.orbit) out.push(`불사조 ${s.orbit.birds}마리 ${s.orbit.dps}/초 몸 ${s.orbit.radius}칸`);
+  if (s.blizzard) out.push(`눈보라 ${s.blizzard.count}곳 ${s.blizzard.dps}/초 ${s.blizzard.dur}초 감속 ${pct(s.blizzard.slowPct)} 터짐 ${s.blizzard.shatter}${s.blizzard.freeze ? ` 빙결 ${s.blizzard.freeze}초` : ''}`);
+  if (s.roller) out.push(s.roller.type === 'tornado' ? `회오리 ${s.roller.length}칸 ${s.roller.dps}/초 밀기 ${s.roller.push}칸/초${s.roller.stun ? ` 기절 ${s.roller.stun}초` : ''}` : `바위 ${s.roller.count}개 ${s.roller.length}칸 깔기 ${s.roller.crush} 기절 ${s.roller.stun}초${s.roller.shred ? ` 갑옷 −${pct(s.roller.shred)}p` : ''}`);
+  if (s.smite) out.push(`빛기둥 ${s.smite.count}명 +최대 체력 ${pct(s.smite.pct)}(보스 ${pct(s.smite.bossPct)})`);
+  if (s.harvest) out.push(`영혼 최대 ${s.harvest.max} (+${pct(s.harvest.per)}씩) 폭풍 ${s.harvest.storm}`);
+  if (s.chrono) out.push(`${s.chrono.every}초마다 시간 멈춤 ${s.chrono.stop}초·되감기 ${s.chrono.rewind}칸 (${s.chrono.radius}칸)`);
+  if (s.breath) out.push(`불길 ${s.breath.count}줄 폭 ${s.breath.width}`);
   if (s.shieldMult) out.push(`보호막 ×${s.shieldMult}`);
   if (oh.burn) out.push(`화상 ${oh.burn.dps}/초`);
   if (oh.slow) out.push(`감속 ${pct(oh.slow.pct)}`);

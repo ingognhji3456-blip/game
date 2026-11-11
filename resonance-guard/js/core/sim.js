@@ -33,6 +33,16 @@ RG.sim = (() => {
     return dist(px, py, ax + vx * t, ay + vy * t);
   }
 
+  /** 불사조 자리(불사조 둥지): 꽃잎 세 장 모양으로 휘돎 — 반지름이 바깥(사거리)↔탑 가까이를 오가며 원 안 전체를 훑음.
+   *  렌더러도 같은 식으로 그림(RG.sim.orbitPos) */
+  function orbitPos(t, c, i, a0) {
+    const O = c.orbit;
+    const a = a0 + (i * Math.PI * 2) / (O.birds || 1);
+    const Rm = c.range - O.radius * 0.5;
+    const r = Rm * (0.6 + 0.4 * Math.cos(3 * a));
+    return [t.x + Math.cos(a) * r, t.y + Math.sin(a) * r];
+  }
+
   /** 기술 나무 효과 합계 */
   function sumSkills(ids) {
     const meta = {};
@@ -71,7 +81,7 @@ RG.sim = (() => {
       maxLives: rules.lives,
       result: null,
       wave: { index: 0, total: o.mode === 'endless' ? Infinity : waves.length, countdown: null, started: false, queue: [], bonusBase: 0 },
-      towers: [], enemies: [], units: [], projectiles: [], zones: [], traps: [], beams: [],
+      towers: [], enemies: [], units: [], projectiles: [], zones: [], traps: [], beams: [], rollers: [],
       hero: null,
       events: [],
       stats: { damageByTower: {}, kills: 0, leaked: 0, goldEarned: 0, heroDamage: 0, resonanceSeen: {} },
@@ -186,7 +196,7 @@ RG.sim = (() => {
       if (e.dead || e.burrowed) return false;
       const ed = D().enemies[e.type];
       if (ed.boss) {
-        if (kind === 'stun' || kind === 'lift' || kind === 'fear') return false; // 보스는 겁먹지 않음
+        if (kind === 'stun' || kind === 'lift' || kind === 'fear' || kind === 'stop') return false; // 보스는 겁먹지·멈추지 않음
         dur *= kind === 'freeze' ? 0.3 : kind === 'root' ? 0.2 : 1;
       }
       if (st.time < e.ccUntil) return false;
@@ -246,7 +256,7 @@ RG.sim = (() => {
       if (!st.zones.length) return 0;
       for (const z of st.zones) {
         if (!z.slowPct || st.time > z.until) continue;
-        if (z.kind !== 'void' && e.flying) continue;
+        if (z.kind !== 'void' && z.kind !== 'blizzard' && e.flying) continue;
         if (d2(z.x, z.y, e.x, e.y) <= z.radius * z.radius) best = Math.max(best, D().enemies[e.type].boss ? z.slowPct * 0.5 : z.slowPct);
       }
       return best;
@@ -407,6 +417,7 @@ RG.sim = (() => {
       st.stats.goldEarned += bounty;
       st.stats.kills += 1;
       ev('kill', { enemyId: e.id, enemyType: e.type, x: e.x, y: e.y, bounty, boss: !!ed.boss, flying: e.flying, dir: e.dir, size: e.size }); // dir·size는 죽는 연출용
+      harvestSoul(e);
       // 경험치
       if (st.hero && !st.hero.dead) {
         if (src && src.heroHit) heroXp(e, true);
@@ -977,7 +988,9 @@ RG.sim = (() => {
           const targets = towerTargets(t, c.multishot || 1, c.range);
           if (!targets.length) return false;
           for (const e of targets) {
-            st.projectiles.push({ id: nextId++, kind: c.kind, element: c.element, x: t.x, y: t.y - 0.35, px: t.x, py: t.y - 0.35, targetId: e.id, tx: e.x, ty: e.y, speed: c.projSpeed || 8, src, base: c.damage, towerType: t.type, level: t.level, branch: t.branch });
+            // 영혼 수확자: 모은 영혼마다 공격력 +%
+            const base = c.harvest ? c.damage * (1 + (t.souls || 0) * c.harvest.per) : c.damage;
+            st.projectiles.push({ id: nextId++, kind: c.kind, element: c.element, x: t.x, y: t.y - 0.35, px: t.x, py: t.y - 0.35, targetId: e.id, tx: e.x, ty: e.y, speed: c.projSpeed || 8, src, base, towerType: t.type, level: t.level, branch: t.branch });
           }
           ev('fire', { towerId: t.id, kind: c.kind, element: c.element, x: t.x, y: t.y, tx: targets[0].x, ty: targets[0].y });
           return true;
@@ -1119,6 +1132,102 @@ RG.sim = (() => {
           ev('thorns', { towerId: t.id, x: best.c + 0.5, y: best.r + 0.5, fromX: t.x, fromY: t.y, radius: K.radius });
           return true;
         }
+        case 'blizzard': {
+          // 눈보라 성채: 사거리 안에서 적이 가장 많이 몰린 곳(들)에 눈보라
+          const B = c.blizzard;
+          const cand = towerTargets(t, 24, c.range);
+          if (!cand.length) return false;
+          const R2 = B.radius * B.radius;
+          const score = cand.map((e) => { let n = 0; for (const o3 of cand) if (d2(o3.x, o3.y, e.x, e.y) <= R2) n++; return n; });
+          const picked = [];
+          for (let k = 0; k < (B.count || 1); k++) {
+            let best = -1;
+            for (let i = 0; i < cand.length; i++) {
+              if (picked.some((p) => d2(cand[p].x, cand[p].y, cand[i].x, cand[i].y) < R2 * 2.25)) continue; // 두 번째는 첫 곳과 떨어진 곳
+              if (best < 0 || score[i] > score[best]) best = i;
+            }
+            if (best < 0) break;
+            picked.push(best);
+          }
+          for (const i of picked) {
+            const e = cand[i];
+            addZone({ kind: 'blizzard', radius: B.radius, dur: B.dur, dps: B.dps, slowPct: B.slowPct, shatter: B.shatter, freeze: B.freeze || 0 }, e.x, e.y, src, false);
+            ev('blizzard', { towerId: t.id, x: e.x, y: e.y, radius: B.radius, dur: B.dur });
+          }
+          ev('fire', { towerId: t.id, kind: 'blizzard', element: c.element, x: t.x, y: t.y, tx: cand[picked[0]].x, ty: cand[picked[0]].y });
+          return true;
+        }
+        case 'roller': {
+          // 폭풍의 눈·거인의 바위: 사거리 안 길의 가장 아래쪽(등불 쪽) 칸에서 길을 거슬러 굴려 보냄
+          const RL = c.roller;
+          // 사거리 안 앞선 적(표적 방식)이 서 있는 길 칸에서 시작 — 그 적부터 깔고 뒤따르는 적 쪽으로 거슬러 굴러감
+          const tg = towerTargets(t, 1, c.range);
+          if (!tg.length) return false;
+          const path = rollerPath(tg[0], RL.length);
+          if (!path) return false;
+          for (let k = 0; k < (RL.count || 1); k++) {
+            st.rollers.push({
+              id: nextId++, owner: t.id, type: RL.type, path, seg: 0, x: path[0].x, y: path[0].y, px: path[0].x, py: path[0].y,
+              travelled: 0, length: RL.length, speed: RL.speed, radius: RL.radius, startAt: st.time + k * 0.45,
+              dps: RL.dps || 0, push: RL.push || 0, crush: RL.crush || 0, stun: RL.stun || 0, shred: RL.shred || 0,
+              hit: [], src, element: c.element, spin: 0,
+            });
+          }
+          ev('roller', { towerId: t.id, type: RL.type, x: path[0].x, y: path[0].y, element: c.element });
+          ev('fire', { towerId: t.id, kind: 'roller', element: c.element, x: t.x, y: t.y, tx: path[0].x, ty: path[0].y });
+          return true;
+        }
+        case 'smite': {
+          // 심판의 첨탑: 표식 → 잠시 뒤 빛기둥. 기본 피해 + 최대 체력의 일부(보스는 덜)
+          const S = c.smite;
+          const targets = towerTargets(t, S.count || 1, c.range);
+          if (!targets.length) return false;
+          for (const e of targets) {
+            const id = e.id;
+            let lx = e.x;
+            let ly = e.y;
+            ev('smiteMark', { towerId: t.id, enemyId: id, x: lx, y: ly, delay: S.delay });
+            delayed.push({
+              at: st.time + S.delay,
+              fn: () => {
+                const tg = enemyById(id);
+                if (tg && !tg.dead) { lx = tg.x; ly = tg.y; }
+                if (tg && !tg.dead && targetable(tg)) {
+                  const boss = !!D().enemies[tg.type].boss;
+                  hitEnemy(tg, c.damage + tg.maxHp * (boss ? S.bossPct : S.pct), src, {});
+                }
+                for (const o3 of enemiesInRadius(lx, ly, S.splash, null)) if (o3 !== tg) hitEnemy(o3, c.damage * S.splashPct, src, { area: true, procMult: 0.3 });
+                ev('smite', { towerId: t.id, x: lx, y: ly, radius: S.splash, element: c.element });
+              },
+            });
+          }
+          ev('fire', { towerId: t.id, kind: 'smite', element: c.element, x: t.x, y: t.y, tx: targets[0].x, ty: targets[0].y });
+          return true;
+        }
+        case 'breath': {
+          // 흑룡의 둥지: 고른 적 쪽으로 일직선 불길 — 줄 위의 적(공중 포함)을 모두 꿰뚫음
+          const B = c.breath;
+          const targets = towerTargets(t, B.count || 1, c.range);
+          if (!targets.length) return false;
+          const ox = t.x;
+          const oy = t.y - 0.45;
+          for (const e of targets) {
+            const dx = e.x - ox;
+            const dy = e.y - oy;
+            const L = Math.hypot(dx, dy) || 1;
+            const len = c.range + 0.4;
+            const x2 = ox + (dx / L) * len;
+            const y2 = oy + (dy / L) * len;
+            const half = B.width / 2;
+            for (const o3 of enemiesInRadius((ox + x2) / 2, (oy + y2) / 2, len / 2 + half + 0.5, null)) {
+              if (!targetable(o3)) continue;
+              if (segDist(o3.x, o3.y, ox, oy, x2, y2) <= half + o3.size * 0.3) hitEnemy(o3, c.damage, src, { area: o3 !== e });
+            }
+            ev('breath', { towerId: t.id, x1: ox, y1: oy, x2, y2, width: B.width, element: c.element });
+          }
+          ev('fire', { towerId: t.id, kind: 'breath', element: c.element, x: t.x, y: t.y, tx: targets[0].x, ty: targets[0].y });
+          return true;
+        }
         case 'chain': {
           const targets = towerTargets(t, 1, c.range);
           if (!targets.length) return false;
@@ -1184,7 +1293,145 @@ RG.sim = (() => {
         const cur = st.zones.find((q) => q.owner === src.tower.id && q.kind === z.kind && Math.abs(q.x - x) < 0.01 && Math.abs(q.y - y) < 0.01);
         if (cur) { cur.until = st.time + z.dur; return; }
       }
-      st.zones.push({ id: nextId++, kind: z.kind, element: src.calc.element, x, y, radius: z.radius, until: st.time + z.dur, born: st.time, dur: z.dur, dps: z.dps * (1 + (src.calc.dmgBonus || 0)), slowPct: z.slowPct || 0, meltArmor: z.meltArmor || 0, owner: src.tower ? src.tower.id : 0, src });
+      st.zones.push({ id: nextId++, kind: z.kind, element: src.calc.element, x, y, radius: z.radius, until: st.time + z.dur, born: st.time, dur: z.dur, dps: z.dps * (1 + (src.calc.dmgBonus || 0)), slowPct: z.slowPct || 0, meltArmor: z.meltArmor || 0, owner: src.tower ? src.tower.id : 0, src, shatter: z.shatter || 0, freeze: z.freeze || 0, shattered: false });
+    }
+
+    /**
+     * 불사조 둥지: 불사조(birds마리, 같은 간격)가 탑 둘레(사거리의 72% 원)를 계속 돌며, 몸에 닿는 적에게 초당 피해 + 화상.
+     * 각도는 탑마다 저장(t.orbitA) — 결정적.
+     */
+    const ORBIT_HIT = Object.freeze({ quiet: true, beamTick: true });
+    function updateOrbit(t) {
+      const c = t.calc;
+      const O = c.orbit;
+      t.orbitA = ((t.orbitA || 0) + O.speed * DT) % (Math.PI * 2);
+      const n = O.birds || 1;
+      const src = { tower: t, calc: c, element: c.element };
+      const burn = c.onHit && c.onHit.burn;
+      let any = false;
+      for (let i = 0; i < n; i++) {
+        const [bx, by] = orbitPos(t, c, i, t.orbitA);
+        for (const e of enemiesInRadius(bx, by, O.radius, null)) {
+          if (!targetable(e)) continue;
+          any = true;
+          damage(e, O.dps * DT, c.element, src, ORBIT_HIT);
+          if (burn && !e.dead) addDot(e, 'burn', `${t.type}:${t.id}`, burn.dps * (1 + (c.dmgBonus || 0)), burn.dur, c.element, src);
+        }
+      }
+      if (any) t.anim = Math.max(t.anim, 0.12);
+    }
+
+    /**
+     * 시간의 탑: every초마다 범위 안 적의 시간을 멈추고(stop) 조금 되감음(지나온 칸을 거꾸로). 보스는 멈추지 않고 크게 느려짐.
+     */
+    function updateChrono(t) {
+      const C = t.calc.chrono;
+      t.chronoCd = (t.chronoCd == null ? C.every * 0.5 : t.chronoCd) - DT;
+      if (t.chronoCd > 0) return;
+      const list = enemiesInRadius(t.x, t.y, C.radius, null);
+      if (!list.length) { t.chronoCd = 0; return; }
+      t.chronoCd = C.every;
+      for (const e of list) {
+        if (D().enemies[e.type].boss) { applySlow(e, C.bossSlow, C.stop * 1.5); continue; }
+        if (hardCC(e, 'stop', C.stop) && C.rewind > 0) { releaseEnemy(e); moveBack(e, C.rewind); }
+      }
+      t.anim = 0.25;
+      ev('chrono', { towerId: t.id, x: t.x, y: t.y, radius: C.radius, element: t.calc.element });
+    }
+
+    /** 영혼 수확자: 근처(사거리 + 0.5)에서 적이 죽으면 영혼 하나 — 가득 차면 영혼 폭풍 */
+    function harvestSoul(e) {
+      for (const t of st.towers) {
+        const c = t.calc;
+        if (!c || !c.harvest || t.disabled || t.building) continue;
+        const R = c.range + 0.5;
+        if (d2(t.x, t.y, e.x, e.y) > R * R) continue;
+        const H = c.harvest;
+        t.souls = Math.min(H.max, (t.souls || 0) + 1);
+        ev('soul', { towerId: t.id, x: e.x, y: e.y, souls: t.souls, max: H.max });
+        if (t.souls >= H.max) {
+          t.souls = 0; // 먼저 비움 — 폭풍으로 죽은 적은 다음 영혼으로
+          const src = { tower: t, calc: c, element: c.element };
+          for (const o3 of enemiesInRadius(t.x, t.y, H.radius, null)) {
+            hitEnemy(o3, H.storm, src, { area: true, procMult: 0.3 });
+            if (H.curse && !o3.dead) applyCurse(o3, H.curse.pct, H.curse.dur, null);
+          }
+          t.anim = 0.25;
+          ev('soulStorm', { towerId: t.id, x: t.x, y: t.y, radius: H.radius, element: c.element });
+        }
+      }
+    }
+
+    /**
+     * 구르는 것의 길: 표적 적이 향하는 길 칸(없으면 서 있는 칸)에서 시작해, 흐름 거리가 늘어나는 쪽(입구 쪽)으로
+     * 이웃 길 칸을 따라 length칸 남짓. 칸 중심 목록을 돌려줌(시작점은 적의 지금 자리 — 첫 적부터 깔림).
+     */
+    function rollerPath(e, length) {
+      const route = routeSet();
+      let start = e.tr * map.cols + e.tc;
+      if (!route.has(start) || !isFinite(flow[start])) start = e.r * map.cols + e.c;
+      if (!route.has(start) || !isFinite(flow[start])) return null;
+      const path = [{ x: (start % map.cols) + 0.5, y: Math.floor(start / map.cols) + 0.5 }];
+      let cur = start;
+      const seen = new Set([cur]);
+      const N4 = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+      for (let k = 0; k < Math.ceil(length) + 1; k++) {
+        const c0 = cur % map.cols;
+        const r0 = Math.floor(cur / map.cols);
+        const f0 = flow[cur];
+        let next = -1;
+        let nf = Infinity;
+        for (const [dc, dr] of N4) {
+          const c2 = c0 + dc;
+          const r2 = r0 + dr;
+          if (c2 < 0 || r2 < 0 || c2 >= map.cols || r2 >= map.rows) continue;
+          const j = r2 * map.cols + c2;
+          if (!route.has(j) || seen.has(j)) continue;
+          const f = flow[j];
+          if (isFinite(f) && f > f0 && f < nf) { nf = f; next = j; }
+        }
+        if (next < 0) break;
+        seen.add(next);
+        cur = next;
+        path.push({ x: (cur % map.cols) + 0.5, y: Math.floor(cur / map.cols) + 0.5 });
+      }
+      return path.length >= 2 ? path : null;
+    }
+
+    const ROLL_HIT = Object.freeze({ quiet: true, beamTick: true });
+    function updateRollers(time) {
+      for (const R of st.rollers) {
+        R.px = R.x; R.py = R.y;
+        if (time < R.startAt || R.done) continue;
+        // 길을 따라 speed칸/초
+        let step = R.speed * DT;
+        R.travelled += step;
+        R.spin += step;
+        while (step > 1e-6 && R.seg < R.path.length - 1) {
+          const b = R.path[R.seg + 1];
+          const dd = dist(R.x, R.y, b.x, b.y);
+          if (dd > step) { R.x += ((b.x - R.x) / dd) * step; R.y += ((b.y - R.y) / dd) * step; step = 0; } else { R.x = b.x; R.y = b.y; step -= dd; R.seg++; }
+        }
+        if (R.travelled >= R.length || R.seg >= R.path.length - 1) { R.done = true; ev('rollerEnd', { type: R.type, x: R.x, y: R.y }); continue; }
+        const ground = R.type === 'boulder';
+        for (const e of enemiesInRadius(R.x, R.y, R.radius, ground ? 'ground' : null)) {
+          if (!targetable(e)) continue;
+          const first = R.hit.indexOf(e.id) < 0;
+          if (R.type === 'tornado') {
+            damage(e, R.dps * DT, R.element, R.src, ROLL_HIT);
+            if (first) { R.hit.push(e.id); if (R.stun && !e.dead) hardCC(e, 'stun', R.stun); }
+            const ed = D().enemies[e.type];
+            if (R.push > 0 && !e.dead && !ed.boss && e.size < 0.9 && !e.burrowed) { releaseEnemy(e); moveBack(e, R.push * DT); }
+          } else if (first) {
+            R.hit.push(e.id);
+            hitEnemy(e, R.crush, R.src, { area: true });
+            if (!e.dead && R.stun) hardCC(e, 'stun', R.stun);
+            if (!e.dead && R.shred) addShred(e, 'iron_ball', R.shred, R.shred, 4);
+            ev('crush', { x: e.x, y: e.y });
+          }
+        }
+      }
+      compact(st.rollers, (R) => !R.done);
     }
 
     /**
@@ -1769,13 +2016,28 @@ RG.sim = (() => {
       /* --- 탑 공격 --- */
       for (const t of st.towers) stepTower(t, time);
 
+      /* --- 구르는 것(회오리·바위) --- */
+      if (st.rollers.length) updateRollers(time);
+
       /* --- 투사체 --- */
       updateProjectiles();
 
       /* --- 장판 --- */
       for (const z of st.zones) {
-        if (time > z.until) continue;
-        const filter = z.kind === 'void' ? null : 'ground';
+        if (time > z.until) {
+          // 눈보라 성채: 눈보라가 끝나는 순간 얼음이 터짐 — 안의 적에게 한 번 피해(언 적은 2배), 영원한 겨울은 얼림
+          if (z.shatter && !z.shattered) {
+            z.shattered = true;
+            for (const e of enemiesInRadius(z.x, z.y, z.radius, null)) {
+              const frozen = time < e.ccUntil && e.ccKind === 'freeze';
+              hitEnemy(e, z.shatter * (frozen ? 2 : 1), z.src, SHATTER_HIT);
+              if (z.freeze && !e.dead) hardCC(e, 'freeze', z.freeze);
+            }
+            ev('shatter', { x: z.x, y: z.y, radius: z.radius, element: z.element });
+          }
+          continue;
+        }
+        const filter = z.kind === 'void' || z.kind === 'blizzard' ? null : 'ground';
         const list = enemiesInRadius(z.x, z.y, z.radius, filter);
         for (let i = 0; i < list.length; i++) {
           const e = list[i];
@@ -1849,6 +2111,7 @@ RG.sim = (() => {
     // 매 틱 수백 번 쓰는 피해 옵션은 하나를 같이 씀 (damage는 옵션을 읽기만 함)
     const DOT_HIT = Object.freeze({ dot: true, quiet: true });
     const ZONE_HIT = Object.freeze({ dot: true, area: true, quiet: true });
+    const SHATTER_HIT = Object.freeze({ area: true, procMult: 0.5 });
     /** 화상·출혈 목록 하나 처리 — 적이 죽으면 true */
     function tickDots(e, list, time) {
       for (let i = list.length - 1; i >= 0; i--) {
@@ -1994,6 +2257,8 @@ RG.sim = (() => {
       if (c.kind === 'none') return;
       if (c.kind === 'beam') { updateTowerBeams(t); return; }
       if (c.kind === 'sweep') { updateSweep(t); return; }
+      if (c.kind === 'orbit') { updateOrbit(t); return; }
+      if (c.chrono) updateChrono(t);
       if (c.cyclone) {
         t.cycloneCd = (t.cycloneCd == null ? c.cyclone.every * 0.5 : t.cycloneCd) - DT;
         if (t.cycloneCd <= 0) {
