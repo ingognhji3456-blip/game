@@ -9,8 +9,9 @@
  *  - 공명석으로 뽑기: 1회 100, 10회 900 (10회는 희귀 이상 하나 확정 — 뽑기에 희귀가 있을 때)
  *  - 등급: 일반 60% · 희귀 30% · 영웅 10%. 뽑기에 아직 없는 등급의 몫은 있는 등급에 비율대로 나눔
  *  - 천장: 뽑기에 영웅 탑이 들어온 뒤 30회 안에 영웅 확정
- *  - 중복: 그 탑 강화 +1 (최대 +5). +5에서 또 나오면 공명석 30을 돌려받음
- *  - 강화 효과: 단계마다 공격력(지원 탑은 지원 효과, 병영은 병사, 광산은 수입) +6%
+ *  - 중복: 그 탑 강화 +1 (최대 +5). +5에서 한 번 더 나오면 **최종 강화**(2026-11-11 개정: 예전엔 공명석 30 돌려받음)
+ *  - 최종 강화한 탑은 뽑기에서 빠짐 (그 몫의 확률은 남은 탑에 나눔). 10회 도중에 최종이 되면 그 뒤로 바로 빠짐
+ *  - 강화 효과: 단계마다 공격력(지원 탑은 지원 효과, 병영은 병사, 광산은 수입) +6%, 최종 강화는 +50%
  *
  * 순수 함수(무작위는 rng를 받아 씀) — 시험에서 결과를 정할 수 있게.
  * pool = 지금 뽑기에 들어 있는 탑 목록 (진행도가 정해서 넘김)
@@ -23,6 +24,8 @@ RG.gacha = (() => {
     ember_archer: 'common', stone_barracks: 'common', frost_crystal: 'common', flame_mortar: 'common', crystal_mine: 'common', sanctuary: 'common',
     winter_bell: 'rare', quake_hammer: 'rare', lightning_rod: 'rare', forge: 'rare', ice_ballista: 'rare', gale_cannon: 'rare',
     shadow_snare: 'epic', sun_lens: 'epic', hex_spire: 'epic', radiance_spire: 'epic', void_orb: 'epic', dynamo: 'epic',
+    // 2차 6종 (2026-11-11)
+    flame_jet: 'common', thorn_garden: 'common', icicle_cloud: 'rare', thunder_cloud: 'rare', lighthouse: 'epic', dread_bell: 'epic',
   };
   const ORDER = ['common', 'rare', 'epic'];
   const RARITIES = {
@@ -33,6 +36,10 @@ RG.gacha = (() => {
   const COST = { one: 100, ten: 900 };
   const MAX_RANK = 5;
   const RANK_PCT = 0.06;
+  /** 최종 강화 단계 (+5 다음) 와 그 효과 */
+  const FINAL_RANK = MAX_RANK + 1;
+  const FINAL_BONUS = 0.5;
+  /** (안전장치) 최종 강화한 탑이 어떻게든 또 나오면 돌려줄 공명석 — 정상이라면 뽑기에서 빠져 있어 나오지 않음 */
   const REFUND = 30;
   const PITY = 30;
   const START_CRYSTALS = 100;
@@ -43,7 +50,10 @@ RG.gacha = (() => {
 
   const rarityOf = (t) => RARITY[t] || 'common';
   const allTowers = () => D().towerOrder.filter((t) => D().towers[t]);
-  const poolOf = (pool) => (pool && pool.length ? pool : allTowers());
+  const poolOf = (pool) => (pool ? pool : allTowers());
+  const isFinal = (rank) => (rank || 0) >= FINAL_RANK;
+  /** 이 상태에서 뽑을 수 있는 탑 (최종 강화한 탑은 뺌) */
+  const livePool = (state, pool) => poolOf(pool).filter((t) => !(state.owned && isFinal(state.owned[t])));
 
   /** 이 뽑기에서 실제 등급 확률: 뽑기에 없는 등급의 몫을 있는 등급에 비율대로 나눔 */
   function ratesFor(pool) {
@@ -87,39 +97,52 @@ RG.gacha = (() => {
   function pull(state, kind, rng = Math.random, pool = null) {
     const cost = COST[kind];
     if (!cost) return { ok: false, reason: '알 수 없는 뽑기' };
+    let live = livePool(state, pool);
+    if (!live.length) return { ok: false, reason: '뽑기에 남은 탑이 없습니다 — 모두 최종 강화했어요!' };
     if ((state.crystals || 0) < cost) return { ok: false, reason: `공명석이 부족합니다 (${cost} 필요)` };
     state.crystals -= cost;
     const n = kind === 'ten' ? 10 : 1;
-    const rates = ratesFor(pool);
     const results = [];
     let gotRare = false;
-    for (let i = 0; i < n; i++) {
+    let rolled = 0;
+    for (let i = 0; i < n && live.length; i++) {
+      const rates = ratesFor(live);
       // 천장은 뽑기에 영웅 탑이 있을 때만 셈
       if (rates.epic) state.pity = (state.pity || 0) + 1;
       let floor = null;
       if (rates.epic && state.pity >= PITY) floor = 'epic';
       else if (kind === 'ten' && i === n - 1 && !gotRare) floor = 'rare';
-      const rarity = rollRarity(rng, floor, pool);
-      const type = rollTower(rng, rarity, pool);
+      const rarity = rollRarity(rng, floor, live);
+      const type = rollTower(rng, rarity, live);
+      rolled++;
       if (!type) continue;
       if (rarity === 'epic') state.pity = 0;
       if (rarity !== 'common') gotRare = true;
-      results.push(grant(state, type));
+      const r = grant(state, type);
+      results.push(r);
+      if (r.isFinal) live = live.filter((t) => t !== type); // 최종 강화 → 이 뽑기 안에서도 바로 빠짐
     }
-    return { ok: true, results };
+    // 10회 도중에 뽑을 탑이 다 떨어지면 못 뽑은 만큼 공명석을 돌려줌
+    let returned = 0;
+    if (rolled < n) { returned = Math.round((cost * (n - rolled)) / n); state.crystals += returned; }
+    return { ok: true, results, returned };
   }
 
-  /** 탑 하나를 받음: 없으면 새로, 있으면 강화 +1, 최대면 공명석 돌려받음 */
+  /** 탑 하나를 받음: 없으면 새로, 있으면 강화 +1, +5에서 또 나오면 최종 강화 */
   function grant(state, type) {
     const rarity = rarityOf(type);
-    if (!(type in state.owned)) { state.owned[type] = 0; return { type, rarity, isNew: true, rank: 0, refund: 0 }; }
-    if (state.owned[type] < MAX_RANK) { state.owned[type] += 1; return { type, rarity, isNew: false, rank: state.owned[type], refund: 0 }; }
+    if (!(type in state.owned)) { state.owned[type] = 0; return { type, rarity, isNew: true, rank: 0, refund: 0, isFinal: false }; }
+    const cur = state.owned[type];
+    if (cur < MAX_RANK) { state.owned[type] = cur + 1; return { type, rarity, isNew: false, rank: cur + 1, refund: 0, isFinal: false }; }
+    if (cur === MAX_RANK) { state.owned[type] = FINAL_RANK; return { type, rarity, isNew: false, rank: FINAL_RANK, refund: 0, isFinal: true }; }
     state.crystals = (state.crystals || 0) + REFUND;
-    return { type, rarity, isNew: false, rank: MAX_RANK, refund: REFUND };
+    return { type, rarity, isNew: false, rank: FINAL_RANK, refund: REFUND, isFinal: false };
   }
 
-  /** 강화 단계에 따른 배율 (1 + 단계 × 6%) */
-  const rankMult = (rank) => 1 + Math.max(0, Math.min(MAX_RANK, rank || 0)) * RANK_PCT;
+  /** 강화 단계에 따른 배율 (1 + 단계 × 6%, 최종 강화는 1 + 50%) */
+  const rankMult = (rank) => (isFinal(rank) ? 1 + FINAL_BONUS : 1 + Math.max(0, Math.min(MAX_RANK, rank || 0)) * RANK_PCT);
+  /** 강화 단계 표시 글 (+3 / 최종) */
+  const rankLabel = (rank) => (isFinal(rank) ? '최종' : `+${rank || 0}`);
 
   /** 판 결과로 얻는 공명석 계산 (기록 전 상태 기준) */
   function rewardFor({ result, mode, firstClear, newStars, endlessGain }) {
@@ -133,5 +156,5 @@ RG.gacha = (() => {
     return { crystals, lines };
   }
 
-  return { BASIC, RARITY, RARITIES, ORDER, COST, MAX_RANK, RANK_PCT, REFUND, PITY, START_CRYSTALS, REWARD, TICKET_TO_CRYSTALS, rarityOf, ratesFor, rollRarity, rollTower, pull, grant, rankMult, rewardFor };
+  return { BASIC, RARITY, RARITIES, ORDER, COST, MAX_RANK, RANK_PCT, FINAL_RANK, FINAL_BONUS, REFUND, PITY, START_CRYSTALS, REWARD, TICKET_TO_CRYSTALS, rarityOf, ratesFor, rollRarity, rollTower, pull, grant, rankMult, rankLabel, isFinal, livePool, rewardFor };
 })();

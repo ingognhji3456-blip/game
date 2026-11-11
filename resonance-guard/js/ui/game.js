@@ -184,6 +184,7 @@
     }
     if (events.length) handleEvents(events);
     if (running && st.beams.length) { beamT -= dt; if (beamT <= 0) { UI.sfx('beam', { vol: 0.3 }); beamT = 0.2; } }
+    if (RG.fx.setSpeed) RG.fx.setSpeed(running ? speed : 0); // 고드름 낙하 등 판 시간에 맞춰야 하는 효과용
     RG.render.frame(running ? acc / DT() : 1, running ? dt : dt * 0.25);
     hudT -= dt;
     if (hudT <= 0) { updateHud(false); hudT = 0.1; }
@@ -206,6 +207,11 @@
     for (const e of events) {
       switch (e.type) {
         case 'fire': UI.sfx(e.kind === 'bolt' && e.element === 'dark' ? 'hex' : FIRE_SFX[e.kind] || 'arrow', { vol: 0.5 }); break;
+        case 'cone': UI.sfx('gust', { vol: 0.25, pitch: 5 }); break; // 화염 분사기: 쉭 하는 불길
+        case 'icicleHit': UI.sfx('hit_frost', { vol: e.big ? 0.5 : 0.3 }); break;
+        case 'strike': UI.sfx(e.big ? 'explosion' : 'chain', { vol: 0.5, pitch: e.big ? -4 : 0 }); break;
+        case 'thorns': UI.sfx('trap', { vol: 0.35, pitch: 3 }); break;
+        case 'fear': UI.sfx('hex', { vol: 0.25, pitch: -5 }); break;
         case 'pulse': if (e.towerId) { const t = game.state.towers.find((q) => q.id === e.towerId); UI.sfx(t ? PULSE_SFX[t.type] || 'bell' : 'bell', { vol: 0.5 }); } break;
         case 'chain': if (!e.small) UI.sfx('chain', { vol: 0.5 }); break;
         case 'splash': if (e.element === 'fire' || e.big) UI.sfx('explosion', { vol: 0.55 }); break;
@@ -239,8 +245,8 @@
     if (sel && sel.kind === 'enemy' && !game.state.enemies.find((t) => t.id === sel.id)) closePanels();
   }
 
-  const FIRE_SFX = { arrow: 'arrow', bolt: 'bolt', gust: 'gust', mortar: 'mortar', orb: 'orb', ballista: 'ballista' };
-  const PULSE_SFX = { winter_bell: 'bell', quake_hammer: 'slam', radiance_spire: 'flash' };
+  const FIRE_SFX = { arrow: 'arrow', bolt: 'bolt', gust: 'gust', mortar: 'mortar', orb: 'orb', ballista: 'ballista', rain: 'bolt', strike: 'chain' };
+  const PULSE_SFX = { winter_bell: 'bell', quake_hammer: 'slam', radiance_spire: 'flash', dread_bell: 'hex' };
 
   function bossPhaseText(e) {
     if (e.immune) return `이제 ${e.immune.map((x) => D().elements[x].name).join('·')}에 면역입니다`;
@@ -641,7 +647,7 @@
         'aria-pressed': 'false',
       }, [
         key ? el('kbd', { text: key }) : null,
-        (game.ranks && game.ranks[type]) ? el('em', { class: 'tc-rank', text: `+${game.ranks[type]}` }) : null,
+        (game.ranks && game.ranks[type]) ? el('em', { class: `tc-rank ${RG.gacha.isFinal(game.ranks[type]) ? 'fin' : ''}`, text: RG.gacha.isFinal(game.ranks[type]) ? '★' : `+${game.ranks[type]}` }) : null,
         UI.towerImg(type, 1, null, 'tc-img'),
         el('span', { class: 'tc-name', text: td.name }),
         el('span', { class: 'tc-cost' }, [UI.icon('gold', 'tiny'), String(cost)]),
@@ -1119,7 +1125,7 @@
       UI.towerImg(t.type, t.level, t.branch, 'ip-img'),
       el('div', { class: 'ip-title' }, [
         el('b', { text: info.name }),
-        el('span', { class: 'ip-sub' }, [UI.elementBadge(td.element), el('span', { text: t.level >= 4 ? ' 분기' : ` Lv${t.level}` }), calc && calc.rank ? el('em', { class: 'ip-rank', title: `뽑기 중복 강화: ${UI.rankText ? UI.rankText(t.type, calc.rank) : ''}`, text: ` 강화 +${calc.rank}` }) : null]),
+        el('span', { class: 'ip-sub' }, [UI.elementBadge(td.element), el('span', { text: t.level >= 4 ? ' 분기' : ` Lv${t.level}` }), calc && calc.rank ? el('em', { class: `ip-rank ${RG.gacha.isFinal(calc.rank) ? 'fin' : ''}`, title: `뽑기 중복 강화: ${UI.rankText ? UI.rankText(t.type, calc.rank) : ''}`, text: RG.gacha.isFinal(calc.rank) ? ' ★ 최종 강화' : ` 강화 +${calc.rank}` }) : null]),
       ]),
       el('button', { class: 'x-btn', 'aria-label': '닫기', onclick: cancelAll }, [UI.icon('close')]),
     ]);

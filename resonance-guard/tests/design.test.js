@@ -11,11 +11,11 @@ const { RG } = loadGame();
 const D = RG.data;
 const doc = (f) => fs.readFileSync(path.join(ROOT, 'docs', f), 'utf8');
 
-test('탑 설계서 ↔ 데이터: 18종, 이름·id·원소·해금', () => {
+test('탑 설계서 ↔ 데이터: 24종, 이름·id·원소·해금', () => {
   const md = doc('design/towers.md');
   const heads = [...md.matchAll(/^### [A-Z]\d · (.+?) `([a-z_]+)`$/gm)].map((m) => ({ name: m[1], id: m[2] }));
-  assert.strictEqual(heads.length, 18, `설계서 탑 수 ${heads.length}`);
-  assert.strictEqual(Object.keys(D.towers).length, 18);
+  assert.strictEqual(heads.length, 24, `설계서 탑 수 ${heads.length}`);
+  assert.strictEqual(Object.keys(D.towers).length, 24);
   for (const h of heads) {
     const t = D.towers[h.id];
     assert.ok(t, `데이터에 없음: ${h.id}`);

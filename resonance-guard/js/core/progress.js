@@ -75,14 +75,35 @@ RG.progress = (() => {
   const towerRank = (t) => (ownsTower(t) ? gachaState().owned[t] : -1);
   /** 판에 넘길 강화 단계 묶음 (명령 재현이 같도록 판 시작 때 복사해 둠) */
   function towerRanks() { return Object.assign({}, gachaState().owned); }
-  /**
-   * 지금 뽑기에 들어 있는 탑: 기본 탑 + 스테이지가 열린 탑(그 탑이 처음 나오는 맵이 열렸으면).
-   * 스테이지가 열려도 탑을 주지는 않고 뽑기에 넣기만 함.
+  /*
+   * 뽑기에 들어오는 때 (2026-11-11 개정, 사용자 요청): 스테이지마다 하나씩이 아니라 **지역 단위로 한꺼번에**.
+   *  - 1지역(솔빛 들판) 탑은 처음부터 뽑기에 들어 있음
+   *  - n지역 탑은 n−1지역의 마지막 맵을 깨면 한꺼번에 들어옴 (예: 솔빛 들판을 깨면 서리 고개 탑 전부)
+   *  - 들어와도 탑을 주지는 않음(뽑아야 얻음). 최종 강화한 탑은 뽑기에서 빠짐
    */
+  const mapRegion = (id) => { const m = D().maps.find((q) => q.id === id); return m ? m.region : 1; };
+  /** 이 지역을 다 깼나 (그 지역 마지막 맵 클리어) */
+  function regionCleared(r) {
+    const ms = D().maps.filter((m) => m.region === r);
+    return ms.length > 0 && !!mapRec(ms[ms.length - 1].id).cleared;
+  }
+  /** 이 탑이 뽑기에 들어오는 지역 (그 탑이 처음 나오는 맵의 지역) */
+  const towerRegion = (t) => (D().towers[t] && D().towers[t].unlock ? mapRegion(D().towers[t].unlock) : 1);
+  /** 뽑기에 열렸나 (최종 강화 여부와 상관없이) */
+  function towerOpen(t) {
+    if (RG.gacha.BASIC.includes(t)) return true;
+    const r = towerRegion(t);
+    return r <= 1 || regionCleared(r - 1);
+  }
+  /** 열린 탑 전부 (최종 강화한 탑 포함) */
+  function towersOpen() { return D().towerOrder.filter(towerOpen); }
+  /** 지금 뽑기에서 나올 수 있는 탑 (열렸고, 최종 강화하지 않은 탑) */
   function gachaPool() {
-    return D().towerOrder.filter((t) => RG.gacha.BASIC.includes(t) || (D().towers[t].unlock && mapUnlocked(D().towers[t].unlock)));
+    const o = gachaState().owned;
+    return towersOpen().filter((t) => !RG.gacha.isFinal(o[t]));
   }
   const inPool = (t) => gachaPool().includes(t);
+  const towerFinal = (t) => RG.gacha.isFinal(gachaState().owned[t]);
   function pullGacha(kind, rng) {
     const res = RG.gacha.pull(gachaState(), kind, rng, gachaPool());
     if (res.ok) { gachaState().pulls = (gachaState().pulls || 0) + res.results.length; save(); }
@@ -143,7 +164,7 @@ RG.progress = (() => {
     const before = mapStars(mapId);
     const beforeTowers = new Set(towersFor(nextMapId(mapId) || mapId));
     const beforeEndless = p.endless[mapId] || 0;
-    const beforePool = new Set(gachaPool());
+    const beforePool = new Set(towersOpen());
     const beforeHeroes = new Set(heroesFor(nextMapId(mapId) || mapId));
     const wasBranches = branchesUnlocked();
     const wasCleared = !!rec.cleared;
@@ -173,8 +194,8 @@ RG.progress = (() => {
     // 공명석·새 탑 확정권
     const firstClear = st.result === 'win' && !wasCleared && mode === 'normal';
     const reward = RG.gacha.rewardFor({ result: st.result, mode, firstClear, newStars: after - before, endlessGain: mode === 'endless' ? (p.endless[mapId] || 0) - beforeEndless : 0 });
-    // 스테이지가 열리며 뽑기에 새로 들어온 탑 (주는 것은 아님)
-    reward.pooled = gachaPool().filter((t) => !beforePool.has(t));
+    // 지역을 깨서 뽑기에 새로 들어온 탑 (주는 것은 아님)
+    reward.pooled = towersOpen().filter((t) => !beforePool.has(t));
     p.gacha.crystals += reward.crystals;
     save();
     const unlocks = { towers: [], heroes: [], maps: [], branches: false };
@@ -217,7 +238,7 @@ RG.progress = (() => {
 
   return {
     load, get, save, reset, hasSave, mapIndex, mapRec, mapUnlocked, towersFor, heroesFor, branchesUnlocked,
-    gachaState, ownedTowers, ownsTower, towerRank, towerRanks, gachaPool, inPool, pullGacha,
+    gachaState, ownedTowers, ownsTower, towerRank, towerRanks, gachaPool, inPool, pullGacha, towersOpen, towerOpen, towerRegion, regionCleared, towerFinal,
     mapStars, starsTotal, starsSpent, starsFree, canLearn, learn, resetSkills, record, nextMapId, markSeen, seen, frontier, skillCost,
   };
 })();

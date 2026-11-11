@@ -179,7 +179,7 @@ RG.sim = (() => {
       if (e.dead || e.burrowed) return false;
       const ed = D().enemies[e.type];
       if (ed.boss) {
-        if (kind === 'stun' || kind === 'lift') return false;
+        if (kind === 'stun' || kind === 'lift' || kind === 'fear') return false; // 보스는 겁먹지 않음
         dur *= kind === 'freeze' ? 0.3 : kind === 'root' ? 0.2 : 1;
       }
       if (st.time < e.ccUntil) return false;
@@ -196,10 +196,11 @@ RG.sim = (() => {
       e.ccLog.push(st.time);
       e.ccUntil = st.time + dur;
       e.ccKind = kind;
-      if (kind === 'lift') releaseEnemy(e);
+      if (kind === 'lift' || kind === 'fear') releaseEnemy(e);
       return true;
     }
     const isHardCC = (e) => st.time < e.ccUntil;
+    const isFeared = (e) => st.time < e.ccUntil && e.ccKind === 'fear';
     const canMove = (e) => !isHardCC(e);
     const canAct = (e) => !(isHardCC(e) && e.ccKind !== 'root');
 
@@ -550,6 +551,35 @@ RG.sim = (() => {
       }
     }
 
+    /**
+     * 공포(공포의 종): 지나온 칸 중심(trail)을 거꾸로 밟아 뒷걸음질. trail의 마지막은 지금 칸(c,r)의 중심.
+     * 지금 칸 중심에 닿으면 그 앞 칸으로, 겁이 풀리면 다시 원래 다음 칸(tc,tr)으로 걸어감 — 길은 그대로.
+     */
+    function moveBack(e, step) {
+      let guard = 0;
+      while (step > 1e-6 && guard++ < 4) {
+        let tx = e.c + 0.5;
+        let ty = e.r + 0.5;
+        if (Math.abs(e.x - tx) < 1e-6 && Math.abs(e.y - ty) < 1e-6) {
+          const tr = e.trail;
+          if (tr.length < 2) return; // 더 물러설 곳이 없음 (입구 근처)
+          tr.pop();
+          const p = tr[tr.length - 1];
+          e.tc = e.c; e.tr = e.r; // 겁이 풀리면 방금 떠난 칸으로 다시
+          e.c = Math.floor(p.x); e.r = Math.floor(p.y);
+          tx = p.x; ty = p.y;
+        }
+        const dd = dist(e.x, e.y, tx, ty);
+        if (dd > step) {
+          e.x += ((tx - e.x) / dd) * step;
+          e.y += ((ty - e.y) / dd) * step;
+          if (Math.abs(tx - e.x) > 0.01) e.dir = tx > e.x ? 1 : -1;
+          return;
+        }
+        e.x = tx; e.y = ty; step -= dd;
+      }
+    }
+
     /** 흐름장이 끊긴 칸에서 빠져나갈 이웃 칸 (모서리 규칙 무시 — 비상용) */
     function escapeStep(c, r) {
       let best = null;
@@ -682,7 +712,7 @@ RG.sim = (() => {
 
     function canBeBlocked(e) {
       const ed = D().enemies[e.type];
-      return !e.dead && !e.flying && !e.burrowed && !ed.traits.unstoppable && !(isHardCC(e) && e.ccKind === 'lift');
+      return !e.dead && !e.flying && !e.burrowed && !ed.traits.unstoppable && !(isHardCC(e) && (e.ccKind === 'lift' || e.ccKind === 'fear'));
     }
 
     // 붙잡기 계산에 매 틱 쓰는 배열은 다시 씀 (적 수백 × 병사 수십을 매 틱 훑으므로 새 배열을 만들면 쓰레기가 많음)
@@ -839,7 +869,7 @@ RG.sim = (() => {
       let b = base;
       if (calc.onHit && calc.onHit.flyingMult && e.flying) b *= calc.onHit.flyingMult;
       if (src.heroCrit && isSlowed(e) && rng() < src.heroCrit.chance) hit.critOverride = src.heroCrit.mult;
-      const dealt = damage(e, b, src.element || calc.element, src, { crit: hit.critOverride || crit, area: hit.area, shieldMult: hit.shieldMult || calc.shieldMult });
+      const dealt = damage(e, b, src.element || calc.element, src, { crit: hit.critOverride || crit, area: hit.area, shieldMult: hit.shieldMult || calc.shieldMult, quiet: hit.quiet });
       if (e.dead && !e.leaked) {
         procsOnDeadTarget(e, dealt, src, hit);
         return dealt;
@@ -987,8 +1017,95 @@ RG.sim = (() => {
           const list = enemiesInRadius(t.x, t.y, c.range, filter);
           if (!list.some((e) => !e.dead)) return false;
           for (const e of list) hitEnemy(e, c.damage, src, { area: true });
+          if (c.fear) for (const e of list) if (!e.dead && hardCC(e, 'fear', c.fear.dur)) ev('fear', { enemyId: e.id, x: e.x, y: e.y }); // 공포의 종
           if (c.zone) addZone(c.zone, t.x, t.y, src, true);
-          ev('pulse', { towerId: t.id, x: t.x, y: t.y, radius: c.range, element: c.element });
+          ev('pulse', { towerId: t.id, x: t.x, y: t.y, radius: c.range, element: c.element, fear: !!c.fear });
+          return true;
+        }
+        case 'cone': {
+          // 화염 분사기: 가장 앞선 적 쪽으로 부채꼴(c.cone도) 안의 지상 적 모두 (360이면 사방)
+          const targets = towerTargets(t, 1, c.range);
+          if (!targets.length) return false;
+          const aim = Math.atan2(targets[0].y - t.y, targets[0].x - t.x);
+          const half = (c.cone / 2) * (Math.PI / 180);
+          const list = enemiesInRadius(t.x, t.y, c.range, c.targets === 'ground' ? 'ground' : null);
+          for (const e of list) {
+            if (c.cone < 360) {
+              let da = Math.atan2(e.y - t.y, e.x - t.x) - aim;
+              while (da > Math.PI) da -= Math.PI * 2;
+              while (da < -Math.PI) da += Math.PI * 2;
+              if (Math.abs(da) > half && d2(e.x, e.y, t.x, t.y) > 0.25 * 0.25) continue; // 탑에 바짝 붙은 적은 늘 맞음
+            }
+            hitEnemy(e, c.damage, src, { area: e !== targets[0], quiet: true });
+          }
+          ev('cone', { towerId: t.id, x: t.x, y: t.y, angle: aim, cone: c.cone, range: c.range, element: c.element });
+          return true;
+        }
+        case 'rain': {
+          // 고드름 구름: 적 여럿을 골라 머리 위로 고드름 — 잠시 뒤 그 자리에 떨어짐(빠른 적은 벗어날 수 있음)
+          const R = c.rain;
+          const targets = towerTargets(t, R.count, c.range);
+          if (!targets.length) return false;
+          for (const e of targets) {
+            const x = e.x;
+            const y = e.y;
+            ev('icicle', { towerId: t.id, x, y, delay: R.delay, big: R.count === 1, element: c.element });
+            delayed.push({
+              at: st.time + R.delay,
+              fn: () => {
+                const hit = enemiesInRadius(x, y, R.radius, c.targets === 'ground' ? 'ground' : null);
+                for (const o3 of hit) hitEnemy(o3, c.damage, src, { area: true });
+                ev('icicleHit', { x, y, radius: R.radius, big: R.count === 1, element: c.element });
+              },
+            });
+          }
+          ev('fire', { towerId: t.id, kind: 'rain', element: c.element, x: t.x, y: t.y, tx: targets[0].x, ty: targets[0].y });
+          return true;
+        }
+        case 'strike': {
+          // 뇌운 탑: 고른 적에게 하늘에서 바로 번개 (투사체 없음) + 주변 작은 피해
+          const S = c.strike;
+          const targets = towerTargets(t, S.count || 1, c.range);
+          if (!targets.length) return false;
+          for (const e of targets) {
+            const x = e.x;
+            const y = e.y;
+            hitEnemy(e, c.damage, src, {});
+            if (S.splash) for (const o3 of enemiesInRadius(x, y, S.splash, c.targets === 'ground' ? 'ground' : null)) if (o3 !== e) hitEnemy(o3, c.damage * S.splashPct, src, { area: true, procMult: 0.5 });
+            ev('strike', { towerId: t.id, x, y, element: c.element, big: (S.count || 1) === 1 && c.damage >= 150 });
+          }
+          ev('fire', { towerId: t.id, kind: 'strike', element: c.element, x: t.x, y: t.y, tx: targets[0].x, ty: targets[0].y });
+          return true;
+        }
+        case 'spikes': {
+          // 가시 덤불: 사거리 안 길 칸(적이 오는 쪽부터)에 가시밭을 키움 — 동시에 max곳까지
+          const K = c.spikes;
+          const mine = st.zones.filter((z) => z.owner === t.id && z.kind === 'thorn' && st.time <= z.until);
+          if (mine.length >= K.max) return false;
+          const near = enemiesInRadius(t.x, t.y, c.range + 2, 'ground');
+          if (!near.length) return false; // 적이 근처에 없으면 기다림
+          // 적이 서 있는 길 칸을 먼저(많이 선 칸부터), 없으면 적이 올 쪽(흐름 거리가 먼 칸)
+          let best = null;
+          let bestN = -1;
+          let bestD = -1;
+          const R = c.range;
+          const route = routeSet();
+          for (let r = Math.max(0, Math.floor(t.y - R)); r <= Math.min(map.rows - 1, Math.floor(t.y + R)); r++) {
+            for (let cc = Math.max(0, Math.floor(t.x - R)); cc <= Math.min(map.cols - 1, Math.floor(t.x + R)); cc++) {
+              if (!route.has(r * map.cols + cc)) continue;
+              if (map.kinds[r * map.cols + cc] === RG.grid.T.LANTERN) continue;
+              if (d2(cc + 0.5, r + 0.5, t.x, t.y) > R * R) continue;
+              if (mine.some((z) => Math.abs(z.x - (cc + 0.5)) < 0.01 && Math.abs(z.y - (r + 0.5)) < 0.01)) continue;
+              const fd = flow[r * map.cols + cc];
+              if (!isFinite(fd)) continue;
+              let n = 0;
+              for (let k = 0; k < near.length; k++) { const o3 = near[k]; if (!o3.dead && Math.abs(o3.x - (cc + 0.5)) <= 0.6 && Math.abs(o3.y - (r + 0.5)) <= 0.6) n++; }
+              if (n > bestN || (n === bestN && fd > bestD)) { bestN = n; bestD = fd; best = { c: cc, r }; }
+            }
+          }
+          if (!best) return false;
+          addZone({ kind: 'thorn', radius: K.radius, dur: K.dur, dps: K.dps, slowPct: K.slowPct, meltArmor: K.meltArmor || 0 }, best.c + 0.5, best.r + 0.5, src, false);
+          ev('thorns', { towerId: t.id, x: best.c + 0.5, y: best.r + 0.5, fromX: t.x, fromY: t.y, radius: K.radius });
           return true;
         }
         case 'chain': {
@@ -1057,6 +1174,38 @@ RG.sim = (() => {
         if (cur) { cur.until = st.time + z.dur; return; }
       }
       st.zones.push({ id: nextId++, kind: z.kind, element: src.calc.element, x, y, radius: z.radius, until: st.time + z.dur, born: st.time, dur: z.dur, dps: z.dps * (1 + (src.calc.dmgBonus || 0)), slowPct: z.slowPct || 0, meltArmor: z.meltArmor || 0, owner: src.tower ? src.tower.id : 0, src });
+    }
+
+    /**
+     * 빛의 등대: 빛줄기(beams개, 같은 간격)가 탑을 중심으로 계속 돌며, 빛 안에 든 적에게 초당 피해.
+     * 각도는 탑마다 저장(t.sweepA) — 결정적. 수색 등대는 비친 적에게 표식(받는 피해 +%).
+     */
+    const SWEEP_HIT = Object.freeze({ quiet: true, beamTick: true });
+    function updateSweep(t) {
+      const c = t.calc;
+      const S = c.sweep;
+      t.sweepA = ((t.sweepA || 0) + S.speed * DT) % (Math.PI * 2);
+      const list = enemiesInRadius(t.x, t.y, c.range, c.targets === 'ground' ? 'ground' : null);
+      if (!list.length) return;
+      const half = S.width / 2;
+      const step = (Math.PI * 2) / (S.beams || 1);
+      const dps = c.sweepDps || S.dps;
+      let any = false;
+      for (const e of list) {
+        if (!targetable(e)) continue;
+        const ang = Math.atan2(e.y - t.y, e.x - t.x);
+        let lit = false;
+        for (let b = 0; b < (S.beams || 1) && !lit; b++) {
+          let da = ang - (t.sweepA + b * step);
+          da = ((da % (Math.PI * 2)) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+          if (Math.abs(da) <= half || d2(e.x, e.y, t.x, t.y) < 0.2 * 0.2) lit = true;
+        }
+        if (!lit) continue;
+        any = true;
+        damage(e, dps * DT, c.element, { tower: t, calc: c, element: c.element }, SWEEP_HIT);
+        if (S.mark && !e.dead) applyCurse(e, S.mark.pct, S.mark.dur, null);
+      }
+      if (any) t.anim = Math.max(t.anim, 0.12);
     }
 
     function updateTowerBeams(t) {
@@ -1754,6 +1903,7 @@ RG.sim = (() => {
       if (e.boss && RG.bosses) RG.bosses.update(game, e, api);
       if (e.dead) return;
       // 이동
+      if (isFeared(e)) { moveBack(e, enemySpeed(e) * rules.fearSpeed * DT); updateProg(e); return; } // 공포: 왔던 길을 거꾸로
       if (e.blockedBy || !canMove(e)) { updateProg(e); return; }
       const sp = enemySpeed(e) * DT;
       e.walkT += sp;
@@ -1832,6 +1982,7 @@ RG.sim = (() => {
       }
       if (c.kind === 'none') return;
       if (c.kind === 'beam') { updateTowerBeams(t); return; }
+      if (c.kind === 'sweep') { updateSweep(t); return; }
       if (c.cyclone) {
         t.cycloneCd = (t.cycloneCd == null ? c.cyclone.every * 0.5 : t.cycloneCd) - DT;
         if (t.cycloneCd <= 0) {

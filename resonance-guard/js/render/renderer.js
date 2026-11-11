@@ -654,6 +654,44 @@ RG.render = (() => {
     }
   }
 
+  /* ---------------- 빛의 등대: 도는 빛줄기 ---------------- */
+  // 등실(muzzle)에서 땅의 사거리 원까지 부채꼴 빛. 각도는 시뮬의 t.sweepA를 프레임 사이로 이어 그림
+  const DT_SIM = 1 / 30; // 시뮬 한 틱 (sim.js DT)
+  function drawSweeps(alpha) {
+    const st = game.state;
+    let any = false;
+    for (const t of st.towers) {
+      const c = t.calc;
+      if (!c || c.kind !== 'sweep' || t.disabled || t.building || !c.sweep) continue;
+      if (!any) { any = true; ctx.save(); ctx.globalCompositeOperation = 'lighter'; }
+      const S = c.sweep;
+      const a0 = (t.sweepA || 0) + S.speed * DT_SIM * alpha;
+      const mz = muzzleOf(t) || { x: t.x, y: t.y - 0.6 };
+      const ox0 = X(mz.x);
+      const oy0 = Y(mz.y);
+      const R = c.range;
+      const n = S.beams || 1;
+      for (let b = 0; b < n; b++) {
+        const a = a0 + (b * Math.PI * 2) / n;
+        const h = S.width / 2;
+        const g = ctx.createRadialGradient(ox0, oy0, 1, X(t.x), Y(t.y), R * T);
+        g.addColorStop(0, S.mark ? 'rgba(255,236,170,0.55)' : 'rgba(255,246,200,0.5)');
+        g.addColorStop(1, 'rgba(255,230,140,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(ox0, oy0);
+        const steps = 6;
+        for (let k = 0; k <= steps; k++) {
+          const aa = a - h + (2 * h * k) / steps;
+          ctx.lineTo(X(t.x + Math.cos(aa) * R), Y(t.y + Math.sin(aa) * R * 0.92));
+        }
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+    if (any) ctx.restore();
+  }
+
   /* ---------------- 공명 선 ---------------- */
   /** 공명 선 목록 [탑, 이웃] (같은 짝은 한 번) */
   function linkPairs() {
@@ -836,6 +874,7 @@ RG.render = (() => {
       return ph < 1.7 ? 'idle' : ph < 2.55 ? 'aim' : 'fire';
     }
     if (td.kind === 'beam') return t.beamState && t.beamState.length ? 'fire' : 'idle';
+    if (td.kind === 'sweep') { const ph = (time * 1.1 + t.id * 0.37) % 2; return t.anim > 0 ? (ph < 1 ? 'fire' : 'aim') : ph < 1.4 ? 'idle' : 'aim'; } // 등대: 렌즈가 돌며 번쩍
     if (t.anim > 0.11) return 'fire';
     const iv = (t.calc && t.calc.interval) || 1;
     if (t.cd > 0 && t.cd <= Math.max(0.22, iv * 0.4)) return 'aim';
@@ -1088,6 +1127,18 @@ RG.render = (() => {
         const a = time * 6 + (i * Math.PI * 2) / 3;
         ctx.beginPath(); ctx.arc(cx + Math.cos(a) * size * 0.3, top - 2 + Math.sin(a) * size * 0.08, Math.max(1.5, T * 0.04), 0, Math.PI * 2); ctx.fill();
       }
+      ctx.restore();
+    }
+    if (st.time < e.ccUntil && e.ccKind === 'fear') {
+      // 공포: 머리 위 보랏빛 '!' 두 개가 떨림
+      ctx.save();
+      ctx.font = `900 ${Math.max(10, Math.round(T * 0.3))}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.lineWidth = Math.max(2, T * 0.06);
+      ctx.strokeStyle = '#2a0f30';
+      ctx.fillStyle = '#e9a6ff';
+      const jx = Math.sin(time * 30 + e.id) * T * 0.03;
+      ctx.strokeText('!!', cx + jx, top - 2); ctx.fillText('!!', cx + jx, top - 2);
       ctx.restore();
     }
     if (st.time < e.ccUntil && e.ccKind === 'root') {
@@ -1627,6 +1678,7 @@ RG.render = (() => {
     flyQ.sort(byEnemyY);
     for (let i = 0; i < flyQ.length; i++) drawEnemy(flyQ[i], alpha);
     flyQ.length = 0;
+    drawSweeps(alpha);
     flushBars();
     // 건설 미리보기 탑 그림
     const gh = overlay.ghost;

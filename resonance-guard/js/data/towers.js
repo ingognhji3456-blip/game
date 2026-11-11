@@ -1,7 +1,7 @@
 'use strict';
 
 /* =========================================================
- * 탑 18종 — 설계: docs/design/towers.md
+ * 탑 24종 (2차 6종은 맨 아래, 2026-11-11) — 설계: docs/design/towers.md
  * 필드 뜻: docs/ARCHITECTURE.md §3.2
  * 각 단계(spec)는 그 단계의 전체 값을 적습니다(상속 없음). cost = 그 단계로 가는 비용.
  * ========================================================= */
@@ -318,14 +318,100 @@ RG.data.towers = {
       B: { id: 'shadow_blades', name: '그림자 칼날', desc: '덫 피해가 크게 늘고 출혈을 남깁니다.', cost: 270, range: 2.8, interval: 2.6, snare: { maxTraps: 3, root: 1.6, damage: 140, bleed: { dps: 20, dur: 4 } } },
     },
   },
+
+  /* ===================== ✦ 2차 6종 (2026-11-11) — 원소마다 하나, 새 공격 방식 ===================== */
+
+  flame_jet: {
+    name: '화염 분사기', element: 'fire', role: 'attack', targets: 'ground', kind: 'cone', unlock: '1-1',
+    desc: '가장 앞선 적 쪽으로 부채꼴 불길을 짧은 간격으로 뿜어, 그 안의 지상 적을 모두 태웁니다. 사거리가 짧습니다.',
+    levels: [
+      { cost: 85, range: 1.8, interval: 0.5, damage: 3, cone: 60, onHit: { burn: { dps: 1.5, dur: 1.5 } } },
+      { cost: 90, range: 1.9, interval: 0.5, damage: 4.6, cone: 60, onHit: { burn: { dps: 2.5, dur: 1.5 } } },
+      { cost: 140, range: 2.0, interval: 0.45, damage: 6.8, cone: 64, onHit: { burn: { dps: 3.5, dur: 1.5 } } },
+    ],
+    branches: {
+      A: { id: 'dragon_breath', name: '용의 숨결', desc: '불길이 좁아지는 대신 길고 뜨거워집니다. 한 줄로 오는 떼·정예용.', cost: 280, range: 2.6, interval: 0.45, damage: 13, cone: 40, onHit: { burn: { dps: 8, dur: 2 } } },
+      B: { id: 'fire_whirl', name: '불꽃 회오리', desc: '사방(360°)으로 불길을 돌려 뿜습니다. 사거리는 짧습니다.', cost: 270, range: 1.75, interval: 0.5, damage: 9, cone: 360, onHit: { burn: { dps: 5, dur: 2 } } },
+    },
+  },
+
+  thorn_garden: {
+    name: '가시 덤불', element: 'earth', role: 'attack', targets: 'ground', kind: 'spikes', unlock: '1-1',
+    desc: '사거리 안의 길에 가시밭을 키웁니다. 가시밭 위의 지상 적은 계속 찔리고 느려집니다.',
+    levels: [
+      { cost: 90, range: 2.4, interval: 2.6, spikes: { max: 2, radius: 0.55, dur: 6, dps: 4, slowPct: 0.15 } },
+      { cost: 90, range: 2.5, interval: 2.4, spikes: { max: 2, radius: 0.6, dur: 6, dps: 6.5, slowPct: 0.15 } },
+      { cost: 140, range: 2.6, interval: 2.2, spikes: { max: 3, radius: 0.6, dur: 6.5, dps: 10, slowPct: 0.18 } },
+    ],
+    branches: {
+      A: { id: 'iron_thorn', name: '강철 가시', desc: '가시가 강철이 되어 피해가 크게 늘고, 그 위의 적은 갑옷이 녹습니다(−15%p).', cost: 280, range: 2.7, interval: 2.0, spikes: { max: 3, radius: 0.65, dur: 7, dps: 22, slowPct: 0.18, meltArmor: 0.15 } },
+      B: { id: 'vine_tangle', name: '휘감는 덩굴', desc: '가시밭이 넓어지고 감속이 강해지며(35%), 더 많이 깔립니다.', cost: 260, range: 2.8, interval: 1.8, spikes: { max: 4, radius: 0.85, dur: 7, dps: 8, slowPct: 0.35 } },
+    },
+  },
+
+  icicle_cloud: {
+    name: '고드름 구름', element: 'frost', role: 'attack', targets: 'both', kind: 'rain', unlock: '2-1',
+    desc: '사거리 안 적 여럿의 머리 위로 고드름을 떨어뜨립니다(0.35초 뒤). 맞으면 피해와 감속. 공중 적도 맞습니다.',
+    levels: [
+      { cost: 100, range: 3.0, interval: 1.7, damage: 9, rain: { count: 2, delay: 0.35, radius: 0.35 }, onHit: { slow: { pct: 0.25, dur: 1.2 } } },
+      { cost: 110, range: 3.1, interval: 1.6, damage: 13, rain: { count: 3, delay: 0.35, radius: 0.35 }, onHit: { slow: { pct: 0.25, dur: 1.2 } } },
+      { cost: 160, range: 3.3, interval: 1.5, damage: 19, rain: { count: 3, delay: 0.35, radius: 0.38 }, onHit: { slow: { pct: 0.3, dur: 1.3 } } },
+    ],
+    branches: {
+      A: { id: 'hail_storm', name: '우박 폭풍', desc: '한 번에 적 여섯에게 떨어뜨립니다. 떼용.', cost: 290, range: 3.4, interval: 1.4, damage: 15, rain: { count: 6, delay: 0.35, radius: 0.4 }, onHit: { slow: { pct: 0.3, dur: 1.3 } } },
+      B: { id: 'glacier_spear', name: '빙하 창', desc: '적 하나에게 거대한 얼음 창을 떨어뜨려 큰 피해를 주고 얼립니다(1초). 보스·정예용.', cost: 300, range: 3.6, interval: 2.4, damage: 125, rain: { count: 1, delay: 0.45, radius: 0.5 }, onHit: { freezeEvery: { n: 1, dur: 1.0 } } },
+    },
+  },
+
+  thunder_cloud: {
+    name: '뇌운 탑', element: 'storm', role: 'attack', targets: 'both', kind: 'strike', unlock: '3-1',
+    desc: '아주 먼 적 하나에 하늘에서 번개를 바로 내리꽂습니다. 주변에도 작은 피해, 가끔 기절(보스 제외). 간격이 깁니다.',
+    levels: [
+      { cost: 110, range: 4.0, interval: 2.2, damage: 32, strike: { count: 1, splash: 0.5, splashPct: 0.3 }, onHit: { stun: { chance: 0.3, dur: 0.3 } } },
+      { cost: 120, range: 4.2, interval: 2.1, damage: 50, strike: { count: 1, splash: 0.5, splashPct: 0.3 }, onHit: { stun: { chance: 0.3, dur: 0.3 } } },
+      { cost: 170, range: 4.5, interval: 2.0, damage: 76, strike: { count: 1, splash: 0.55, splashPct: 0.3 }, onHit: { stun: { chance: 0.35, dur: 0.35 } } },
+    ],
+    branches: {
+      A: { id: 'thunder_altar', name: '천둥신 제단', desc: '한 발이 매우 셉니다. 보스용.', cost: 300, range: 5.0, interval: 2.8, damage: 200, strike: { count: 1, splash: 0.6, splashPct: 0.3 }, onHit: { stun: { chance: 0.4, dur: 0.4 } } },
+      B: { id: 'storm_front', name: '폭풍 전선', desc: '한 번에 적 넷에게 번개를 내리꽂습니다. 떼용.', cost: 300, range: 4.6, interval: 2.1, damage: 50, strike: { count: 4, splash: 0.45, splashPct: 0.25 }, onHit: { stun: { chance: 0.25, dur: 0.3 } } },
+    },
+  },
+
+  lighthouse: {
+    name: '빛의 등대', element: 'light', role: 'attack', targets: 'both', kind: 'sweep', unlock: '4-1',
+    desc: '도는 빛줄기가 스치는 사거리 안의 적을 모두 태우고(공중 포함), 숨은 적을 드러냅니다.',
+    levels: [
+      { cost: 120, range: 2.6, detect: 2.6, sweep: { beams: 1, speed: 2.6, width: 0.9, dps: 50 } },
+      { cost: 120, range: 2.8, detect: 2.8, sweep: { beams: 1, speed: 2.6, width: 0.9, dps: 76 } },
+      { cost: 170, range: 3.0, detect: 3.0, sweep: { beams: 1, speed: 2.6, width: 0.95, dps: 112 } },
+    ],
+    branches: {
+      A: { id: 'prism_lighthouse', name: '프리즘 등대', desc: '빛줄기가 셋으로 갈라져 돕니다. 사방의 떼용.', cost: 300, range: 3.0, detect: 3.0, sweep: { beams: 3, speed: 2.4, width: 0.9, dps: 82 } },
+      B: { id: 'searchlight', name: '수색 등대', desc: '사거리가 길고, 빛에 비친 적은 3초 동안 모든 피해를 20% 더 받습니다.', cost: 290, range: 3.6, detect: 3.6, sweep: { beams: 1, speed: 2.8, width: 0.8, dps: 105, mark: { pct: 0.2, dur: 3 } } },
+    },
+  },
+
+  dread_bell: {
+    name: '공포의 종', element: 'dark', role: 'attack', targets: 'both', kind: 'pulse', unlock: '5-1',
+    desc: '종을 울려 범위 안 적에게 작은 피해를 주고 겁먹게 해, 잠깐 왔던 길을 거꾸로 걷게 합니다. 보스는 겁먹지 않습니다.',
+    levels: [
+      { cost: 120, range: 1.8, interval: 4.2, damage: 10, fear: { dur: 0.8 } },
+      { cost: 120, range: 2.0, interval: 4.0, damage: 15, fear: { dur: 1.0 } },
+      { cost: 170, range: 2.2, interval: 3.8, damage: 24, fear: { dur: 1.2 } },
+    ],
+    branches: {
+      A: { id: 'doom_bell', name: '파멸의 종', desc: '공포가 길고 범위가 넓어집니다. 길을 되감는 제어.', cost: 300, range: 2.6, interval: 3.6, damage: 30, fear: { dur: 1.8 } },
+      B: { id: 'soul_bell', name: '영혼의 종', desc: '자주 울리고 피해가 크며, 울린 적은 3초 동안 받는 피해 +15%.', cost: 290, range: 2.2, interval: 2.6, damage: 70, fear: { dur: 0.7 }, onHit: { curse: { pct: 0.15, dur: 3 } } },
+    },
+  },
 };
 
 /** 설계서 순서 (도감·건설 메뉴 정렬용) */
 RG.data.towerOrder = [
-  'ember_archer', 'flame_mortar', 'forge',
-  'frost_crystal', 'ice_ballista', 'winter_bell',
-  'lightning_rod', 'gale_cannon', 'dynamo',
-  'stone_barracks', 'quake_hammer', 'crystal_mine',
-  'sun_lens', 'sanctuary', 'radiance_spire',
-  'hex_spire', 'void_orb', 'shadow_snare',
+  'ember_archer', 'flame_mortar', 'forge', 'flame_jet',
+  'frost_crystal', 'ice_ballista', 'winter_bell', 'icicle_cloud',
+  'lightning_rod', 'gale_cannon', 'dynamo', 'thunder_cloud',
+  'stone_barracks', 'quake_hammer', 'crystal_mine', 'thorn_garden',
+  'sun_lens', 'sanctuary', 'radiance_spire', 'lighthouse',
+  'hex_spire', 'void_orb', 'shadow_snare', 'dread_bell',
 ];

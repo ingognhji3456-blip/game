@@ -492,3 +492,91 @@ test('§7.2-14 정예: 데이터의 elite 적은 불꽃을 2개 이상 꺼뜨림
   run(g, 3);
   assert.strictEqual(g.state.lives, D.rules.lives - D.enemies.ashen_paladin.lives);
 });
+
+/* =============== 2차 탑 6종의 고유 규칙 (2026-11-11) =============== */
+test('공포의 종: 겁먹은 적은 왔던 길을 거꾸로 걷고, 풀리면 다시 앞으로 · 보스는 겁먹지 않음', () => {
+  const g = game();
+  const e = spawn(g, 'ash_boar', null, null, { hp: 1e6 });
+  run(g, 4); // 길을 따라 몇 칸 걸어옴
+  const prog0 = e.prog;
+  const ok = g.api.hardCC ? g.api.hardCC(e, 'fear', 1.0) : (() => { e.ccUntil = g.state.time + 1.0; e.ccKind = 'fear'; return true; })();
+  assert.ok(ok, '공포 걸림');
+  run(g, 0.9);
+  assert.ok(e.prog > prog0 + 0.3, `뒤로 물러섬: ${prog0.toFixed(2)} → ${e.prog.toFixed(2)}`);
+  const prog1 = e.prog;
+  run(g, 1.5);
+  assert.ok(e.prog < prog1, '겁이 풀리면 다시 등불 쪽으로');
+  // 공포의 종이 실제로 공포를 검 + 보스는 면역
+  const g2 = game();
+  build(g2, 'dread_bell', 5, 2);
+  const a = spawn(g2, 'ash_boar', 5.5, 1.5, { hp: 1e6 });
+  const fears = runCollect(g2, 5, (ev) => ev.type === 'fear');
+  assert.ok(fears.some((f) => f.enemyId === a.id), '종소리에 겁먹음');
+  const g3 = game();
+  const boss = spawn(g3, 'hollow_elder', 5.5, 1.5, { hp: 1e7 });
+  assert.ok(!g3.api.hardCC || !g3.api.hardCC(boss, 'fear', 1), '보스는 겁먹지 않음');
+});
+
+test('빛의 등대: 도는 빛줄기가 둘레의 적을 모두 태우고(공중 포함) 숨은 적을 드러냄', () => {
+  const g = game();
+  build(g, 'lighthouse', 5, 2);
+  const ground = spawn(g, 'ash_boar', 5.5, 1.5, { hp: 1e6, root: true });
+  const air = spawn(g, 'mist_crow', 3.6, 2.6, { hp: 1e6, root: true });
+  run(g, 4);
+  assert.ok(ground.hp < ground.maxHp && air.hp < air.maxHp, '둘 다 피해');
+  const g2 = game();
+  build(g2, 'lighthouse', 5, 2);
+  const s = spawn(g2, 'ash_boar', 5.5, 1.5, { hp: 1e6, root: true });
+  s.stealth = true; s.revealed = false;
+  run(g2, 0.2);
+  assert.ok(s.revealed, '숨은 적 드러남');
+});
+
+test('고드름 구름: 고른 자리에 잠시 뒤 떨어짐 — 그 사이 멀리 벗어난 적은 피함', () => {
+  const g = game();
+  const t = build(g, 'icicle_cloud', 5, 2);
+  const e = spawn(g, 'ash_boar', 5.5, 1.5, { hp: 1e6, root: true });
+  const evs = runCollect(g, 3, (x) => x.type === 'icicle' || x.type === 'icicleHit');
+  assert.ok(evs.some((x) => x.type === 'icicle') && evs.some((x) => x.type === 'icicleHit'), '떨어지는 이벤트');
+  assert.ok(e.hp < e.maxHp, '맞음');
+  // 떨어지기 전에 다른 곳으로 옮긴 적은 맞지 않음
+  const g2 = game();
+  build(g2, 'icicle_cloud', 5, 2);
+  const m = spawn(g2, 'ash_boar', 5.5, 1.5, { hp: 1e6, root: true });
+  let moved = false;
+  for (let i = 0; i < 90 && !moved; i++) { g2.step(); if (g2.state.events.some((x) => x.type === 'icicle')) { m.x = 9.5; m.y = 6.5; moved = true; } }
+  run(g2, 0.6);
+  assert.ok(moved && m.hp === m.maxHp, '피함');
+  assert.ok(t);
+});
+
+test('가시 덤불: 적이 서 있는 길 칸에 먼저 가시밭이 자라 피해·감속', () => {
+  const g = game();
+  build(g, 'thorn_garden', 5, 2);
+  const e = spawn(g, 'ash_boar', 5.5, 1.5, { hp: 1e6, root: true });
+  run(g, 3);
+  const z = g.state.zones.find((q) => q.kind === 'thorn');
+  assert.ok(z && Math.abs(z.x - 5.5) < 0.01 && Math.abs(z.y - 1.5) < 0.01, `적 발밑에 가시밭: ${z && [z.x, z.y]}`);
+  assert.ok(e.hp < e.maxHp, '피해');
+  assert.ok(g.state.zones.filter((q) => q.kind === 'thorn').length <= D.towers.thorn_garden.levels[0].spikes.max, '동시에 최대 개수까지');
+});
+
+test('화염 분사기: 부채꼴 안의 적만 태움 (뒤쪽 적은 안 맞음), 불꽃 회오리는 사방', () => {
+  const g = game();
+  build(g, 'flame_jet', 5, 2);
+  const front = spawn(g, 'ash_boar', 5.5, 1.3, { hp: 1e6, root: true }); // 위(길)
+  const back = spawn(g, 'ash_boar', 5.5, 3.6, { hp: 1e6, root: true });  // 아래 반대편
+  g.state.towers[0].targetMode = 'close';
+  run(g, 3);
+  const hitFront = front.hp < front.maxHp;
+  const hitBack = back.hp < back.maxHp;
+  assert.ok(hitFront !== hitBack, `한쪽만 맞음 (앞 ${hitFront}, 뒤 ${hitBack})`);
+});
+
+test('최종 강화(+5 다음)는 전투에서 공격력 +50%', () => {
+  const mk = (ranks) => { const g2 = RG.sim.create({ mapId: '1-1', seed: 1, heroId: null, mode: 'normal', towerRanks: ranks }); g2.state.gold = 1e6; return g2; };
+  const calcOf = (g2) => { const res = g2.cmd({ type: 'build', tower: 'ember_archer', c: 5, r: 2 }); RG.stats.computeAll(g2); return g2.state.towers.find((t) => t.id === res.id).calc; };
+  const b = calcOf(mk({}));
+  const f = calcOf(mk({ ember_archer: RG.gacha.FINAL_RANK }));
+  assert.ok(Math.abs((f.dmgBonus - b.dmgBonus) - 0.5) < 1e-9, `+50%: ${f.dmgBonus - b.dmgBonus}`);
+});

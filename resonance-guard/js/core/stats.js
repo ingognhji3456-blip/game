@@ -201,6 +201,7 @@ RG.stats = (() => {
         c.soldiers.interval /= 1 + c.speedBonus;
       }
       if (c.kind === 'beam') c.dps = c.damage * (1 + c.speedBonus);
+      if (c.kind === 'sweep' && c.sweep) { c.sweepDps = c.sweep.dps * (1 + c.speedBonus); if (c.detect) c.detect *= 1 + c.rangeBonus; }
       c.crit = c.crit ? { chance: c.crit.chance + c.critBonus, mult: c.crit.mult } : (c.critBonus ? { chance: c.critBonus, mult: 2 } : null);
       t.calc = c;
     }

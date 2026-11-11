@@ -11,7 +11,7 @@
   /** 중복 강화 효과 글 */
   function rankText(t, rank) {
     const role = RG.data.towers[t].role;
-    const pct = Math.round(rank * RG.gacha.RANK_PCT * 100);
+    const pct = Math.round((RG.gacha.rankMult(rank) - 1) * 100); // 최종 강화는 +50%
     return role === 'support' ? `지원 효과 +${pct}%` : role === 'economy' ? `수입 +${pct}%` : role === 'barracks' ? `병사 체력·공격력 +${pct}%` : `공격력 +${pct}%`;
   }
   RG.ui.rankText = rankText;
@@ -489,7 +489,7 @@
       for (const t of towers) {
         const rank = P().towerRank(t);
         const chip = el('span', { class: `t-chip rar-${RG.gacha.rarityOf(t)}` }, [UI.towerImg(t, 1, null, 'mini'), rank > 0 ? el('em', { class: 'rank', text: `+${rank}` }) : null]);
-        UI.tooltipFor(chip, () => `<b>${esc(D().towers[t].name)}</b>${rank > 0 ? ` <span class="good">+${rank} (${esc(rankText(t, rank))})</span>` : ''}<br>${esc(D().towers[t].desc)}`);
+        UI.tooltipFor(chip, () => `<b>${esc(D().towers[t].name)}</b>${rank > 0 ? ` <span class="good">${RG.gacha.rankLabel(rank)} (${esc(rankText(t, rank))})</span>` : ''}<br>${esc(D().towers[t].desc)}`);
         towerRow.appendChild(chip);
       }
       const missing = D().towerOrder.length - towers.length;
@@ -574,7 +574,7 @@
           el('div', { class: 'rw-total' }, [UI.icon('crystal', 'small'), el('b', { text: `+${rw.crystals}` }), el('span', { text: '공명석' })]),
           el('div', { class: 'rw-lines dim', text: rw.lines.map(([k, v]) => `${k} +${v}`).join(' · ') }),
           rw.pooled && rw.pooled.length ? el('div', { class: 'rw-pool' }, [
-            el('span', { class: 'rw-pool-t', text: '뽑기에 새 탑이 들어왔습니다' }),
+            el('span', { class: 'rw-pool-t', text: rw.pooled.length > 1 ? `지역을 지켜 내서 뽑기에 새 탑 ${rw.pooled.length}종이 한꺼번에 들어왔습니다!` : '뽑기에 새 탑이 들어왔습니다' }),
             ...rw.pooled.map((t) => el('span', { class: `rw-pool-tower rar-${RG.gacha.rarityOf(t)}` }, [UI.towerImg(t, 1, null, 'mini'), el('b', { text: D().towers[t].name }), el('small', { text: RG.gacha.RARITIES[RG.gacha.rarityOf(t)].name })])),
           ]) : null,
         ]);

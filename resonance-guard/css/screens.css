@@ -659,6 +659,14 @@
 .gc-tag.new { background: linear-gradient(#ff8a7a, #e0334a); color: #fff; box-shadow: 0 0 10px #ff6a6a99; }
 .gc-tag.up { background: linear-gradient(#fff2b0, #f0a020); color: #3a1e06; }
 .gc-tag.refund { background: #b48aff; color: #1a0e2e; }
+.gc-tag.final { background: linear-gradient(90deg, #fff6c8, #ffc44a, #fff6c8); color: #3a1e06; box-shadow: 0 0 14px #ffd56acc, 0 0 0 2px #5a2e0c; animation: gc-final 1.2s ease-in-out infinite; }
+@keyframes gc-final { 50% { box-shadow: 0 0 22px #ffe08a, 0 0 0 2px #5a2e0c; } }
+.gc-rcard.is-final .gc-face.front { box-shadow: 0 0 0 3px #ffd56a, 0 0 30px #ffcf6aaa, inset 0 0 30px #ffd56a40; }
+.rank-final { display: inline-flex; align-items: center; padding: 0 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 900; color: #3a1e06; background: linear-gradient(180deg, #fff3c4, #f4b84a); box-shadow: 0 0 8px #ffcf6a99, 0 0 0 1px #5a2e0c; }
+.gc-card.final { box-shadow: 0 0 0 2px #ffd56a, 0 0 18px #ffcf6a66, inset 0 0 22px #ffd56a2a !important; }
+.gc-rank.fin { color: #ffe08a; font-size: 1rem; text-shadow: 0 0 8px #ffcf6a, 0 1px 2px #000; }
+.gc-finals { color: var(--gold2); font-weight: 800; }
+.gc-empty { margin: 4px 0 0; padding: 8px 12px; border-radius: 12px; background: #2a1708; border: 1px solid #ffd56a88; color: #ffe6a0; font-weight: 800; text-align: center; }
 .gc-summary { min-height: 1.3em; font-weight: 800; color: #fff1d6; text-shadow: 0 1px 3px #000; }
 .gc-rbtns { display: flex; gap: 10px; }
 .gc-rbtns .btn { min-width: 120px; min-height: 46px; }

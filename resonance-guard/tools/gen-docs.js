@@ -29,6 +29,13 @@ function specSpecial(s) {
   if (s.beam) out.push(`최대 ×${s.beam.maxMult}${s.beam.beams > 1 ? ` ${s.beam.beams}갈래` : ''}`);
   if (s.snare) out.push(`덫 ${s.snare.maxTraps} 속박 ${s.snare.root}초 피해 ${s.snare.damage}`);
   if (s.cyclone) out.push(`회오리 ${s.cyclone.every}초`);
+  if (s.cone) out.push(s.cone >= 360 ? '사방 불길' : `부채꼴 ${s.cone}°`);
+  if (s.rain) out.push(`고드름 ${s.rain.count}개 (${s.rain.delay}초 뒤)`);
+  if (s.strike) out.push(`번개 ${s.strike.count}명${s.strike.splash ? ` 주변 ${s.strike.splash}칸 ${pct(s.strike.splashPct)}` : ''}`);
+  if (s.spikes) out.push(`가시밭 ${s.spikes.max}곳 ${s.spikes.dps}/초 ${s.spikes.dur}초 감속 ${pct(s.spikes.slowPct)}${s.spikes.meltArmor ? ` 갑옷 −${pct(s.spikes.meltArmor)}p` : ''}`);
+  if (s.sweep) out.push(`빛줄기 ${s.sweep.beams}갈래 ${s.sweep.dps}/초${s.sweep.mark ? ` 표식 +${pct(s.sweep.mark.pct)}` : ''}`);
+  if (s.detect) out.push(`탐지 ${s.detect}칸`);
+  if (s.fear) out.push(`공포 ${s.fear.dur}초`);
   if (s.shieldMult) out.push(`보호막 ×${s.shieldMult}`);
   if (oh.burn) out.push(`화상 ${oh.burn.dps}/초`);
   if (oh.slow) out.push(`감속 ${pct(oh.slow.pct)}`);

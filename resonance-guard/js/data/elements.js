@@ -115,6 +115,7 @@ RG.data.rules = {
   sellRate: 0.7,
   countdown: 15,
   hardCc: { window: 4, mults: [1, 0.5, 0.25], immune: 2 },
+  fearSpeed: 0.8, // 공포(공포의 종)에 걸린 적이 뒷걸음질하는 속도 (평소 속도 대비)
   push: { per: 0.35, decay: 0.25 },
   bountyCap: 0.75,
   mineFalloff: [1, 0.8, 0.6, 0.4],

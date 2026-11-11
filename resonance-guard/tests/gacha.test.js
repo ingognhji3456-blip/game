@@ -13,11 +13,17 @@ const fresh = () => {
 const js = (v) => JSON.stringify(v);
 const winRec = (lives = 12) => ({ result: 'win', lives, task: { done: true }, wave: { index: 8 } });
 
-test('처음 시작: 기본 탑 3종만 가지고, 뽑기에도 기본 3종만, 공명석 100', () => {
+const region1 = (RG) => RG.data.towerOrder.filter((t) => RG.progress.towerRegion(t) === 1);
+const regionOf = (RG, r) => RG.data.towerOrder.filter((t) => RG.progress.towerRegion(t) === r);
+
+test('처음 시작: 기본 탑 3종만 가지고, 뽑기에는 솔빛 들판(1지역) 탑이 처음부터 전부, 공명석 100', () => {
   const { RG } = fresh();
   const P = RG.progress;
   assert.strictEqual(js(P.ownedTowers()), js(['ember_archer', 'frost_crystal', 'stone_barracks']));
-  assert.strictEqual(js(P.gachaPool()), js(['ember_archer', 'frost_crystal', 'stone_barracks']));
+  assert.strictEqual(js(P.gachaPool()), js(region1(RG)));
+  assert.ok(region1(RG).length >= 8, `1지역 탑이 처음부터 여럿: ${region1(RG).length}`);
+  for (const t of ['flame_mortar', 'crystal_mine', 'sanctuary']) assert.ok(P.inPool(t), `${t}는 처음부터 뽑기에`);
+  assert.ok(!P.inPool('winter_bell'), '2지역 탑은 아직');
   assert.strictEqual(P.gachaState().crystals, RG.gacha.COST.one);
   assert.ok(!('tickets' in P.gachaState()), '확정권 없음');
   assert.strictEqual(P.towerRank('void_orb'), -1);
@@ -30,35 +36,77 @@ test('모든 탑에 등급이 있고, 기본 등급 확률 합은 1', () => {
   assert.ok(Math.abs(sum - 1) < 1e-9);
 });
 
-test('뽑기에 든 탑만 나옴: 처음엔 기본 3종(중복 → 강화)만, 스테이지가 열려야 새 탑이 뽑기에 들어옴', () => {
+test('뽑기에 든 탑만 나옴: 처음엔 1지역 탑만 (2지역 탑은 안 나옴)', () => {
   const { RG } = fresh();
   const P = RG.progress;
   P.gachaState().crystals = 1e6;
-  for (let i = 0; i < 30; i++) {
+  const r1 = region1(RG);
+  for (let i = 0; i < 40; i++) {
+    P.gachaState().owned = { ember_archer: 0, frost_crystal: 0, stone_barracks: 0 }; // 최종 강화로 탑이 동나지 않게
     const r = P.pullGacha('one', seeded(i + 1));
-    assert.ok(RG.gacha.BASIC.includes(r.results[0].type), `기본 탑만: ${r.results[0].type}`);
+    assert.ok(r.ok && r1.includes(r.results[0].type), `1지역 탑만: ${r.results[0] && r.results[0].type}`);
   }
-  assert.ok(P.ownedTowers().length === 3, '새 탑을 얻지 않음');
 });
 
-test('스테이지가 열리면 그 탑이 뽑기에 들어갈 뿐, 가진 탑은 늘지 않음 (확정으로 주지 않음)', () => {
+test('지역을 다 깨면 다음 지역 탑이 한꺼번에 뽑기에 들어감 (스테이지마다가 아님, 확정으로 주지 않음)', () => {
   const { RG } = fresh();
   const P = RG.progress;
-  P.record('1-1', 'normal', winRec());
-  const rec = P.record('1-2', 'normal', winRec());
-  // 1-2 클리어 → 1-3(화염 박격포가 처음 나오는 맵)이 열림
-  assert.strictEqual(js(rec.reward.pooled), js(['flame_mortar']));
-  assert.ok(P.inPool('flame_mortar'));
-  assert.ok(!P.ownsTower('flame_mortar'), '확정으로 주지 않음');
+  for (const id of ['1-1', '1-2', '1-3', '1-4', '1-5']) assert.strictEqual(P.record(id, 'normal', winRec()).reward.pooled.length, 0, `${id}: 스테이지마다는 안 들어옴`);
+  assert.ok(!P.inPool('winter_bell'));
+  const rec = P.record('1-6', 'normal', winRec()); // 솔빛 들판 마지막 맵
+  assert.strictEqual(js(rec.reward.pooled), js(regionOf(RG, 2)), '서리 고개 탑 전부 한꺼번에');
+  assert.ok(rec.reward.pooled.length >= 5);
+  for (const t of regionOf(RG, 2)) { assert.ok(P.inPool(t), t); assert.ok(!P.ownsTower(t), `${t} 확정으로 주지 않음`); }
+  assert.ok(!P.inPool('sun_lens'), '3지역 탑은 아직');
   assert.strictEqual(P.ownedTowers().length, 3);
-  assert.ok(!('tickets' in rec.reward));
-  // 다시 깨면 새로 들어오는 탑 없음
-  assert.strictEqual(P.record('1-2', 'normal', winRec()).reward.pooled.length, 0);
-  // 뽑기에 든 탑이면 뽑기로 나올 수 있음
-  const pool = P.gachaPool();
-  let got = false;
-  for (let s = 1; s <= 200 && !got; s++) { const st = { owned: {}, crystals: 100, pity: 0 }; got = RG.gacha.pull(st, 'one', seeded(s), pool).results[0].type === 'flame_mortar'; }
-  assert.ok(got, '뽑기에서 나옴');
+  assert.strictEqual(P.record('1-6', 'normal', winRec()).reward.pooled.length, 0, '다시 깨면 새로 들어오는 탑 없음');
+  // 서리 고개 마지막 맵까지 깨면 3지역 탑 묶음
+  for (const m of RG.data.maps.filter((q) => q.region === 2).slice(0, -1)) P.record(m.id, 'normal', winRec());
+  const last2 = RG.data.maps.filter((q) => q.region === 2).slice(-1)[0];
+  assert.strictEqual(js(P.record(last2.id, 'normal', winRec()).reward.pooled), js(regionOf(RG, 3)));
+});
+
+test('최종 강화: +5에서 한 번 더 뽑으면 최종(+50%), 최종 강화한 탑은 뽑기에서 빠짐', () => {
+  const { RG } = fresh();
+  const G = RG.gacha;
+  const st = { owned: { ember_archer: 0 }, crystals: 0, pity: 0 };
+  for (let i = 1; i <= 5; i++) assert.strictEqual(G.grant(st, 'ember_archer').rank, i);
+  const r = G.grant(st, 'ember_archer');
+  assert.ok(r.isFinal && r.rank === G.FINAL_RANK && r.refund === 0, js(r));
+  assert.strictEqual(st.owned.ember_archer, G.FINAL_RANK);
+  assert.ok(Math.abs(G.rankMult(G.FINAL_RANK) - 1.5) < 1e-9 && Math.abs(G.rankMult(5) - 1.3) < 1e-9);
+  assert.strictEqual(G.rankLabel(G.FINAL_RANK), '최종');
+  // 뽑기에서 빠짐: 그 탑만 든 뽑기는 아예 못 뽑고 공명석도 쓰지 않음
+  const st2 = { owned: { ember_archer: G.FINAL_RANK }, crystals: 500, pity: 0 };
+  const res = G.pull(st2, 'one', seeded(1), ['ember_archer']);
+  assert.ok(!res.ok && st2.crystals === 500, js(res));
+  // 진행도: 최종 강화한 탑은 열려 있어도 뽑기 목록에서 빠짐
+  const P = RG.progress;
+  P.gachaState().owned.ember_archer = G.FINAL_RANK;
+  assert.ok(P.towerOpen('ember_archer') && !P.inPool('ember_archer') && P.towerFinal('ember_archer'));
+  P.gachaState().crystals = 1e5;
+  for (let i = 0; i < 60; i++) {
+    P.gachaState().owned = { ember_archer: G.FINAL_RANK };
+    const res2 = P.pullGacha('one', seeded(100 + i));
+    assert.ok(res2.ok && res2.results[0].type !== 'ember_archer', js(res2));
+  }
+});
+
+test('10회 뽑기 도중 최종 강화가 되면 그 뒤로 바로 빠지고, 뽑을 탑이 다 떨어지면 남은 몫을 돌려줌', () => {
+  const { RG } = fresh();
+  const G = RG.gacha;
+  // 남은 탑이 +5 하나뿐 → 첫 장에서 최종, 나머지 9장은 못 뽑음 → 900의 9/10 = 810 돌려받음
+  const st = { owned: { ember_archer: 5 }, crystals: 900, pity: 0 };
+  const r = G.pull(st, 'ten', seeded(2), ['ember_archer']);
+  assert.ok(r.ok && r.results.length === 1 && r.results[0].isFinal, js(r));
+  assert.strictEqual(r.returned, 810);
+  assert.strictEqual(st.crystals, 810);
+  // 둘 중 하나가 최종이 되면 나머지만 나옴
+  const st2 = { owned: { ember_archer: 5, flame_mortar: 0 }, crystals: 900, pity: 0 };
+  const r2 = G.pull(st2, 'ten', seeded(5), ['ember_archer', 'flame_mortar']);
+  const iFinal = r2.results.findIndex((x) => x.type === 'ember_archer');
+  assert.ok(r2.results.slice(iFinal + 1).every((x) => x.type === 'flame_mortar'), '최종 뒤로는 궁수탑이 안 나옴');
+  assert.ok(r2.results.filter((x) => x.type === 'ember_archer').length <= 1);
 });
 
 test('뽑기에 없는 등급의 확률은 있는 등급에 비율대로 나뉨', () => {
@@ -71,14 +119,11 @@ test('뽑기에 없는 등급의 확률은 있는 등급에 비율대로 나뉨'
   assert.ok(Math.abs(r3.common - 0.6) < 1e-9 && Math.abs(r3.rare - 0.3) < 1e-9 && Math.abs(r3.epic - 0.1) < 1e-9);
 });
 
-test('중복이 나오면 그 탑 강화 +1, 최대 +5, 그 뒤로는 공명석 30을 돌려받음', () => {
+test('중복이 나오면 그 탑 강화 +1씩 (+5까지는 +6%씩)', () => {
   const { RG } = fresh();
   const st = { owned: { ember_archer: 0 }, crystals: 0, pity: 0 };
-  for (let i = 1; i <= 5; i++) assert.strictEqual(RG.gacha.grant(st, 'ember_archer').rank, i);
-  const r = RG.gacha.grant(st, 'ember_archer');
-  assert.strictEqual(r.refund, RG.gacha.REFUND);
-  assert.strictEqual(st.owned.ember_archer, RG.gacha.MAX_RANK);
-  assert.strictEqual(st.crystals, RG.gacha.REFUND);
+  for (let i = 1; i <= 5; i++) { const r = RG.gacha.grant(st, 'ember_archer'); assert.ok(r.rank === i && !r.isFinal && !r.refund); }
+  assert.ok(Math.abs(RG.gacha.rankMult(3) - 1.18) < 1e-9);
 });
 
 test('1회 100·10회 900을 쓰고, 공명석이 모자라면 뽑지 않음', () => {
@@ -112,11 +157,12 @@ test('천장: 영웅 탑이 뽑기에 들어온 뒤 30회 안에 영웅 확정, 
   const allCommon = () => 0.99; // 늘 일반이 나오는 운
   const noEpic = ['ember_archer', 'winter_bell'];
   const st = { owned: {}, crystals: 1e6, pity: 0 };
-  for (let i = 0; i < 40; i++) RG.gacha.pull(st, 'one', allCommon, noEpic);
+  // (같은 탑이 계속 나와 최종 강화로 빠지지 않게 매번 가진 탑을 비움 — 천장 셈만 봄)
+  for (let i = 0; i < 40; i++) { st.owned = {}; RG.gacha.pull(st, 'one', allCommon, noEpic); }
   assert.strictEqual(st.pity, 0, '영웅이 없는 뽑기는 천장을 세지 않음');
   const withEpic = noEpic.concat(['shadow_snare']);
   let epicAt = -1;
-  for (let i = 1; i <= 30; i++) { if (RG.gacha.pull(st, 'one', allCommon, withEpic).results[0].rarity === 'epic') { epicAt = i; break; } }
+  for (let i = 1; i <= 30; i++) { st.owned = {}; if (RG.gacha.pull(st, 'one', allCommon, withEpic).results[0].rarity === 'epic') { epicAt = i; break; } }
   assert.strictEqual(epicAt, RG.gacha.PITY);
   assert.strictEqual(st.pity, 0, '영웅이 나오면 천장 초기화');
 });

@@ -10,6 +10,7 @@ RG.fx = (() => {
   const bolts = [];      // 번개·선
   const texts = [];      // 떠오르는 글자
   const areas = [];      // 바닥 경고 원
+  const drops = [];      // 떨어지는 고드름 (고드름 구름)
   let shake = 0;
   const settings = { numbers: true, shake: true };
   const MAX_PARTS = 900;
@@ -32,6 +33,8 @@ RG.fx = (() => {
   // 화면에 적이 아주 많을 때(렌더러가 알려 줌) 조각·글자 수를 줄여 느린 기기에서도 매끄럽게
   let lite = false;
   function setLite(v) { lite = !!v; }
+  let gameSpeed = 1; // 판 배속 (판 시간에 맞춰야 하는 효과 — 고드름 낙하)
+  function setSpeed(v) { gameSpeed = v > 0 ? v : 1; }
   function burst(x, y, color, n, speed = 2.2, life = 0.5, size = 0.06, gravity = 0) {
     const cap = lite ? 160 : MAX_PARTS; // 적이 아주 많으면 조각 수를 줄임(그래도 화면은 충분히 붐빔)
     for (let i = 0; i < n && parts.length < cap; i++) {
@@ -91,6 +94,46 @@ RG.fx = (() => {
           break;
         case 'pulse':
           ring(e.x, e.y, e.radius, colorOf(e.element), e.big ? 0.7 : 0.45, e.big ? 0.15 : 0.1);
+          if (e.fear) ring(e.x, e.y, e.radius * 0.6, '#e9a6ff', 0.6, 0.06); // 공포의 종: 겹 소리 고리
+          break;
+        case 'cone': {
+          // 화염 분사기: 분사관 끝에서 부채꼴로 퍼지는 불길 조각
+          const tw = game && game.state.towers.find((q) => q.id === e.towerId);
+          const mz = (tw && RG.render.muzzleOf && RG.render.muzzleOf(tw)) || { x: e.x, y: e.y - 0.4 };
+          const full = e.cone >= 360;
+          const spread = (full ? 360 : e.cone) * (Math.PI / 180);
+          const n = lite ? (full ? 8 : 6) : (full ? 18 : 12);
+          const cols = ['#fff1a8', '#ffc85a', '#ff8a3d', '#ff5a2a'];
+          for (let i = 0; i < n && parts.length < (lite ? 160 : MAX_PARTS); i++) {
+            const a = e.angle + (rnd() - 0.5) * spread;
+            const sp = e.range * (2.2 + rnd() * 1.4);
+            const life = 0.32 + rnd() * 0.12;
+            parts.push({ x: full ? e.x : mz.x, y: full ? e.y - 0.25 : mz.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.8, life, max: life, size: 0.07 + rnd() * 0.08, color: cols[i % 4], g: -0.6 });
+          }
+          break;
+        }
+        case 'icicle':
+          drops.push({ x: e.x, y: e.y, t: 0, delay: (e.delay || 0.35) / gameSpeed, big: !!e.big }); // 판에서 떨어지는 시간과 맞춤
+          break;
+        case 'icicleHit':
+          burst(e.x, e.y - 0.1, '#dff6ff', e.big ? 22 : 8, e.big ? 2.6 : 1.8, 0.4, e.big ? 0.08 : 0.055, 2.5);
+          ring(e.x, e.y, e.radius + 0.15, '#9fe4ff', 0.35, e.big ? 0.12 : 0.07);
+          if (e.big) addShake(0.15);
+          break;
+        case 'strike':
+          // 뇌운 탑: 하늘에서 내리꽂는 번개 (굵은 줄기 + 가는 곁가지)
+          bolt([[e.x + (rnd() - 0.5) * 0.8, e.y - 5], [e.x + (rnd() - 0.5) * 0.3, e.y - 2.2], [e.x, e.y - 0.15]], '#c9b8ff', e.big ? 0.26 : 0.2, e.big ? 0.13 : 0.09, 0.3);
+          if (!lite) bolt([[e.x + (rnd() - 0.5) * 0.4, e.y - 2.6], [e.x + (rnd() - 0.5) * 1.2, e.y - 1.2]], '#e6dcff', 0.14, 0.04, 0.2);
+          ring(e.x, e.y, e.big ? 0.9 : 0.55, '#d9ccff', 0.3, e.big ? 0.14 : 0.08);
+          burst(e.x, e.y - 0.1, '#efe8ff', e.big ? 18 : 7, 2.4, 0.3, 0.05);
+          if (e.big) addShake(0.25);
+          break;
+        case 'thorns':
+          burst(e.x, e.y, '#9fd36a', 10, 1.6, 0.45, 0.06, 1.2);
+          ring(e.x, e.y, e.radius, '#6fae3c', 0.4, 0.07);
+          break;
+        case 'fear':
+          text(e.x, e.y - 0.95, '!', '#e9a6ff', true);
           break;
         case 'chain':
           bolt(e.points, colorOf(e.element), e.small ? 0.12 : 0.18, e.small ? 0.04 : 0.07);
@@ -224,6 +267,7 @@ RG.fx = (() => {
       for (let i = list.length - 1; i >= 0; i--) { list[i].life -= dt; if (list[i].life <= 0) list.splice(i, 1); }
     }
     for (const t of texts) t.y -= dt * (t.big ? 0.9 : 1.2);
+    for (let i = drops.length - 1; i >= 0; i--) { drops[i].t += dt; if (drops[i].t >= drops[i].delay) drops.splice(i, 1); }
     shake = Math.max(0, shake - dt * 2.2);
   }
 
@@ -276,6 +320,29 @@ RG.fx = (() => {
       ctx.lineWidth = Math.max(1, b.w * T * 0.35);
       ctx.stroke();
     }
+    // 떨어지는 고드름: 하늘(2.6칸 위)에서 맞을 자리로 가속하며 떨어짐
+    if (drops.length) {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+      for (const d of drops) {
+        const k = Math.min(1, d.t / d.delay);
+        const y = d.y - 2.6 * (1 - k * k);
+        const L = (d.big ? 0.7 : 0.38) * T;
+        const W = (d.big ? 0.2 : 0.11) * T;
+        const cx = X(d.x);
+        const cy = Y(y);
+        ctx.fillStyle = '#d8f4ff';
+        ctx.strokeStyle = '#2a4a6a';
+        ctx.lineWidth = Math.max(1, T * 0.025);
+        ctx.beginPath(); ctx.moveTo(cx - W, cy - L); ctx.lineTo(cx + W, cy - L); ctx.lineTo(cx, cy); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.moveTo(cx - W * 0.45, cy - L * 0.9); ctx.lineTo(cx - W * 0.05, cy - L * 0.9); ctx.lineTo(cx - W * 0.1, cy - L * 0.35); ctx.closePath(); ctx.fill();
+        // 떨어질 자리 그림자 (가까워질수록 진해짐)
+        ctx.fillStyle = `rgba(20,40,70,${(0.15 + 0.35 * k).toFixed(2)})`;
+        ctx.beginPath(); ctx.ellipse(X(d.x), Y(d.y), W * 1.6, W * 0.7, 0, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalCompositeOperation = 'lighter';
+    }
     // 조각: 같은 색·비슷한 투명도(6단계)끼리 한 경로로 모아 한 번에 칠함 (조각마다 칠하면 수백 번)
     pFrame++;
     pOrder.length = 0;
@@ -326,7 +393,7 @@ RG.fx = (() => {
     ctx.restore();
   }
 
-  function clear() { parts.length = 0; rings.length = 0; bolts.length = 0; texts.length = 0; areas.length = 0; shake = 0; }
+  function clear() { parts.length = 0; rings.length = 0; bolts.length = 0; texts.length = 0; areas.length = 0; drops.length = 0; shake = 0; }
 
-  return { onEvents, update, draw, drawUnder, drawTexts, shakeOffset, clear, settings, burst, ring, text, colorOf, lightOf, setLite };
+  return { onEvents, update, draw, drawUnder, drawTexts, shakeOffset, clear, settings, burst, ring, text, colorOf, lightOf, setLite, setSpeed };
 })();
