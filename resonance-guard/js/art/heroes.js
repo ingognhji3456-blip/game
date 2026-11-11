@@ -2104,6 +2104,15 @@
 
   /** 유닛 자세: idle · walk0·walk1 · aim(휘두르기 직전·드론은 충전) · attack. 바위 벽은 모든 자세가 같음 */
   RG.art.UNIT_POSES = ['idle', 'walk0', 'walk1', 'aim', 'attack'];
+  /* 다른 파일(heroes-ext.js — 확장 영웅 6명)이 같은 도구로 그리도록 공개 + 등록 표 */
+  RG.art._hr = {
+    OLC, h, num, sh, IL, RIMC, pad, ow, P, C, E, T, L, G, op, FUR, FURI, CL, SHD, PI, CI, OUT, SPEC, LI, STITCH, wrap,
+    flower, stoneTex, tufts, D2R, V, pol, rot, angTo, dist, lerp, add, pt, vp, at, ik, cap, limb, castSegs, arcBand,
+    fist, palm, boot, HUMAN, rig, leg, arm, HEAD, eyes, mouth, ear, faceBase, neckS, ground, foot, BODY, BODY_IN, innerOf, BODY_SHD,
+    FACE, TORSO, curls, plate, sparkle, pEye, MOUTH, BROW, sweat, human,
+    HEROES, PORTRAITS, PORTRAIT_FN, UNITS,
+  };
+
   RG.art.unit = function unit(kind, pose = 'idle') {
     const c = pad();
     const p = RG.art.UNIT_POSES.includes(pose) ? pose : 'idle';

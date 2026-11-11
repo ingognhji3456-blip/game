@@ -41,9 +41,9 @@ const ENEMY_SIZE = {
   ice_tortoise: 0.9, avalanche_golem: 0.9, yeti_shaman: 0.9, magma_brute: 0.9, coral_colossus: 0.9, ashen_paladin: 0.9, bellshard_golem: 0.9, silent_drake: 0.9,
   hollow_elder: 1.8, whitehorn: 1.8, pyre_worm: 1.8, tempest_whale: 2.0, bellkeeper: 1.6, the_silence: 2.0,
 };
-const HEROES = ['kara', 'sera', 'sio', 'zena', 'bawi', 'yaro'];
-const PORTRAITS = [...HEROES, 'elder', 'bellkeeper', 'haru'];
-const UNITS = ['stone_soldier', 'granite_guard', 'obsidian_blade', 'drone', 'rock_wall'];
+const HEROES = ['kara', 'sera', 'sio', 'zena', 'bawi', 'yaro', 'haru', 'dohan', 'narae', 'tori', 'byeori', 'mujin'];
+const PORTRAITS = [...HEROES, 'elder', 'bellkeeper'];
+const UNITS = ['stone_soldier', 'granite_guard', 'obsidian_blade', 'drone', 'rock_wall', 'snowman', 'tori_giant'];
 const ICONS = ['fire', 'frost', 'storm', 'earth', 'light', 'dark',
   'flying', 'armor', 'regen', 'split', 'stealth', 'shield', 'healer', 'shielder', 'burrow', 'dash', 'undying', 'deathburst',
   'ranged', 'shock', 'silence', 'adaptive', 'dampen', 'unstoppable',
