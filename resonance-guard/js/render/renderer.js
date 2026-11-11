@@ -664,6 +664,100 @@ RG.render = (() => {
     ctx.restore();
   }
 
+  /* ---------------- 6지역: 별다리 · 별빛 건설지 ---------------- */
+  /**
+   * 별다리: 열린 무리는 금빛 별빛 판자, 닫힌 무리는 옅은 점선 윤곽.
+   * 닫히기 3초 전부터 열린 다리가 깜박이고 다리 가운데 위에 남은 초를 표시(읽을 수 있는 위협).
+   * 별빛 건설지(*)는 칸 가운데 작은 금빛 별이 은은하게 반짝임(탑이 있으면 탑 밑에 가려짐).
+   */
+  function drawBridges() {
+    const map = game.map;
+    if (map.hasStars === undefined) { let any = false; for (let i = 0; i < map.kinds.length; i++) if (map.kinds[i] === RG.grid.T.STAR) { any = true; break; } map.hasStars = any; }
+    if (!map.hasBridges && !map.hasStars) return;
+    const st = game.state;
+    const cols = map.cols;
+    if (map.hasStars) {
+      ctx.save();
+      for (let i = 0; i < map.kinds.length; i++) {
+        if (map.kinds[i] !== RG.grid.T.STAR) continue;
+        const c = i % cols;
+        const r = (i - c) / cols;
+        if (game.tileTower(c, r)) continue;
+        const cx = X(c + 0.5);
+        const cy = Y(r + 0.5);
+        const k = 0.6 + 0.4 * Math.sin(time * 2.4 + i * 1.7);
+        const R = T * 0.16 * (0.85 + 0.15 * k);
+        ctx.globalAlpha = 0.35 * k;
+        ctx.fillStyle = '#fff4c0';
+        ctx.beginPath(); ctx.arc(cx, cy, T * 0.36, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 0.95;
+        ctx.fillStyle = '#ffe7a8';
+        ctx.strokeStyle = '#6a5a2a';
+        ctx.lineWidth = Math.max(1, T * 0.03);
+        ctx.beginPath();
+        for (let j = 0; j < 8; j++) { const a = (j / 8) * Math.PI * 2 - Math.PI / 2; const rr = j % 2 ? R * 0.4 : R; ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); }
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
+      ctx.restore();
+    }
+    if (!map.hasBridges || !st.bridge) return;
+    const B = st.bridge;
+    const left = B.next - st.time;
+    const warn = left <= 3;
+    const groups = [[map.bridgeA, B.phase === 0], [map.bridgeB, B.phase === 1]];
+    ctx.save();
+    for (const [tiles, open] of groups) {
+      if (!tiles.length) continue;
+      const blink = open && warn ? 0.45 + 0.55 * Math.abs(Math.sin(time * (left < 1.2 ? 14 : 8))) : 1;
+      let sx = 0;
+      let sy = 0;
+      for (const i of tiles) {
+        const c = i % cols;
+        const r = (i - c) / cols;
+        sx += c; sy += r;
+        const x0 = X(c);
+        const y0 = Y(r);
+        if (open) {
+          ctx.globalAlpha = blink;
+          ctx.fillStyle = 'rgba(255,231,168,0.85)';
+          ctx.strokeStyle = '#7a6a3a';
+          ctx.lineWidth = Math.max(1, T * 0.04);
+          ctx.beginPath(); ctx.rect(x0 + T * 0.04, y0 + T * 0.12, T * 0.92, T * 0.76); ctx.fill(); ctx.stroke();
+          ctx.strokeStyle = 'rgba(122,106,58,0.6)';
+          ctx.beginPath();
+          for (let k = 1; k < 4; k++) { ctx.moveTo(x0 + T * 0.04 + (T * 0.92 * k) / 4, y0 + T * 0.14); ctx.lineTo(x0 + T * 0.04 + (T * 0.92 * k) / 4, y0 + T * 0.86); }
+          ctx.stroke();
+          ctx.fillStyle = '#ffffff';
+          ctx.globalAlpha = blink * (0.5 + 0.5 * Math.sin(time * 3 + i));
+          ctx.beginPath(); ctx.arc(x0 + T * (0.3 + 0.4 * ((i * 37) % 10) / 10), y0 + T * 0.5, Math.max(1, T * 0.05), 0, Math.PI * 2); ctx.fill();
+        } else {
+          ctx.globalAlpha = 0.4;
+          ctx.strokeStyle = '#ffe7a8';
+          ctx.lineWidth = Math.max(1, T * 0.03);
+          ctx.setLineDash([T * 0.08, T * 0.1]);
+          ctx.beginPath(); ctx.rect(x0 + T * 0.08, y0 + T * 0.16, T * 0.84, T * 0.68); ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+      // 남은 초 (열린 다리가 곧 닫힘 · 닫힌 다리가 곧 열림)
+      if (warn) {
+        const cx = X(sx / tiles.length + 0.5);
+        const cy = Y(sy / tiles.length + 0.5) - T * 0.55;
+        ctx.globalAlpha = 1;
+        ctx.font = `900 ${Math.max(11, Math.round(T * 0.36))}px system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#1a1238';
+        const txt = `${open ? '닫힘' : '열림'} ${Math.ceil(left)}`;
+        ctx.strokeText(txt, cx, cy);
+        ctx.fillStyle = open ? '#ffb0a0' : '#c8f0ff';
+        ctx.fillText(txt, cx, cy);
+      }
+    }
+    ctx.restore();
+  }
+
   /* ---------------- 장판·덫 ---------------- */
   const ZONE_FLAT = { fire: 'rgba(255,120,60,0.4)', lava: 'rgba(255,90,40,0.45)', void: 'rgba(110,31,102,0.5)', thorn: 'rgba(74,122,38,0.4)', blizzard: 'rgba(200,236,255,0.35)' };
   function drawZones() {
@@ -1915,6 +2009,7 @@ RG.render = (() => {
     ctx.save();
     ctx.translate(sx, sy);
     drawBackground(based);
+    drawBridges();
     drawPortals();
     drawZones();
     drawPathPreview();

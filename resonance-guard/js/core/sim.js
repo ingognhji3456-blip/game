@@ -93,10 +93,16 @@ RG.sim = (() => {
       maxTicks: o.mode === 'endless' ? Infinity : 30 * 60 * 40, // 무한 모드는 시간 제한 없음
     };
 
-    const blocked = new Uint8Array(n);       // 탑이 있는 칸
+    const blocked = new Uint8Array(n);       // 탑이 있는 칸 (+ 6지역: 닫힌 별다리)
     const tileTowers = new Array(n).fill(null);
     const soldTile = new Float64Array(n);    // 판 칸 재건설 가능 시각
     let flow = map.baseDist;
+    // 별다리: phase 0 = A 무리 열림·b 닫힘, period초마다 번갈아 (docs/design/region6.md)
+    if (map.hasBridges) {
+      for (const i of RG.grid.closedBridges(map, 0)) blocked[i] = 1;
+      const per = (def.bridges && def.bridges.period) || 14;
+      st.bridge = { phase: 0, period: per, next: per };
+    }
     let nextId = 1;
     let statsDirty = true;
     const delayed = [];
@@ -573,7 +579,7 @@ RG.sim = (() => {
 
     function updateProg(e) {
       const ti = e.tr * map.cols + e.tc;
-      const fd = flow[ti];
+      const fd = (e.cross ? e.cross.flow : flow)[ti];
       e.prog = (isFinite(fd) ? fd : 99) + dist(e.x, e.y, e.tc + 0.5, e.tr + 0.5);
     }
 
@@ -618,7 +624,9 @@ RG.sim = (() => {
         }
         e.c = e.tc; e.r = e.tr;
         if (e.c === map.lantern.c && e.r === map.lantern.r) { leak(e); return; }
-        let nx = RG.grid.nextStep(map, flow, blocked, e.c, e.r, e.lane);
+        // 닫히는 별다리 위에 있던 적은 그대로 건너감: 다리를 벗어날 때까지 닫히기 전 흐름장을 따름
+        if (e.cross && !RG.grid.isBridgeKind(map.kinds[e.r * map.cols + e.c])) e.cross = null;
+        let nx = e.cross ? RG.grid.nextStep(map, e.cross.flow, e.cross.blocked, e.c, e.r, e.lane) : RG.grid.nextStep(map, flow, blocked, e.c, e.r, e.lane);
         if (!nx) nx = escapeStep(e.c, e.r); // 갇힌 칸(밀려나 막힌 주머니 등): 이웃 중 길이 이어진 칸으로
         if (!nx) { leak(e); return; }
         e.tc = nx.c; e.tr = nx.r;
@@ -1651,6 +1659,14 @@ RG.sim = (() => {
         const nd = RG.grid.computeFlow(map, blocked);
         blocked[i] = 0;
         for (const s of map.spawns) if (!isFinite(nd[s.r * map.cols + s.c])) return fail('길을 완전히 막을 수 없습니다');
+        if (st.bridge) { // 별다리가 바뀐 뒤에도 길이 있어야 함
+          const alt = blocked.slice();
+          alt[i] = 1;
+          for (const j of RG.grid.closedBridges(map, st.bridge.phase)) alt[j] = 0;
+          for (const j of RG.grid.closedBridges(map, 1 - st.bridge.phase)) alt[j] = 1;
+          const ad = RG.grid.computeFlow(map, alt);
+          for (const s of map.spawns) if (!isFinite(ad[s.r * map.cols + s.c])) return fail('별다리가 바뀌면 길이 막혀서 지을 수 없습니다');
+        }
         for (const e of st.enemies) {
           if (e.dead || e.flying) continue;
           if (!isFinite(nd[e.r * map.cols + e.c]) || !isFinite(nd[e.tr * map.cols + e.tc])) return fail('적이 갇히게 되어 지을 수 없습니다');
@@ -1663,6 +1679,7 @@ RG.sim = (() => {
       flow = RG.grid.computeFlow(map, blocked);
       for (const e of st.enemies) {
         if (e.dead || e.flying) continue;
+        if (e.cross) { updateProg(e); continue; } // 별다리를 건너는 중
         // 지금 목표 칸이 여전히 좋은지 확인, 아니면 지금 칸에서 다시 고름
         const curD = flow[e.r * map.cols + e.c];
         const tgtD = flow[e.tr * map.cols + e.tc];
@@ -1682,6 +1699,25 @@ RG.sim = (() => {
           if (tile) { u.x = tile.c + 0.5; u.y = tile.r + 0.5; u.px = u.x; u.py = u.y; u.path = []; }
         }
       }
+    }
+
+    /** 별다리 바꾸기: 닫히는 다리 위(또는 그리로 가던) 적은 건너가게 하고, 흐름장을 다시 계산 */
+    function flipBridges() {
+      const B = st.bridge;
+      const closing = RG.grid.closedBridges(map, 1 - B.phase);
+      const opening = RG.grid.closedBridges(map, B.phase);
+      const closeSet = new Set(closing);
+      const old = { flow, blocked: blocked.slice() };
+      for (const e of st.enemies) {
+        if (e.dead || e.flying) continue;
+        if (closeSet.has(e.r * map.cols + e.c) || closeSet.has(e.tr * map.cols + e.tc)) e.cross = old;
+      }
+      for (const i of opening) blocked[i] = 0;
+      for (const i of closing) blocked[i] = 1;
+      B.phase = 1 - B.phase;
+      B.next += B.period;
+      refreshFlow();
+      ev('bridges', { phase: B.phase });
     }
 
     function build(cmd) {
@@ -2140,6 +2176,7 @@ RG.sim = (() => {
       const time = st.time;
 
       refreshHeroAuras();
+      if (st.bridge && time >= st.bridge.next) flipBridges();
       for (let i = 0; i < st.enemies.length; i++) { const e = st.enemies[i]; e.px = e.x; e.py = e.y; }
       for (const u of st.units) { u.px = u.x; u.py = u.y; }
       for (const p of st.projectiles) { p.px = p.x; p.py = p.y; }

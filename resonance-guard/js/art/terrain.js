@@ -32,7 +32,7 @@
   const f = (v) => Math.round(v * 10) / 10;
 
   /* 칸 종류 (RG.grid.T와 같은 값) */
-  const K = { PATH: 1, OPEN: 2, BUILD: 3, WATER: 4, ROCK: 5, TREE: 6, LAVA: 7, PILLAR: 8, SPAWN: 9, AIR: 10, LANTERN: 11 };
+  const K = { PATH: 1, OPEN: 2, BUILD: 3, WATER: 4, ROCK: 5, TREE: 6, LAVA: 7, PILLAR: 8, SPAWN: 9, AIR: 10, LANTERN: 11, BRIDGE_A: 12, BRIDGE_B: 13, STAR: 14 };
 
   /* ---------------- 지역 색 ---------------- */
   const LAVA = { lava: '#ff8a2a', lavaL: '#ffe28c', lavaD: '#c4401b' };
@@ -132,6 +132,25 @@
       stoneTints: ['#d8c6ec', '#b4b6dc', '#dccfb6'], stud: '#f4d36e',
       patchW: '#5f5480', patchC: '#33304f', patchX: '#5a4a64',
       skyTop: '#4e4864', skyBot: '#b4a6c6',
+    },
+    6: { // 별울림 첨탑 — 밤하늘 위 구름 섬 · 연한 금빛 별
+      ground: '#cfc8ec', groundL: '#ebe7ff', groundD: '#aea5d6', tuft: '#958bc4', tuftL: '#ffffff',
+      forest: '#b9b0e0', forestD: '#9f95cc', rubble: '#a39bcb', litter: '#9087bd',
+      open: '#e2ddf8', openL: '#f5f3ff', openD: '#c0b9e4', openMark: '#6a60a0',
+      plot: '#a199c8', plotL: '#bdb5e0', plotD: '#776fa6',
+      slab: '#b6aee0', slabL: '#e0daff', slabD: '#8a82bc', slabSide: '#4c447c', slabLine: '#6a62a0', moss: '#ffe7a8', mossL: '#fff6d0',
+      road: '#efe0ae', roadL: '#fff4d2', roadD: '#d3bf88', roadEdge: '#7a6a3a', roadAO: '#4a4288',
+      shoreWet: '#8a82bc', shore: '#f4f2ff', foam: '#ffffff', waterL: '#3c3c90', water: '#26246c', waterD: '#1a1852', waterDeep: '#100e3a',
+      ...LAVA, crust: '#2a2444',
+      cliffTop: '#a69ed0', cliffTopL: '#d6d0f4', cliffTopD: '#7a72aa', cliffFace: '#68609a', cliffFaceD: '#443c72', cliffLine: '#2c2656',
+      stone: '#a098d0', stoneL: '#d2ccee', stoneD: '#645c94', accent: '#ffe7a8',
+      plaza: '#efe6c8', plazaD: '#a8986a', wood: '#8c7cb4', woodD: '#5a4c82',
+      leaf: '#9ad8ff', leafL: '#dcf4ff', leafD: '#5a98c8',
+      flowers: ['#fff6c8', '#ffe7a8', '#c8d8ff', '#ffffff'], mist: '#3a3468',
+      shadow: '#2a2460', shadowOp: 0.3,
+      stoneTints: ['#c8bce8', '#b8c8e8', '#e0d0e8'], stud: '#ffe7a8',
+      patchW: '#f8f6ff', patchC: '#b8b0e0', patchX: '#d6cef4',
+      skyTop: '#16163e', skyBot: '#5e50a0',
     },
   };
   /* 맵마다 다른 점 (설계서 docs/design/maps.md의 지형 메모) */
@@ -525,6 +544,16 @@
       const agave = [200, 228, 250, 270, 290, 312, 340].map((a, i) => blade(a, i % 2 ? 30 : 38, 6)).join('');
       out.push({ g: `<g transform="translate(0 -2)"><path d="${agave}" fill="${leafG}" ${SO(3)}/><path d="${[228, 270, 312].map((a) => { const r = (a * Math.PI) / 180; return `M0 0L${f(Math.cos(r) * 24)} ${f(Math.sin(r) * 24)}`; }).join('')}" ${strokeA(P.leafL, 2.4, 0.8)}/></g>`, top: 42, half: 38, bush: 1 });
       out.push({ g: coralSyms()[0].g, top: 52, half: 28, coral: 1 });
+    } else if (region === 6) {
+      // 별빛 수정 나무: 수정 기둥 묶음 꼭대기에 별, 둥근 구름 수관의 별꽃 나무, 구름 덤불
+      const cG = def('crys6', (id) => h.lg(id, [[0, '#e8f6ff'], [0.45, P.leaf], [1, P.leafD]], 'h'));
+      const crystal = (x, ht, w, lean) => `<path d="M${x - w} 0L${x - w * 0.8 + lean * 0.4} ${-ht * 0.8}L${x + lean} ${-ht}L${x + w * 0.8 + lean * 0.4} ${-ht * 0.8}L${x + w} 0Z" fill="${cG}" ${SO(3)}/><path d="M${x + lean} ${-ht}L${x + w * 0.8 + lean * 0.4} ${-ht * 0.8}L${x + w} 0H${x + w * 0.2}Z" fill="${P.leafD}" fill-opacity="0.45"/><path d="M${x - w * 0.5} -4L${x - w * 0.4 + lean * 0.3} ${-ht * 0.7}" ${strokeA('#ffffff', 2, 0.8)}/>`;
+      const starTop = (x, y, r) => `<path d="M${x} ${y - r}L${x + r * 0.3} ${y - r * 0.3}L${x + r} ${y}L${x + r * 0.3} ${y + r * 0.3}L${x} ${y + r}L${x - r * 0.3} ${y + r * 0.3}L${x - r} ${y}L${x - r * 0.3} ${y - r * 0.3}Z" fill="${P.accent}" ${SO(1.8)}/>`;
+      out.push({ g: crystal(-12, 46, 8, -4) + crystal(12, 40, 7, 5) + crystal(0, 66, 10, 0) + starTop(0, -72, 7), top: 80, half: 30 });
+      out.push({ g: crystal(-8, 38, 7, -3) + crystal(9, 54, 9, 3) + starTop(12, -60, 6), top: 66, half: 26 });
+      const canopy6 = `<path d="${circ(-14, -40, 16)}${circ(14, -42, 16)}${circ(0, -56, 18)}${circ(0, -36, 16)}" fill="#e6f2ff" ${SO(3.2)}/><path d="${circ(10, -36, 12)}${circ(16, -46, 9)}" fill="#b8d0f0" fill-opacity="0.7"/>`;
+      out.push({ g: `<path d="M-5 2L-3 -30H3L5 2Z" fill="${P.wood}" ${SO(3)}/>${canopy6}<path d="${[[-14, -46], [6, -60], [12, -38], [-4, -38]].map(([a, b]) => `M${a} ${b - 4}l1.4 3l3 1l-3 1l-1.4 3l-1.4 -3l-3 -1l3 -1Z`).join('')}" fill="${P.accent}"/>`, top: 76, half: 32 });
+      out.push({ g: `<path d="M-30 2C-34-10-22-22-8-22C0-32 20-30 24-16C32-12 32 0 26 2Z" fill="#f4f2ff" ${SO(3.2)}/><path d="M6 -25C18-25 24-18 24-12C30-8 31-1 26 1C18 2 10 1 6 -2Z" fill="#cfc8ec"/><path d="M-18-10C-12-16-4-16 2-12" ${strokeA('#ffffff', 3)}/>${starTop(-6, -26, 4.4)}`, top: 32, half: 34, bush: 1 });
     } else {
       // 잿빛 고목: 굵은 밑동 + 맨가지 + 금빛 잎 몇 장
       const wG = def('dwood', (id) => h.lg(id, [[0, h.shade(P.wood, 0.25)], [0.6, P.wood], [1, P.woodD]], 'h'));
@@ -646,6 +675,9 @@
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         let k = raw(c, r);
+        // 별다리는 바탕에서 구름 사이 밤하늘 틈(물처럼 그림, 다리는 렌더러가 열림·닫힘에 따라 위에 그림), 별빛 건설지는 건설지
+        if (k === K.BRIDGE_A || k === K.BRIDGE_B) k = K.WATER;
+        else if (k === K.STAR) k = K.BUILD;
         if (k === K.AIR) {
           const cnt = {};
           for (const [dc, dr] of N4) {
@@ -1319,6 +1351,11 @@
           bk2.add(strokeA('#ffffff', 3, 0.75), `M${f(x - 12)} ${f(y)}q6 -7 12 0q6 7 12 0`);
         } else if (region === 5 && v < 0.35) {
           bk2.add(fillA(P.accent, 0.8), `M${f(x)} ${f(y - 5)}l2 4l4 1l-4 1l-2 4l-2 -4l-4 -1l4 -1Z`);
+        } else if (region === 6) {
+          // 구름 틈 아래 밤하늘의 별
+          if (v < 0.55) bk2.add(fillA(P.accent, 0.9), `M${f(x)} ${f(y - 6)}l2 4.6l4.6 1.4l-4.6 1.4l-2 4.6l-2 -4.6l-4.6 -1.4l4.6 -1.4Z`);
+          bk2.add(fillA('#ffffff', 0.8), circ(c * 100 + 10 + rnd(c, r, 851) * 80, r * 100 + 10 + rnd(c, r, 852) * 80, 1.6));
+          bk2.add(fillA('#c8d8ff', 0.7), circ(c * 100 + 10 + rnd(c, r, 853) * 80, r * 100 + 10 + rnd(c, r, 854) * 80, 1.2));
         }
       }
       s += bk.out() + bk2.out();
@@ -2508,6 +2545,43 @@
       let mo = '';
       for (let i = 0; i < 20; i++) mo += circ(150 + rnd(i, 1) * 200, 30 + rnd(i, 2) * 90, 1 + rnd(i, 3) * 1.4);
       s += `<path d="${mo}" fill="#ffe28c" fill-opacity="0.85"/>`;
+      return s;
+    },
+    /* 6 · 별울림 첨탑: 밤하늘, 구름 바다 위 첨탑과 별종, 번갈아 놓이는 별다리, 위로 번지는 그믐달 그림자 */
+    6(x) {
+      const { P, def, rnd, S } = x;
+      const sky = def('sky6', (i) => h.lg(i, [[0, '#0e0e30'], [0.55, '#2a2468'], [1, '#6a58a8']]));
+      const moonG = def('moon6', (i) => h.rg(i, [[0, '#fff8e0'], [0.5, '#ffe7a8', 0.6], [1, '#ffe7a8', 0]], 0.5, 0.5, 0.5));
+      const bellG = def('bell6', (i) => h.rg(i, [[0, '#fff4c8'], [0.5, '#e8c070'], [1, '#9a7030']], 0.35, 0.3, 0.8));
+      const glow = def('glow6', (i) => h.rg(i, [[0, '#fff4c0', 0.9], [0.4, '#ffe7a8', 0.45], [1, '#ffe7a8', 0]], 0.5, 0.5, 0.5));
+      let s = `<rect width="400" height="160" fill="${sky}"/>`;
+      // 별 + 별자리 선
+      let st = '';
+      for (let i = 0; i < 46; i++) st += circ(rnd(i, 11) * 400, rnd(i, 12) * 100, 0.6 + rnd(i, 13) * 1.3);
+      s += `<path d="${st}" fill="#ffffff" fill-opacity="0.85"/>`;
+      s += `<path d="M40 30L66 18L92 26L110 12M300 22L322 36L350 30" ${strokeA('#c8d8ff', 1, 0.5)}/>`;
+      s += `<path d="${[[66, 18], [92, 26], [110, 12], [40, 30], [322, 36], [350, 30], [300, 22]].map(([a, b]) => `M${a} ${b - 4}l1.4 3l3 1l-3 1l-1.4 3l-1.4 -3l-3 -1l3 -1Z`).join('')}" fill="#ffe7a8"/>`;
+      // 그믐달과 갉아먹는 그림자
+      s += `<circle cx="338" cy="44" r="40" fill="${moonG}"/><path d="M338 22A22 22 0 1 0 352 62A17 17 0 1 1 338 22Z" fill="#fff4d0" ${S(2)}/>`;
+      s += `<path d="M300 20C320 30 330 50 320 74C306 64 296 46 300 20Z" fill="#1a1238" fill-opacity="0.55"/>`;
+      // 먼 구름 바다
+      s += `<path d="M0 104C30 96 60 100 90 106C130 96 170 98 210 104C250 94 300 96 340 104C370 98 390 100 400 102V160H0Z" fill="#8a7ec0"/>`;
+      s += cloud(60, 98, 1.1, '#b6aee0', '#8a80c0', 1) + cloud(150, 104, 0.9, '#b6aee0', '#8a80c0', 1) + cloud(330, 100, 1.2, '#b6aee0', '#8a80c0', 1);
+      // 첨탑 (가운데) + 별종
+      s += `<circle cx="200" cy="40" r="34" fill="${glow}"/>`;
+      s += `<path d="M184 120L190 64L196 56H204L210 64L216 120Z" fill="#a69ed0" ${S()}/><path d="M204 56L210 64L216 120H206Z" fill="#6a6298" fill-opacity="0.7"/>`;
+      s += `<path d="M188 64H212M187 80H213M186 96H214" ${strokeA('#6a62a0', 2, 0.8)}/>`;
+      s += `<path d="M190 56L200 34L210 56Z" fill="#c8c0ec" ${S()}/>`;
+      s += `<path d="M200 30C192 30 190 38 190 44C190 48 187 50 186 51H214C213 50 210 48 210 44C210 38 208 30 200 30Z" fill="${bellG}" ${S(2.2)}/><circle cx="200" cy="53" r="2.4" fill="#e8c070" ${S(1.4)}/>`;
+      s += `<path d="M200 22V30" ${strokeA('#ffe7a8', 2)}/>`;
+      // 별다리 둘 (하나는 놓이고 하나는 반짝이며 사라짐)
+      s += `<path d="M40 126Q120 96 186 112" ${strokeA('#ffe7a8', 6, 0.9)}/><path d="M40 126Q120 96 186 112" ${strokeA('#fff8e0', 2)}/>`;
+      s += `<path d="M214 112Q290 96 370 124" ${strokeA('#ffe7a8', 4, 0.35)} stroke-dasharray="6 8"/>`;
+      // 앞 구름 섬과 별 덤불
+      s += `<path d="M-6 160C-6 138 20 128 44 130C60 120 90 124 100 136C120 134 134 146 132 160Z" fill="${P.ground}" ${S()}/><path d="M10 140C30 132 60 132 90 138" ${strokeA('#ffffff', 3, 0.8)}/>`;
+      s += `<path d="M262 160C258 140 280 128 304 132C320 118 360 120 372 136C392 134 410 146 408 160Z" fill="${P.ground}" ${S()}/><path d="M282 140C310 132 344 132 380 140" ${strokeA('#ffffff', 3, 0.8)}/>`;
+      s += `<path d="M150 160C156 146 176 140 200 142C224 140 244 146 250 160Z" fill="${P.groundL}" ${S()}/>`;
+      s += `<path d="${[[60, 132], [84, 128], [320, 128], [350, 126], [196, 140]].map(([a, b]) => `M${a} ${b - 6}l2 4.4l4.4 1.6l-4.4 1.6l-2 4.4l-2 -4.4l-4.4 -1.6l4.4 -1.6Z`).join('')}" fill="#ffe7a8" ${S(1.2)}/>`;
       return s;
     },
   };

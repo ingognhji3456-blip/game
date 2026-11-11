@@ -7,18 +7,20 @@
 RG.grid = (() => {
   const T = {
     PATH: 1, OPEN: 2, BUILD: 3, WATER: 4, ROCK: 5, TREE: 6, LAVA: 7, PILLAR: 8, SPAWN: 9, AIR: 10, LANTERN: 11,
+    BRIDGE_A: 12, BRIDGE_B: 13, STAR: 14, // 6지역: 별다리 두 무리(번갈아 열림) · 별빛 건설지(사거리 +15%)
   };
   const CHAR = {
     '.': T.PATH, ',': T.OPEN, '#': T.BUILD, '~': T.WATER, '^': T.ROCK, T: T.TREE, '%': T.LAVA, '=': T.PILLAR,
-    S: T.SPAWN, A: T.AIR, L: T.LANTERN,
+    S: T.SPAWN, A: T.AIR, L: T.LANTERN, B: T.BRIDGE_A, b: T.BRIDGE_B, '*': T.STAR,
   };
   const SQRT2 = Math.SQRT2;
   /** 8방향: 북, 북동, 동, 남동, 남, 남서, 서, 북서 */
   const DIRS = [[0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1]];
 
-  const isEnemyWalkKind = (k) => k === T.PATH || k === T.OPEN || k === T.SPAWN || k === T.LANTERN;
-  const isBuildKind = (k) => k === T.BUILD || k === T.OPEN;
-  const isHeroWalkKind = (k) => k === T.PATH || k === T.OPEN || k === T.BUILD || k === T.SPAWN || k === T.LANTERN;
+  const isEnemyWalkKind = (k) => k === T.PATH || k === T.OPEN || k === T.SPAWN || k === T.LANTERN || k === T.BRIDGE_A || k === T.BRIDGE_B;
+  const isBuildKind = (k) => k === T.BUILD || k === T.OPEN || k === T.STAR;
+  const isHeroWalkKind = (k) => k === T.PATH || k === T.OPEN || k === T.BUILD || k === T.SPAWN || k === T.LANTERN || k === T.BRIDGE_A || k === T.BRIDGE_B || k === T.STAR;
+  const isBridgeKind = (k) => k === T.BRIDGE_A || k === T.BRIDGE_B;
 
   /** 맵 정의 → 해석된 맵. 오류가 있으면 예외 */
   function parseMap(def) {
@@ -48,11 +50,24 @@ RG.grid = (() => {
     if (!lantern) throw new Error(`${def.id}: 울림등(L)이 없음`);
     if (!spawns.length) throw new Error(`${def.id}: 입구(S)가 없음`);
     const map = { id: def.id, def, cols, rows, kinds, spawns, airSpawns, lantern };
-    const empty = new Uint8Array(n);
-    const dist = computeFlow(map, empty);
-    for (const s of spawns) {
-      if (!isFinite(dist[s.r * cols + s.c])) throw new Error(`${def.id}: 입구 (${s.c},${s.r})에서 울림등까지 길이 없음`);
-    }
+    // 별다리: A 무리가 먼저 열리고(B 닫힘) 주기마다 번갈아 — 두 상태 모두 입구에서 울림등까지 길이 있어야 함
+    const bridgeA = [];
+    const bridgeB = [];
+    for (let i = 0; i < n; i++) { if (kinds[i] === T.BRIDGE_A) bridgeA.push(i); else if (kinds[i] === T.BRIDGE_B) bridgeB.push(i); }
+    map.bridgeA = bridgeA;
+    map.bridgeB = bridgeB;
+    map.hasBridges = bridgeA.length + bridgeB.length > 0;
+    const states = map.hasBridges ? [bridgeB, bridgeA] : [[]]; // 닫힌 무리
+    let dist = null;
+    states.forEach((closed, si) => {
+      const blk = new Uint8Array(n);
+      for (const i of closed) blk[i] = 1;
+      const d = computeFlow(map, blk);
+      for (const s of spawns) {
+        if (!isFinite(d[s.r * cols + s.c])) throw new Error(`${def.id}: 입구 (${s.c},${s.r})에서 울림등까지 길이 없음${map.hasBridges ? ` (별다리 ${si ? 'b' : 'B'} 무리만 열렸을 때)` : ''}`);
+      }
+      if (!dist) dist = d;
+    });
     map.baseDist = dist;
     return map;
   }
@@ -253,8 +268,11 @@ RG.grid = (() => {
     return out;
   }
 
+  /** 별다리 phase(0: A 열림·B 닫힘, 1: 반대)일 때 닫힌 칸 목록 */
+  const closedBridges = (map, phase) => (!map.hasBridges ? [] : phase ? map.bridgeA : map.bridgeB);
+
   return {
     T, CHAR, DIRS, parseMap, parseWaves, computeFlow, nextStep, enemyWalkable, heroWalkable, heroPath,
-    nearestHeroTile, nearestEnemyTile, neighbors8, isEnemyWalkKind, isBuildKind, isHeroWalkKind, idx, inBounds,
+    nearestHeroTile, nearestEnemyTile, neighbors8, isEnemyWalkKind, isBuildKind, isHeroWalkKind, isBridgeKind, closedBridges, idx, inBounds,
   };
 })();

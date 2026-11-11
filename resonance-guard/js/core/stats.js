@@ -110,6 +110,8 @@ RG.stats = (() => {
       c.dmgBonus = 0;
       c.speedBonus = 0;
       c.rangeBonus = meta.rangePct || 0;
+      // 6지역 별빛 건설지: 사거리 +15%
+      if (game.map && game.map.kinds[t.r * game.map.cols + t.c] === RG.grid.T.STAR) c.rangeBonus += RG.data.rules.starRange || 0.15;
       c.critBonus = 0;
       c.mods = {};
       c.resIds = [];
