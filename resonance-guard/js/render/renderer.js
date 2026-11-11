@@ -146,30 +146,83 @@ RG.render = (() => {
     let cv = m.get(k);
     if (!cv) {
       if (m.size > 6) m.clear(); // 크기가 자주 바뀌면(창 크기·화질) 오래된 것은 버림
-      cv = document.createElement('canvas');
-      cv.width = pw; cv.height = ph;
-      const c2 = cv.getContext('2d');
-      c2.imageSmoothingQuality = 'high'; // 고품질 축소 한 번 (임시 캔버스를 만들지 않음 — 시작 직후 수백 장을 만들 때 가벼움)
-      if (flip) { c2.translate(pw, 0); c2.scale(-1, 1); }
-      c2.drawImage(s.canvas, 0, 0, pw, ph);
-      cv = cropOpaque(cv);
+      cv = s.canvas._bb ? fitCropped(s.canvas, pw, ph, flip, null) : null;
+      if (!cv) {
+        cv = document.createElement('canvas');
+        cv.width = pw; cv.height = ph;
+        const c2 = cv.getContext('2d');
+        c2.imageSmoothingQuality = 'high'; // 고품질 축소 한 번 (임시 캔버스를 만들지 않음 — 시작 직후 수백 장을 만들 때 가벼움)
+        if (flip) { c2.translate(pw, 0); c2.scale(-1, 1); }
+        c2.drawImage(s.canvas, 0, 0, pw, ph);
+        cv = cropOpaque(cv);
+      }
       m.set(k, cv);
       toBitmap(m, k, cv);
     }
     return cv;
   }
   /*
+   * 불러올 때 재 둔 불투명 범위(src._bb)로 잘라 줄이기 — 화소를 읽지 않음(전투 중 getImageData는 느림).
+   * sh가 있으면 발밑 그늘(그림 칸 기준 가운데 gx,gy·크기 gw,gh·진하기 a)을 먼저 깔고 그 범위까지 포함.
+   * 결과는 예전 cropOpaque와 같은 모양(_ox,_oy = 잘라 낸 위치, _fw,_fh = 줄인 전체 크기).
+   */
+  function fitCropped(src, pw, ph, flip, sh) {
+    const bb = src._bb;
+    const kx = pw / src.width;
+    const ky = ph / src.height;
+    // 그림 범위(줄인 크기 기준, 1화소 여유)
+    let x0 = Math.max(0, Math.floor(bb[0] * kx) - 1);
+    let x1 = Math.min(pw, Math.ceil((bb[2] + 1) * kx) + 1);
+    const y0s = Math.max(0, Math.floor(bb[1] * ky) - 1);
+    const y1s = Math.min(ph, Math.ceil((bb[3] + 1) * ky) + 1);
+    if (flip) { const a = pw - x1; x1 = pw - x0; x0 = a; }
+    let X0 = x0; let Y0 = y0s; let X1 = x1; let Y1 = y1s;
+    if (sh) {
+      X0 = Math.min(X0, Math.floor(sh.gx - sh.gw / 2) - 1); X1 = Math.max(X1, Math.ceil(sh.gx + sh.gw / 2) + 1);
+      Y0 = Math.min(Y0, Math.floor(sh.gy - sh.gh / 2) - 1); Y1 = Math.max(Y1, Math.ceil(sh.gy + sh.gh / 2) + 1);
+      X0 = Math.max(0, X0); Y0 = Math.max(0, Y0);
+    }
+    const cw = X1 - X0;
+    const ch = Y1 - Y0;
+    if (cw <= 0 || ch <= 0) return null;
+    const out = document.createElement('canvas');
+    out.width = cw; out.height = ch;
+    const c2 = out.getContext('2d');
+    c2.imageSmoothingQuality = 'high';
+    if (sh) { c2.globalAlpha = sh.a; c2.drawImage(blob(), sh.gx - sh.gw / 2 - X0, sh.gy - sh.gh / 2 - Y0, sh.gw, sh.gh); c2.globalAlpha = 1; }
+    // 원본 전체를 (-X0,-Y0)만큼 옮겨 줄여 그림 — 캔버스 밖은 그려지지 않음
+    c2.translate(-X0, -Y0);
+    if (flip) { c2.translate(pw, 0); c2.scale(-1, 1); }
+    c2.drawImage(src, 0, 0, pw, ph);
+    out._ox = X0; out._oy = Y0; out._fw = pw; out._fh = ph;
+    return out;
+  }
+  /*
    * 줄여 둔 그림을 ImageBitmap(바뀌지 않는 그림)으로 바꿔 둠: 캔버스를 찍으면 찍을 때마다 그 캔버스의
    * 스냅숏을 확인하는 비용이 드는데(적 300마리면 프레임마다 수백 번), ImageBitmap은 그 과정이 없음.
    * 바꾸는 동안에는 캔버스를 그대로 쓰고, 끝나면 같은 자리를 바꿔 끼움(그림은 같음).
    */
+  // 바꾸기는 줄을 세워 프레임마다 몇 장씩만 (판 시작 직후 수백 장이 한꺼번에 바뀌면 그 몇 초가 끊겼음)
+  const bitmapQ = [];
   function toBitmap(m, k, cv) {
     if (typeof createImageBitmap !== 'function') return;
-    createImageBitmap(cv).then((bm) => {
-      if (m.get(k) !== cv) { bm.close(); return; } // 그 사이 캐시가 비워졌으면 버림
-      bm._ox = cv._ox; bm._oy = cv._oy; bm._fw = cv._fw; bm._fh = cv._fh;
-      m.set(k, bm);
-    }, () => {});
+    bitmapQ.push(m, k, cv);
+  }
+  function pumpBitmaps(n) {
+    let i = 0;
+    for (; i < bitmapQ.length && n > 0; i += 3) {
+      const m = bitmapQ[i];
+      const k = bitmapQ[i + 1];
+      const cv = bitmapQ[i + 2];
+      if (m.get(k) !== cv) continue; // 이미 버려진 것
+      n--;
+      createImageBitmap(cv).then((bm) => {
+        if (m.get(k) !== cv) { bm.close(); return; } // 그 사이 캐시가 비워졌으면 버림
+        bm._ox = cv._ox; bm._oy = cv._oy; bm._fw = cv._fw; bm._fh = cv._fh;
+        m.set(k, bm);
+      }, () => {});
+    }
+    bitmapQ.splice(0, i);
   }
   /*
    * 투명한 여백 잘라내기: 그림 캔버스는 동작(점프·기울기)을 위해 둘레에 여백이 넉넉한데,
@@ -222,17 +275,20 @@ RG.render = (() => {
     let cv = m.get(k);
     if (!cv) {
       if (m.size > 6) m.clear();
-      cv = document.createElement('canvas');
-      cv.width = Math.max(pw, gx + (gw >> 1) + 2);
-      cv.height = Math.max(ph, gy + (gh >> 1) + 2);
-      const c2 = cv.getContext('2d');
-      c2.imageSmoothingQuality = 'high';
-      c2.globalAlpha = sh[4];
-      c2.drawImage(blob(), gx - gw / 2, gy - gh / 2, gw, gh);
-      c2.globalAlpha = 1;
-      if (flip) { c2.translate(pw, 0); c2.scale(-1, 1); }
-      c2.drawImage(s.canvas, 0, 0, pw, ph);
-      cv = cropOpaque(cv);
+      cv = s.canvas._bb ? fitCropped(s.canvas, pw, ph, flip, { gx, gy, gw, gh, a: sh[4] }) : null;
+      if (!cv) {
+        cv = document.createElement('canvas');
+        cv.width = Math.max(pw, gx + (gw >> 1) + 2);
+        cv.height = Math.max(ph, gy + (gh >> 1) + 2);
+        const c2 = cv.getContext('2d');
+        c2.imageSmoothingQuality = 'high';
+        c2.globalAlpha = sh[4];
+        c2.drawImage(blob(), gx - gw / 2, gy - gh / 2, gw, gh);
+        c2.globalAlpha = 1;
+        if (flip) { c2.translate(pw, 0); c2.scale(-1, 1); }
+        c2.drawImage(s.canvas, 0, 0, pw, ph);
+        cv = cropOpaque(cv);
+      }
       m.set(k, cv);
       toBitmap(m, k, cv);
     }
@@ -1114,6 +1170,7 @@ RG.render = (() => {
     }
   }
 
+  const stunPts = []; // 기절 별 자리 (프레임마다 모아 한 번에 칠함)
   const isFrozenNow = (e) => game.state.time < e.ccUntil && e.ccKind === 'freeze';
   /** 공포 표시 '!!' — 칸 크기·화면 배율마다 한 번 구워 둠 (적이 많을 때 글자 그리기 수백 번을 피함) */
   let fearCv = null;
@@ -1333,13 +1390,11 @@ RG.render = (() => {
       ctx.restore();
     }
     if (st.time < e.ccUntil && e.ccKind === 'stun') {
-      ctx.save();
-      ctx.fillStyle = '#ffe066';
+      // 기절 별 셋: 모아 두었다가 모든 적을 그린 뒤 한 경로로 (바위·회오리가 한꺼번에 여럿을 기절시킴)
       for (let i = 0; i < 3; i++) {
         const a = time * 6 + (i * Math.PI * 2) / 3;
-        ctx.beginPath(); ctx.arc(cx + Math.cos(a) * size * 0.3, top - 2 + Math.sin(a) * size * 0.08, Math.max(1.5, T * 0.04), 0, Math.PI * 2); ctx.fill();
+        stunPts.push(cx + Math.cos(a) * size * 0.3, top - 2 + Math.sin(a) * size * 0.08);
       }
-      ctx.restore();
     }
     if (st.time < e.ccUntil && e.ccKind === 'fear') {
       // 공포: 머리 위 보랏빛 '!' 두 개가 떨림
@@ -1727,7 +1782,7 @@ RG.render = (() => {
    * 출구 소용돌이, 터지는 조각 수)를 줄이고 게임 정보(체력 막대·빛줄기·상태 표시)는 그대로 둠.
    */
   let slowFx = false;
-  const lowFx = () => (window.__lowFxForce != null ? window.__lowFxForce : slowFx) && manyEnemies;
+  const lowFx = () => slowFx && manyEnemies;
   let perfRaised = false; // 이 판에서 화질을 다시 높인 적이 있는가
   let perfNoRaise = false; // 높였다가 다시 느려짐 → 이 판에서는 더 높이지 않음
   function watchSpeed() {
@@ -1736,14 +1791,15 @@ RG.render = (() => {
     perfLast = now;
     if (!gap || gap > 0.5) return; // 탭 전환·멈춤·그림 만들기 뒤 첫 프레임은 빼고
     perfT += gap;
-    if (perfT < 1.5) return; // 불러온 직후는 그림을 만드느라 느릴 수 있음
+    if (perfT < 0.6) return; // 불러온 직후는 그림을 만드느라 느릴 수 있음
     perfN++;
     perfWin += gap;
     if (gap > 1 / 30) perfSlow++;
     // 2초마다 판단 — 프레임 수가 아니라 시간으로 재야 아주 느릴 때도 빨리 반응함.
     // 화질을 바꿀 때마다 그림 캐시를 모두 다시 만들어 잠깐 멈추므로: 아주 느리면(평균 24fps 미만) 한 번에 가장 낮게,
     // 다시 높이는 것은 오래(20초) 부드러울 때만, 높였다가 다시 느려진 판에서는 더 높이지 않음(오르내림 반복 방지).
-    if (perfWin >= 2 && perfN >= 12 && perfSlow / perfN > 0.6 && dprCap > 1 && (window.devicePixelRatio || 1) > 1) {
+    // 낮추기는 빨리 판단(처음 1초, 그 뒤 2초마다) — 느린 휴대폰에서 판 시작 몇 초가 끊기지 않게
+    if (perfWin >= (dprCap >= 2 && !perfRaised ? 1 : 2) && perfN >= 10 && perfSlow / perfN > 0.6 && dprCap > 1 && (window.devicePixelRatio || 1) > 1) {
       const avg = perfWin / perfN;
       dprCap = avg > 1 / 24 ? 1 : Math.max(1, dprCap - 0.5);
       if (perfRaised) perfNoRaise = true;
@@ -1778,6 +1834,7 @@ RG.render = (() => {
   function frame(alpha, dt) {
     if (!game || !ctx) return;
     watchSpeed();
+    if (bitmapQ.length) pumpBitmaps(4);
     time += dt;
     RG.fx.update(dt);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1889,6 +1946,7 @@ RG.render = (() => {
     for (const u of st.units) if (!u.dead && u.kind !== 'drone') shadow(lerp(u.px, u.x, alpha), lerp(u.py, u.y, alpha), u.kind === 'wall' ? 0.45 : 0.22, 0.08, 0.3);
 
     barOn = true; barN = 0; // 체력 막대는 모아 두었다가 모든 적을 그린 뒤 위에 한 번에
+    stunPts.length = 0;
     // y 순서로 (그릴 것 목록은 매 프레임 새로 만들지 않고 다시 씀)
     dlN = 0;
     for (const t of st.towers) dlAdd(t.r + 0.82, 0, t);
@@ -1923,6 +1981,14 @@ RG.render = (() => {
     flyQ.length = 0;
     drawSweeps(alpha);
     drawOrbits(alpha);
+    if (stunPts.length) {
+      const r = Math.max(1.5, T * 0.04);
+      ctx.fillStyle = '#ffe066';
+      ctx.beginPath();
+      for (let i = 0; i < stunPts.length; i += 2) { ctx.moveTo(stunPts[i] + r, stunPts[i + 1]); ctx.arc(stunPts[i], stunPts[i + 1], r, 0, Math.PI * 2); }
+      ctx.fill();
+      stunPts.length = 0;
+    }
     flushBars();
     // 건설 미리보기 탑 그림
     const gh = overlay.ghost;
@@ -1944,5 +2010,5 @@ RG.render = (() => {
     ctx.restore();
   }
 
-  return { attach, detach, resize, frame, onEvents, muzzleOf, setShadows: (on) => { shadowsOn = !!on; }, setQuality: (cap) => { dprCap = Math.max(0.25, Math.min(2, cap)); resize(); }, get quality() { return dprCap; }, screenToWorld, worldToScreen, overlay, tileSize, get T() { return T; } };
+  return { attach, detach, resize, frame, onEvents, muzzleOf, setShadows: (on) => { shadowsOn = !!on; }, setQuality: (cap) => { dprCap = Math.max(1, Math.min(2, cap)); resize(); }, get quality() { return dprCap; }, screenToWorld, worldToScreen, overlay, tileSize, get T() { return T; } };
 })();

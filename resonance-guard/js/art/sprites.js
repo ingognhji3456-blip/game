@@ -30,6 +30,23 @@ RG.art.sprites = (() => {
     ctx.restore();
   }
 
+  /**
+   * 불투명한 부분의 범위 [x0, y0, x1, y1] (화소, 끝 포함) — 불러올 때 한 번만 읽어 둠.
+   * 렌더러가 화면 크기로 줄일 때마다 화소를 다시 읽지 않고 이 범위로 잘라 냄(전투 중 읽기 = 느림).
+   */
+  function opaqueBounds(ctx, w, h) {
+    let d;
+    try { d = ctx.getImageData(0, 0, w, h).data; } catch (e) { return null; }
+    let x0 = w; let y0 = h; let x1 = -1; let y1 = -1;
+    for (let y = 0; y < h; y++) {
+      const row = y * w * 4 + 3;
+      for (let x = 0; x < w; x++) {
+        if (d[row + x * 4]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; y1 = y; }
+      }
+    }
+    return x1 < 0 ? null : [x0, y0, x1, y1];
+  }
+
   function toCanvas(svg, w, h, opt) {
     return new Promise((resolve) => {
       const img = new Image();
@@ -39,6 +56,7 @@ RG.art.sprites = (() => {
         const ctx = cv.getContext('2d');
         try { ctx.drawImage(img, 0, 0, w, h); } catch (e) { /* 무시 */ }
         if (opt && opt.light) volumeLight(ctx, w, h, opt.light);
+        cv._bb = opaqueBounds(ctx, w, h);
         resolve(cv);
       };
       img.onerror = () => resolve(null);
@@ -92,6 +110,11 @@ RG.art.sprites = (() => {
       for (const lv of [1, 2, 3]) jobs.push(load(towerKey(t, lv, null), () => A.tower(t, lv, null, 'idle'), TW, TH));
       for (const b of ['A', 'B']) jobs.push(load(towerKey(t, 4, b), () => A.tower(t, 4, b, 'idle'), TW, TH));
       for (const p of ['aim', 'fire']) jobs.push(load(towerKey(t, 1, null, p), () => A.tower(t, 1, null, p), TW, TH));
+    }
+    // 탑과 따로 움직이는 효과 그림 (불사조·바위·철구)
+    if (A.fxSprite) {
+      if (types.has('phoenix_nest')) for (const fr of [0, 1]) jobs.push(load(`fx:phoenix:${fr}`, () => A.fxSprite('phoenix', fr), 120, 120));
+      if (types.has('titan_boulder')) { jobs.push(load('fx:boulder', () => A.fxSprite('boulder', 0), 120, 120)); jobs.push(load('fx:ironball', () => A.fxSprite('ironball', 0), 120, 120)); }
     }
     const enemies = new Set();
     for (const w of RG.grid.parseWaves(game.def.waves || [])) for (const g of w.groups) enemies.add(g.e);

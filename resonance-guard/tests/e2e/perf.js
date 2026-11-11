@@ -27,7 +27,9 @@ async function loadFps(page) {
     // 측정 중 판이 끝나지 않게 (예전 시험은 적이 새어 2초 만에 패배 → 멈춘 화면을 재는 꼴이었음)
     g.state.lives = g.state.maxLives = 1e9;
     let n = 0;
-    for (let r = 0; r < g.map.rows && n < 40; r++) for (let c = 0; c < g.map.cols && n < 40; c++) if (ui.doCmd({ type: 'build', tower: RG.data.towerOrder[n % RG.data.towerOrder.length], c, r }, true).ok) n++;
+    // 이 판에서 지을 수 있는 탑만 차례로 (맵보다 늦게 열리는 탑은 짓기가 실패해 탑 수가 줄었음)
+    const types = RG.data.towerOrder.filter((t) => !g.opts.towers || g.opts.towers.includes(t));
+    for (let r = 0; r < g.map.rows && n < 40; r++) for (let c = 0; c < g.map.cols && n < 40; c++) if (ui.doCmd({ type: 'build', tower: types[n % types.length], c, r }, true).ok) n++;
     ui.doCmd({ type: 'callWave' }, true);
     const pool = ['mist_rat', 'ash_boar', 'frost_wolf', 'spray_sprite', 'rock_crab', 'echo_shade'];
     // 실제 판에서는 그 맵의 적 그림(모든 동작)을 불러오는 화면에서 미리 준비함(sprites.prepareForGame).

@@ -146,7 +146,8 @@ RG.fx = (() => {
         case 'hit':
           if (e.dot) break;
           burst(e.x, e.y - 0.2, colorOf(e.element), e.beam ? 2 : 4, 1.6, 0.3, 0.05);
-          if (settings.numbers && (e.amount >= 1)) text(e.x, e.y - 0.55, String(Math.round(e.amount)), e.crit ? '#ffe066' : '#ffffff', e.crit);
+          // 적이 아주 많으면 그리는 글자도 최근 몇 개뿐 — 만들기도 그만큼만(쓰레기 수거 줄이기). 치명타는 늘 보임
+          if (settings.numbers && (e.amount >= 1) && (!lite || e.crit || texts.length < (lite2 ? 6 : 12))) text(e.x, e.y - 0.55, String(Math.round(e.amount)), e.crit ? '#ffe066' : '#ffffff', e.crit);
           break;
         case 'kill': {
           const big = e.boss;

@@ -2650,5 +2650,5 @@ RG.sim = (() => {
     return g;
   }
 
-  return { create, replay, DT };
+  return { create, replay, DT, orbitPos };
 })();

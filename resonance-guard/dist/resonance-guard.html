@@ -779,6 +779,10 @@ button { font-family: var(--font); color: inherit; }
 .rar-badge.rar-common { background: linear-gradient(#f0ecf8, #b8b0cc); }
 .rar-badge.rar-rare { background: linear-gradient(#bfe6ff, #4aa0f0); }
 .rar-badge.rar-epic { background: linear-gradient(#fff2b0, #f0a020); box-shadow: 0 0 8px #ffc44a99; }
+/* 전설(붉은 금빛)·신화(무지갯빛) — 2026-11-11 */
+.rar-badge.rar-legendary { background: linear-gradient(#ffd0a0, #ff5a2a); color: #2a0a04; box-shadow: 0 0 10px #ff6a3dcc; }
+.rar-badge.rar-mythic { background: linear-gradient(90deg, #ff9ae8, #b48aff, #7ad8ff, #ffe08a); color: #1a0a2a; box-shadow: 0 0 12px #ff5ad6cc; animation: rar-mythic 3s linear infinite; background-size: 200% 100%; }
+@keyframes rar-mythic { to { background-position: 200% 0; } }
 
 /* 모음 */
 .gc-collection { min-height: 0; overflow-y: auto; padding: 4px 6px 10px; background: #0005; border: 1px solid #ffffff12; border-radius: 16px; }
@@ -787,7 +791,8 @@ button { font-family: var(--font); color: inherit; }
 .gc-sec-title { padding: 4px 6px; }
 .gc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; padding: 2px 4px; }
 .gc-card { --rc: #c9c3d8; position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px 7px; border-radius: 12px; background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--rc) 22%, transparent), transparent 70%), linear-gradient(#2a2040, #18122a); border: 2px solid color-mix(in srgb, var(--rc) 55%, #000); box-shadow: 0 3px 0 #0008; outline: none; }
-.gc-card.rar-rare { --rc: #5fb4ff; } .gc-card.rar-epic { --rc: #ffc44a; }
+.gc-card.rar-rare { --rc: #5fb4ff; } .gc-card.rar-epic { --rc: #ffc44a; } .gc-card.rar-legendary { --rc: #ff6a3d; } .gc-card.rar-mythic { --rc: #ff5ad6; }
+.gc-card.rar-legendary.owned { box-shadow: 0 0 16px #ff6a3d66, 0 3px 0 #0008; } .gc-card.rar-mythic.owned { box-shadow: 0 0 18px #ff5ad677, 0 0 6px #7ad8ff55, 0 3px 0 #0008; }
 .gc-card.rar-epic.owned { box-shadow: 0 0 14px #ffc44a55, 0 3px 0 #0008; }
 .gc-card:focus-visible { outline: 2px solid var(--gold2); }
 .gc-img { width: 58px; height: 68px; object-fit: contain; filter: drop-shadow(1px 2px 1px #0008); }
@@ -810,7 +815,7 @@ button { font-family: var(--font); color: inherit; }
 .gc-rtitle { font-size: 1.3rem; font-weight: 900; color: var(--gold2); text-shadow: 0 2px 6px #000; }
 .gc-rcards { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: min(820px, 100%); }
 .gc-rcard { --rc: #c9c3d8; position: relative; width: clamp(92px, 13vw, 140px); aspect-ratio: 3 / 4; appearance: none; border: 0; padding: 0; background: none; cursor: pointer; perspective: 700px; animation: gc-deal 0.35s calc(var(--i) * 0.05s) ease-out both; }
-.gc-rcard.rar-rare { --rc: #5fb4ff; } .gc-rcard.rar-epic { --rc: #ffc44a; }
+.gc-rcard.rar-rare { --rc: #5fb4ff; } .gc-rcard.rar-epic { --rc: #ffc44a; } .gc-rcard.rar-legendary { --rc: #ff6a3d; } .gc-rcard.rar-mythic { --rc: #ff5ad6; }
 @keyframes gc-deal { from { opacity: 0; transform: translateY(30px) scale(0.85); } }
 .gc-face { position: absolute; inset: 0; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; backface-visibility: hidden; transition: transform 0.45s cubic-bezier(.3,1.4,.5,1); }
 .gc-face.back { background: repeating-linear-gradient(45deg, #3a2470 0 8px, #2c1a58 8px 16px); border: 3px solid #c8a6ff; box-shadow: 0 6px 16px #000a, inset 0 0 18px #a070ff66; }
@@ -819,6 +824,12 @@ button { font-family: var(--font); color: inherit; }
 .gc-rcard.open .gc-face.back { transform: rotateY(-180deg); }
 .gc-rcard.open .gc-face.front { transform: rotateY(0deg); }
 .gc-rcard.rar-epic.open .gc-face.front { animation: gc-epic 1.6s ease-in-out infinite; }
+.gc-rcard.rar-legendary.open .gc-face.front { animation: gc-legend 1.2s ease-in-out infinite; }
+.gc-rcard.rar-mythic.open .gc-face.front { animation: gc-mythic 1.6s linear infinite; }
+@keyframes gc-legend { 0%, 100% { box-shadow: 0 0 14px #ff6a3d, inset 0 0 0 2px #ffb08a; } 50% { box-shadow: 0 0 30px #ff6a3d, 0 0 50px #ffb34777, inset 0 0 0 2px #fff0d0; } }
+@keyframes gc-mythic { 0% { box-shadow: 0 0 22px #ff5ad6, inset 0 0 0 2px #ffc0f0; } 33% { box-shadow: 0 0 26px #b48aff, inset 0 0 0 2px #e0d0ff; } 66% { box-shadow: 0 0 26px #7ad8ff, inset 0 0 0 2px #d0f4ff; } 100% { box-shadow: 0 0 22px #ff5ad6, inset 0 0 0 2px #ffc0f0; } }
+.gc-flash.fl-legendary { background: radial-gradient(circle, #ffd8b0cc, #ff6a3d55 40%, transparent 70%); }
+.gc-flash.fl-mythic { background: radial-gradient(circle, #ffffffdd, #ff5ad677 35%, #7ad8ff44 55%, transparent 75%); }
 @keyframes gc-epic { 50% { box-shadow: 0 0 36px #ffd77a, 0 6px 16px #000a; } }
 .gc-rimg { width: 70%; height: 52%; object-fit: contain; filter: drop-shadow(1px 3px 2px #000a); }
 .gc-rname { font-size: 0.82rem; text-align: center; line-height: 1.15; }
@@ -845,7 +856,7 @@ button { font-family: var(--font); color: inherit; }
 .btn-gacha.ready { border-color: #c8a6ff; box-shadow: 0 0 12px #a070ff88; animation: gc-ready 2.4s ease-in-out infinite; }
 @keyframes gc-ready { 50% { box-shadow: 0 0 20px #c890ffcc; } }
 .t-chip { position: relative; }
-.t-chip.rar-rare { box-shadow: inset 0 -3px 0 #5fb4ff; } .t-chip.rar-epic { box-shadow: inset 0 -3px 0 #ffc44a; }
+.t-chip.rar-rare { box-shadow: inset 0 -3px 0 #5fb4ff; } .t-chip.rar-epic { box-shadow: inset 0 -3px 0 #ffc44a; } .t-chip.rar-legendary { box-shadow: inset 0 -3px 0 #ff6a3d, 0 0 8px #ff6a3d55; } .t-chip.rar-mythic { box-shadow: inset 0 -3px 0 #ff5ad6, 0 0 10px #ff5ad655; }
 .t-chip em.rank { position: absolute; top: -4px; right: -4px; font-style: normal; font-weight: 900; font-size: 0.7rem; color: #3a1e06; background: var(--gold2); border-radius: 6px; padding: 0 4px; }
 .t-chip em.rank.fin { background: linear-gradient(180deg, #fff6c8, #f4b84a); box-shadow: 0 0 8px #ffcf6a; }
 .t-chip.more { appearance: none; border: 2px dashed #b48aff; background: #2a1d40; color: #e8d0ff; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; cursor: pointer; border-radius: 10px; }
@@ -873,7 +884,7 @@ button { font-family: var(--font); color: inherit; }
   .gc-collection { overflow: visible; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .gc-rays, .gc-ring, .gc-core, .gc-orbit, .gc-back-icon, .btn-gacha.ready, .gc-rcard, .gc-rcard.rar-epic.open .gc-face.front { animation: none !important; }
+  .gc-rays, .gc-ring, .gc-core, .gc-orbit, .gc-back-icon, .btn-gacha.ready, .gc-rcard, .gc-rcard.rar-epic.open .gc-face.front, .gc-rcard.rar-legendary.open .gc-face.front, .gc-rcard.rar-mythic.open .gc-face.front, .rar-badge.rar-mythic { animation: none !important; }
   .gc-face { transition: none; }
 }
 /* 키 작은 화면(휴대폰 가로): 제단 그림을 작게, 결과 카드는 한 줄로 */
@@ -906,7 +917,7 @@ button { font-family: var(--font); color: inherit; }
 .rw-pool { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 6px; padding-top: 6px; border-top: 1px solid #ffffff1a; }
 .rw-pool-t { width: 100%; font-weight: 800; color: #e8d0ff; font-size: 0.85rem; }
 .rw-pool-tower { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 2px; border-radius: 10px; background: #0005; border: 1px solid #ffffff22; font-size: 0.82rem; }
-.rw-pool-tower.rar-rare { border-color: #5fb4ff; } .rw-pool-tower.rar-epic { border-color: #ffc44a; }
+.rw-pool-tower.rar-rare { border-color: #5fb4ff; } .rw-pool-tower.rar-epic { border-color: #ffc44a; } .rw-pool-tower.rar-legendary { border-color: #ff6a3d; } .rw-pool-tower.rar-mythic { border-color: #ff5ad6; }
 .rw-pool-tower small { color: var(--dim); }
 .rw-pool-tower .tower-img { width: 30px; height: 36px; flex: none; object-fit: contain; }
 .rw-pool-tower b { white-space: nowrap; }
@@ -1150,6 +1161,9 @@ button { font-family: var(--font); color: inherit; }
 }
 .tower-card.el-fire { --el: var(--fire); } .tower-card.el-frost { --el: var(--frost); } .tower-card.el-storm { --el: var(--storm); }
 .tower-card.el-earth { --el: var(--earth); } .tower-card.el-light { --el: var(--light); } .tower-card.el-dark { --el: var(--dark); }
+/* 전설·신화 탑 카드: 등급 빛 테두리 */
+.tower-card.rar-legendary { box-shadow: inset 0 0 0 1.5px #ff6a3dcc, 0 0 9px #ff6a3d55; }
+.tower-card.rar-mythic { box-shadow: inset 0 0 0 1.5px #ff7ae0dd, 0 0 11px #ff5ad666, 0 0 4px #7ad8ff55; }
 .tower-card .tc-img { width: 48px; height: 56px; object-fit: contain; pointer-events: none; filter: drop-shadow(1px 2px 1px #0008); }
 .tower-card .tc-name { font-size: 0.7rem; font-weight: 700; line-height: 1.2; white-space: nowrap; }
 .tower-card .tc-cost { font-size: 0.78rem; font-weight: 800; line-height: 1.2; color: var(--gold2); display: inline-flex; align-items: center; gap: 2px; font-variant-numeric: tabular-nums; }
@@ -2038,6 +2052,120 @@ RG.data.towers = {
       B: { id: 'soul_bell', name: '영혼의 종', desc: '자주 울리고 피해가 크며, 울린 적은 3초 동안 받는 피해 +15%.', cost: 290, range: 2.2, interval: 2.6, damage: 70, fear: { dur: 0.7 }, onHit: { curse: { pct: 0.15, dur: 3 } } },
     },
   },
+
+  /* ===================== ✦ 전설 6종·신화 2종 (2026-11-11) — 뽑기 높은 등급, 모두 새 공격 방식 ===================== */
+
+  phoenix_nest: {
+    name: '불사조 둥지', element: 'fire', role: 'attack', targets: 'both', kind: 'orbit', unlock: '3-2',
+    desc: '불사조가 탑 둘레를 쉬지 않고 날며, 날개에 닿는 적(공중 포함)을 태웁니다.',
+    levels: [
+      { cost: 150, range: 2.4, orbit: { birds: 1, speed: 2.4, radius: 0.55, dps: 60 }, onHit: { burn: { dps: 6, dur: 2 } } },
+      { cost: 150, range: 2.5, orbit: { birds: 1, speed: 2.4, radius: 0.55, dps: 88 }, onHit: { burn: { dps: 9, dur: 2 } } },
+      { cost: 220, range: 2.7, orbit: { birds: 1, speed: 2.5, radius: 0.6, dps: 128 }, onHit: { burn: { dps: 13, dur: 2 } } },
+    ],
+    branches: {
+      A: { id: 'sun_phoenix', name: '태양 불사조', desc: '불사조가 커지고 훨씬 뜨거워집니다. 큰 원을 그리며 납니다.', cost: 380, range: 3.0, orbit: { birds: 1, speed: 2.2, radius: 0.85, dps: 230 }, onHit: { burn: { dps: 24, dur: 2.5 } } },
+      B: { id: 'twin_phoenix', name: '쌍둥이 불사조', desc: '불사조 둘이 마주 보며 돕니다.', cost: 370, range: 2.8, orbit: { birds: 2, speed: 2.6, radius: 0.6, dps: 150 }, onHit: { burn: { dps: 15, dur: 2 } } },
+    },
+  },
+
+  blizzard_keep: {
+    name: '눈보라 성채', element: 'frost', role: 'attack', targets: 'both', kind: 'blizzard', unlock: '4-2',
+    desc: '적이 몰린 곳에 눈보라를 일으켜 계속 피해를 주고 크게 느리게 합니다. 눈보라가 끝날 때 얼음이 터집니다(언 적은 2배).',
+    levels: [
+      { cost: 150, range: 3.0, interval: 5.0, blizzard: { count: 1, radius: 1.1, dur: 3, dps: 10, slowPct: 0.35, shatter: 40 } },
+      { cost: 150, range: 3.1, interval: 4.8, blizzard: { count: 1, radius: 1.2, dur: 3, dps: 15, slowPct: 0.38, shatter: 60 } },
+      { cost: 220, range: 3.3, interval: 4.5, blizzard: { count: 1, radius: 1.3, dur: 3.2, dps: 22, slowPct: 0.4, shatter: 90 } },
+    ],
+    branches: {
+      A: { id: 'eternal_winter', name: '영원한 겨울', desc: '눈보라가 아주 넓고 길어지며, 터질 때 남은 적을 얼립니다(1초).', cost: 380, range: 3.5, interval: 5.0, blizzard: { count: 1, radius: 1.7, dur: 4, dps: 30, slowPct: 0.5, shatter: 140, freeze: 1.0 } },
+      B: { id: 'ice_storm', name: '얼음 폭풍', desc: '눈보라를 두 곳에 한꺼번에 일으킵니다.', cost: 370, range: 3.4, interval: 4.2, blizzard: { count: 2, radius: 1.2, dur: 3, dps: 26, slowPct: 0.4, shatter: 110 } },
+    },
+  },
+
+  storm_eye: {
+    name: '폭풍의 눈', element: 'storm', role: 'attack', targets: 'both', kind: 'roller', unlock: '4-4',
+    desc: '회오리를 일으켜 길을 거슬러 보냅니다. 회오리에 걸린 적은 피해를 입으며 뒤로 밀려납니다(보스·큰 적은 밀리지 않음).',
+    levels: [
+      { cost: 150, range: 2.6, interval: 6.0, roller: { type: 'tornado', count: 1, speed: 1.6, length: 5, radius: 0.6, dps: 16, push: 1.2 } },
+      { cost: 150, range: 2.7, interval: 5.7, roller: { type: 'tornado', count: 1, speed: 1.6, length: 5.5, radius: 0.6, dps: 24, push: 1.3 } },
+      { cost: 220, range: 2.9, interval: 5.4, roller: { type: 'tornado', count: 1, speed: 1.7, length: 6, radius: 0.65, dps: 34, push: 1.4 } },
+    ],
+    branches: {
+      A: { id: 'typhoon', name: '태풍', desc: '회오리가 거대해져 더 멀리 가고 더 세게 밀어냅니다.', cost: 380, range: 3.2, interval: 5.5, roller: { type: 'tornado', count: 1, speed: 1.5, length: 8, radius: 0.9, dps: 52, push: 1.6 } },
+      B: { id: 'thunder_twister', name: '번개 회오리', desc: '덜 밀어내는 대신 번개가 감겨 피해가 크고, 처음 닿은 적을 기절시킵니다(0.4초, 보스 제외).', cost: 370, range: 3.0, interval: 5.0, roller: { type: 'tornado', count: 1, speed: 2.0, length: 7, radius: 0.65, dps: 80, push: 0.7, stun: 0.4 } },
+    },
+  },
+
+  titan_boulder: {
+    name: '거인의 바위', element: 'earth', role: 'attack', targets: 'ground', kind: 'roller', unlock: '3-3',
+    desc: '커다란 바위를 길 위로 굴려 보냅니다. 바위는 길을 거슬러 구르며 닿는 지상 적을 한 번씩 깔아뭉개고 잠깐 기절시킵니다(보스 제외).',
+    levels: [
+      { cost: 150, range: 2.6, interval: 5.5, roller: { type: 'boulder', count: 1, speed: 2.4, length: 6, radius: 0.55, crush: 40, stun: 0.5 } },
+      { cost: 150, range: 2.7, interval: 5.3, roller: { type: 'boulder', count: 1, speed: 2.4, length: 6.5, radius: 0.55, crush: 60, stun: 0.55 } },
+      { cost: 220, range: 2.9, interval: 5.0, roller: { type: 'boulder', count: 1, speed: 2.5, length: 7, radius: 0.6, crush: 90, stun: 0.6 } },
+    ],
+    branches: {
+      A: { id: 'landslide', name: '산사태', desc: '바위 셋을 줄지어 굴립니다. 길게 늘어선 떼용.', cost: 380, range: 3.0, interval: 5.5, roller: { type: 'boulder', count: 3, speed: 2.5, length: 7, radius: 0.55, crush: 85, stun: 0.5 } },
+      B: { id: 'iron_ball', name: '거인의 철구', desc: '쇠공 하나가 아주 세게 깔아뭉개고, 맞은 적의 갑옷을 4초 동안 25%p 깎습니다.', cost: 370, range: 2.9, interval: 5.0, roller: { type: 'boulder', count: 1, speed: 2.2, length: 7, radius: 0.7, crush: 280, stun: 0.6, shred: 0.25 } },
+    },
+  },
+
+  judgment_spire: {
+    name: '심판의 첨탑', element: 'light', role: 'attack', targets: 'both', kind: 'smite', unlock: '5-2',
+    desc: '적 하나에 빛의 표식을 새기고, 잠시 뒤 하늘에서 빛기둥을 내립니다. 기본 피해에 최대 체력의 일부만큼 더 줍니다(보스는 덜). 큰 적일수록 아픕니다.',
+    levels: [
+      { cost: 150, range: 3.6, interval: 3.2, damage: 60, smite: { count: 1, delay: 0.8, pct: 0.06, bossPct: 0.02, splash: 0.6, splashPct: 0.3 } },
+      { cost: 150, range: 3.8, interval: 3.0, damage: 90, smite: { count: 1, delay: 0.8, pct: 0.07, bossPct: 0.025, splash: 0.6, splashPct: 0.3 } },
+      { cost: 220, range: 4.0, interval: 2.8, damage: 135, smite: { count: 1, delay: 0.8, pct: 0.08, bossPct: 0.03, splash: 0.65, splashPct: 0.3 } },
+    ],
+    branches: {
+      A: { id: 'divine_verdict', name: '신의 심판', desc: '빛기둥 하나가 아주 셉니다(최대 체력 12%, 보스 4%).', cost: 380, range: 4.4, interval: 3.0, damage: 300, smite: { count: 1, delay: 0.9, pct: 0.12, bossPct: 0.04, splash: 0.7, splashPct: 0.3 } },
+      B: { id: 'light_rain', name: '빛의 비', desc: '한 번에 적 셋에게 표식을 새깁니다.', cost: 370, range: 4.2, interval: 2.6, damage: 120, smite: { count: 3, delay: 0.8, pct: 0.06, bossPct: 0.02, splash: 0.55, splashPct: 0.3 } },
+    },
+  },
+
+  soul_reaper: {
+    name: '영혼 수확자', element: 'dark', role: 'attack', targets: 'both', kind: 'bolt', unlock: '5-3',
+    desc: '어둠 화살을 쏩니다. 근처에서 적이 죽을 때마다 영혼을 모아 점점 세지고(영혼마다 공격력 +%), 영혼이 가득 차면 영혼 폭풍으로 주변을 휩씁니다.',
+    levels: [
+      { cost: 150, range: 2.8, interval: 1.0, damage: 26, projSpeed: 9, harvest: { max: 12, per: 0.05, storm: 120, radius: 2.2 } },
+      { cost: 150, range: 3.0, interval: 1.0, damage: 39, projSpeed: 9, harvest: { max: 12, per: 0.05, storm: 180, radius: 2.3 } },
+      { cost: 220, range: 3.1, interval: 0.9, damage: 57, projSpeed: 9, harvest: { max: 12, per: 0.06, storm: 260, radius: 2.4 } },
+    ],
+    branches: {
+      A: { id: 'death_scythe', name: '죽음의 낫', desc: '화살이 매우 세지고, 영혼 10개로 아주 센 폭풍을 일으킵니다.', cost: 380, range: 3.2, interval: 0.8, damage: 105, projSpeed: 9, harvest: { max: 10, per: 0.07, storm: 520, radius: 2.6 } },
+      B: { id: 'soul_legion', name: '영혼 군단', desc: '영혼을 20개까지 모으고, 폭풍이 넓으며 휩쓸린 적은 4초 동안 받는 피해 +20%.', cost: 370, range: 3.3, interval: 0.9, damage: 78, projSpeed: 9, harvest: { max: 20, per: 0.06, storm: 300, radius: 3.0, curse: { pct: 0.2, dur: 4 } } },
+    },
+  },
+
+  chrono_spire: {
+    name: '시간의 탑', element: 'light', role: 'attack', targets: 'both', kind: 'bolt', unlock: '5-4',
+    desc: '시계 바늘 같은 빛 화살을 쏘고, 주기적으로 넓은 범위의 시간을 멈춥니다. 멈춘 적은 조금 뒤로 되감깁니다. 보스는 멈추지 않고 크게 느려집니다.',
+    levels: [
+      { cost: 200, range: 3.0, interval: 0.9, damage: 30, projSpeed: 10, chrono: { every: 7, radius: 2.4, stop: 1.2, rewind: 0.6, bossSlow: 0.5 } },
+      { cost: 200, range: 3.1, interval: 0.85, damage: 45, projSpeed: 10, chrono: { every: 6.8, radius: 2.5, stop: 1.3, rewind: 0.7, bossSlow: 0.5 } },
+      { cost: 300, range: 3.3, interval: 0.8, damage: 66, projSpeed: 10, chrono: { every: 6.5, radius: 2.7, stop: 1.4, rewind: 0.8, bossSlow: 0.5 } },
+    ],
+    branches: {
+      A: { id: 'frozen_world', name: '멈춘 세계', desc: '시간을 아주 넓게, 오래 멈추고 더 많이 되감습니다.', cost: 480, range: 3.6, interval: 0.8, damage: 85, projSpeed: 10, chrono: { every: 6, radius: 3.4, stop: 2.0, rewind: 1.0, bossSlow: 0.6 } },
+      B: { id: 'haste_clock', name: '가속 시계', desc: '시간을 빠르게 돌려 화살을 아주 빨리 쏩니다.', cost: 470, range: 3.4, interval: 0.35, damage: 60, projSpeed: 10, chrono: { every: 7, radius: 2.6, stop: 1.2, rewind: 0.8, bossSlow: 0.5 } },
+    },
+  },
+
+  shadow_dragon: {
+    name: '흑룡의 둥지', element: 'dark', role: 'attack', targets: 'both', kind: 'breath', unlock: '5-6', region: 6,
+    desc: '흑룡이 가장 앞선 적 쪽으로 어둠의 불길을 일직선으로 뿜습니다. 줄 위의 적(공중 포함)을 모두 꿰뚫고, 받는 피해를 늘립니다.',
+    levels: [
+      { cost: 200, range: 3.2, interval: 2.2, damage: 70, breath: { count: 1, width: 0.5 }, onHit: { curse: { pct: 0.1, dur: 3 } } },
+      { cost: 200, range: 3.3, interval: 2.1, damage: 105, breath: { count: 1, width: 0.5 }, onHit: { curse: { pct: 0.1, dur: 3 } } },
+      { cost: 300, range: 3.5, interval: 2.0, damage: 155, breath: { count: 1, width: 0.55 }, onHit: { curse: { pct: 0.12, dur: 3 } } },
+    ],
+    branches: {
+      A: { id: 'doom_breath', name: '멸망의 숨결', desc: '불길이 길고 굵어지며 한 번이 아주 셉니다. 받는 피해 +20%.', cost: 480, range: 4.2, interval: 2.2, damage: 380, breath: { count: 1, width: 0.65 }, onHit: { curse: { pct: 0.2, dur: 4 } } },
+      B: { id: 'twin_dragon', name: '쌍두 흑룡', desc: '머리 둘이 서로 다른 적에게 한꺼번에 뿜습니다.', cost: 470, range: 3.6, interval: 1.9, damage: 170, breath: { count: 2, width: 0.5 }, onHit: { curse: { pct: 0.12, dur: 3 } } },
+    },
+  },
 };
 
 /** 설계서 순서 (도감·건설 메뉴 정렬용) */
@@ -2048,6 +2176,8 @@ RG.data.towerOrder = [
   'stone_barracks', 'quake_hammer', 'crystal_mine', 'thorn_garden',
   'sun_lens', 'sanctuary', 'radiance_spire', 'lighthouse',
   'hex_spire', 'void_orb', 'shadow_snare', 'dread_bell',
+  // 전설·신화 (2026-11-11) — 원소 차례로
+  'phoenix_nest', 'blizzard_keep', 'storm_eye', 'titan_boulder', 'judgment_spire', 'soul_reaper', 'chrono_spire', 'shadow_dragon',
 ];
 
 </script>
@@ -4615,6 +4745,16 @@ RG.sim = (() => {
     return dist(px, py, ax + vx * t, ay + vy * t);
   }
 
+  /** 불사조 자리(불사조 둥지): 꽃잎 세 장 모양으로 휘돎 — 반지름이 바깥(사거리)↔탑 가까이를 오가며 원 안 전체를 훑음.
+   *  렌더러도 같은 식으로 그림(RG.sim.orbitPos) */
+  function orbitPos(t, c, i, a0) {
+    const O = c.orbit;
+    const a = a0 + (i * Math.PI * 2) / (O.birds || 1);
+    const Rm = c.range - O.radius * 0.5;
+    const r = Rm * (0.6 + 0.4 * Math.cos(3 * a));
+    return [t.x + Math.cos(a) * r, t.y + Math.sin(a) * r];
+  }
+
   /** 기술 나무 효과 합계 */
   function sumSkills(ids) {
     const meta = {};
@@ -4653,7 +4793,7 @@ RG.sim = (() => {
       maxLives: rules.lives,
       result: null,
       wave: { index: 0, total: o.mode === 'endless' ? Infinity : waves.length, countdown: null, started: false, queue: [], bonusBase: 0 },
-      towers: [], enemies: [], units: [], projectiles: [], zones: [], traps: [], beams: [],
+      towers: [], enemies: [], units: [], projectiles: [], zones: [], traps: [], beams: [], rollers: [],
       hero: null,
       events: [],
       stats: { damageByTower: {}, kills: 0, leaked: 0, goldEarned: 0, heroDamage: 0, resonanceSeen: {} },
@@ -4768,7 +4908,7 @@ RG.sim = (() => {
       if (e.dead || e.burrowed) return false;
       const ed = D().enemies[e.type];
       if (ed.boss) {
-        if (kind === 'stun' || kind === 'lift' || kind === 'fear') return false; // 보스는 겁먹지 않음
+        if (kind === 'stun' || kind === 'lift' || kind === 'fear' || kind === 'stop') return false; // 보스는 겁먹지·멈추지 않음
         dur *= kind === 'freeze' ? 0.3 : kind === 'root' ? 0.2 : 1;
       }
       if (st.time < e.ccUntil) return false;
@@ -4828,7 +4968,7 @@ RG.sim = (() => {
       if (!st.zones.length) return 0;
       for (const z of st.zones) {
         if (!z.slowPct || st.time > z.until) continue;
-        if (z.kind !== 'void' && e.flying) continue;
+        if (z.kind !== 'void' && z.kind !== 'blizzard' && e.flying) continue;
         if (d2(z.x, z.y, e.x, e.y) <= z.radius * z.radius) best = Math.max(best, D().enemies[e.type].boss ? z.slowPct * 0.5 : z.slowPct);
       }
       return best;
@@ -4989,6 +5129,7 @@ RG.sim = (() => {
       st.stats.goldEarned += bounty;
       st.stats.kills += 1;
       ev('kill', { enemyId: e.id, enemyType: e.type, x: e.x, y: e.y, bounty, boss: !!ed.boss, flying: e.flying, dir: e.dir, size: e.size }); // dir·size는 죽는 연출용
+      harvestSoul(e);
       // 경험치
       if (st.hero && !st.hero.dead) {
         if (src && src.heroHit) heroXp(e, true);
@@ -5559,7 +5700,9 @@ RG.sim = (() => {
           const targets = towerTargets(t, c.multishot || 1, c.range);
           if (!targets.length) return false;
           for (const e of targets) {
-            st.projectiles.push({ id: nextId++, kind: c.kind, element: c.element, x: t.x, y: t.y - 0.35, px: t.x, py: t.y - 0.35, targetId: e.id, tx: e.x, ty: e.y, speed: c.projSpeed || 8, src, base: c.damage, towerType: t.type, level: t.level, branch: t.branch });
+            // 영혼 수확자: 모은 영혼마다 공격력 +%
+            const base = c.harvest ? c.damage * (1 + (t.souls || 0) * c.harvest.per) : c.damage;
+            st.projectiles.push({ id: nextId++, kind: c.kind, element: c.element, x: t.x, y: t.y - 0.35, px: t.x, py: t.y - 0.35, targetId: e.id, tx: e.x, ty: e.y, speed: c.projSpeed || 8, src, base, towerType: t.type, level: t.level, branch: t.branch });
           }
           ev('fire', { towerId: t.id, kind: c.kind, element: c.element, x: t.x, y: t.y, tx: targets[0].x, ty: targets[0].y });
           return true;
@@ -5701,6 +5844,102 @@ RG.sim = (() => {
           ev('thorns', { towerId: t.id, x: best.c + 0.5, y: best.r + 0.5, fromX: t.x, fromY: t.y, radius: K.radius });
           return true;
         }
+        case 'blizzard': {
+          // 눈보라 성채: 사거리 안에서 적이 가장 많이 몰린 곳(들)에 눈보라
+          const B = c.blizzard;
+          const cand = towerTargets(t, 24, c.range);
+          if (!cand.length) return false;
+          const R2 = B.radius * B.radius;
+          const score = cand.map((e) => { let n = 0; for (const o3 of cand) if (d2(o3.x, o3.y, e.x, e.y) <= R2) n++; return n; });
+          const picked = [];
+          for (let k = 0; k < (B.count || 1); k++) {
+            let best = -1;
+            for (let i = 0; i < cand.length; i++) {
+              if (picked.some((p) => d2(cand[p].x, cand[p].y, cand[i].x, cand[i].y) < R2 * 2.25)) continue; // 두 번째는 첫 곳과 떨어진 곳
+              if (best < 0 || score[i] > score[best]) best = i;
+            }
+            if (best < 0) break;
+            picked.push(best);
+          }
+          for (const i of picked) {
+            const e = cand[i];
+            addZone({ kind: 'blizzard', radius: B.radius, dur: B.dur, dps: B.dps, slowPct: B.slowPct, shatter: B.shatter, freeze: B.freeze || 0 }, e.x, e.y, src, false);
+            ev('blizzard', { towerId: t.id, x: e.x, y: e.y, radius: B.radius, dur: B.dur });
+          }
+          ev('fire', { towerId: t.id, kind: 'blizzard', element: c.element, x: t.x, y: t.y, tx: cand[picked[0]].x, ty: cand[picked[0]].y });
+          return true;
+        }
+        case 'roller': {
+          // 폭풍의 눈·거인의 바위: 사거리 안 길의 가장 아래쪽(등불 쪽) 칸에서 길을 거슬러 굴려 보냄
+          const RL = c.roller;
+          // 사거리 안 앞선 적(표적 방식)이 서 있는 길 칸에서 시작 — 그 적부터 깔고 뒤따르는 적 쪽으로 거슬러 굴러감
+          const tg = towerTargets(t, 1, c.range);
+          if (!tg.length) return false;
+          const path = rollerPath(tg[0], RL.length);
+          if (!path) return false;
+          for (let k = 0; k < (RL.count || 1); k++) {
+            st.rollers.push({
+              id: nextId++, owner: t.id, type: RL.type, path, seg: 0, x: path[0].x, y: path[0].y, px: path[0].x, py: path[0].y,
+              travelled: 0, length: RL.length, speed: RL.speed, radius: RL.radius, startAt: st.time + k * 0.45,
+              dps: RL.dps || 0, push: RL.push || 0, crush: RL.crush || 0, stun: RL.stun || 0, shred: RL.shred || 0,
+              hit: [], src, element: c.element, spin: 0,
+            });
+          }
+          ev('roller', { towerId: t.id, type: RL.type, x: path[0].x, y: path[0].y, element: c.element });
+          ev('fire', { towerId: t.id, kind: 'roller', element: c.element, x: t.x, y: t.y, tx: path[0].x, ty: path[0].y });
+          return true;
+        }
+        case 'smite': {
+          // 심판의 첨탑: 표식 → 잠시 뒤 빛기둥. 기본 피해 + 최대 체력의 일부(보스는 덜)
+          const S = c.smite;
+          const targets = towerTargets(t, S.count || 1, c.range);
+          if (!targets.length) return false;
+          for (const e of targets) {
+            const id = e.id;
+            let lx = e.x;
+            let ly = e.y;
+            ev('smiteMark', { towerId: t.id, enemyId: id, x: lx, y: ly, delay: S.delay });
+            delayed.push({
+              at: st.time + S.delay,
+              fn: () => {
+                const tg = enemyById(id);
+                if (tg && !tg.dead) { lx = tg.x; ly = tg.y; }
+                if (tg && !tg.dead && targetable(tg)) {
+                  const boss = !!D().enemies[tg.type].boss;
+                  hitEnemy(tg, c.damage + tg.maxHp * (boss ? S.bossPct : S.pct), src, {});
+                }
+                for (const o3 of enemiesInRadius(lx, ly, S.splash, null)) if (o3 !== tg) hitEnemy(o3, c.damage * S.splashPct, src, { area: true, procMult: 0.3 });
+                ev('smite', { towerId: t.id, x: lx, y: ly, radius: S.splash, element: c.element });
+              },
+            });
+          }
+          ev('fire', { towerId: t.id, kind: 'smite', element: c.element, x: t.x, y: t.y, tx: targets[0].x, ty: targets[0].y });
+          return true;
+        }
+        case 'breath': {
+          // 흑룡의 둥지: 고른 적 쪽으로 일직선 불길 — 줄 위의 적(공중 포함)을 모두 꿰뚫음
+          const B = c.breath;
+          const targets = towerTargets(t, B.count || 1, c.range);
+          if (!targets.length) return false;
+          const ox = t.x;
+          const oy = t.y - 0.45;
+          for (const e of targets) {
+            const dx = e.x - ox;
+            const dy = e.y - oy;
+            const L = Math.hypot(dx, dy) || 1;
+            const len = c.range + 0.4;
+            const x2 = ox + (dx / L) * len;
+            const y2 = oy + (dy / L) * len;
+            const half = B.width / 2;
+            for (const o3 of enemiesInRadius((ox + x2) / 2, (oy + y2) / 2, len / 2 + half + 0.5, null)) {
+              if (!targetable(o3)) continue;
+              if (segDist(o3.x, o3.y, ox, oy, x2, y2) <= half + o3.size * 0.3) hitEnemy(o3, c.damage, src, { area: o3 !== e });
+            }
+            ev('breath', { towerId: t.id, x1: ox, y1: oy, x2, y2, width: B.width, element: c.element });
+          }
+          ev('fire', { towerId: t.id, kind: 'breath', element: c.element, x: t.x, y: t.y, tx: targets[0].x, ty: targets[0].y });
+          return true;
+        }
         case 'chain': {
           const targets = towerTargets(t, 1, c.range);
           if (!targets.length) return false;
@@ -5766,7 +6005,145 @@ RG.sim = (() => {
         const cur = st.zones.find((q) => q.owner === src.tower.id && q.kind === z.kind && Math.abs(q.x - x) < 0.01 && Math.abs(q.y - y) < 0.01);
         if (cur) { cur.until = st.time + z.dur; return; }
       }
-      st.zones.push({ id: nextId++, kind: z.kind, element: src.calc.element, x, y, radius: z.radius, until: st.time + z.dur, born: st.time, dur: z.dur, dps: z.dps * (1 + (src.calc.dmgBonus || 0)), slowPct: z.slowPct || 0, meltArmor: z.meltArmor || 0, owner: src.tower ? src.tower.id : 0, src });
+      st.zones.push({ id: nextId++, kind: z.kind, element: src.calc.element, x, y, radius: z.radius, until: st.time + z.dur, born: st.time, dur: z.dur, dps: z.dps * (1 + (src.calc.dmgBonus || 0)), slowPct: z.slowPct || 0, meltArmor: z.meltArmor || 0, owner: src.tower ? src.tower.id : 0, src, shatter: z.shatter || 0, freeze: z.freeze || 0, shattered: false });
+    }
+
+    /**
+     * 불사조 둥지: 불사조(birds마리, 같은 간격)가 탑 둘레(사거리의 72% 원)를 계속 돌며, 몸에 닿는 적에게 초당 피해 + 화상.
+     * 각도는 탑마다 저장(t.orbitA) — 결정적.
+     */
+    const ORBIT_HIT = Object.freeze({ quiet: true, beamTick: true });
+    function updateOrbit(t) {
+      const c = t.calc;
+      const O = c.orbit;
+      t.orbitA = ((t.orbitA || 0) + O.speed * DT) % (Math.PI * 2);
+      const n = O.birds || 1;
+      const src = { tower: t, calc: c, element: c.element };
+      const burn = c.onHit && c.onHit.burn;
+      let any = false;
+      for (let i = 0; i < n; i++) {
+        const [bx, by] = orbitPos(t, c, i, t.orbitA);
+        for (const e of enemiesInRadius(bx, by, O.radius, null)) {
+          if (!targetable(e)) continue;
+          any = true;
+          damage(e, O.dps * DT, c.element, src, ORBIT_HIT);
+          if (burn && !e.dead) addDot(e, 'burn', `${t.type}:${t.id}`, burn.dps * (1 + (c.dmgBonus || 0)), burn.dur, c.element, src);
+        }
+      }
+      if (any) t.anim = Math.max(t.anim, 0.12);
+    }
+
+    /**
+     * 시간의 탑: every초마다 범위 안 적의 시간을 멈추고(stop) 조금 되감음(지나온 칸을 거꾸로). 보스는 멈추지 않고 크게 느려짐.
+     */
+    function updateChrono(t) {
+      const C = t.calc.chrono;
+      t.chronoCd = (t.chronoCd == null ? C.every * 0.5 : t.chronoCd) - DT;
+      if (t.chronoCd > 0) return;
+      const list = enemiesInRadius(t.x, t.y, C.radius, null);
+      if (!list.length) { t.chronoCd = 0; return; }
+      t.chronoCd = C.every;
+      for (const e of list) {
+        if (D().enemies[e.type].boss) { applySlow(e, C.bossSlow, C.stop * 1.5); continue; }
+        if (hardCC(e, 'stop', C.stop) && C.rewind > 0) { releaseEnemy(e); moveBack(e, C.rewind); }
+      }
+      t.anim = 0.25;
+      ev('chrono', { towerId: t.id, x: t.x, y: t.y, radius: C.radius, element: t.calc.element });
+    }
+
+    /** 영혼 수확자: 근처(사거리 + 0.5)에서 적이 죽으면 영혼 하나 — 가득 차면 영혼 폭풍 */
+    function harvestSoul(e) {
+      for (const t of st.towers) {
+        const c = t.calc;
+        if (!c || !c.harvest || t.disabled || t.building) continue;
+        const R = c.range + 0.5;
+        if (d2(t.x, t.y, e.x, e.y) > R * R) continue;
+        const H = c.harvest;
+        t.souls = Math.min(H.max, (t.souls || 0) + 1);
+        ev('soul', { towerId: t.id, x: e.x, y: e.y, souls: t.souls, max: H.max });
+        if (t.souls >= H.max) {
+          t.souls = 0; // 먼저 비움 — 폭풍으로 죽은 적은 다음 영혼으로
+          const src = { tower: t, calc: c, element: c.element };
+          for (const o3 of enemiesInRadius(t.x, t.y, H.radius, null)) {
+            hitEnemy(o3, H.storm, src, { area: true, procMult: 0.3 });
+            if (H.curse && !o3.dead) applyCurse(o3, H.curse.pct, H.curse.dur, null);
+          }
+          t.anim = 0.25;
+          ev('soulStorm', { towerId: t.id, x: t.x, y: t.y, radius: H.radius, element: c.element });
+        }
+      }
+    }
+
+    /**
+     * 구르는 것의 길: 표적 적이 향하는 길 칸(없으면 서 있는 칸)에서 시작해, 흐름 거리가 늘어나는 쪽(입구 쪽)으로
+     * 이웃 길 칸을 따라 length칸 남짓. 칸 중심 목록을 돌려줌(시작점은 적의 지금 자리 — 첫 적부터 깔림).
+     */
+    function rollerPath(e, length) {
+      const route = routeSet();
+      let start = e.tr * map.cols + e.tc;
+      if (!route.has(start) || !isFinite(flow[start])) start = e.r * map.cols + e.c;
+      if (!route.has(start) || !isFinite(flow[start])) return null;
+      const path = [{ x: (start % map.cols) + 0.5, y: Math.floor(start / map.cols) + 0.5 }];
+      let cur = start;
+      const seen = new Set([cur]);
+      const N4 = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+      for (let k = 0; k < Math.ceil(length) + 1; k++) {
+        const c0 = cur % map.cols;
+        const r0 = Math.floor(cur / map.cols);
+        const f0 = flow[cur];
+        let next = -1;
+        let nf = Infinity;
+        for (const [dc, dr] of N4) {
+          const c2 = c0 + dc;
+          const r2 = r0 + dr;
+          if (c2 < 0 || r2 < 0 || c2 >= map.cols || r2 >= map.rows) continue;
+          const j = r2 * map.cols + c2;
+          if (!route.has(j) || seen.has(j)) continue;
+          const f = flow[j];
+          if (isFinite(f) && f > f0 && f < nf) { nf = f; next = j; }
+        }
+        if (next < 0) break;
+        seen.add(next);
+        cur = next;
+        path.push({ x: (cur % map.cols) + 0.5, y: Math.floor(cur / map.cols) + 0.5 });
+      }
+      return path.length >= 2 ? path : null;
+    }
+
+    const ROLL_HIT = Object.freeze({ quiet: true, beamTick: true });
+    function updateRollers(time) {
+      for (const R of st.rollers) {
+        R.px = R.x; R.py = R.y;
+        if (time < R.startAt || R.done) continue;
+        // 길을 따라 speed칸/초
+        let step = R.speed * DT;
+        R.travelled += step;
+        R.spin += step;
+        while (step > 1e-6 && R.seg < R.path.length - 1) {
+          const b = R.path[R.seg + 1];
+          const dd = dist(R.x, R.y, b.x, b.y);
+          if (dd > step) { R.x += ((b.x - R.x) / dd) * step; R.y += ((b.y - R.y) / dd) * step; step = 0; } else { R.x = b.x; R.y = b.y; step -= dd; R.seg++; }
+        }
+        if (R.travelled >= R.length || R.seg >= R.path.length - 1) { R.done = true; ev('rollerEnd', { type: R.type, x: R.x, y: R.y }); continue; }
+        const ground = R.type === 'boulder';
+        for (const e of enemiesInRadius(R.x, R.y, R.radius, ground ? 'ground' : null)) {
+          if (!targetable(e)) continue;
+          const first = R.hit.indexOf(e.id) < 0;
+          if (R.type === 'tornado') {
+            damage(e, R.dps * DT, R.element, R.src, ROLL_HIT);
+            if (first) { R.hit.push(e.id); if (R.stun && !e.dead) hardCC(e, 'stun', R.stun); }
+            const ed = D().enemies[e.type];
+            if (R.push > 0 && !e.dead && !ed.boss && e.size < 0.9 && !e.burrowed) { releaseEnemy(e); moveBack(e, R.push * DT); }
+          } else if (first) {
+            R.hit.push(e.id);
+            hitEnemy(e, R.crush, R.src, { area: true });
+            if (!e.dead && R.stun) hardCC(e, 'stun', R.stun);
+            if (!e.dead && R.shred) addShred(e, 'iron_ball', R.shred, R.shred, 4);
+            ev('crush', { x: e.x, y: e.y });
+          }
+        }
+      }
+      compact(st.rollers, (R) => !R.done);
     }
 
     /**
@@ -6351,13 +6728,28 @@ RG.sim = (() => {
       /* --- 탑 공격 --- */
       for (const t of st.towers) stepTower(t, time);
 
+      /* --- 구르는 것(회오리·바위) --- */
+      if (st.rollers.length) updateRollers(time);
+
       /* --- 투사체 --- */
       updateProjectiles();
 
       /* --- 장판 --- */
       for (const z of st.zones) {
-        if (time > z.until) continue;
-        const filter = z.kind === 'void' ? null : 'ground';
+        if (time > z.until) {
+          // 눈보라 성채: 눈보라가 끝나는 순간 얼음이 터짐 — 안의 적에게 한 번 피해(언 적은 2배), 영원한 겨울은 얼림
+          if (z.shatter && !z.shattered) {
+            z.shattered = true;
+            for (const e of enemiesInRadius(z.x, z.y, z.radius, null)) {
+              const frozen = time < e.ccUntil && e.ccKind === 'freeze';
+              hitEnemy(e, z.shatter * (frozen ? 2 : 1), z.src, SHATTER_HIT);
+              if (z.freeze && !e.dead) hardCC(e, 'freeze', z.freeze);
+            }
+            ev('shatter', { x: z.x, y: z.y, radius: z.radius, element: z.element });
+          }
+          continue;
+        }
+        const filter = z.kind === 'void' || z.kind === 'blizzard' ? null : 'ground';
         const list = enemiesInRadius(z.x, z.y, z.radius, filter);
         for (let i = 0; i < list.length; i++) {
           const e = list[i];
@@ -6431,6 +6823,7 @@ RG.sim = (() => {
     // 매 틱 수백 번 쓰는 피해 옵션은 하나를 같이 씀 (damage는 옵션을 읽기만 함)
     const DOT_HIT = Object.freeze({ dot: true, quiet: true });
     const ZONE_HIT = Object.freeze({ dot: true, area: true, quiet: true });
+    const SHATTER_HIT = Object.freeze({ area: true, procMult: 0.5 });
     /** 화상·출혈 목록 하나 처리 — 적이 죽으면 true */
     function tickDots(e, list, time) {
       for (let i = list.length - 1; i >= 0; i--) {
@@ -6576,6 +6969,8 @@ RG.sim = (() => {
       if (c.kind === 'none') return;
       if (c.kind === 'beam') { updateTowerBeams(t); return; }
       if (c.kind === 'sweep') { updateSweep(t); return; }
+      if (c.kind === 'orbit') { updateOrbit(t); return; }
+      if (c.chrono) updateChrono(t);
       if (c.cyclone) {
         t.cycloneCd = (t.cycloneCd == null ? c.cyclone.every * 0.5 : t.cycloneCd) - DT;
         if (t.cycloneCd <= 0) {
@@ -6967,7 +7362,7 @@ RG.sim = (() => {
     return g;
   }
 
-  return { create, replay, DT };
+  return { create, replay, DT, orbitPos };
 })();
 
 </script>
@@ -7026,8 +7421,10 @@ RG.save = (() => {
  *  - 기본 탑 3종(불씨 궁수탑·바위 병영·서리 결정탑)은 처음부터 가지고 있음
  *  - 스테이지가 열리면 그 스테이지의 새 탑이 **뽑기에 들어갈 뿐**(확정으로 주지 않음)
  *  - 공명석으로 뽑기: 1회 100, 10회 900 (10회는 희귀 이상 하나 확정 — 뽑기에 희귀가 있을 때)
- *  - 등급: 일반 60% · 희귀 30% · 영웅 10%. 뽑기에 아직 없는 등급의 몫은 있는 등급에 비율대로 나눔
- *  - 천장: 뽑기에 영웅 탑이 들어온 뒤 30회 안에 영웅 확정
+ *  - 등급: 일반 58% · 희귀 28% · 영웅 10% · 전설 3.2% · 신화 0.8% (2026-11-11 전설·신화 추가).
+ *    뽑기에 아직 없는 등급의 몫은 있는 등급에 비율대로 나눔
+ *  - 천장: 뽑기에 영웅 탑이 들어온 뒤 30회 안에 영웅 이상 확정, 전설 탑이 들어온 뒤 80회 안에 전설 이상 확정
+ *    (전설 천장에서는 전설:신화 = 4:1)
  *  - 중복: 그 탑 강화 +1 (최대 +5). +5에서 한 번 더 나오면 **최종 강화**(2026-11-11 개정: 예전엔 공명석 30 돌려받음)
  *  - 최종 강화한 탑은 뽑기에서 빠짐 (그 몫의 확률은 남은 탑에 나눔). 10회 도중에 최종이 되면 그 뒤로 바로 빠짐
  *  - 강화 효과: 단계마다 공격력(지원 탑은 지원 효과, 병영은 병사, 광산은 수입) +6%, 최종 강화는 +50%
@@ -7045,13 +7442,20 @@ RG.gacha = (() => {
     shadow_snare: 'epic', sun_lens: 'epic', hex_spire: 'epic', radiance_spire: 'epic', void_orb: 'epic', dynamo: 'epic',
     // 2차 6종 (2026-11-11)
     flame_jet: 'common', thorn_garden: 'common', icicle_cloud: 'rare', thunder_cloud: 'rare', lighthouse: 'epic', dread_bell: 'epic',
+    // 전설 6종·신화 2종 (2026-11-11)
+    phoenix_nest: 'legendary', blizzard_keep: 'legendary', storm_eye: 'legendary', titan_boulder: 'legendary', judgment_spire: 'legendary', soul_reaper: 'legendary',
+    chrono_spire: 'mythic', shadow_dragon: 'mythic',
   };
-  const ORDER = ['common', 'rare', 'epic'];
+  const ORDER = ['common', 'rare', 'epic', 'legendary', 'mythic'];
   const RARITIES = {
-    common: { name: '일반', rate: 0.6, color: '#c9c3d8' },
-    rare: { name: '희귀', rate: 0.3, color: '#5fb4ff' },
-    epic: { name: '영웅', rate: 0.1, color: '#ffc44a' },
+    common: { name: '일반', rate: 0.58, color: '#c9c3d8' },
+    rare: { name: '희귀', rate: 0.28, color: '#5fb4ff' },
+    epic: { name: '영웅', rate: 0.10, color: '#ffc44a' },
+    legendary: { name: '전설', rate: 0.032, color: '#ff6a3d' },
+    mythic: { name: '신화', rate: 0.008, color: '#ff5ad6' },
   };
+  /** 등급 높낮이 (천장·확정 판단용) */
+  const TIER = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
   const COST = { one: 100, ten: 900 };
   const MAX_RANK = 5;
   const RANK_PCT = 0.06;
@@ -7061,6 +7465,8 @@ RG.gacha = (() => {
   /** (안전장치) 최종 강화한 탑이 어떻게든 또 나오면 돌려줄 공명석 — 정상이라면 뽑기에서 빠져 있어 나오지 않음 */
   const REFUND = 30;
   const PITY = 30;
+  /** 전설 이상 천장 (뽑기에 전설·신화가 들어온 뒤) */
+  const PITY_LEGEND = 80;
   const START_CRYSTALS = 100;
   /** 판 결과로 얻는 공명석 */
   const REWARD = { firstClear: 100, perStar: 30, win: 15, lose: 5, endlessWave: 4 };
@@ -7079,25 +7485,38 @@ RG.gacha = (() => {
     const p = poolOf(pool);
     const have = ORDER.filter((r) => p.some((t) => rarityOf(t) === r));
     const sum = have.reduce((s, r) => s + RARITIES[r].rate, 0) || 1;
-    const out = { common: 0, rare: 0, epic: 0 };
+    const out = { common: 0, rare: 0, epic: 0, legendary: 0, mythic: 0 };
     for (const r of have) out[r] = RARITIES[r].rate / sum;
     return out;
   }
+  /** 이 등급 이상이 뽑기에 있나 */
+  const hasTier = (rates, min) => ORDER.some((k) => TIER[k] >= TIER[min] && rates[k] > 0);
 
-  /** 등급 하나 고르기 (floor: 최소 등급 — 뽑기에 그 등급 이상이 있을 때만) */
+  /**
+   * 등급 하나 고르기 (floor: 최소 등급 — 뽑기에 그 등급 이상이 있을 때만).
+   * 높은 등급부터 차례로 확률을 더해 고르고, 뽑힌 등급이 floor보다 낮으면 floor 이상 중에서 확률 비율대로 다시 고름.
+   */
   function rollRarity(rng, floor, pool) {
     const rates = ratesFor(pool);
     const r = rng();
     let pick = 'common';
     let acc = 0;
-    for (const k of ['epic', 'rare', 'common']) {
+    for (let i = ORDER.length - 1; i >= 0; i--) {
+      const k = ORDER[i];
       if (!rates[k]) continue;
       acc += rates[k];
       if (r < acc) { pick = k; break; }
       pick = k;
     }
-    if (floor === 'epic' && rates.epic) return 'epic';
-    if (floor === 'rare' && pick === 'common' && (rates.rare || rates.epic)) return rates.rare ? 'rare' : 'epic';
+    if (floor && TIER[pick] < TIER[floor] && hasTier(rates, floor)) {
+      // floor 이상 등급 중에서 (예: 전설 천장 → 전설:신화 = 4:1, 영웅 천장 → 영웅·전설·신화 비율대로)
+      // 높은 등급부터 빼 나감 — 위의 굴림과 같이 rng가 1에 가까울수록 낮은 등급
+      const ok = ORDER.filter((k) => TIER[k] >= TIER[floor] && rates[k] > 0).reverse();
+      const sum = ok.reduce((s2, k) => s2 + rates[k], 0);
+      let x = rng() * sum;
+      for (const k of ok) { x -= rates[k]; if (x < 0) return k; }
+      return ok[ok.length - 1];
+    }
     return pick;
   }
 
@@ -7126,16 +7545,21 @@ RG.gacha = (() => {
     let rolled = 0;
     for (let i = 0; i < n && live.length; i++) {
       const rates = ratesFor(live);
-      // 천장은 뽑기에 영웅 탑이 있을 때만 셈
-      if (rates.epic) state.pity = (state.pity || 0) + 1;
+      // 천장은 뽑기에 그 등급 이상의 탑이 있을 때만 셈 (영웅 이상 30회, 전설 이상 80회)
+      const epicUp = hasTier(rates, 'epic');
+      const legendUp = hasTier(rates, 'legendary');
+      if (epicUp) state.pity = (state.pity || 0) + 1;
+      if (legendUp) state.pityL = (state.pityL || 0) + 1;
       let floor = null;
-      if (rates.epic && state.pity >= PITY) floor = 'epic';
+      if (legendUp && state.pityL >= PITY_LEGEND) floor = 'legendary';
+      else if (epicUp && state.pity >= PITY) floor = 'epic';
       else if (kind === 'ten' && i === n - 1 && !gotRare) floor = 'rare';
       const rarity = rollRarity(rng, floor, live);
       const type = rollTower(rng, rarity, live);
       rolled++;
       if (!type) continue;
-      if (rarity === 'epic') state.pity = 0;
+      if (TIER[rarity] >= TIER.epic) state.pity = 0;
+      if (TIER[rarity] >= TIER.legendary) state.pityL = 0;
       if (rarity !== 'common') gotRare = true;
       const r = grant(state, type);
       results.push(r);
@@ -7175,7 +7599,7 @@ RG.gacha = (() => {
     return { crystals, lines };
   }
 
-  return { BASIC, RARITY, RARITIES, ORDER, COST, MAX_RANK, RANK_PCT, FINAL_RANK, FINAL_BONUS, REFUND, PITY, START_CRYSTALS, REWARD, TICKET_TO_CRYSTALS, rarityOf, ratesFor, rollRarity, rollTower, pull, grant, rankMult, rankLabel, isFinal, livePool, rewardFor };
+  return { BASIC, RARITY, RARITIES, ORDER, TIER, COST, MAX_RANK, RANK_PCT, FINAL_RANK, FINAL_BONUS, REFUND, PITY, PITY_LEGEND, START_CRYSTALS, REWARD, TICKET_TO_CRYSTALS, rarityOf, ratesFor, rollRarity, rollTower, pull, grant, rankMult, rankLabel, isFinal, livePool, rewardFor };
 })();
 
 </script>
@@ -7270,7 +7694,8 @@ RG.progress = (() => {
     return ms.length > 0 && !!mapRec(ms[ms.length - 1].id).cleared;
   }
   /** 이 탑이 뽑기에 들어오는 지역 (그 탑이 처음 나오는 맵의 지역) */
-  const towerRegion = (t) => (D().towers[t] && D().towers[t].unlock ? mapRegion(D().towers[t].unlock) : 1);
+  // region을 따로 적은 탑(흑룡의 둥지 = 6)은 그 지역 번호를 씀 — 6은 '마지막 지역(5)을 깬 뒤'
+  const towerRegion = (t) => { const td = D().towers[t]; if (!td) return 1; if (td.region) return td.region; return td.unlock ? mapRegion(td.unlock) : 1; };
   /** 뽑기에 열렸나 (최종 강화 여부와 상관없이) */
   function towerOpen(t) {
     if (RG.gacha.BASIC.includes(t)) return true;
@@ -7574,6 +7999,7 @@ RG.art._h = (() => {
     hex_spire: 'dark', void_orb: 'dark', shadow_snare: 'dark',
     // 2차 6종 (2026-11-11) — 그림은 js/art/tower-<id>.js
     flame_jet: 'fire', thorn_garden: 'earth', icicle_cloud: 'frost', thunder_cloud: 'storm', lighthouse: 'light', dread_bell: 'dark',
+    phoenix_nest: 'fire', blizzard_keep: 'frost', storm_eye: 'storm', titan_boulder: 'earth', judgment_spire: 'light', soul_reaper: 'dark', chrono_spire: 'light', shadow_dragon: 'dark',
   };
 
   /* ---------------- 섬세한 명암 (docs/design/animation.md §7) ----------------
@@ -13902,6 +14328,1385 @@ RG.art._h = (() => {
       if (v === 'A') return doom(c, pose);
       return soul(c, pose);
     },
+  };
+})();
+
+</script>
+  <script>/* js/art/tower-phoenix_nest.js */
+'use strict';
+
+/* =========================================================
+ * 탑 그림 — 🔥 불사조 둥지 `phoenix_nest` (전설, 2026-11-11). 설계: docs/design/towers.md F5
+ *  붉은 협곡 꼭대기의 둥지 탑. 불사조 자체는 렌더러가 따로 그림(탑 둘레를 날아다님) — 여기엔 둥지·불씨 알·불꽃 깃털.
+ *  idle: 둥지 불꽃이 잔잔함 · aim: 불꽃이 커지며 알이 빛남 · fire: 불꽃이 솟구치고 불씨가 튐
+ *  4A 태양 불사조: 둥지 위에 작은 태양 · 4B 쌍둥이 불사조: 쌍둥이 기둥 위 둥지 둘
+ *
+ *  전설·신화 공용 장식도 여기서 정의(RG.art._tw.L) — 다음 탑 파일들이 씀.
+ * ========================================================= */
+(() => {
+  const { f, M, fine, poly, cyl, frus, ring, band, aura, spark, plat, masonry, masonryCyl, metalBand, gem, flame } = RG.art._tw;
+  const A = RG.art._tw.A;
+  const { footShade, litWindow, bandI, embers, G, OP } = A;
+  const T = RG.art._tw.T;
+
+  /* ---------- 전설·신화 공용 ---------- */
+  const GOLD = '#f2c14e';
+  /** 등급 받침: 기본 받침 + (Lv2↑) 금테 고리 + (Lv4) 등급 빛 고리. mythic이면 별빛 */
+  function legendPlat(c, v, o = {}) {
+    const lv = v === 'A' || v === 'B' ? 4 : v;
+    let s = plat(c, lv, { stone: o.stone, trim: o.trim || GOLD, rough: o.rough, top: o.top });
+    const glow = o.glow || c.E.light;
+    if (lv >= 2) {
+      const y = lv === 4 ? 98 : 104;
+      const rx = lv === 4 ? 30 : 34.5;
+      s += c.e(50, y, rx, rx * 0.285, 'none', 0, ` stroke="${GOLD}" stroke-width="${c.sw(1.6)}" opacity="0.85"`);
+    }
+    if (lv === 4) {
+      s += c.e(50, 104.5, 41, 12.4, 'none', 0, ` stroke="${glow}" stroke-width="${c.sw(2.4)}" opacity="0.55"`);
+      if (o.mythic) {
+        s += [[14, 100], [86, 101], [24, 116], [76, 117], [50, 121]].map(([x, y], i) => spark(c, x, y, i === 4 ? 2.6 : 2, i % 2 ? '#bfe8ff' : '#ffd8f4', 0)).join('');
+      } else {
+        s += [[16, 101], [84, 101]].map(([x, y]) => spark(c, x, y, 2.2, '#ffe6a8', 0)).join('');
+      }
+    }
+    return s;
+  }
+  /** 날카로운 불꽃 깃털 하나 — 뿌리 (x,y), 길이 L, 각 ang(도, 0=위) */
+  function feather(c, x, y, L, ang, col = '#ff7a2a') {
+    const h = c.h;
+    const a = ((ang - 90) * Math.PI) / 180;
+    const ux = Math.cos(a);
+    const uy = Math.sin(a);
+    const px = -uy;
+    const py = ux;
+    const P = (t, w) => `${f(x + ux * L * t + px * w)} ${f(y + uy * L * t + py * w)}`;
+    const w = L * 0.16;
+    let s = c.p(`M${P(0, 0)}Q${P(0.35, w * 1.4)} ${P(0.7, w)}Q${P(0.9, w * 0.4)} ${P(1, 0)}Q${P(0.85, -w * 0.6)} ${P(0.62, -w * 1.1)}Q${P(0.3, -w * 1.2)} ${P(0, 0)}Z`, c.vg(h.shade(col, 0.25), 0.35, -0.2), 1.8);
+    s += c.ln(`M${P(0.05, 0)}Q${P(0.5, w * 0.2)} ${P(0.92, 0)}`, '#fff1a8', 1.1, 0.85);
+    return s;
+  }
+  RG.art._tw.L = { GOLD, legendPlat, feather };
+
+  /* ---------- 부품 ---------- */
+  /** 둥지: 엮은 나뭇가지 그릇 + 불씨 알 + 불꽃 — 가운데 (x, y=둥지 윗선), 너비 w */
+  function nest(c, x, y, w, pose, o = {}) {
+    const h = c.h;
+    const big = pose === 'fire' ? 1.45 : pose === 'aim' ? 1.2 : 1;
+    let s = aura(c, x, y - w * 0.25, w * (0.9 + 0.3 * big), w * (0.7 + 0.35 * big), '#ff9a3d', 0.35 + 0.15 * big);
+    // 뒤쪽 테
+    s += c.e(x, y, w / 2, w * 0.16, c.vg(o.rim ? h.shade(o.rim, -0.3) : '#4a2c18', 0, -0.2), 2.2);
+    // 불꽃(알 뒤)
+    s += flame(c, x - w * 0.12, y + 1, w * 0.42 * big, w * 0.72 * big);
+    s += flame(c, x + w * 0.16, y + 1, w * 0.36 * big, w * 0.58 * big);
+    // 불씨 알
+    s += c.e(x, y - w * 0.06, w * 0.17, w * 0.22, c.sg(pose === 'idle' ? '#ff9a4a' : '#ffd27a'), 1.8);
+    s += c.ln(`M${f(x - w * 0.05)} ${f(y - w * 0.22)}L${f(x + w * 0.02)} ${f(y - w * 0.12)}L${f(x - w * 0.04)} ${f(y - w * 0.03)}`, '#fff6c8', 1.2, 0.9);
+    // 앞쪽 그릇(엮은 가지)
+    const rim = o.rim || '#7a4a26';
+    s += c.p(`M${f(x - w / 2)} ${f(y)}Q${f(x - w * 0.46)} ${f(y + w * 0.34)} ${f(x)} ${f(y + w * 0.38)}Q${f(x + w * 0.46)} ${f(y + w * 0.34)} ${f(x + w / 2)} ${f(y)}A${f(w / 2)} ${f(w * 0.16)} 0 0 1 ${f(x - w / 2)} ${f(y)}Z`, c.vg(rim, 0.25, -0.3), 2.4);
+    let d = '';
+    for (let i = 0; i < 5; i++) {
+      const k = (i + 0.5) / 5;
+      d += `M${f(x - w * 0.48 + w * 0.96 * k - w * 0.1)} ${f(y + w * 0.08 + Math.sin(k * Math.PI) * w * 0.12)}L${f(x - w * 0.48 + w * 0.96 * k + w * 0.12)} ${f(y + w * 0.02 + Math.sin(k * Math.PI) * w * 0.16)}`;
+    }
+    s += c.ln(d, h.shade(rim, -0.4), 1.3, 0.8);
+    s += c.ln(`M${f(x - w * 0.46)} ${f(y + w * 0.1)}Q${f(x)} ${f(y + w * 0.32)} ${f(x + w * 0.46)} ${f(y + w * 0.1)}`, h.shade(rim, 0.35), 1.2, 0.7);
+    if (o.gold) s += c.ln(`M${f(x - w * 0.5)} ${f(y + 0.4)}A${f(w / 2)} ${f(w * 0.16)} 0 0 0 ${f(x + w / 2)} ${f(y + 0.4)}`, GOLD, 2, 0.95);
+    if (pose === 'fire') s += embers(c, [[x - w * 0.5, y - w * 0.7, 2.4], [x + w * 0.45, y - w * 0.85, 2.2], [x + w * 0.05, y - w * 1.1, 2.8]], '#ffd27a');
+    if (pose === 'aim') s += embers(c, [[x - w * 0.35, y - w * 0.55, 1.8], [x + w * 0.35, y - w * 0.6, 1.8]], '#ffb347');
+    return s;
+  }
+  const REDSTONE = '#b0685a';
+
+  /* ---------- 단계별 ---------- */
+  /* Lv1: 나무 횃대(엇갈린 가지) 위 둥지 */
+  function lv1(c, pose) {
+    const h = c.h;
+    let o = legendPlat(c, 1);
+    o += footShade(c, 50, 103, 18, 5);
+    o += c.ol('M40 104L50 68M60 104L50 68', M.woodD, 3.4);
+    o += c.ol('M37 92L63 92', M.wood, 2.6);
+    o += c.ol('M50 104V64', M.wood, 3.6);
+    o += c.ol('M50 76L41 66M50 80L60 70', M.woodD, 1.8);
+    o += feather(c, 41, 66, 9, -40, '#ff6a2a') + feather(c, 60, 70, 8, 35, '#ffa040');
+    o += nest(c, 50, 62, 26, pose);
+    return o;
+  }
+
+  /* Lv2·3: 붉은 돌 탑 위 금테 둥지 (Lv3는 높고 금띠·불꽃 깃털 볏) */
+  function lv23(c, pose, L3) {
+    const h = c.h;
+    let o = legendPlat(c, L3 ? 3 : 2, { stone: '#c8a08a', trim: GOLD });
+    o += footShade(c, 50, 103, 20, 6);
+    const top = L3 ? 60 : 68;
+    o += masonry(c, 50, top, 104, L3 ? 10 : 11, 15, 0.3, REDSTONE, { ch: 7, bw: 9, seed: L3 ? 61 : 59 });
+    if (L3) o += metalBand(c, 50, 74, 77, 11.4, 3.4, GOLD) + metalBand(c, 50, 90, 93, 13.2, 4, GOLD);
+    o += litWindow(c, 50, L3 ? 88 : 92, 4.6, 6.4, '#ffb347', { frame: '#8a5a4a' });
+    // 둥지 받침(돌 그릇)
+    o += cyl(c, 50, top - 4, top, L3 ? 14 : 13, (L3 ? 14 : 13) * 0.3, c.cg('#8a4a3a'), c.vg('#5a2a20', 0, -0.2), 2.4);
+    if (L3) {
+      o += feather(c, 37, top - 8, 14, -55, '#ff5a2a') + feather(c, 63, top - 8, 14, 55, '#ff5a2a');
+      o += feather(c, 41, top - 12, 15, -25, '#ff8a3a') + feather(c, 59, top - 12, 15, 25, '#ff8a3a');
+    } else {
+      o += feather(c, 39, top - 6, 11, -50, '#ff6a2a') + feather(c, 61, top - 6, 11, 50, '#ff6a2a');
+    }
+    o += nest(c, 50, top - 6, L3 ? 30 : 27, pose, { gold: true, rim: '#8a5a2a' });
+    if (L3) o += gem(c, 50, top + 1.5, 2.6, 3.2, '#ff7a3a', true);
+    return o;
+  }
+
+  /* 4A 태양 불사조: 높은 탑 + 둥지 위로 떠 있는 작은 태양(빛살 고리) */
+  function sun(c, pose) {
+    const h = c.h;
+    let o = legendPlat(c, 'A', { stone: '#d8b8a0', trim: GOLD, glow: '#ffb347' });
+    o += footShade(c, 50, 99, 22, 6);
+    o += masonry(c, 50, 64, 99, 11, 16, 0.3, REDSTONE, { ch: 7, bw: 9, seed: 71 });
+    o += metalBand(c, 50, 76, 79, 12.6, 3.8, GOLD) + metalBand(c, 50, 88, 91, 14, 4.2, GOLD);
+    o += litWindow(c, 50, 86, 4.6, 6.4, '#ffd27a', { frame: '#8a5a4a' });
+    o += cyl(c, 50, 60, 64, 16, 4.8, c.cg('#8a4a3a'), c.vg('#5a2a20', 0, -0.2), 2.4);
+    o += feather(c, 34, 56, 16, -60, '#ff5a2a') + feather(c, 66, 56, 16, 60, '#ff5a2a') + feather(c, 39, 52, 17, -30, '#ff8a3a') + feather(c, 61, 52, 17, 30, '#ff8a3a');
+    o += nest(c, 50, 58, 32, pose, { gold: true, rim: '#8a5a2a' });
+    // 태양
+    const lit = pose === 'idle' ? 0.6 : 1;
+    const sy = pose === 'fire' ? 24 : 27;
+    o += aura(c, 50, sy, 22 + 6 * lit, 20 + 6 * lit, '#ffd27a', 0.4 + 0.3 * lit);
+    let rays = '';
+    for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2 + (pose === 'aim' ? 0.13 : 0); const r1 = 10.5; const r2 = i % 2 ? 15 : 18.5; rays += `M${f(50 + Math.cos(a) * r1)} ${f(sy + Math.sin(a) * r1)}L${f(50 + Math.cos(a) * r2)} ${f(sy + Math.sin(a) * r2)}`; }
+    o += c.ln(rays, '#ffb347', 2.6, 0.9) + c.ln(rays, '#fff1a8', 1.2, 0.95);
+    o += c.ci(50, sy, 9.5, c.sg('#ffd040'), 2.4);
+    o += c.ci(48, sy - 2, 3.4, '#fffbe0', 0, ' opacity="0.8"');
+    if (pose === 'fire') o += c.e(50, sy, 22, 20, 'none', 0, ` stroke="#fff1a8" stroke-width="${c.sw(2)}" opacity="0.8"`);
+    return o;
+  }
+
+  /* 4B 쌍둥이 불사조: 쌍둥이 붉은 돌 기둥 + 금빛 아치, 기둥마다 둥지 */
+  function twin(c, pose) {
+    const h = c.h;
+    let o = legendPlat(c, 'B', { stone: '#d8b8a0', trim: GOLD, glow: '#ffb347' });
+    o += footShade(c, 50, 99, 26, 7);
+    for (const x of [33, 67]) {
+      o += masonry(c, x, 64, 99, 7.5, 10, 0.3, REDSTONE, { ch: 7, bw: 8, seed: x });
+      o += metalBand(c, x, 80, 82.6, 8.8, 2.6, GOLD);
+    }
+    // 아치
+    o += c.p('M30 66Q50 44 70 66L66 68Q50 52 34 68Z', c.vg(GOLD, 0.35, -0.25), 2.4);
+    o += gem(c, 50, 55, 3, 3.8, '#ff7a3a', true);
+    o += c.p('M44 99V88Q50 82 56 88V99Z', c.vg('#4a2c20', 0.1, -0.2), 2.2);
+    for (const [x, d] of [[33, -1], [67, 1]]) {
+      o += cyl(c, x, 60, 64, 11, 3.3, c.cg('#8a4a3a'), c.vg('#5a2a20', 0, -0.2), 2.2);
+      o += feather(c, x + d * 9, 56, 12, d * 55, '#ff5a2a');
+      o += nest(c, x, 59, 22, pose, { gold: true, rim: '#8a5a2a' });
+    }
+    return o;
+  }
+
+  T.phoenix_nest = {
+    /* 둥지 불꽃 가운데 */
+    muzzle: [[50, 56], [50, 58], [50, 50], [50, 50], [33, 52]],
+    draw(c, v, pose = 'idle') {
+      c = fine(c);
+      if (v === 1) return lv1(c, pose);
+      if (v === 2) return lv23(c, pose, false);
+      if (v === 3) return lv23(c, pose, true);
+      if (v === 'A') return sun(c, pose);
+      return twin(c, pose);
+    },
+  };
+})();
+
+</script>
+  <script>/* js/art/tower-blizzard_keep.js */
+'use strict';
+
+/* =========================================================
+ * 탑 그림 — ❄️ 눈보라 성채 `blizzard_keep` (전설, 2026-11-11). 설계: docs/design/towers.md I5
+ *  서리 고개의 얼음 성채. 꼭대기에 눈보라 수정이 떠 있고, 둘레에 눈이 돎.
+ *  idle: 수정이 은은히 빛남 · aim: 수정에 눈이 모임(모이는 빛살) · fire: 수정에서 눈보라가 뿜어짐(고리·눈송이)
+ *  4A 영원한 겨울: 얼음 가시 왕관을 쓴 넓은 성채 · 4B 얼음 폭풍: 쌍둥이 얼음 첨탑
+ * ========================================================= */
+(() => {
+  const { f, M, fine, poly, cyl, frus, ring, aura, spark, masonry, masonryCyl, metalBand, gem, crystal } = RG.art._tw;
+  const A = RG.art._tw.A;
+  const { footShade, litWindow, stoneRect, gather, frostMotes, burstRing, tileCone } = A;
+  const { GOLD, legendPlat } = RG.art._tw.L;
+  const T = RG.art._tw.T;
+  const ICE = '#cfe8f6';
+  const ICED = '#8fbcd8';
+  const BLUESTONE = '#8aa6c4';
+
+  /* ---------- 부품 ---------- */
+  /** 떠 있는 눈보라 수정 + 둘레 눈송이 — 가운데 (x,y), 크기 k */
+  function stormCrystal(c, x, y, k, pose) {
+    const lit = pose === 'idle' ? 0.55 : 1;
+    const dy = pose === 'aim' ? -2.5 : pose === 'fire' ? 1 : 0;
+    const cy = y + dy;
+    let s = aura(c, x, cy, 14 * k * (0.9 + 0.3 * lit), 13 * k * (0.9 + 0.3 * lit), '#bfeaff', 0.35 + 0.35 * lit);
+    if (pose === 'aim') s += gather(c, x, cy, 7 * k, 17 * k, '#dff6ff', 8, 20);
+    s += crystal(c, x, cy, 10 * k, 18 * k, '#bfe8ff', 2.6);
+    s += c.ln(`M${f(x)} ${f(cy - 7 * k)}V${f(cy + 7 * k)}M${f(x - 5 * k)} ${f(cy - 3 * k)}L${f(x + 5 * k)} ${f(cy + 3 * k)}M${f(x + 5 * k)} ${f(cy - 3 * k)}L${f(x - 5 * k)} ${f(cy + 3 * k)}`, '#ffffff', 1.2, 0.8);
+    // 도는 눈송이
+    const ph = pose === 'aim' ? 0.4 : pose === 'fire' ? 0.8 : 0;
+    s += frostMotes(c, [0, 1, 2, 3, 4].map((i) => { const a = ph + i * 1.256; return [x + Math.cos(a) * 13 * k, cy + Math.sin(a) * 5 * k, (i % 2 ? 1.8 : 2.4) * k]; }));
+    if (pose === 'fire') {
+      s += burstRing(c, x, cy, 16 * k, 8 * k, '#ffffff', 2.4, 0.85) + burstRing(c, x, cy, 23 * k, 11 * k, '#bfeaff', 1.8, 0.6);
+      s += frostMotes(c, [[x - 22 * k, cy - 8 * k, 2.6 * k], [x + 23 * k, cy - 4 * k, 2.6 * k], [x - 16 * k, cy + 9 * k, 2.2 * k], [x + 18 * k, cy + 10 * k, 2.2 * k], [x, cy - 16 * k, 2.4 * k]]);
+    }
+    return s;
+  }
+  /** 얼음 성가퀴(앞면) — 가운데 x, 윗선 y, 반지름 r */
+  function battlement(c, x, y, r, col) {
+    let s = '';
+    for (const d of [-64, -32, 0, 32, 64]) {
+      const a = (d * Math.PI) / 180;
+      const bx = x + r * Math.sin(a);
+      const by = y + r * 0.3 * Math.cos(a);
+      s += stoneRect(c, bx - 3.4, by - 6, 6.8, 6.4, col, { ch: 3.2, bw: 4, seed: d + 7, ow: 2 });
+    }
+    return s;
+  }
+  /** 고드름 줄 (처마 아래) */
+  function icicles(c, x1, x2, y, n, L) {
+    let d = '';
+    const step = (x2 - x1) / n;
+    for (let i = 0; i < n; i++) { const a = x1 + i * step + step * 0.15; const l = L * (i % 2 ? 0.6 : 1); d += `M${f(a)} ${f(y)}L${f(a + step * 0.35)} ${f(y + l)}L${f(a + step * 0.7)} ${f(y)}Z`; }
+    return c.p(d, c.vg('#e8f8ff', 0.3, -0.15), 1.6);
+  }
+
+  /* ---------- 단계별 ---------- */
+  /* Lv1: 얼음 덩이를 쌓은 작은 망루 + 눈 덮개 + 수정 */
+  function lv1(c, pose) {
+    let o = legendPlat(c, 1);
+    o += footShade(c, 50, 103, 17, 5);
+    o += stoneRect(c, 40, 74, 20, 30, ICE, { ch: 7.5, bw: 9, seed: 4, mortar: ICED });
+    o += c.p('M46 104V96Q50 92 54 96V104Z', c.vg('#5a7a9a', 0.1, -0.2), 2);
+    o += c.r(37, 70, 26, 5, c.vg('#e8f8ff', 0.2, -0.15), 1, 2.4);
+    o += icicles(c, 38, 62, 75, 6, 4.5);
+    o += battlement(c, 50, 69, 12, ICE);
+    o += stormCrystal(c, 50, 50, 0.85, pose);
+    return o;
+  }
+
+  /* Lv2·3: 푸른 돌 성탑 + 얼음 지붕(Lv2) / 성가퀴 성채(Lv3) */
+  function lv23(c, pose, L3) {
+    let o = legendPlat(c, L3 ? 3 : 2, { stone: '#b8c8d8', trim: GOLD });
+    o += footShade(c, 50, 103, 20, 6);
+    const top = L3 ? 64 : 70;
+    o += masonry(c, 50, top, 104, L3 ? 12.5 : 11.5, 15, 0.3, BLUESTONE, { ch: 7, bw: 9, seed: L3 ? 81 : 79 });
+    o += litWindow(c, 50, L3 ? 90 : 94, 4.6, 6.4, '#9fe4ff', { frame: '#6a8aa8' });
+    o += c.p('M45 104V97Q50 92 55 97V104Z', c.vg('#3a4a6a', 0.1, -0.2), 2.2);
+    if (L3) {
+      o += metalBand(c, 50, 78, 80.6, 13.6, 4, GOLD);
+      o += cyl(c, 50, top - 3, top, 15, 4.5, c.cg('#c8e4f4'), c.vg('#e8f8ff', 0.1, -0.1), 2.4);
+      o += icicles(c, 36, 64, top + 1, 7, 5);
+      o += battlement(c, 50, top - 3, 15, ICE);
+      o += stormCrystal(c, 50, top - 22, 1.05, pose);
+    } else {
+      o += icicles(c, 38, 62, top + 0.5, 6, 4.5);
+      o += tileCone(c, 50, top, 28, 16, '#bfe0f4', { rows: 3, scallops: 7 });
+      o += stormCrystal(c, 50, top - 28, 0.95, pose);
+    }
+    return o;
+  }
+
+  /* 4A 영원한 겨울: 넓은 성채 + 얼음 가시 왕관 + 큰 수정 */
+  function winter(c, pose) {
+    let o = legendPlat(c, 'A', { stone: '#c8d8e8', trim: GOLD, glow: '#bfeaff' });
+    o += footShade(c, 50, 99, 26, 7);
+    o += masonry(c, 50, 62, 99, 17, 20, 0.3, BLUESTONE, { ch: 7, bw: 10, seed: 91 });
+    o += metalBand(c, 50, 76, 79, 18, 5.4, GOLD) + metalBand(c, 50, 89, 92, 19.4, 5.8, GOLD);
+    o += litWindow(c, 41, 87, 4, 5.6, '#9fe4ff', { frame: '#6a8aa8' }) + litWindow(c, 59, 87, 4, 5.6, '#9fe4ff', { frame: '#6a8aa8' });
+    o += c.p('M45 99V91Q50 86 55 91V99Z', c.vg('#3a4a6a', 0.1, -0.2), 2.2);
+    o += cyl(c, 50, 58, 62, 20, 6, c.cg('#c8e4f4'), c.vg('#e8f8ff', 0.1, -0.1), 2.4);
+    o += icicles(c, 31, 69, 63, 9, 6);
+    // 얼음 가시 왕관
+    let spikes = '';
+    for (const [x, hgt] of [[33, 13], [41, 19], [50, 24], [59, 19], [67, 13]]) spikes += `M${x - 4} 60L${x} ${60 - hgt}L${x + 4} 60Z`;
+    o += c.p(spikes, c.vg('#e8f8ff', 0.4, -0.2), 2.2);
+    o += c.ln('M40 58L41 44M49 58L50 39M58 58L59 44', '#ffffff', 1.2, 0.8);
+    o += gem(c, 50, 54, 2.8, 3.4, '#9fe4ff', true);
+    o += stormCrystal(c, 50, 22, 1.25, pose);
+    return o;
+  }
+
+  /* 4B 얼음 폭풍: 쌍둥이 얼음 첨탑, 꼭대기마다 수정 */
+  function twinSpire(c, pose) {
+    let o = legendPlat(c, 'B', { stone: '#c8d8e8', trim: GOLD, glow: '#bfeaff' });
+    o += footShade(c, 50, 99, 26, 7);
+    o += c.p('M30 99V84Q50 74 70 84V99Z', c.vg(BLUESTONE, 0.15, -0.25), 2.4);
+    o += c.p('M44 99V90Q50 85 56 90V99Z', c.vg('#3a4a6a', 0.1, -0.2), 2.2);
+    for (const [x, ht] of [[34, 50], [66, 46]]) {
+      o += masonry(c, x, 99 - ht + 12, 99, 6.5, 9, 0.3, BLUESTONE, { ch: 6, bw: 7, seed: x });
+      o += c.p(`M${x - 8} ${99 - ht + 12}L${x} ${99 - ht - 12}L${x + 8} ${99 - ht + 12}Q${x} ${99 - ht + 15} ${x - 8} ${99 - ht + 12}Z`, c.vg('#d8f0ff', 0.35, -0.2), 2.4);
+      o += c.ln(`M${x - 3} ${99 - ht + 10}L${x} ${99 - ht - 8}`, '#ffffff', 1.3, 0.8);
+      o += metalBand(c, x, 99 - ht + 22, 99 - ht + 24.4, 7.4, 2.2, GOLD);
+      o += stormCrystal(c, x, 99 - ht - 22, 0.8, pose);
+    }
+    return o;
+  }
+
+  T.blizzard_keep = {
+    /* 수정 가운데 — 눈보라가 여기서 뿜어짐 */
+    muzzle: [[50, 50], [50, 42], [50, 42], [50, 22], [34, 27]],
+    draw(c, v, pose = 'idle') {
+      c = fine(c);
+      if (v === 1) return lv1(c, pose);
+      if (v === 2) return lv23(c, pose, false);
+      if (v === 3) return lv23(c, pose, true);
+      if (v === 'A') return winter(c, pose);
+      return twinSpire(c, pose);
+    },
+  };
+})();
+
+</script>
+  <script>/* js/art/tower-storm_eye.js */
+'use strict';
+
+/* =========================================================
+ * 탑 그림 — ⚡ 폭풍의 눈 `storm_eye` (전설, 2026-11-11). 설계: docs/design/towers.md S5
+ *  폭풍 해안 절벽의 바람 신전. 꼭대기 고리 안에 푸른 소용돌이 '폭풍의 눈'.
+ *  idle: 눈이 천천히 돎 · aim: 눈이 빨리 돌며 밝아짐(바람 줄) · fire: 바람 고리가 터짐
+ *  4A 태풍: 거대한 소용돌이 고리 · 4B 번개 회오리: 번개가 감긴 구리 피뢰 신전
+ * ========================================================= */
+(() => {
+  const { f, M, fine, poly, cyl, ring, aura, spark, masonry, metalBand, gem } = RG.art._tw;
+  const A = RG.art._tw.A;
+  const { footShade, litWindow, burstRing, motion, zapArc, COPPER, rodTip } = A;
+  const { GOLD, legendPlat } = RG.art._tw.L;
+  const T = RG.art._tw.T;
+  const SILVER = '#a8b0c4';
+
+  /* ---------- 부품 ---------- */
+  /** 소용돌이 눈: 푸른 구슬 안에 나선 — 가운데 (x,y), 반지름 r, 회전 rot(라디안) */
+  function eye(c, x, y, r, pose, o = {}) {
+    const rot = pose === 'aim' ? 0.9 : pose === 'fire' ? 1.7 : 0;
+    const lit = pose === 'idle' ? 0.55 : 1;
+    let s = aura(c, x, y, r * (1.8 + 0.5 * lit), r * (1.7 + 0.5 * lit), o.glow || '#8ad8ff', 0.35 + 0.35 * lit);
+    s += c.ci(x, y, r, c.sg(o.col || '#5ab0e8'), 2.6);
+    // 나선 세 갈래
+    let d = '';
+    for (let k = 0; k < 3; k++) {
+      const a0 = rot + (k * Math.PI * 2) / 3;
+      let p = '';
+      for (let i = 0; i <= 10; i++) {
+        const t = i / 10;
+        const a = a0 + t * 3.2;
+        const rr = r * (0.12 + 0.78 * t);
+        p += `${i ? 'L' : 'M'}${f(x + Math.cos(a) * rr)} ${f(y + Math.sin(a) * rr)}`;
+      }
+      d += p;
+    }
+    s += c.ln(d, '#e8f8ff', Math.max(1.2, r * 0.16), 0.9);
+    s += c.ci(x, y, r * 0.18, '#ffffff', 0);
+    if (pose === 'aim') s += motion(c, `M${f(x - r * 2.2)} ${f(y - r * 0.6)}Q${f(x - r * 1.5)} ${f(y - r * 1.3)} ${f(x - r * 0.6)} ${f(y - r * 1.5)}M${f(x + r * 2.2)} ${f(y + r * 0.6)}Q${f(x + r * 1.5)} ${f(y + r * 1.3)} ${f(x + r * 0.6)} ${f(y + r * 1.5)}`, '#e8f8ff', 1.8, 0.8);
+    if (pose === 'fire') s += burstRing(c, x, y, r * 2.4, r * 1.3, '#e8f8ff', 2.4, 0.85) + burstRing(c, x, y, r * 3.2, r * 1.7, '#9fd8ff', 1.8, 0.55);
+    return s;
+  }
+  /** 고리 틀 (은빛 + 금 보석) — 눈을 감싸는 앞쪽 반 고리 */
+  function frame(c, x, y, r, col = SILVER) {
+    let s = c.ln(`M${f(x - r)} ${f(y)}A${f(r)} ${f(r)} 0 0 1 ${f(x + r)} ${f(y)}`, '#1c1426', 5.4) + c.ln(`M${f(x - r)} ${f(y)}A${f(r)} ${f(r)} 0 0 1 ${f(x + r)} ${f(y)}`, col, 3);
+    s += c.ln(`M${f(x - r)} ${f(y)}A${f(r)} ${f(r)} 0 0 0 ${f(x + r)} ${f(y)}`, '#1c1426', 5.4) + c.ln(`M${f(x - r)} ${f(y)}A${f(r)} ${f(r)} 0 0 0 ${f(x + r)} ${f(y)}`, col, 3);
+    s += gem(c, x, y - r, 2.4, 3, '#8ad8ff', true) + gem(c, x - r, y, 2, 2.6, GOLD, false) + gem(c, x + r, y, 2, 2.6, GOLD, false);
+    return s;
+  }
+  /** 돌기둥에 새긴 나선 바람 무늬 */
+  function windCarve(c, x, y1, y2, r) {
+    let d = '';
+    for (let y = y1 + 4; y < y2 - 2; y += 7) d += `M${f(x - r * 0.8)} ${f(y + 2)}Q${f(x)} ${f(y - 3)} ${f(x + r * 0.8)} ${f(y + 2)}`;
+    return c.ln(d, '#5a6480', 1.4, 0.7) + c.ln(d.replace(/(\d+\.?\d*) (\d+\.?\d*)/g, (m, a, b) => `${a} ${(+b + 1).toFixed(1)}`), '#dfe6f4', 0.9, 0.5);
+  }
+
+  /* ---------- 단계별 ---------- */
+  /* Lv1: 나무 기둥 + 바람개비(천 날개 넷) + 작은 소용돌이 */
+  function lv1(c, pose) {
+    const h = c.h;
+    let o = legendPlat(c, 1);
+    o += footShade(c, 50, 103, 16, 5);
+    o += c.ol('M50 104V58', M.wood, 3.6);
+    o += c.ol('M42 104L50 84L58 104', M.woodD, 2.2);
+    const rot = pose === 'aim' ? 25 : pose === 'fire' ? 50 : 0;
+    let sails = '';
+    for (let i = 0; i < 4; i++) {
+      const a = ((rot + i * 90) * Math.PI) / 180;
+      const ux = Math.cos(a); const uy = Math.sin(a);
+      const P = (t, w) => `${f(50 + ux * t - uy * w)} ${f(58 + uy * t + ux * w)}`;
+      sails += `M${P(2, 0)}L${P(19, 0)}L${P(19, 7)}L${P(4, 5)}Z`;
+    }
+    o += c.p(sails, c.vg('#e8eef8', 0.2, -0.2), 2.2);
+    o += c.ln(sails.replace(/Z/g, ''), '#9aa8c0', 0.8, 0.5);
+    o += c.ci(50, 58, 2.6, c.sg(GOLD), 1.6);
+    o += eye(c, 50, 36, 7, pose);
+    return o;
+  }
+
+  /* Lv2·3: 은빛 돌기둥(나선 무늬) + 고리 속 폭풍의 눈. Lv3는 높고 작은 구름 둘 */
+  function lv23(c, pose, L3) {
+    let o = legendPlat(c, L3 ? 3 : 2, { stone: '#c8cede', trim: GOLD });
+    o += footShade(c, 50, 103, 19, 6);
+    const top = L3 ? 66 : 72;
+    o += masonry(c, 50, top, 104, L3 ? 9 : 9.5, 14, 0.3, SILVER, { ch: 7, bw: 9, seed: L3 ? 101 : 99 });
+    o += windCarve(c, 50, top, 104, L3 ? 11 : 11.5);
+    if (L3) o += metalBand(c, 50, top + 4, top + 6.4, 9.8, 3, GOLD);
+    o += c.p('M46 104V97Q50 93 54 97V104Z', c.vg('#3a4060', 0.1, -0.2), 2.2);
+    o += cyl(c, 50, top - 3, top, L3 ? 11 : 10, 3.2, c.cg('#c8cede'), c.vg('#e8ecf4', 0.1, -0.1), 2.4);
+    const ey = top - (L3 ? 18 : 15);
+    const er = L3 ? 9 : 8;
+    o += c.ol(`M${50 - er - 3} ${top - 2}L${50 - er - 1} ${ey}M${50 + er + 3} ${top - 2}L${50 + er + 1} ${ey}`, SILVER, 2.6);
+    o += eye(c, 50, ey, er, pose);
+    o += frame(c, 50, ey, er + 3);
+    if (L3) {
+      const cloud = (x, y, k) => c.p(`M${f(x - 7 * k)} ${f(y)}Q${f(x - 8 * k)} ${f(y - 5 * k)} ${f(x - 3 * k)} ${f(y - 5 * k)}Q${f(x)} ${f(y - 9 * k)} ${f(x + 4 * k)} ${f(y - 5 * k)}Q${f(x + 9 * k)} ${f(y - 5 * k)} ${f(x + 7 * k)} ${f(y)}Z`, c.vg('#e8eef8', 0.1, -0.2), 2);
+      o += cloud(26, ey + 4, 0.8) + cloud(74, ey - 2, 0.8);
+    }
+    return o;
+  }
+
+  /* 4A 태풍: 넓은 신전 + 거대한 소용돌이 고리(겹친 바람 띠) */
+  function typhoon(c, pose) {
+    let o = legendPlat(c, 'A', { stone: '#d0d6e4', trim: GOLD, glow: '#8ad8ff' });
+    o += footShade(c, 50, 99, 24, 7);
+    for (const x of [36, 64]) o += masonry(c, x, 66, 99, 5, 6.5, 0.3, SILVER, { ch: 6, bw: 6, seed: x }) + metalBand(c, x, 70, 72.4, 5.4, 1.6, GOLD);
+    o += c.p('M30 68Q50 60 70 68L70 64Q50 56 30 64Z', c.vg('#c8cede', 0.2, -0.2), 2.4);
+    o += masonry(c, 50, 72, 99, 9, 11, 0.3, SILVER, { ch: 7, bw: 8, seed: 111 });
+    o += windCarve(c, 50, 72, 99, 10);
+    // 소용돌이 띠 셋 (뒤 → 앞)
+    const rot = pose === 'aim' ? 0.4 : pose === 'fire' ? 0.8 : 0;
+    for (let i = 0; i < 3; i++) {
+      const ry = 34 - i * 2;
+      const rx = 30 - i * 6;
+      const a = rot + i * 1.1;
+      o += c.e(50, ry, rx, rx * 0.32, 'none', 0, ` stroke="#9fd8ff" stroke-width="${c.sw(4)}" opacity="0.45"`);
+      o += c.p(`M${f(50 + Math.cos(a) * rx)} ${f(ry + Math.sin(a) * rx * 0.32)}A${f(rx)} ${f(rx * 0.32)} 0 0 1 ${f(50 + Math.cos(a + 2.2) * rx)} ${f(ry + Math.sin(a + 2.2) * rx * 0.32)}`, 'none', 0, ` stroke="#ffffff" stroke-width="${c.sw(2)}" opacity="0.8"`);
+    }
+    o += eye(c, 50, 30, 10, pose);
+    o += frame(c, 50, 30, 13);
+    o += c.ol('M37 64L39 41M63 64L61 41', SILVER, 2.6);
+    return o;
+  }
+
+  /* 4B 번개 회오리: 구리 피뢰 신전 + 번개가 감긴 눈 */
+  function twister(c, pose) {
+    let o = legendPlat(c, 'B', { stone: '#d0d6e4', trim: COPPER, glow: '#c9b8ff' });
+    o += footShade(c, 50, 99, 22, 7);
+    o += masonry(c, 50, 64, 99, 10, 14, 0.3, SILVER, { ch: 7, bw: 9, seed: 121 });
+    o += metalBand(c, 50, 70, 72.6, 10.6, 3.2, COPPER) + metalBand(c, 50, 86, 88.6, 12.6, 3.8, COPPER);
+    o += litWindow(c, 50, 84, 4.4, 6, '#c9b8ff', { frame: '#6a6a88' });
+    o += cyl(c, 50, 61, 64, 12, 3.6, c.cg(COPPER), c.vg('#e8a870', 0.2, -0.1), 2.4);
+    // 피뢰침 둘
+    for (const x of [33, 67]) {
+      o += c.ol(`M${x} 64L${x + (x < 50 ? 3 : -3)} 28`, COPPER, 2.6);
+      o += rodTip(c, x + (x < 50 ? 3 : -3), 28, 2.6, pose);
+    }
+    o += eye(c, 50, 38, 10, pose, { col: '#6a8ae8', glow: '#c9b8ff' });
+    o += frame(c, 50, 38, 13, COPPER);
+    const zap = pose === 'idle' ? 0.5 : 1;
+    o += c.ln('M36 30L42 36L38 40L46 44M64 30L58 35L62 40L54 45', '#c9b8ff', 2.6, 0.6 * zap) + c.ln('M36 30L42 36L38 40L46 44M64 30L58 35L62 40L54 45', '#ffffff', 1.1, 0.9 * zap);
+    return o;
+  }
+
+  T.storm_eye = {
+    /* 폭풍의 눈 가운데 */
+    muzzle: [[50, 36], [50, 57], [50, 48], [50, 30], [50, 38]],
+    draw(c, v, pose = 'idle') {
+      c = fine(c);
+      if (v === 1) return lv1(c, pose);
+      if (v === 2) return lv23(c, pose, false);
+      if (v === 3) return lv23(c, pose, true);
+      if (v === 'A') return typhoon(c, pose);
+      return twister(c, pose);
+    },
+  };
+})();
+
+</script>
+  <script>/* js/art/tower-titan_boulder.js */
+'use strict';
+
+/* =========================================================
+ * 탑 그림 — 🌍 거인의 바위 `titan_boulder` (전설, 2026-11-11). 설계: docs/design/towers.md E5
+ *  솔빛 들판 언덕의 돌 거인 작업장. 거인의 돌 팔이 바위를 들어 길로 굴려 보냄. 바위는 렌더러가 따로 굴림.
+ *  idle: 바위를 쥐고 쉼 · aim: 팔을 높이 들어 올림 · fire: 팔을 내려 바위를 놓음(바위는 사라지고 먼지·움직임 줄)
+ *  4A 산사태: 바위가 잔뜩 쌓인 절벽 성채 · 4B 거인의 철구: 쇠사슬에 매단 거대한 철구
+ * ========================================================= */
+(() => {
+  const { f, M, fine, poly, cyl, ring, aura, spark, masonry, metalBand, gem } = RG.art._tw;
+  const A = RG.art._tw.A;
+  const { footShade, litWindow, planks, motion, smoke, G, rotP } = A;
+  const { GOLD, legendPlat } = RG.art._tw.L;
+  const T = RG.art._tw.T;
+  const ROCK = '#a89a84';
+  const EARTHSTONE = '#9a9478';
+
+  /* ---------- 부품 ---------- */
+  /** 모난 바위 — 가운데 (x,y), 반지름 r */
+  function rock(c, x, y, r, col = ROCK, seed = 0) {
+    const h = c.h;
+    const pts = [];
+    for (let i = 0; i < 9; i++) { const a = (i / 9) * Math.PI * 2 + seed; const rr = r * (0.86 + 0.14 * Math.sin(i * 2.3 + seed * 3)); pts.push([x + Math.cos(a) * rr, y + Math.sin(a) * rr * 0.92]); }
+    let s = c.p(poly(pts), c.vg(col, 0.28, -0.35), 2.4);
+    s += c.p(poly([pts[5], pts[6], pts[7], [x, y - r * 0.1]]), h.shade(col, 0.3), 0, ' opacity="0.7"');
+    s += c.ln(`M${f(x - r * 0.2)} ${f(y - r * 0.3)}L${f(x + r * 0.1)} ${f(y + r * 0.2)}L${f(x + r * 0.5)} ${f(y + r * 0.1)}M${f(x + r * 0.1)} ${f(y + r * 0.2)}L${f(x - r * 0.1)} ${f(y + r * 0.6)}`, h.shade(col, -0.45), 1.4, 0.85);
+    return s;
+  }
+  /** 거인의 돌 팔: 어깨 (sx,sy)에서 각 ang(도, 0=오른쪽 위로 뻗음 기준)으로 뻗어 손에 물건을 쥠 */
+  function arm(c, sx, sy, ang, L, held) {
+    const h = c.h;
+    const a = (ang * Math.PI) / 180;
+    const ex = sx + Math.cos(a) * L * 0.5;
+    const ey = sy - Math.sin(a) * L * 0.5;
+    const a2 = a + 0.35; // 팔뚝은 조금 더 위로 꺾임
+    const hx = ex + Math.cos(a2) * L * 0.45;
+    const hy = ey - Math.sin(a2) * L * 0.45;
+    const seg = (x1, y1, x2, y2, w) => { const dx = x2 - x1; const dy = y2 - y1; const l = Math.hypot(dx, dy) || 1; const px = (-dy / l) * w; const py = (dx / l) * w; return c.p(`M${f(x1 + px)} ${f(y1 + py)}L${f(x2 + px * 0.85)} ${f(y2 + py * 0.85)}L${f(x2 - px * 0.85)} ${f(y2 - py * 0.85)}L${f(x1 - px)} ${f(y1 - py)}Z`, c.vg(EARTHSTONE, 0.25, -0.3), 2.6); };
+    let s = c.ci(sx, sy, 6.4, c.sg(h.shade(EARTHSTONE, -0.05)), 2.4); // 어깨
+    s += seg(sx, sy, ex, ey, 6.6);
+    s += c.ci(ex, ey, 5.6, c.sg(h.shade(EARTHSTONE, -0.05)), 2.4); // 팔꿈치
+    s += seg(ex, ey, hx, hy, 5.8);
+    s += c.ln(`M${f(sx + (ex - sx) * 0.45 - 2)} ${f(sy + (ey - sy) * 0.45 - 2)}l3 4M${f(ex + (hx - ex) * 0.5 - 2)} ${f(ey + (hy - ey) * 0.5 - 2)}l3 4`, h.shade(EARTHSTONE, -0.45), 1.3, 0.8);
+    // 손바닥 → 쥔 것 → 앞 손가락 둘(쥔 것을 감쌈)
+    const rx = hx + Math.cos(a2) * 8;
+    const ry = hy - Math.sin(a2) * 8;
+    s += c.p(`M${f(hx - 6)} ${f(hy + 2)}Q${f(hx - 4)} ${f(hy - 7)} ${f(hx + 4)} ${f(hy - 6)}Q${f(hx + 8)} ${f(hy)} ${f(hx + 3)} ${f(hy + 6)}Q${f(hx - 3)} ${f(hy + 7)} ${f(hx - 6)} ${f(hy + 2)}Z`, c.vg(h.shade(EARTHSTONE, 0.08), 0.25, -0.3), 2.4);
+    if (held) {
+      s += held(rx, ry);
+      s += c.ol(`M${f(hx + 2)} ${f(hy + 3)}Q${f(rx + 6)} ${f(ry + 9)} ${f(rx + 9)} ${f(ry + 1)}M${f(hx - 1)} ${f(hy + 5)}Q${f(rx)} ${f(ry + 12)} ${f(rx + 5)} ${f(ry + 8)}`, h.shade(EARTHSTONE, 0.05), 3.2);
+    }
+    return { s, hand: [rx, ry] };
+  }
+  const POSE_ANG = { idle: 30, aim: 58, fire: -8 };
+
+  /* ---------- 단계별 ---------- */
+  /* Lv1: 나무 비탈대 위 바위 + 받침 쐐기 */
+  function lv1(c, pose) {
+    const h = c.h;
+    let o = legendPlat(c, 1);
+    o += footShade(c, 50, 103, 18, 5);
+    o += c.ol('M36 104L36 80M64 104L64 66', M.woodD, 3);
+    o += c.p('M30 84L70 64L72 70L32 90Z', c.vg(M.plank, 0.2, -0.3), 2.4);
+    o += c.ln('M40 79L42 84M50 74L52 79M60 69L62 74', h.shade(M.plank, -0.35), 1.2, 0.8);
+    o += c.p('M38 82L42 76L44 80Z', c.vg(M.woodD, 0.1, -0.2), 1.6); // 쐐기
+    if (pose !== 'fire') o += rock(c, pose === 'aim' ? 60 : 54, pose === 'aim' ? 60 : 64, 9, ROCK, 0.4);
+    else o += motion(c, 'M24 92H36M22 97H32', '#ffffff', 1.8, 0.8) + smoke(c, 30, 92, 4, '#d8d0c0', 0.8);
+    return o;
+  }
+
+  /* Lv2·3: 돌 비탈 성채. Lv3는 탑 위 돌 거인 팔이 바위를 듦 */
+  function lv23(c, pose, L3) {
+    const h = c.h;
+    let o = legendPlat(c, L3 ? 3 : 2, { stone: '#c0b89c', trim: GOLD });
+    o += footShade(c, 50, 103, 20, 6);
+    const top = L3 ? 66 : 74;
+    o += masonry(c, 50, top, 104, L3 ? 12 : 12.5, 15.5, 0.3, EARTHSTONE, { ch: 7, bw: 9, seed: L3 ? 131 : 129 });
+    o += litWindow(c, 50, L3 ? 92 : 95, 4.4, 6, '#ffc65a', { frame: '#7a7258' });
+    o += c.p('M46 104V98Q50 94 54 98V104Z', c.vg('#3a3426', 0.1, -0.2), 2.2);
+    if (L3) o += metalBand(c, 50, 78, 80.6, 13, 3.9, GOLD);
+    o += cyl(c, 50, top - 3, top, L3 ? 13.5 : 14, 4, c.cg('#b0a888'), c.vg('#c8c0a4', 0.1, -0.1), 2.4);
+    if (!L3) {
+      // 쌓인 바위 + 앞으로 기운 돌 비탈
+      o += rock(c, 42, top - 8, 6, ROCK, 1.1) + rock(c, 57, top - 9, 7, h.shade(ROCK, -0.08), 2.2);
+      o += c.p(`M58 ${top - 2}L78 ${top + 14}L76 ${top + 18}L56 ${top + 3}Z`, c.vg('#b0a888', 0.2, -0.3), 2.2);
+      if (pose !== 'fire') o += rock(c, pose === 'aim' ? 50 : 51, top - (pose === 'aim' ? 21 : 17), 8, ROCK, 0.5);
+      else o += motion(c, `M66 ${top + 10}L78 ${top + 18}M62 ${top + 14}L72 ${top + 21}`, '#ffffff', 1.8, 0.8) + smoke(c, 76, top + 18, 4.5, '#d8d0c0', 0.85);
+      return o;
+    }
+    o += rock(c, 40, top - 7, 5.5, ROCK, 1.7);
+    const held = pose === 'fire' ? null : (x, y) => rock(c, x, y, 10, ROCK, 0.3);
+    const a = arm(c, 54, top - 6, POSE_ANG[pose], 26, held);
+    o += a.s;
+    if (pose === 'fire') o += motion(c, `M${f(a.hand[0] + 6)} ${f(a.hand[1] + 10)}l10 8M${f(a.hand[0] + 2)} ${f(a.hand[1] + 14)}l8 7`, '#ffffff', 1.8, 0.8) + smoke(c, a.hand[0] + 14, a.hand[1] + 18, 4.5, '#d8d0c0', 0.85);
+    o += gem(c, 54, top - 2, 2.4, 3, '#b8d86a', true);
+    return o;
+  }
+
+  /* 4A 산사태: 절벽 성채 + 위에 쌓인 바위 무더기, 팔이 그 위에 */
+  function landslide(c, pose) {
+    const h = c.h;
+    let o = legendPlat(c, 'A', { stone: '#c8c0a4', trim: GOLD, glow: '#b8d86a' });
+    o += footShade(c, 50, 99, 26, 7);
+    o += c.p('M26 99L30 70L42 62L60 60L72 68L76 99Z', c.vg(EARTHSTONE, 0.2, -0.3), 2.6);
+    o += c.ln('M32 80L40 74L46 82M58 72L66 78L70 90M40 90L48 86', h.shade(EARTHSTONE, -0.4), 1.4, 0.8);
+    o += metalBand(c, 51, 84, 86.6, 24, 4, GOLD);
+    o += c.p('M45 99V91Q50 86 55 91V99Z', c.vg('#3a3426', 0.1, -0.2), 2.2);
+    o += rock(c, 34, 62, 7, ROCK, 0.9) + rock(c, 46, 58, 8, h.shade(ROCK, -0.06), 2.1) + rock(c, 60, 58, 7.5, ROCK, 3.3) + rock(c, 40, 50, 6.5, h.shade(ROCK, 0.06), 1.5) + rock(c, 54, 48, 7, ROCK, 2.7);
+    const held = pose === 'fire' ? null : (x, y) => rock(c, x, y, 11, ROCK, 0.3);
+    const a = arm(c, 62, 58, POSE_ANG[pose] + 6, 28, held);
+    o += a.s;
+    if (pose === 'fire') o += motion(c, `M${f(a.hand[0] + 6)} ${f(a.hand[1] + 10)}l10 8M${f(a.hand[0] + 2)} ${f(a.hand[1] + 14)}l8 7`, '#ffffff', 1.8, 0.8) + smoke(c, a.hand[0] + 14, a.hand[1] + 18, 5, '#d8d0c0', 0.85);
+    o += gem(c, 51, 70, 2.8, 3.4, '#b8d86a', true);
+    return o;
+  }
+
+  /* 4B 거인의 철구: 돌 교수대 팔 끝에 쇠사슬로 매단 가시 철구 */
+  function ironBall(c, pose) {
+    const h = c.h;
+    let o = legendPlat(c, 'B', { stone: '#c8c0a4', trim: GOLD, glow: '#b8d86a' });
+    o += footShade(c, 50, 99, 22, 7);
+    o += masonry(c, 44, 60, 99, 10, 13, 0.3, EARTHSTONE, { ch: 7, bw: 9, seed: 141 });
+    o += metalBand(c, 44, 72, 74.6, 10.6, 3.2, M.iron) + metalBand(c, 44, 86, 88.6, 12, 3.6, GOLD);
+    o += c.p('M40 99V92Q44 88 48 92V99Z', c.vg('#3a3426', 0.1, -0.2), 2.2);
+    // 들보 (탑 → 오른쪽)
+    o += c.p('M40 58L80 50L82 56L42 64Z', c.vg('#7a7058', 0.2, -0.3), 2.4);
+    o += c.ln('M50 58L52 62M62 56L64 60M72 54L74 58', '#4a4232', 1.2, 0.8);
+    // 쇠사슬 + 철구 (aim: 뒤로 흔듦, fire: 철구가 떨어져 없음)
+    const sw = pose === 'aim' ? -10 : 0;
+    const bx = 76 + sw * 0.6;
+    const by = 82;
+    if (pose !== 'fire') {
+      let ch = '';
+      for (let i = 0; i < 6; i++) { const t = i / 6; const x = 78 + (bx - 78) * t; const y = 54 + (by - 14 - 54) * t; ch += `M${f(x - 1.6)} ${f(y)}a1.6 2.4 0 1 0 3.2 0a1.6 2.4 0 1 0 -3.2 0`; }
+      o += c.ln(ch, '#1c1426', 2.6) + c.ln(ch, M.ironL, 1.3);
+      let spikes = '';
+      for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; spikes += `M${f(bx + Math.cos(a) * 9 - Math.sin(a) * 2)} ${f(by + Math.sin(a) * 9 + Math.cos(a) * 2)}L${f(bx + Math.cos(a) * 14)} ${f(by + Math.sin(a) * 14)}L${f(bx + Math.cos(a) * 9 + Math.sin(a) * 2)} ${f(by + Math.sin(a) * 9 - Math.cos(a) * 2)}Z`; }
+      o += c.p(spikes, c.vg(M.ironL, 0.3, -0.2), 1.6);
+      o += c.ci(bx, by, 10.5, c.sg('#5c6370'), 2.6);
+      o += c.p(`M${f(bx - 10)} ${f(by)}Q${f(bx)} ${f(by + 4)} ${f(bx + 10)} ${f(by)}`, 'none', 0, ` stroke="#3a4048" stroke-width="${c.sw(2)}"`);
+      o += c.e(bx - 3.5, by - 4, 3, 2, '#ffffff', 0, ' opacity="0.35"');
+    } else {
+      o += c.ln('M78 54L79 66', '#1c1426', 2.6) + c.ln('M78 54L79 66', M.ironL, 1.3);
+      o += motion(c, 'M70 88L84 96M66 92L78 99', '#ffffff', 1.8, 0.8) + smoke(c, 80, 94, 5, '#d8d0c0', 0.85);
+    }
+    o += gem(c, 44, 64, 2.6, 3.2, '#b8d86a', true);
+    return o;
+  }
+
+  T.titan_boulder = {
+    /* 바위를 쥔 손(던지는 곳) */
+    muzzle: [[54, 64], [51, 57], [66, 44], [70, 40], [76, 82]],
+    draw(c, v, pose = 'idle') {
+      c = fine(c);
+      if (v === 1) return lv1(c, pose);
+      if (v === 2) return lv23(c, pose, false);
+      if (v === 3) return lv23(c, pose, true);
+      if (v === 'A') return landslide(c, pose);
+      return ironBall(c, pose);
+    },
+  };
+})();
+
+</script>
+  <script>/* js/art/tower-judgment_spire.js */
+'use strict';
+
+/* =========================================================
+ * 탑 그림 — ✨ 심판의 첨탑 `judgment_spire` (전설, 2026-11-11). 설계: docs/design/towers.md L5
+ *  하얀 대리석 첨탑과 금빛 저울·날개·후광. 빛기둥은 효과가 그림(하늘에서 적에게).
+ *  idle: 후광이 은은함 · aim: 저울·후광이 밝아짐 · fire: 꼭대기에서 하늘로 빛이 솟음
+ *  4A 신의 심판: 거대한 빛의 검을 든 날개 첨탑 · 4B 빛의 비: 세 갈래 빛 첨탑
+ * ========================================================= */
+(() => {
+  const { f, M, fine, poly, cyl, ring, aura, spark, masonry, metalBand, gem, orb } = RG.art._tw;
+  const A = RG.art._tw.A;
+  const { footShade, litWindow, burstRing } = A;
+  const { GOLD, legendPlat } = RG.art._tw.L;
+  const T = RG.art._tw.T;
+  const MARBLE = '#ece6da';
+  const LIGHT = '#fff1a8';
+
+  /* ---------- 부품 ---------- */
+  /** 후광 고리 — 가운데 (x,y), 반지름 r */
+  function halo(c, x, y, r, pose) {
+    const lit = pose === 'idle' ? 0.55 : 1;
+    let s = aura(c, x, y, r * 1.8, r * 1.2, LIGHT, 0.3 + 0.35 * lit);
+    s += c.e(x, y, r, r * 0.34, 'none', 0, ` stroke="#1c1426" stroke-width="${c.sw(4.6)}"`);
+    s += c.e(x, y, r, r * 0.34, 'none', 0, ` stroke="${GOLD}" stroke-width="${c.sw(2.6)}"`);
+    s += c.e(x, y, r, r * 0.34, 'none', 0, ` stroke="#fff6c8" stroke-width="${c.sw(1)}" opacity="0.9"`);
+    return s;
+  }
+  /** 금빛 저울 — 기둥 위 (x,y), 크기 k, 기울기 tilt */
+  function scales(c, x, y, k, tilt = 0) {
+    const t = tilt * k;
+    let s = c.ol(`M${f(x)} ${f(y)}V${f(y - 10 * k)}`, GOLD, 1.8);
+    s += c.ol(`M${f(x - 10 * k)} ${f(y - 9 * k + t)}L${f(x + 10 * k)} ${f(y - 9 * k - t)}`, GOLD, 1.6);
+    for (const [px, py] of [[x - 10 * k, y - 9 * k + t], [x + 10 * k, y - 9 * k - t]]) {
+      s += c.ln(`M${f(px)} ${f(py)}L${f(px - 3 * k)} ${f(py + 6 * k)}M${f(px)} ${f(py)}L${f(px + 3 * k)} ${f(py + 6 * k)}`, '#8a6a20', 0.9, 0.9);
+      s += c.p(`M${f(px - 4 * k)} ${f(py + 6 * k)}Q${f(px)} ${f(py + 9.5 * k)} ${f(px + 4 * k)} ${f(py + 6 * k)}Z`, c.vg(GOLD, 0.35, -0.2), 1.6);
+    }
+    s += c.ci(x, y - 10.5 * k, 1.8 * k, c.sg(GOLD), 1.4);
+    return s;
+  }
+  /** 돌 날개 한 쌍 — 몸 가운데 x, 뿌리 높이 y, 크기 k */
+  function wings(c, x, y, k, col = MARBLE) {
+    const h = c.h;
+    let s = '';
+    for (const d of [-1, 1]) {
+      const P = (u, v) => `${f(x + d * u * k)} ${f(y + v * k)}`;
+      s += c.p(`M${P(3, 2)}Q${P(14, -12)} ${P(24, -16)}Q${P(22, -8)} ${P(26, -6)}Q${P(20, -1)} ${P(23, 3)}Q${P(15, 3)} ${P(16, 8)}Q${P(9, 6)} ${P(3, 8)}Z`, c.vg(col, 0.25, -0.25), 2.2);
+      s += c.ln(`M${P(6, 2)}Q${P(14, -6)} ${P(21, -10)}M${P(6, 5)}Q${P(13, 1)} ${P(19, -1)}`, h.shade(col, -0.3), 1.1, 0.8);
+    }
+    return s;
+  }
+  /** 하늘로 솟는 빛 (fire) */
+  const skyBeam = (c, x, y, w) => c.p(`M${f(x - w)} ${f(y)}L${f(x - w * 0.6)} 0L${f(x + w * 0.6)} 0L${f(x + w)} ${f(y)}Z`, c.ag('#fff6c8', 0.85), 0) + c.r(x - w * 0.25, 0, w * 0.5, y, '#ffffff', 0, 0, ' opacity="0.8"');
+
+  /* ---------- 단계별 ---------- */
+  /* Lv1: 흰 돌 제단 + 작은 저울 + 옅은 후광 */
+  function lv1(c, pose) {
+    let o = legendPlat(c, 1);
+    o += footShade(c, 50, 103, 16, 5);
+    o += c.p('M38 104L40 96H60L62 104Q50 106 38 104Z', c.vg(MARBLE, 0.25, -0.3), 2.2);
+    o += c.p('M42 96L44 76H56L58 96Z', c.vg(MARBLE, 0.3, -0.25), 2.4);
+    o += c.r(41, 72, 18, 4.6, c.vg(MARBLE, 0.35, -0.2), 1, 2.2);
+    o += c.ln('M46 92V80M54 92V80', '#c8bca8', 1.2, 0.7);
+    if (pose === 'fire') o += skyBeam(c, 50, 64, 4);
+    o += scales(c, 50, 72, 0.9, pose === 'aim' ? 2 : 0);
+    o += halo(c, 50, 56, 9, pose);
+    return o;
+  }
+
+  /* Lv2·3: 대리석 첨탑 + 돌 날개 + 저울·후광. Lv3는 높고 금띠 */
+  function lv23(c, pose, L3) {
+    let o = legendPlat(c, L3 ? 3 : 2, { stone: '#e0dac8', trim: GOLD });
+    o += footShade(c, 50, 103, 18, 6);
+    const top = L3 ? 54 : 62;
+    o += masonry(c, 50, top, 104, L3 ? 6.5 : 7, 12, 0.3, MARBLE, { ch: 7, bw: 8, seed: L3 ? 151 : 149 });
+    o += c.p('M46.5 104V97Q50 93 53.5 97V104Z', c.vg('#5a4a40', 0.1, -0.2), 2);
+    o += litWindow(c, 50, L3 ? 88 : 91, 3.6, 5.4, LIGHT, { frame: '#b8a888' });
+    if (L3) o += metalBand(c, 50, 72, 74.4, 8.4, 2.5, GOLD) + metalBand(c, 50, 90, 92.4, 10.4, 3.1, GOLD);
+    o += wings(c, 50, top + 12, L3 ? 1.05 : 0.9);
+    o += c.p(`M${50 - (L3 ? 7.5 : 8)} ${top}L50 ${top - (L3 ? 12 : 10)}L${50 + (L3 ? 7.5 : 8)} ${top}Z`, c.vg(GOLD, 0.4, -0.2), 2.2);
+    if (pose === 'fire') o += skyBeam(c, 50, top - 10, 5);
+    o += scales(c, 50, top - 10, L3 ? 1.1 : 1, pose === 'aim' ? 2 : 0);
+    o += halo(c, 50, top - (L3 ? 27 : 24), L3 ? 11 : 10, pose);
+    if (pose === 'fire') o += burstRing(c, 50, top - (L3 ? 27 : 24), 16, 6, '#fff6c8', 2, 0.8);
+    return o;
+  }
+
+  /* 4A 신의 심판: 큰 날개 첨탑 위에 아래를 향한 빛의 검 */
+  function verdict(c, pose) {
+    let o = legendPlat(c, 'A', { stone: '#e8e2d0', trim: GOLD, glow: LIGHT });
+    o += footShade(c, 50, 99, 22, 6);
+    o += masonry(c, 50, 58, 99, 8, 14, 0.3, MARBLE, { ch: 7, bw: 9, seed: 161 });
+    o += metalBand(c, 50, 70, 72.6, 9.4, 2.8, GOLD) + metalBand(c, 50, 86, 88.6, 12, 3.6, GOLD);
+    o += c.p('M46 99V92Q50 88 54 92V99Z', c.vg('#5a4a40', 0.1, -0.2), 2.2);
+    o += wings(c, 50, 70, 1.35);
+    o += c.p('M41 58L50 48L59 58Z', c.vg(GOLD, 0.4, -0.2), 2.2);
+    const lit = pose === 'idle' ? 0.6 : 1;
+    const sy = pose === 'aim' ? -3 : pose === 'fire' ? 3 : 0;
+    // 빛의 검 (칼끝이 아래) — 첨탑 끝 바로 위에 떠 있음
+    o += aura(c, 50, 30 + sy, 14, 24, LIGHT, 0.3 + 0.35 * lit);
+    o += c.p(`M46 ${18 + sy}H54L53 ${40 + sy}L50 ${46 + sy}L47 ${40 + sy}Z`, c.vg('#fffbe6', 0.3, -0.1), 2.2);
+    o += c.ln(`M50 ${20 + sy}V${42 + sy}`, '#ffe9a0', 1.2, 0.9);
+    o += c.r(40, 14 + sy, 20, 4, c.vg(GOLD, 0.35, -0.25), 1.2, 2.2);
+    o += c.r(48, 7 + sy, 4, 7.5, c.vg('#c8a040', 0.2, -0.2), 1, 1.8);
+    o += c.ci(50, 6 + sy, 2.6, c.sg(GOLD), 1.6);
+    o += halo(c, 50, 16 + sy, 13, pose);
+    if (pose === 'fire') o += burstRing(c, 50, 48, 18, 6, '#fff6c8', 2.4, 0.9) + spark(c, 50, 47, 8, '#ffffff', 0);
+    return o;
+  }
+
+  /* 4B 빛의 비: 세 갈래 첨탑, 끝마다 빛 구슬 */
+  function rain(c, pose) {
+    let o = legendPlat(c, 'B', { stone: '#e8e2d0', trim: GOLD, glow: LIGHT });
+    o += footShade(c, 50, 99, 22, 6);
+    o += masonry(c, 50, 64, 99, 9, 14, 0.3, MARBLE, { ch: 7, bw: 9, seed: 171 });
+    o += metalBand(c, 50, 74, 76.6, 10, 3, GOLD);
+    o += c.p('M46 99V92Q50 88 54 92V99Z', c.vg('#5a4a40', 0.1, -0.2), 2.2);
+    o += wings(c, 50, 78, 1.0);
+    const lit = pose === 'idle' ? 0.6 : 1;
+    for (const [x, y, k] of [[34, 34, 0.8], [66, 34, 0.8], [50, 22, 1]]) {
+      o += c.ol(`M50 64Q${(50 + x) / 2} ${(64 + y) / 2 + 6} ${x} ${y + 8}`, MARBLE, 4);
+      o += c.p(`M${x - 4} ${y + 9}L${x} ${y + 2}L${x + 4} ${y + 9}Z`, c.vg(GOLD, 0.4, -0.2), 1.8);
+      o += aura(c, x, y - 2, 9 * k, 9 * k, LIGHT, 0.3 + 0.35 * lit);
+      o += orb(c, x, y - 2, 4.6 * k, pose === 'idle' ? '#ffe9a0' : '#fff6d0', 2);
+      if (pose === 'fire') o += skyBeam(c, x, y - 6, 3.2);
+    }
+    o += halo(c, 50, 58, 12, pose);
+    return o;
+  }
+
+  T.judgment_spire = {
+    /* 후광 가운데 (빛이 솟는 곳) */
+    muzzle: [[50, 56], [50, 38], [50, 27], [50, 16], [50, 20]],
+    draw(c, v, pose = 'idle') {
+      c = fine(c);
+      if (v === 1) return lv1(c, pose);
+      if (v === 2) return lv23(c, pose, false);
+      if (v === 3) return lv23(c, pose, true);
+      if (v === 'A') return verdict(c, pose);
+      return rain(c, pose);
+    },
+  };
+})();
+
+</script>
+  <script>/* js/art/tower-soul_reaper.js */
+'use strict';
+
+/* =========================================================
+ * 탑 그림 — 🌑 영혼 수확자 `soul_reaper` (전설, 2026-11-11). 설계: docs/design/towers.md D5
+ *  검보라 돌 묘탑과 거대한 낫, 영혼 등불. Lv3부터 두건 쓴 석상(얼굴 없이 어둠과 눈빛 — 사람 아님)이 낫을 듦.
+ *  idle: 등불·눈빛이 은은함 · aim: 낫날·등불이 밝아짐 · fire: 영혼 화살이 번쩍(보랏빛 섬광)
+ *  4A 죽음의 낫: 낫 두 자루를 엇갈려 든 석상 · 4B 영혼 군단: 영혼 등불 여럿이 감도는 묘탑
+ *  모은 영혼 수는 렌더러가 탑 위에 점으로 그림.
+ * ========================================================= */
+(() => {
+  const { f, M, STONE, fine, poly, cyl, ring, aura, spark, masonry, metalBand, gem } = RG.art._tw;
+  const A = RG.art._tw.A;
+  const { footShade, litWindow, stoneRect, smoke, OP } = A;
+  const { GOLD, legendPlat } = RG.art._tw.L;
+  const T = RG.art._tw.T;
+  const ROCK = STONE.dark;
+  const SOUL = '#b8f0d8';
+  const GLOW = '#c890ff';
+
+  /* ---------- 부품 ---------- */
+  /** 낫 — 자루 아래 (x,y), 자루 끝 (x2,y2), 날 방향 d(1=오른쪽) */
+  function scythe(c, x, y, x2, y2, d, lit, k = 1) {
+    const h = c.h;
+    let s = c.ol(`M${f(x)} ${f(y)}L${f(x2)} ${f(y2)}`, '#4a3a48', 2.2 * k);
+    const P = (u, v) => `${f(x2 + d * u * k)} ${f(y2 + v * k)}`;
+    if (lit > 0.7) s += aura(c, x2 + d * 10 * k, y2 + 4 * k, 14 * k, 8 * k, GLOW, 0.5);
+    s += c.p(`M${P(-1, -1)}Q${P(14, -6)} ${P(24, 8)}Q${P(14, 2)} ${P(1, 4)}Z`, c.vg('#d8d4e8', 0.4, -0.25), 2);
+    s += c.ln(`M${P(2, 0)}Q${P(13, -3)} ${P(21, 6)}`, lit > 0.7 ? '#f0e0ff' : '#ffffff', 1.1, 0.85);
+    return s;
+  }
+  /** 영혼 등불 — 고리 (x,y)에 매달림 */
+  function soulLantern(c, x, y, k, lit) {
+    let s = aura(c, x, y + 7 * k, 9 * k, 9 * k, SOUL, 0.3 + 0.35 * lit);
+    s += c.p(`M${f(x - 3.6 * k)} ${f(y + 2.6 * k)}L${f(x + 3.6 * k)} ${f(y + 2.6 * k)}L${f(x + 2.8 * k)} ${f(y + 11 * k)}L${f(x - 2.8 * k)} ${f(y + 11 * k)}Z`, c.vg('#d8fff0', 0.35, -0.1), 1.8);
+    s += c.e(x, y + 7 * k, 1.4 * k, 2.4 * k, '#7affc8', 0, ` opacity="${0.6 + 0.4 * lit}"`);
+    s += c.p(`M${f(x - 4.6 * k)} ${f(y + 3 * k)}L${f(x)} ${f(y - 0.6 * k)}L${f(x + 4.6 * k)} ${f(y + 3 * k)}Z`, c.vg('#4a3a58', 0.3, -0.2), 1.6);
+    s += c.r(x - 3.2 * k, y + 10.6 * k, 6.4 * k, 1.8 * k, '#4a3a58', 0.5, 1.2);
+    return s;
+  }
+  /** 두건 석상: 어깨 가운데 x, 발 y, 높이 ht — 얼굴 자리는 어둠 + 눈빛 */
+  function hooded(c, x, y, ht, lit) {
+    const h = c.h;
+    const w = ht * 0.42;
+    let s = c.p(`M${f(x - w)} ${f(y)}Q${f(x - w * 0.9)} ${f(y - ht * 0.55)} ${f(x - w * 0.5)} ${f(y - ht * 0.78)}Q${f(x - w * 0.45)} ${f(y - ht * 1.02)} ${f(x)} ${f(y - ht * 1.04)}Q${f(x + w * 0.45)} ${f(y - ht * 1.02)} ${f(x + w * 0.5)} ${f(y - ht * 0.78)}Q${f(x + w * 0.9)} ${f(y - ht * 0.55)} ${f(x + w)} ${f(y)}Z`, c.vg('#5a4a6e', 0.25, -0.3), 2.6);
+    s += c.ln(`M${f(x - w * 0.5)} ${f(y - ht * 0.1)}Q${f(x - w * 0.42)} ${f(y - ht * 0.5)} ${f(x - w * 0.3)} ${f(y - ht * 0.72)}M${f(x + w * 0.4)} ${f(y - ht * 0.08)}Q${f(x + w * 0.36)} ${f(y - ht * 0.45)} ${f(x + w * 0.28)} ${f(y - ht * 0.7)}`, '#3a2e48', 1.4, 0.8);
+    s += c.e(x, y - ht * 0.8, w * 0.36, ht * 0.14, '#140c1c', 1.6);
+    s += c.ci(x - w * 0.14, y - ht * 0.8, Math.max(1, ht * 0.03), GLOW, 0, ` opacity="${0.6 + 0.4 * lit}"`) + c.ci(x + w * 0.14, y - ht * 0.8, Math.max(1, ht * 0.03), GLOW, 0, ` opacity="${0.6 + 0.4 * lit}"`);
+    return s;
+  }
+  /** 떠도는 영혼 하나 */
+  const wisp = (c, x, y, k, a = 0.7) => OP(c.p(`M${f(x - 2.4 * k)} ${f(y)}Q${f(x - 3.4 * k)} ${f(y - 4 * k)} ${f(x)} ${f(y - 7 * k)}Q${f(x + 3.4 * k)} ${f(y - 4 * k)} ${f(x + 2.4 * k)} ${f(y)}Q${f(x)} ${f(y + 2 * k)} ${f(x - 2.4 * k)} ${f(y)}Z`, c.vg(SOUL, 0.3, -0.1), 0) + c.ci(x - 0.8 * k, y - 2.6 * k, 0.6 * k, '#1c1426', 0) + c.ci(x + 0.8 * k, y - 2.6 * k, 0.6 * k, '#1c1426', 0), a);
+  const flash = (c, x, y, r) => aura(c, x, y, r * 2, r * 2, GLOW, 0.8) + spark(c, x, y, r, '#f0e0ff', 0);
+
+  /* ---------- 단계별 ---------- */
+  /* Lv1: 낡은 묘비 + 기댄 낫 + 영혼 한 줄기 */
+  function lv1(c, pose) {
+    const lit = pose === 'idle' ? 0.5 : 1;
+    let o = legendPlat(c, 1, { stone: ROCK });
+    o += footShade(c, 50, 103, 16, 5);
+    o += c.p('M40 104V78Q40 68 50 68Q60 68 60 78V104Z', c.vg('#7a6a88', 0.25, -0.3), 2.4);
+    o += c.ln('M45 80H55M50 75V88', '#3a2e48', 1.6, 0.9);
+    o += c.ln('M42 98L46 92L44 86', '#3a2e48', 1.1, 0.7);
+    o += scythe(c, 60, 104, 63, 64, 1, lit, 0.9);
+    o += wisp(c, 34, 76, 1.2, 0.5 + 0.3 * lit);
+    if (pose === 'fire') o += flash(c, 58, 70, 5);
+    return o;
+  }
+
+  /* Lv2·3: 검보라 묘탑 + 영혼 등불. Lv3는 꼭대기에 낫을 든 두건 석상 */
+  function lv23(c, pose, L3) {
+    const lit = pose === 'idle' ? 0.5 : 1;
+    let o = legendPlat(c, L3 ? 3 : 2, { stone: '#7a6a88', trim: GOLD });
+    o += footShade(c, 50, 103, 20, 6);
+    const top = L3 ? 70 : 72;
+    o += c.p(`M67 ${top}L72 ${top - 3}V101L67 104Z`, c.vg('#3a2e48', 0.1, -0.3), 2.4);
+    o += stoneRect(c, 33, top, 34, 104 - top, ROCK, { seed: L3 ? 61 : 57, ch: 7, bw: 10 });
+    o += aura(c, 50, 98, 8, 6, GLOW, 0.4 + 0.2 * lit);
+    o += c.p('M45 104V96Q50 89.5 55 96V104Z', c.vg('#1e1428', 0.1, -0.1), 2.2);
+    o += c.r(30, top - 4, 40, 4.6, c.vg('#6a5a7a', 0.25, -0.3), 0.8, 2.4);
+    if (L3) o += c.r(30, top - 1.6, 40, 2, c.vg(GOLD, 0.3, -0.2), 0.4, 1.4);
+    // 등불 걸이
+    o += c.ol(`M66 ${top - 4}L66 ${top - 16}L74 ${top - 16}`, '#4a3a48', 1.8);
+    o += soulLantern(c, 74, top - 16, 1, lit);
+    if (L3) {
+      o += hooded(c, 48, top - 4, 30, lit);
+      o += scythe(c, 38, top - 2, 34, top - 40, 1, lit, 1.15);
+      o += wisp(c, 26, top - 20, 1.2, 0.5 + 0.3 * lit) + wisp(c, 72, top - 34, 1, 0.45 + 0.3 * lit);
+      if (pose === 'fire') o += flash(c, 52, top - 36, 7);
+    } else {
+      o += c.p(`M38 ${top - 4}L50 ${top - 18}L62 ${top - 4}Z`, c.vg('#3c3050', 0.2, -0.3), 2.4);
+      o += scythe(c, 44, top - 4, 40, top - 34, 1, lit, 1);
+      o += wisp(c, 28, top - 18, 1.1, 0.5 + 0.3 * lit);
+      if (pose === 'fire') o += flash(c, 48, top - 30, 6);
+    }
+    return o;
+  }
+
+  /* 4A 죽음의 낫: 큰 석상이 낫 두 자루를 엇갈려 듦 */
+  function deathScythe(c, pose) {
+    const lit = pose === 'idle' ? 0.5 : 1;
+    let o = legendPlat(c, 'A', { stone: '#7a6a88', trim: GOLD, glow: GLOW });
+    o += footShade(c, 50, 99, 24, 7);
+    o += stoneRect(c, 32, 70, 36, 29, ROCK, { seed: 71, ch: 7, bw: 10 });
+    o += c.p('M45 99V92Q50 86 55 92V99Z', c.vg('#1e1428', 0.1, -0.1), 2.2);
+    o += c.r(29, 66, 42, 5, c.vg('#6a5a7a', 0.25, -0.3), 0.8, 2.4) + c.r(29, 69, 42, 2, c.vg(GOLD, 0.3, -0.2), 0.4, 1.4);
+    o += aura(c, 50, 40, 26, 26, GLOW, 0.2 + 0.25 * lit);
+    o += scythe(c, 30, 70, 38, 14, -1, lit, 1.2);
+    o += scythe(c, 70, 70, 62, 14, 1, lit, 1.2);
+    o += hooded(c, 50, 66, 40, lit);
+    o += wisp(c, 18, 56, 1.4, 0.5 + 0.3 * lit) + wisp(c, 82, 50, 1.3, 0.5 + 0.3 * lit);
+    if (pose === 'fire') o += flash(c, 50, 30, 9);
+    return o;
+  }
+
+  /* 4B 영혼 군단: 높은 묘탑 + 둘레를 도는 영혼 등불 넷 + 영혼들 */
+  function legion(c, pose) {
+    const lit = pose === 'idle' ? 0.5 : 1;
+    let o = legendPlat(c, 'B', { stone: '#7a6a88', trim: GOLD, glow: SOUL });
+    o += footShade(c, 50, 99, 22, 7);
+    o += masonry(c, 50, 52, 99, 10, 14, 0.3, ROCK, { ch: 7, bw: 9, seed: 81 });
+    o += metalBand(c, 50, 66, 68.6, 10.8, 3.2, GOLD) + metalBand(c, 50, 84, 86.6, 12.8, 3.8, GOLD);
+    o += litWindow(c, 50, 80, 4.4, 6, SOUL, { frame: '#5a4a6e' });
+    o += c.p('M46 99V92Q50 88 54 92V99Z', c.vg('#1e1428', 0.1, -0.1), 2.2);
+    o += c.p('M38 52L50 30L62 52Q50 55 38 52Z', c.cg('#3c3050'), 2.6);
+    o += c.ci(50, 28, 3, c.sg(GLOW), 1.6);
+    const ph = pose === 'aim' ? 0.5 : pose === 'fire' ? 1 : 0;
+    for (let i = 0; i < 4; i++) {
+      const a = ph + i * 1.5708;
+      const x = 50 + Math.cos(a) * 26;
+      const y = 58 + Math.sin(a) * 8;
+      o += soulLantern(c, x, y - 8, 0.95, lit);
+    }
+    o += wisp(c, 22, 40, 1.2, 0.5 + 0.3 * lit) + wisp(c, 78, 36, 1.2, 0.5 + 0.3 * lit) + wisp(c, 66, 22, 1, 0.45 + 0.3 * lit);
+    if (pose === 'fire') o += flash(c, 50, 28, 8);
+    return o;
+  }
+
+  T.soul_reaper = {
+    /* 낫날·석상 앞 (영혼 화살이 나가는 곳) */
+    muzzle: [[58, 70], [48, 42], [52, 34], [50, 30], [50, 28]],
+    draw(c, v, pose = 'idle') {
+      c = fine(c);
+      if (v === 1) return lv1(c, pose);
+      if (v === 2) return lv23(c, pose, false);
+      if (v === 3) return lv23(c, pose, true);
+      if (v === 'A') return deathScythe(c, pose);
+      return legion(c, pose);
+    },
+  };
+})();
+
+</script>
+  <script>/* js/art/tower-chrono_spire.js */
+'use strict';
+
+/* =========================================================
+ * 탑 그림 — ⏳ 시간의 탑 `chrono_spire` (신화, 2026-11-11). 설계: docs/design/towers.md L6
+ *  금빛 톱니와 큰 시계판의 탑, 떠 있는 별빛 모래시계. 신화 — 받침에 별빛.
+ *  idle: 바늘이 제자리 · aim: 바늘이 돌며 빛남 · fire: 시계 고리가 퍼짐
+ *  4A 멈춘 세계: 시계판 고리가 여러 겹 도는 탑 · 4B 가속 시계: 바늘이 빙글빙글 도는 쌍 시계판
+ * ========================================================= */
+(() => {
+  const { f, M, fine, poly, cyl, ring, aura, spark, masonry, metalBand, gem } = RG.art._tw;
+  const A = RG.art._tw.A;
+  const { footShade, litWindow, burstRing, motion, tileCone } = A;
+  const { GOLD, legendPlat } = RG.art._tw.L;
+  const T = RG.art._tw.T;
+  const IVORY = '#efe6d2';
+  const BRASS = '#d9a441';
+  const STAR = '#bfe8ff';
+
+  /* ---------- 부품 ---------- */
+  /** 톱니바퀴 — 가운데 (x,y), 반지름 r, 이빨 n, 돌림 rot(라디안) */
+  function gear(c, x, y, r, n, col, rot = 0) {
+    const pts = [];
+    for (let i = 0; i < n * 2; i++) {
+      const a = rot + (i / (n * 2)) * Math.PI * 2;
+      const rr = i % 2 ? r : r * 1.22;
+      const a1 = a - Math.PI / (n * 4);
+      const a2 = a + Math.PI / (n * 4);
+      pts.push([x + Math.cos(a1) * rr, y + Math.sin(a1) * rr], [x + Math.cos(a2) * rr, y + Math.sin(a2) * rr]);
+    }
+    let s = c.p(poly(pts), c.vg(col, 0.3, -0.25), 2);
+    s += c.ci(x, y, r * 0.45, c.h.shade(col, -0.3), 1.4) + c.ci(x, y, r * 0.18, c.h.shade(col, 0.4), 0);
+    return s;
+  }
+  /** 시계판 — 가운데 (x,y), 반지름 r, 바늘 각(시·분, 도) */
+  function dial(c, x, y, r, hA, mA, lit) {
+    let s = aura(c, x, y, r * 1.6, r * 1.6, '#fff1a8', 0.2 + 0.35 * lit);
+    s += c.ci(x, y, r + 2, c.vg(GOLD, 0.35, -0.25), 2.4);
+    s += c.ci(x, y, r, c.sg(IVORY), 1.6);
+    let tk = '';
+    for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; const r1 = r * (i % 3 ? 0.8 : 0.7); tk += `M${f(x + Math.cos(a) * r1)} ${f(y + Math.sin(a) * r1)}L${f(x + Math.cos(a) * r * 0.92)} ${f(y + Math.sin(a) * r * 0.92)}`; }
+    s += c.ln(tk, '#6a5030', Math.max(0.8, r * 0.08), 0.9);
+    const hand = (ang, L, w, col) => { const a = ((ang - 90) * Math.PI) / 180; return c.ln(`M${f(x)} ${f(y)}L${f(x + Math.cos(a) * L)} ${f(y + Math.sin(a) * L)}`, col, w); };
+    s += hand(hA, r * 0.5, Math.max(1.4, r * 0.16), '#3a2a18') + hand(mA, r * 0.78, Math.max(1, r * 0.1), lit > 0.7 ? '#c84a2a' : '#3a2a18');
+    s += c.ci(x, y, Math.max(1, r * 0.12), c.sg(GOLD), 0);
+    return s;
+  }
+  /** 떠 있는 모래시계 — 가운데 (x,y), 크기 k */
+  function hourglass(c, x, y, k, lit, flip = 0) {
+    let s = aura(c, x, y, 9 * k, 11 * k, STAR, 0.25 + 0.35 * lit);
+    const P = (u, v) => `${f(x + u * k)} ${f(y + v * k)}`;
+    s += c.r(x - 6 * k, y - 10 * k, 12 * k, 2.2 * k, c.vg(BRASS, 0.3, -0.2), 0.8, 1.6) + c.r(x - 6 * k, y + 7.8 * k, 12 * k, 2.2 * k, c.vg(BRASS, 0.3, -0.2), 0.8, 1.6);
+    s += c.p(`M${P(-4.6, -7.8)}L${P(4.6, -7.8)}L${P(0.8, 0)}L${P(4.6, 7.8)}L${P(-4.6, 7.8)}L${P(-0.8, 0)}Z`, c.vg('#e8f8ff', 0.3, -0.1), 1.6);
+    const top = flip ? 0.25 : 0.7;
+    s += c.p(`M${P(-3.6 * top, -6.8 + 6 * (1 - top))}L${P(3.6 * top, -6.8 + 6 * (1 - top))}L${P(0.5, -0.6)}L${P(-0.5, -0.6)}Z`, '#ffd27a', 0);
+    s += c.p(`M${P(-3.8, 7)}Q${P(0, 7 - 5 * (1 - top))} ${P(3.8, 7)}Z`, '#ffd27a', 0);
+    s += c.ln(`M${P(0, -0.4)}V${P(0, 6).split(' ')[1]}`, '#ffd27a', 0.8, 0.9);
+    s += spark(c, x + 9 * k, y - 8 * k, 2 * k, '#ffffff', 0) + spark(c, x - 9 * k, y + 6 * k, 1.6 * k, STAR, 0);
+    return s;
+  }
+  const HANDS = { idle: [300, 60], aim: [330, 150], fire: [0, 240] };
+  const ringBurst = (c, x, y, r) => burstRing(c, x, y, r, r * 0.45, '#fff1a8', 2.4, 0.85) + burstRing(c, x, y, r * 1.4, r * 0.62, STAR, 1.8, 0.6);
+
+  /* ---------- 단계별 ---------- */
+  /* Lv1: 돌기둥 위 작은 시계판 + 떠 있는 모래시계 */
+  function lv1(c, pose) {
+    const lit = pose === 'idle' ? 0.5 : 1;
+    let o = legendPlat(c, 1);
+    o += footShade(c, 50, 103, 15, 5);
+    o += c.p('M42 104L44 74H56L58 104Z', c.vg('#d8d0bc', 0.3, -0.25), 2.4);
+    o += c.ln('M47 100V78M53 100V78', '#b8ac98', 1.1, 0.7);
+    o += gear(c, 44, 88, 4, 7, BRASS, pose === 'aim' ? 0.3 : 0);
+    const [hA, mA] = HANDS[pose];
+    o += dial(c, 50, 66, 9, hA, mA, lit);
+    o += hourglass(c, 50, 42, 0.8, lit, pose === 'fire');
+    if (pose === 'fire') o += ringBurst(c, 50, 66, 16);
+    return o;
+  }
+
+  /* Lv2·3: 시계탑 — 앞면 큰 시계판, 옆 톱니, 뾰족 지붕. Lv3는 금빛·모래시계 */
+  function lv23(c, pose, L3) {
+    const lit = pose === 'idle' ? 0.5 : 1;
+    let o = legendPlat(c, L3 ? 3 : 2, { stone: '#e0d8c4', trim: GOLD });
+    o += footShade(c, 50, 103, 19, 6);
+    const top = L3 ? 58 : 64;
+    o += masonry(c, 50, top, 104, L3 ? 12 : 11.5, 15, 0.3, IVORY, { ch: 7, bw: 9, seed: L3 ? 181 : 179 });
+    o += c.p('M46 104V97Q50 93 54 97V104Z', c.vg('#5a4a30', 0.1, -0.2), 2.2);
+    if (L3) o += metalBand(c, 50, 90, 92.4, 14, 4.2, GOLD);
+    const rot = pose === 'aim' ? 0.35 : pose === 'fire' ? 0.7 : 0;
+    o += gear(c, 36, top + 22, L3 ? 6 : 5, 8, BRASS, rot) + gear(c, 64, top + 26, L3 ? 5 : 4.4, 7, BRASS, -rot);
+    const [hA, mA] = HANDS[pose];
+    o += dial(c, 50, top + 12, L3 ? 10 : 9, hA, mA, lit);
+    o += tileCone(c, 50, top, L3 ? 28 : 26, L3 ? 18 : 15, L3 ? '#c89a3a' : '#8a6a4a', { rows: 3, scallops: 7 });
+    o += c.ol(`M50 ${top - (L3 ? 18 : 15)}V${top - (L3 ? 24 : 20)}`, GOLD, 1.4);
+    if (L3) o += hourglass(c, 50, top - 34, 0.95, lit, pose === 'fire');
+    else o += c.ci(50, top - 21, 2.2, c.sg(GOLD), 1.2);
+    if (pose === 'fire') o += ringBurst(c, 50, top + 12, 18);
+    return o;
+  }
+
+  /* 4A 멈춘 세계: 시계탑 + 둘레를 도는 시계판 고리 세 겹(천문 고리처럼) */
+  function frozen(c, pose) {
+    const lit = pose === 'idle' ? 0.55 : 1;
+    let o = legendPlat(c, 'A', { stone: '#e8e0cc', trim: GOLD, glow: STAR, mythic: true });
+    o += footShade(c, 50, 99, 22, 6);
+    o += masonry(c, 50, 58, 99, 12, 16, 0.3, IVORY, { ch: 7, bw: 9, seed: 191 });
+    o += metalBand(c, 50, 86, 88.6, 15, 4.5, GOLD);
+    o += c.p('M46 99V92Q50 88 54 92V99Z', c.vg('#5a4a30', 0.1, -0.2), 2.2);
+    const [hA, mA] = HANDS[pose];
+    o += dial(c, 50, 72, 10, hA, mA, lit);
+    o += tileCone(c, 50, 58, 28, 16, '#c89a3a', { rows: 3, scallops: 7 });
+    // 고리 세 겹 (기울기를 달리해 도는 천문 고리)
+    const ph = pose === 'aim' ? 12 : pose === 'fire' ? 24 : 0;
+    const cy = 30;
+    for (const [rx, ry, rot, col] of [[30, 9, -14 + ph, GOLD], [24, 7, 20 - ph, BRASS], [18, 14, 70 + ph, '#e8c86a']]) {
+      o += `<g transform="rotate(${rot} 50 ${cy})">` + c.e(50, cy, rx, ry, 'none', 0, ` stroke="#1c1426" stroke-width="${c.sw(4.4)}"`) + c.e(50, cy, rx, ry, 'none', 0, ` stroke="${col}" stroke-width="${c.sw(2.4)}"`) + c.ci(50 + rx, cy, 1.8, '#ffffff', 0) + '</g>';
+    }
+    o += hourglass(c, 50, cy, 1.15, lit, pose === 'fire');
+    if (pose === 'fire') o += ringBurst(c, 50, cy, 26);
+    return o;
+  }
+
+  /* 4B 가속 시계: 쌍 시계판(바늘이 빙글빙글) + 가운데 큰 톱니 */
+  function haste(c, pose) {
+    const lit = pose === 'idle' ? 0.55 : 1;
+    let o = legendPlat(c, 'B', { stone: '#e8e0cc', trim: GOLD, glow: STAR, mythic: true });
+    o += footShade(c, 50, 99, 24, 7);
+    o += masonry(c, 50, 60, 99, 13, 17, 0.3, IVORY, { ch: 7, bw: 9, seed: 201 });
+    o += metalBand(c, 50, 84, 86.6, 15.6, 4.6, GOLD);
+    o += c.p('M46 99V92Q50 88 54 92V99Z', c.vg('#5a4a30', 0.1, -0.2), 2.2);
+    const rot = pose === 'aim' ? 0.5 : pose === 'fire' ? 1 : 0;
+    o += gear(c, 50, 50, 12, 10, BRASS, rot);
+    o += c.ol('M38 50L30 38M62 50L70 38', GOLD, 2.4);
+    const spin = { idle: 0, aim: 120, fire: 240 }[pose];
+    o += dial(c, 28, 32, 10, 300 + spin, 60 + spin * 2, lit) + dial(c, 72, 32, 10, 60 - spin, 300 - spin * 2, lit);
+    if (pose !== 'idle') o += motion(c, 'M15 22Q12 32 15 42M41 22Q44 32 41 42M59 22Q56 32 59 42M85 22Q88 32 85 42', '#fff1a8', 1.8, 0.8);
+    o += hourglass(c, 50, 18, 0.85, lit, pose === 'fire');
+    if (pose === 'fire') o += ringBurst(c, 28, 32, 14) + ringBurst(c, 72, 32, 14);
+    return o;
+  }
+
+  T.chrono_spire = {
+    /* 시계판 가운데 (빛 화살이 나가는 곳) */
+    muzzle: [[50, 66], [50, 76], [50, 70], [50, 72], [28, 32]],
+    draw(c, v, pose = 'idle') {
+      c = fine(c);
+      if (v === 1) return lv1(c, pose);
+      if (v === 2) return lv23(c, pose, false);
+      if (v === 3) return lv23(c, pose, true);
+      if (v === 'A') return frozen(c, pose);
+      return haste(c, pose);
+    },
+  };
+})();
+
+</script>
+  <script>/* js/art/tower-shadow_dragon.js */
+'use strict';
+
+/* =========================================================
+ * 탑 그림 — 🐉 흑룡의 둥지 `shadow_dragon` (신화, 2026-11-11). 설계: docs/design/towers.md D6
+ *  검은 바위 둥지 위의 흑룡(보랏빛 눈·뿔·박쥐 날개). 불길은 효과가 그림(일직선).
+ *  Lv1: 알을 깨고 나오는 새끼 · Lv2: 바위 위의 젊은 흑룡(날개 접음) · Lv3: 날개를 편 흑룡
+ *  idle: 입 다묾 · aim: 입에 보랏빛 불이 모임 · fire: 불길을 뿜음(짧은 불꽃 + 섬광)
+ *  4A 멸망의 숨결: 거대한 흑룡 · 4B 쌍두 흑룡: 머리 둘
+ * ========================================================= */
+(() => {
+  const { f, M, STONE, fine, poly, cyl, ring, aura, spark, masonry, metalBand, gem } = RG.art._tw;
+  const A = RG.art._tw.A;
+  const { footShade, motion, OP } = A;
+  const { GOLD, legendPlat } = RG.art._tw.L;
+  const T = RG.art._tw.T;
+  const SCALE = '#4a3e5e';
+  const BELLY = '#8a7aa2';
+  const MEMBRANE = '#6a5288';
+  const GLOW = '#c890ff';
+  const HORN = '#d8d0e0';
+  const BLACKROCK = '#4a4258';
+
+  /* ---------- 부품 ---------- */
+  /** 머리(오른쪽을 봄) — 목 끝 (x,y), 크기 k, 입 벌림 open(0~1) */
+  function head(c, x, y, k, pose, dir = 1) {
+    const h = c.h;
+    const open = pose === 'idle' ? 0 : pose === 'aim' ? 0.45 : 1;
+    const P = (u, v) => `${f(x + dir * u * k)} ${f(y + v * k)}`;
+    let s = '';
+    // 뿔 둘
+    s += c.p(`M${P(-3, -4)}Q${P(-9, -11)} ${P(-14, -10)}Q${P(-8, -8)} ${P(-5, -2)}Z`, c.vg(HORN, 0.3, -0.25), 1.6);
+    s += c.p(`M${P(0, -5)}Q${P(-3, -13)} ${P(-8, -15)}Q${P(-3, -10)} ${P(-1, -3)}Z`, c.vg(HORN, 0.3, -0.25), 1.6);
+    // 아래턱
+    s += c.p(`M${P(-3, 2)}L${P(13, 3 + open * 4)}L${P(12, 5.5 + open * 5)}L${P(-2, 6)}Z`, c.vg(h.shade(SCALE, 0.1), 0.2, -0.3), 1.8);
+    if (open > 0) {
+      s += c.p(`M${P(0, 1.5)}L${P(12, 2.5)}L${P(12, 3 + open * 4)}L${P(0, 4)}Z`, '#2a0f30', 0);
+      s += aura(c, x + dir * 14 * k, y + 2.5 * k, (5 + 5 * open) * k, (4 + 4 * open) * k, GLOW, 0.5 + 0.4 * open);
+      s += c.e(x + dir * 9 * k, y + 2.8 * k, 3 * k, 1.2 * k * (0.5 + open), '#e0b8ff', 0, ' opacity="0.9"');
+    }
+    // 위턱·머리
+    s += c.p(`M${P(-6, -4)}Q${P(-2, -8)} ${P(5, -6)}L${P(15, -2)}Q${P(17, 0)} ${P(14, 1.5)}L${P(0, 2)}Q${P(-6, 2)} ${P(-6, -4)}Z`, c.vg(SCALE, 0.3, -0.25), 2);
+    s += c.ln(`M${P(3, -5.5)}L${P(13, -1.8)}`, h.shade(SCALE, 0.45), 1, 0.7);
+    s += c.ci(x + dir * 14 * k, y - 0.6 * k, 0.6 * k, '#1c1426', 0); // 콧구멍
+    // 눈
+    s += c.e(x + dir * 3.4 * k, y - 3 * k, 1.8 * k, 1.1 * k, GLOW, 0) + c.e(x + dir * 3.4 * k, y - 3 * k, 0.5 * k, 1 * k, '#1c1426', 0);
+    s += c.ci(x + dir * 3.4 * k, y - 3 * k, 2.8 * k, c.ag(GLOW, 0.6), 0);
+    if (pose === 'fire') {
+      // 짧은 불꽃(입에서) — 진짜 불길은 효과가 그림
+      s += c.p(`M${P(13, 1)}Q${P(22, -4)} ${P(32, 0)}Q${P(24, 3)} ${P(32, 7)}Q${P(22, 8)} ${P(13, 5)}Z`, c.vg('#9a4ae8', 0.3, -0.2), 1.6);
+      s += c.p(`M${P(14, 2)}Q${P(21, 0)} ${P(27, 2.5)}Q${P(21, 5)} ${P(14, 4)}Z`, '#f0dcff', 0);
+      s += spark(c, x + dir * 15 * k, y + 2.5 * k, 4 * k, '#ffffff', 0);
+    }
+    return s;
+  }
+  /** 박쥐 날개 — 어깨 (x,y), 크기 k, 펼침 spread(0~1), 방향 d(-1 뒤로/왼쪽, 1 앞/오른쪽), 위로 올림 lift */
+  function wing(c, x, y, k, spread, d, col, lift = 0) {
+    const h = c.h;
+    const P = (u, v) => `${f(x + d * u * k)} ${f(y + v * k)}`;
+    const sp = 0.45 + 0.55 * spread;
+    const tips = [[-4 * sp, -26 * sp - lift], [10 * sp, -30 * sp - lift], [22 * sp, -22 * sp - lift * 0.7], [28 * sp, -8 * sp]];
+    let path = `M${P(0, 0)}L${P(tips[0][0], tips[0][1])}`;
+    for (let i = 0; i < tips.length; i++) {
+      const [tx, ty] = tips[i];
+      path += `L${P(tx, ty)}`;
+      const nx = i < tips.length - 1 ? tips[i + 1] : [8 * sp, 2];
+      path += `Q${P((tx + nx[0]) / 2 - 1, (ty + nx[1]) / 2 + 4)} ${P(nx[0], nx[1])}`;
+    }
+    path += 'Z';
+    let s = c.p(path, c.vg(col, 0.15, -0.3), 2.2);
+    let bones = '';
+    for (const [tx, ty] of tips) bones += `M${P(0, 0)}L${P(tx, ty)}`;
+    s += c.ln(bones, h.shade(col, 0.4), 1.4, 0.8);
+    s += c.ci(x + d * tips[0][0] * k, y + tips[0][1] * k, 1.2 * k, HORN, 0);
+    return s;
+  }
+  /** 흑룡 한 마리 — 발 가운데 (x,y), 크기 k, 날개 펼침 spread, 머리 둘(twin) */
+  function dragon(c, x, y, k, pose, o = {}) {
+    const h = c.h;
+    const spread = o.spread == null ? 0 : o.spread;
+    const P = (u, v) => `${f(x + u * k)} ${f(y + v * k)}`;
+    const lean = pose === 'aim' ? -1.5 : pose === 'fire' ? 1.5 : 0;
+    let s = '';
+    s += aura(c, x + 4 * k, y - 18 * k, 26 * k, 22 * k, GLOW, o.glow || 0.18);
+    // 날개 둘 다 몸 뒤에서 위로 (머리·목이 가려지지 않게) — 펼친 쪽은 오른쪽 위로 조금 덜 올림
+    s += wing(c, x - 2 * k, y - 18 * k, k * 0.92, spread, -1, h.shade(MEMBRANE, -0.12), spread * 4);
+    if (spread > 0.3) s += wing(c, x + 1 * k, y - 20 * k, k * 0.85, spread, 1, MEMBRANE, -spread * 2);
+    // 꼬리
+    s += c.p(`M${P(-8, -4)}Q${P(-20, 0)} ${P(-22, 8)}Q${P(-24, 13)} ${P(-30, 12)}L${P(-36, 8)}L${P(-30, 15)}Q${P(-22, 18)} ${P(-17, 10)}Q${P(-14, 4)} ${P(-4, 2)}Z`, c.vg(SCALE, 0.2, -0.3), 2);
+    // 뒷다리
+    s += c.p(`M${P(-10, -8)}Q${P(-14, -2)} ${P(-10, 0)}L${P(-4, 0)}Q${P(-2, -4)} ${P(-4, -9)}Z`, c.vg(h.shade(SCALE, 0.05), 0.2, -0.3), 1.8);
+    // 몸통
+    s += c.p(`M${P(-13, -6)}Q${P(-14, -18)} ${P(-4, -24 + lean)}Q${P(6, -27 + lean)} ${P(9, -18 + lean)}Q${P(10, -6)} ${P(3, -2)}Q${P(-7, 0)} ${P(-13, -6)}Z`, c.vg(SCALE, 0.3, -0.3), 2.4);
+    s += c.p(`M${P(-1, -4)}Q${P(5, -10)} ${P(5, -19 + lean)}Q${P(8, -12)} ${P(5, -5)}Z`, c.vg(BELLY, 0.3, -0.15), 0, ' opacity="0.9"');
+    s += c.ln(`M${P(1, -6)}L${P(5, -7)}M${P(2, -10)}L${P(6, -11)}M${P(3, -14)}L${P(6.5, -15)}`, h.shade(BELLY, -0.3), 0.9, 0.8);
+    // 등 가시
+    let sp = '';
+    for (const [u, v] of [[-11, -14], [-8, -19], [-4, -22.5]]) sp += `M${P(u, v)}L${P(u - 3, v - 3)}L${P(u + 1.5, v - 1)}Z`;
+    s += c.p(sp, c.vg(HORN, 0.2, -0.2), 1.4);
+    // 앞다리(발톱이 바위를 짚음)
+    s += c.p(`M${P(2, -10)}Q${P(8, -5)} ${P(7, 0)}L${P(11, 0)}Q${P(11, -6)} ${P(6, -12)}Z`, c.vg(h.shade(SCALE, 0.08), 0.2, -0.3), 1.8);
+    s += c.ln(`M${P(8, 0)}l${f(-1 * k)} ${f(1.4 * k)}M${P(10, 0)}l0 ${f(1.6 * k)}M${P(12, -0.2)}l${f(1 * k)} ${f(1.4 * k)}`, HORN, 1, 0.9);
+    // 목 + 머리 (twin이면 둘)
+    const necks = o.twin ? [[-6, -10], [4, 4]] : [[0, 0]];
+    for (const [dx, dy] of necks) {
+      const hx = x + (14 + dx) * k;
+      const hy = y + (-34 + dy + lean) * k;
+      s += c.p(`M${P(0, -20 + lean)}Q${P(4 + dx * 0.4, -30 + dy * 0.5 + lean)} ${f(hx - 3 * k)} ${f(hy - 2 * k)}L${f(hx - 1 * k)} ${f(hy + 4 * k)}Q${P(9 + dx * 0.3, -26 + dy * 0.5 + lean)} ${P(8, -17 + lean)}Z`, c.vg(SCALE, 0.25, -0.3), 2.2);
+      s += c.p(`M${P(5, -20 + lean)}Q${P(9 + dx * 0.3, -26 + dy * 0.5 + lean)} ${f(hx - 1 * k)} ${f(hy + 3 * k)}`, 'none', 0, ` stroke="${BELLY}" stroke-width="${c.sw(1.6 * k)}" opacity="0.7"`);
+      s += head(c, hx, hy, k * (o.headK || 1), pose);
+    }
+    // 접은 날개 (펼친 날개는 위에서 몸 뒤에 그림)
+    if (spread <= 0.3) s += c.p(`M${P(-6, -20)}Q${P(-16, -26)} ${P(-18, -12)}Q${P(-12, -14)} ${P(-8, -8)}Z`, c.vg(h.shade(SCALE, 0.05), 0.2, -0.3), 2); // 접은 날개
+    return s;
+  }
+  /** 검은 바위 둥지 기둥 — 위 가운데 (x,y) */
+  function rockPillar(c, x, yTop, yBot, w) {
+    const h = c.h;
+    let s = c.p(`M${f(x - w * 0.62)} ${f(yBot)}L${f(x - w * 0.5)} ${f(yTop + 6)}L${f(x - w * 0.2)} ${f(yTop)}L${f(x + w * 0.25)} ${f(yTop + 1)}L${f(x + w * 0.5)} ${f(yTop + 7)}L${f(x + w * 0.62)} ${f(yBot)}Z`, c.vg(BLACKROCK, 0.25, -0.35), 2.6);
+    s += c.ln(`M${f(x - w * 0.3)} ${f(yTop + 8)}L${f(x - w * 0.1)} ${f(yTop + 16)}L${f(x - w * 0.35)} ${f(yTop + 26)}M${f(x + w * 0.2)} ${f(yTop + 10)}L${f(x + w * 0.32)} ${f(yTop + 22)}`, h.shade(BLACKROCK, -0.4), 1.4, 0.85);
+    s += c.ln(`M${f(x - w * 0.28)} ${f(yTop + 12)}L${f(x - w * 0.12)} ${f(yTop + 18)}M${f(x + w * 0.24)} ${f(yTop + 14)}L${f(x + w * 0.3)} ${f(yTop + 20)}`, GLOW, 1.1, 0.7);
+    return s;
+  }
+
+  /* ---------- 단계별 ---------- */
+  /* Lv1: 검은 바위 둥지 위 금 간 알에서 고개를 내민 새끼 흑룡 */
+  function lv1(c, pose) {
+    const h = c.h;
+    let o = legendPlat(c, 1, { stone: BLACKROCK, mythic: false });
+    o += footShade(c, 50, 103, 18, 5);
+    o += c.p('M34 104L38 92L48 88L60 90L66 104Z', c.vg(BLACKROCK, 0.25, -0.35), 2.4);
+    o += aura(c, 50, 80, 16, 14, GLOW, 0.35);
+    // 아래 알껍데기
+    o += c.p('M40 90Q40 100 50 100Q60 100 60 90L57 86L54 89L50 85L46 89L43 86Z', c.vg('#5a4a6e', 0.3, -0.3), 2.2);
+    o += c.ln('M44 93L47 96M55 92L53 97', GLOW, 1.2, 0.85);
+    // 새끼 머리
+    o += c.p('M46 88Q44 80 48 76Q52 74 54 78Q55 84 54 88Z', c.vg(SCALE, 0.3, -0.25), 2);
+    o += head(c, 52, 74, 0.62, pose);
+    // 위 껍데기 조각(머리에 얹힘)
+    o += c.p('M44 72L48 68L51 71L54 67L56 72Q50 70 44 72Z', c.vg('#6a5a7e', 0.3, -0.2), 1.6);
+    return o;
+  }
+
+  /* Lv2: 바위 기둥 위 젊은 흑룡(날개 접음) · Lv3: 더 높은 기둥, 날개를 반쯤 폄 */
+  function lv23(c, pose, L3) {
+    let o = legendPlat(c, L3 ? 3 : 2, { stone: '#6a6278', trim: GOLD });
+    o += footShade(c, 50, 103, 20, 6);
+    const top = L3 ? 74 : 80;
+    o += rockPillar(c, 48, top, 104, L3 ? 30 : 28);
+    if (L3) o += metalBand(c, 48, 92, 94.4, 15, 4.4, GOLD);
+    o += gem(c, 48, top + 10, 2.6, 3.2, GLOW, true);
+    o += dragon(c, 48, top + 1, L3 ? 0.95 : 0.8, pose, { spread: L3 ? 0.6 : 0, glow: L3 ? 0.25 : 0.18 });
+    return o;
+  }
+
+  /* 4A 멸망의 숨결: 큰 바위 둥지 + 날개를 활짝 편 거대한 흑룡 */
+  function doom(c, pose) {
+    let o = legendPlat(c, 'A', { stone: '#6a6278', trim: GOLD, glow: GLOW, mythic: true });
+    o += footShade(c, 50, 99, 26, 7);
+    o += rockPillar(c, 46, 72, 99, 40);
+    o += metalBand(c, 46, 86, 88.6, 22, 6, GOLD);
+    o += gem(c, 46, 80, 3, 3.8, GLOW, true);
+    o += dragon(c, 44, 73, 1.2, pose, { spread: 1, glow: 0.3 });
+    return o;
+  }
+
+  /* 4B 쌍두 흑룡: 머리 둘 달린 흑룡 */
+  function twin(c, pose) {
+    let o = legendPlat(c, 'B', { stone: '#6a6278', trim: GOLD, glow: GLOW, mythic: true });
+    o += footShade(c, 50, 99, 26, 7);
+    o += rockPillar(c, 46, 74, 99, 38);
+    o += metalBand(c, 46, 88, 90.6, 21, 5.6, GOLD);
+    o += gem(c, 46, 82, 3, 3.8, GLOW, true);
+    o += dragon(c, 44, 75, 1.1, pose, { spread: 0.75, twin: true, glow: 0.28, headK: 0.9 });
+    return o;
+  }
+
+  T.shadow_dragon = {
+    /* 입 (불길이 나가는 곳) */
+    muzzle: [[60, 76], [64, 54], [65, 46], [67, 37], [63, 34]],
+    draw(c, v, pose = 'idle') {
+      c = fine(c);
+      if (v === 1) return lv1(c, pose);
+      if (v === 2) return lv23(c, pose, false);
+      if (v === 3) return lv23(c, pose, true);
+      if (v === 'A') return doom(c, pose);
+      return twin(c, pose);
+    },
+  };
+})();
+
+</script>
+  <script>/* js/art/fx-sprites.js */
+'use strict';
+
+/* =========================================================
+ * 효과 그림 (2026-11-11) — 탑 그림과 따로 움직이는 것들. 100×100, 가운데 (50,50).
+ *  phoenix (불사조 둥지의 불사조, 오른쪽을 봄, 0 = 날개 위 · 1 = 날개 아래)
+ *  boulder (거인의 바위가 굴리는 바위) · ironball (거인의 철구)
+ *  렌더러가 RG.art.fxSprite(name, frame)로 불러 회전시키며 그림.
+ * ========================================================= */
+(() => {
+  const { f, Ctx, fine, flame, spark } = RG.art._tw;
+  const wrap = (body) => `<g stroke="#1c1426" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">${body}</g>`;
+
+  /** 불사조: 몸·머리 볏·불꽃 꼬리·불꽃 날개 */
+  function phoenix(c, frame) {
+    const h = c.h;
+    const up = frame === 0;
+    let s = c.e(50, 52, 40, 30, c.ag('#ffb347', 0.45), 0);
+    // 꼬리(왼쪽으로 흘러가는 불꽃 깃)
+    s += c.p('M44 54Q28 50 10 40Q20 52 8 58Q22 58 12 70Q28 64 44 60Z', c.vg('#ff6a2a', 0.3, -0.2), 2.4);
+    s += c.p('M42 56Q30 54 18 48Q26 56 20 62Q30 60 42 59Z', '#ffd27a', 0, ' opacity="0.9"');
+    // 먼 날개
+    const farW = up ? 'M54 46Q50 30 56 14Q60 24 66 18Q66 28 74 24Q70 36 76 36Q68 44 62 47Z' : 'M54 56Q50 72 56 88Q60 78 66 84Q66 74 74 78Q70 66 76 66Q68 58 62 55Z';
+    s += c.p(farW, c.vg('#e0482a', 0.2, -0.25), 2.2);
+    // 몸
+    s += c.p('M40 56Q42 44 56 44Q70 44 74 50Q70 60 56 62Q44 62 40 56Z', c.vg('#ff7a2a', 0.35, -0.25), 2.6);
+    s += c.p('M46 56Q50 50 60 51Q66 53 68 55Q60 60 52 59Q47 58 46 56Z', '#ffd27a', 0, ' opacity="0.85"');
+    // 머리 + 볏 + 부리 + 눈
+    s += c.p('M66 46Q66 36 76 36Q84 37 84 44Q82 50 74 51Z', c.vg('#ff8a3a', 0.35, -0.2), 2.4);
+    s += c.p('M70 37Q66 26 72 20Q72 28 77 30Q76 22 82 18Q80 28 80 37Z', c.vg('#ffb347', 0.4, -0.2), 2);
+    s += c.p('M83 42L93 45L83 47Z', c.vg('#ffd040', 0.3, -0.2), 1.8);
+    s += c.ci(77, 42, 2.2, '#2a1018', 0) + c.ci(77.6, 41.4, 0.8, '#ffffff', 0);
+    // 가까운 날개
+    const nearW = up ? 'M50 50Q34 34 32 6Q42 16 46 10Q48 22 56 14Q56 26 64 22Q62 34 70 34Q64 44 62 50Z' : 'M50 54Q34 70 32 98Q42 88 46 94Q48 82 56 90Q56 78 64 82Q62 70 70 70Q64 60 62 54Z';
+    s += c.p(nearW, c.vg('#ff6a2a', 0.35, -0.2), 2.4);
+    const vein = up ? 'M54 48Q42 30 40 12M56 46Q52 30 54 16M58 46Q60 34 64 26' : 'M54 56Q42 74 40 92M56 58Q52 74 54 88M58 58Q60 70 64 78';
+    s += c.ln(vein, '#ffe08a', 1.4, 0.85);
+    s += spark(c, 20, 44, 2.6, '#fff1a8', 0) + spark(c, 14, 64, 2.2, '#ffd27a', 0);
+    return s;
+  }
+
+  /** 바위: 모난 돌덩이(굴러도 모양이 보이도록 금·이끼) */
+  function boulder(c) {
+    const h = c.h;
+    let s = c.p('M50 14L72 20L86 40L84 64L68 82L44 86L22 74L14 50L22 28Z', c.vg('#a89a84', 0.25, -0.35), 3);
+    s += c.p('M50 14L72 20L62 34L44 30Z', c.vg('#c8bca8', 0.3, -0.1), 0, ' opacity="0.9"');
+    s += c.p('M22 28L44 30L36 52L14 50Z', '#b8ac98', 0, ' opacity="0.7"');
+    s += c.p('M68 82L84 64L66 60L56 76Z', h.shade('#a89a84', -0.3), 0, ' opacity="0.8"');
+    s += c.ln('M44 30L36 52L46 70M36 52L18 60M62 34L66 60L84 64M66 60L56 76', h.shade('#a89a84', -0.45), 1.8, 0.9);
+    s += c.p('M24 72Q30 66 38 74Q32 80 24 72Z', '#6a8a4a', 1.4);
+    s += c.ci(40, 24, 3, '#ffffff', 0, ' opacity="0.35"');
+    return s;
+  }
+  /** 철구: 쇠공 + 리벳 띠 + 가시 */
+  function ironball(c) {
+    let s = '';
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const x1 = 50 + Math.cos(a) * 34;
+      const y1 = 50 + Math.sin(a) * 34;
+      const x2 = 50 + Math.cos(a) * 46;
+      const y2 = 50 + Math.sin(a) * 46;
+      const px = -Math.sin(a) * 5;
+      const py = Math.cos(a) * 5;
+      s += c.p(`M${f(x1 + px)} ${f(y1 + py)}L${f(x2)} ${f(y2)}L${f(x1 - px)} ${f(y1 - py)}Z`, c.vg('#8a93a0', 0.3, -0.2), 2);
+    }
+    s += c.ci(50, 50, 36, c.sg('#5c6370'), 3);
+    s += c.p('M14 50Q50 64 86 50Q50 58 14 50Z', '#3a4048', 1.6);
+    s += [20, 35, 50, 65, 80].map((x) => c.ci(x, 50 + Math.sin(((x - 14) / 72) * Math.PI) * 6, 2, '#a8b0bc', 1)).join('');
+    s += c.e(38, 34, 10, 6, '#ffffff', 0, ' opacity="0.3"');
+    return s;
+  }
+
+  RG.art.fxSprite = function fxSprite(name, frame = 0) {
+    const c = fine(Ctx(1, name === 'phoenix' ? 'fire' : 'earth'));
+    const body = name === 'phoenix' ? phoenix(c, frame) : name === 'ironball' ? ironball(c) : boulder(c);
+    return c.h.svg('0 0 100 100', c.defs.join(''), wrap(body));
   };
 })();
 
@@ -26598,6 +28403,23 @@ RG.art.sprites = (() => {
     ctx.restore();
   }
 
+  /**
+   * 불투명한 부분의 범위 [x0, y0, x1, y1] (화소, 끝 포함) — 불러올 때 한 번만 읽어 둠.
+   * 렌더러가 화면 크기로 줄일 때마다 화소를 다시 읽지 않고 이 범위로 잘라 냄(전투 중 읽기 = 느림).
+   */
+  function opaqueBounds(ctx, w, h) {
+    let d;
+    try { d = ctx.getImageData(0, 0, w, h).data; } catch (e) { return null; }
+    let x0 = w; let y0 = h; let x1 = -1; let y1 = -1;
+    for (let y = 0; y < h; y++) {
+      const row = y * w * 4 + 3;
+      for (let x = 0; x < w; x++) {
+        if (d[row + x * 4]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; y1 = y; }
+      }
+    }
+    return x1 < 0 ? null : [x0, y0, x1, y1];
+  }
+
   function toCanvas(svg, w, h, opt) {
     return new Promise((resolve) => {
       const img = new Image();
@@ -26607,6 +28429,7 @@ RG.art.sprites = (() => {
         const ctx = cv.getContext('2d');
         try { ctx.drawImage(img, 0, 0, w, h); } catch (e) { /* 무시 */ }
         if (opt && opt.light) volumeLight(ctx, w, h, opt.light);
+        cv._bb = opaqueBounds(ctx, w, h);
         resolve(cv);
       };
       img.onerror = () => resolve(null);
@@ -26660,6 +28483,11 @@ RG.art.sprites = (() => {
       for (const lv of [1, 2, 3]) jobs.push(load(towerKey(t, lv, null), () => A.tower(t, lv, null, 'idle'), TW, TH));
       for (const b of ['A', 'B']) jobs.push(load(towerKey(t, 4, b), () => A.tower(t, 4, b, 'idle'), TW, TH));
       for (const p of ['aim', 'fire']) jobs.push(load(towerKey(t, 1, null, p), () => A.tower(t, 1, null, p), TW, TH));
+    }
+    // 탑과 따로 움직이는 효과 그림 (불사조·바위·철구)
+    if (A.fxSprite) {
+      if (types.has('phoenix_nest')) for (const fr of [0, 1]) jobs.push(load(`fx:phoenix:${fr}`, () => A.fxSprite('phoenix', fr), 120, 120));
+      if (types.has('titan_boulder')) { jobs.push(load('fx:boulder', () => A.fxSprite('boulder', 0), 120, 120)); jobs.push(load('fx:ironball', () => A.fxSprite('ironball', 0), 120, 120)); }
     }
     const enemies = new Set();
     for (const w of RG.grid.parseWaves(game.def.waves || [])) for (const g of w.groups) enemies.add(g.e);
@@ -27870,6 +29698,11 @@ RG.fx = (() => {
   const texts = [];      // 떠오르는 글자
   const areas = [];      // 바닥 경고 원
   const drops = [];      // 떨어지는 고드름 (고드름 구름)
+  const marks = [];      // 심판의 표식 (적을 따라감)
+  const pillars = [];    // 빛기둥 (심판의 첨탑)
+  const wisps = [];      // 영혼 (죽은 자리 → 영혼 수확자)
+  const breaths = [];    // 어둠 불길 (흑룡의 둥지)
+  let curGame = null;    // 표식이 적을 따라가도록
   let shake = 0;
   const settings = { numbers: true, shake: true };
   const MAX_PARTS = 900;
@@ -27891,23 +29724,28 @@ RG.fx = (() => {
 
   // 화면에 적이 아주 많을 때(렌더러가 알려 줌) 조각·글자 수를 줄여 느린 기기에서도 매끄럽게
   let lite = false;
-  function setLite(v) { lite = !!v; }
+  let lite2 = false; // 느린 기기의 가벼운 단계: 더 적게
+  function setLite(v) { lite = !!v; lite2 = v === 2; }
   let gameSpeed = 1; // 판 배속 (판 시간에 맞춰야 하는 효과 — 고드름 낙하)
   function setSpeed(v) { gameSpeed = v > 0 ? v : 1; }
   function burst(x, y, color, n, speed = 2.2, life = 0.5, size = 0.06, gravity = 0) {
-    const cap = lite ? 160 : MAX_PARTS; // 적이 아주 많으면 조각 수를 줄임(그래도 화면은 충분히 붐빔)
+    const cap = lite2 ? 70 : lite ? 160 : MAX_PARTS; // 적이 아주 많으면 조각 수를 줄임(그래도 화면은 충분히 붐빔)
     for (let i = 0; i < n && parts.length < cap; i++) {
       const a = rnd() * Math.PI * 2;
       const s = speed * (0.3 + rnd() * 0.7);
       parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - speed * 0.3, life, max: life, size: size * (0.6 + rnd() * 0.8), color, g: gravity });
     }
   }
-  function ring(x, y, radius, color, life = 0.45, width = 0.08) { rings.push({ x, y, r: radius, color, life, max: life, w: width }); }
+  // 적이 아주 많으면(가벼운 모드) 고리·번개는 한꺼번에 몇 개까지만 — 고리마다 선 긋기 호출이 따로 들어 휴대폰에서 비쌌음
+  const LITE_RINGS = 18;
+  const LITE_BOLTS = 10;
+  function ring(x, y, radius, color, life = 0.45, width = 0.08) { if (lite && rings.length >= (lite2 ? 8 : LITE_RINGS)) return; rings.push({ x, y, r: radius, color, life, max: life, w: width }); }
   function text(x, y, str, color, big) {
     if (texts.length >= MAX_TEXTS) texts.shift();
     texts.push({ x: x + (rnd() - 0.5) * 0.2, y, str, color, life: big ? 1.1 : 0.8, max: big ? 1.1 : 0.8, big: !!big });
   }
   function bolt(points, color, life = 0.16, width = 0.06, jag = 0.16) {
+    if (lite && bolts.length >= (lite2 ? 5 : LITE_BOLTS)) return;
     // 지그재그 미리 계산
     const pts = [];
     for (let i = 0; i < points.length - 1; i++) {
@@ -27925,16 +29763,78 @@ RG.fx = (() => {
     }
     bolts.push({ pts, color, life, max: life, w: width });
   }
-  function line(ax, ay, bx, by, color, life = 0.14, width = 0.07) { bolts.push({ pts: [[ax, ay], [bx, by]], color, life, max: life, w: width, straight: true }); }
+  function line(ax, ay, bx, by, color, life = 0.14, width = 0.07) { if (lite && bolts.length >= LITE_BOLTS) return; bolts.push({ pts: [[ax, ay], [bx, by]], color, life, max: life, w: width, straight: true }); }
 
   /** 시뮬레이션 이벤트 처리 */
   function onEvents(events, game) {
+    curGame = game || curGame;
     for (const e of events) {
       switch (e.type) {
+        case 'blizzard':
+          ring(e.x, e.y, e.radius, '#dff6ff', 0.5, 0.1);
+          burst(e.x, e.y - 0.3, '#f4fcff', lite ? 6 : 16, 2.2, 0.6, 0.06, 0.6);
+          break;
+        case 'shatter':
+          // 눈보라가 끝나며 얼음이 터짐
+          ring(e.x, e.y, e.radius, '#bfeaff', 0.45, 0.14);
+          ring(e.x, e.y, e.radius * 0.6, '#ffffff', 0.35, 0.08);
+          burst(e.x, e.y - 0.2, '#dff6ff', lite ? 10 : 30, 3.2, 0.5, 0.08, 2.4);
+          addShake(0.12);
+          break;
+        case 'roller':
+          burst(e.x, e.y, e.type === 'boulder' ? '#b8a88a' : '#dfe8ff', lite ? 5 : 12, 2, 0.5, 0.07, 1);
+          break;
+        case 'crush':
+          if (!lite) burst(e.x, e.y, '#c8b898', 5, 1.6, 0.35, 0.06, 2.2);
+          break;
+        case 'rollerEnd':
+          burst(e.x, e.y, e.type === 'boulder' ? '#b8a88a' : '#e8f0ff', lite ? 4 : 12, 2.4, 0.5, 0.07, 1.2);
+          break;
+        case 'smiteMark': {
+          const life = Math.max(0.2, (e.delay || 0.8) / gameSpeed);
+          marks.push({ id: e.enemyId, x: e.x, y: e.y, life, max: life });
+          break;
+        }
+        case 'smite':
+          pillars.push({ x: e.x, y: e.y, life: 0.45, max: 0.45, w: Math.max(0.45, e.radius) });
+          ring(e.x, e.y, Math.max(0.6, e.radius + 0.2), '#fff3b0', 0.4, 0.12);
+          burst(e.x, e.y - 0.3, '#fff6c8', lite ? 8 : 22, 2.6, 0.5, 0.07, -0.6);
+          addShake(0.12);
+          break;
+        case 'soul': {
+          const tw = game && game.state.towers.find((q) => q.id === e.towerId);
+          if (tw && wisps.length < (lite ? 10 : 30)) wisps.push({ x: e.x, y: e.y - 0.3, tx: tw.x, ty: tw.y - 0.9, life: 0.6, max: 0.6 });
+          break;
+        }
+        case 'soulStorm':
+          ring(e.x, e.y, e.radius, '#c890ff', 0.7, 0.16);
+          ring(e.x, e.y, e.radius * 0.7, '#7a3ab8', 0.55, 0.1);
+          burst(e.x, e.y - 0.4, '#d9b0ff', lite ? 12 : 40, 3.4, 0.7, 0.08, -0.4);
+          addShake(0.3);
+          break;
+        case 'chrono':
+          // 시간의 탑: 금빛 시계 고리 두 겹
+          ring(e.x, e.y, e.radius, '#ffe39a', 0.8, 0.12);
+          ring(e.x, e.y, e.radius * 0.55, '#fff6d8', 0.6, 0.06);
+          burst(e.x, e.y - 0.6, '#ffe8a8', lite ? 8 : 20, 2, 0.8, 0.05, -0.3);
+          break;
+        case 'breath': {
+          breaths.push({ x1: e.x1, y1: e.y1, x2: e.x2, y2: e.y2, w: e.width, life: 0.35, max: 0.35 });
+          const n = lite ? 6 : 16;
+          for (let i = 0; i < n && parts.length < (lite2 ? 70 : lite ? 160 : MAX_PARTS); i++) {
+            const k = rnd();
+            const x = e.x1 + (e.x2 - e.x1) * k;
+            const y = e.y1 + (e.y2 - e.y1) * k;
+            const life = 0.35 + rnd() * 0.2;
+            parts.push({ x, y, vx: (rnd() - 0.5) * 0.8, vy: -0.6 - rnd() * 0.8, life, max: life, size: 0.08 + rnd() * 0.08, color: i % 3 ? '#9a4ae8' : '#e0b8ff', g: -0.4 });
+          }
+          break;
+        }
         case 'hit':
           if (e.dot) break;
           burst(e.x, e.y - 0.2, colorOf(e.element), e.beam ? 2 : 4, 1.6, 0.3, 0.05);
-          if (settings.numbers && (e.amount >= 1)) text(e.x, e.y - 0.55, String(Math.round(e.amount)), e.crit ? '#ffe066' : '#ffffff', e.crit);
+          // 적이 아주 많으면 그리는 글자도 최근 몇 개뿐 — 만들기도 그만큼만(쓰레기 수거 줄이기). 치명타는 늘 보임
+          if (settings.numbers && (e.amount >= 1) && (!lite || e.crit || texts.length < (lite2 ? 6 : 12))) text(e.x, e.y - 0.55, String(Math.round(e.amount)), e.crit ? '#ffe066' : '#ffffff', e.crit);
           break;
         case 'kill': {
           const big = e.boss;
@@ -27963,7 +29863,7 @@ RG.fx = (() => {
           const spread = (full ? 360 : e.cone) * (Math.PI / 180);
           const n = lite ? (full ? 8 : 6) : (full ? 18 : 12);
           const cols = ['#fff1a8', '#ffc85a', '#ff8a3d', '#ff5a2a'];
-          for (let i = 0; i < n && parts.length < (lite ? 160 : MAX_PARTS); i++) {
+          for (let i = 0; i < n && parts.length < (lite2 ? 70 : lite ? 160 : MAX_PARTS); i++) {
             const a = e.angle + (rnd() - 0.5) * spread;
             const sp = e.range * (2.2 + rnd() * 1.4);
             const life = 0.32 + rnd() * 0.12;
@@ -28103,7 +30003,7 @@ RG.fx = (() => {
     }
   }
 
-  const TIMED = [rings, bolts, texts, areas];
+  const TIMED = [rings, bolts, texts, areas, marks, pillars, wisps, breaths];
   // 조각 묶음: 색마다 투명도 7단계 칸을 한 번 만들어 두고 매 프레임 다시 씀 (문자열 키·배열을 새로 만들지 않음)
   const pBuckets = new Map();
   const pOrder = [];
@@ -28179,6 +30079,65 @@ RG.fx = (() => {
       ctx.lineWidth = Math.max(1, b.w * T * 0.35);
       ctx.stroke();
     }
+    // 어둠 불길(흑룡): 굵은 보랏빛 줄기 + 가는 흰 속불, 점점 가늘어지며 사라짐
+    for (const b of breaths) {
+      const a = b.life / b.max;
+      ctx.globalAlpha = a;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#7a2ad8';
+      ctx.lineWidth = Math.max(3, b.w * T * (0.6 + 0.6 * a));
+      ctx.beginPath(); ctx.moveTo(X(b.x1), Y(b.y1)); ctx.lineTo(X(b.x2), Y(b.y2)); ctx.stroke();
+      ctx.strokeStyle = '#f0dcff';
+      ctx.lineWidth = Math.max(1.5, b.w * T * 0.25 * (0.5 + a));
+      ctx.stroke();
+    }
+    // 빛기둥(심판): 하늘에서 내려오는 두 겹 기둥
+    for (const p of pillars) {
+      const a = p.life / p.max;
+      const cx = X(p.x);
+      const by = Y(p.y);
+      const w = p.w * T * (0.5 + 0.5 * a);
+      ctx.globalAlpha = 0.55 * a;
+      ctx.fillStyle = '#ffe9a0';
+      ctx.fillRect(cx - w / 2, by - T * 6, w, T * 6);
+      ctx.globalAlpha = 0.9 * a;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(cx - w * 0.18, by - T * 6, w * 0.36, T * 6);
+    }
+    // 영혼: 죽은 자리에서 수확자 쪽으로 휘어 날아감
+    if (wisps.length) {
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = '#d9b0ff';
+      ctx.beginPath();
+      for (const w of wisps) {
+        const k = 1 - w.life / w.max;
+        const e2 = k * k * (3 - 2 * k);
+        const x = w.x + (w.tx - w.x) * e2 + Math.sin(k * Math.PI) * 0.4;
+        const y = w.y + (w.ty - w.y) * e2 - Math.sin(k * Math.PI) * 0.6;
+        const r = Math.max(1.5, T * 0.07);
+        ctx.moveTo(X(x) + r, Y(y));
+        ctx.arc(X(x), Y(y), r, 0, Math.PI * 2);
+      }
+      ctx.fill();
+    }
+    // 심판의 표식: 적을 따라다니는 금빛 원과 내려오는 십자
+    if (marks.length) {
+      ctx.globalCompositeOperation = 'source-over';
+      for (const m of marks) {
+        const e = curGame && curGame.state.enemies.find((q) => q.id === m.id && !q.dead);
+        if (e) { m.x = e.x; m.y = e.y; }
+        const k = 1 - m.life / m.max;
+        const cx = X(m.x);
+        const cy = Y(m.y);
+        ctx.globalAlpha = 0.9;
+        ctx.strokeStyle = '#ffe066';
+        ctx.lineWidth = Math.max(1.5, T * 0.05);
+        ctx.beginPath(); ctx.ellipse(cx, cy, T * (0.55 - 0.2 * k), T * (0.22 - 0.08 * k), 0, 0, Math.PI * 2); ctx.stroke();
+        const yy = cy - T * (1.6 - 1.1 * k);
+        ctx.beginPath(); ctx.moveTo(cx, yy - T * 0.25); ctx.lineTo(cx, yy + T * 0.25); ctx.moveTo(cx - T * 0.15, yy - T * 0.08); ctx.lineTo(cx + T * 0.15, yy - T * 0.08); ctx.stroke();
+      }
+      ctx.globalCompositeOperation = 'lighter';
+    }
     // 떨어지는 고드름: 하늘(2.6칸 위)에서 맞을 자리로 가속하며 떨어짐
     if (drops.length) {
       ctx.globalCompositeOperation = 'source-over';
@@ -28234,7 +30193,7 @@ RG.fx = (() => {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const from = lite ? Math.max(0, texts.length - 24) : 0; // 적이 아주 많으면 최근 글자만
+    const from = lite ? Math.max(0, texts.length - (lite2 ? 6 : 12)) : 0; // 적이 아주 많으면 최근 글자만
     for (let i = from; i < texts.length; i++) {
       const t = texts[i];
       const a = Math.min(1, t.life / t.max * 2);
@@ -28252,7 +30211,7 @@ RG.fx = (() => {
     ctx.restore();
   }
 
-  function clear() { parts.length = 0; rings.length = 0; bolts.length = 0; texts.length = 0; areas.length = 0; drops.length = 0; shake = 0; }
+  function clear() { parts.length = 0; rings.length = 0; bolts.length = 0; texts.length = 0; areas.length = 0; drops.length = 0; marks.length = 0; pillars.length = 0; wisps.length = 0; breaths.length = 0; shake = 0; curGame = null; }
 
   return { onEvents, update, draw, drawUnder, drawTexts, shakeOffset, clear, settings, burst, ring, text, colorOf, lightOf, setLite, setSpeed };
 })();
@@ -28317,7 +30276,7 @@ RG.render = (() => {
     game = g;
     corpses = [];
     projStart.clear();
-    dprCap = 2; perfT = 0; perfN = 0; perfSlow = 0; perfLast = 0; perfWin = 0; perfRaised = false; perfNoRaise = false;
+    dprCap = 2; perfT = 0; perfN = 0; perfSlow = 0; perfLast = 0; perfWin = 0; perfRaised = false; perfNoRaise = false; slowFx = false;
     shadeFor = '';
     ambientFor = '';
     bg = null;
@@ -28407,16 +30366,83 @@ RG.render = (() => {
     let cv = m.get(k);
     if (!cv) {
       if (m.size > 6) m.clear(); // 크기가 자주 바뀌면(창 크기·화질) 오래된 것은 버림
-      cv = document.createElement('canvas');
-      cv.width = pw; cv.height = ph;
-      const c2 = cv.getContext('2d');
-      c2.imageSmoothingQuality = 'high'; // 고품질 축소 한 번 (임시 캔버스를 만들지 않음 — 시작 직후 수백 장을 만들 때 가벼움)
-      if (flip) { c2.translate(pw, 0); c2.scale(-1, 1); }
-      c2.drawImage(s.canvas, 0, 0, pw, ph);
-      cv = cropOpaque(cv);
+      cv = s.canvas._bb ? fitCropped(s.canvas, pw, ph, flip, null) : null;
+      if (!cv) {
+        cv = document.createElement('canvas');
+        cv.width = pw; cv.height = ph;
+        const c2 = cv.getContext('2d');
+        c2.imageSmoothingQuality = 'high'; // 고품질 축소 한 번 (임시 캔버스를 만들지 않음 — 시작 직후 수백 장을 만들 때 가벼움)
+        if (flip) { c2.translate(pw, 0); c2.scale(-1, 1); }
+        c2.drawImage(s.canvas, 0, 0, pw, ph);
+        cv = cropOpaque(cv);
+      }
       m.set(k, cv);
+      toBitmap(m, k, cv);
     }
     return cv;
+  }
+  /*
+   * 불러올 때 재 둔 불투명 범위(src._bb)로 잘라 줄이기 — 화소를 읽지 않음(전투 중 getImageData는 느림).
+   * sh가 있으면 발밑 그늘(그림 칸 기준 가운데 gx,gy·크기 gw,gh·진하기 a)을 먼저 깔고 그 범위까지 포함.
+   * 결과는 예전 cropOpaque와 같은 모양(_ox,_oy = 잘라 낸 위치, _fw,_fh = 줄인 전체 크기).
+   */
+  function fitCropped(src, pw, ph, flip, sh) {
+    const bb = src._bb;
+    const kx = pw / src.width;
+    const ky = ph / src.height;
+    // 그림 범위(줄인 크기 기준, 1화소 여유)
+    let x0 = Math.max(0, Math.floor(bb[0] * kx) - 1);
+    let x1 = Math.min(pw, Math.ceil((bb[2] + 1) * kx) + 1);
+    const y0s = Math.max(0, Math.floor(bb[1] * ky) - 1);
+    const y1s = Math.min(ph, Math.ceil((bb[3] + 1) * ky) + 1);
+    if (flip) { const a = pw - x1; x1 = pw - x0; x0 = a; }
+    let X0 = x0; let Y0 = y0s; let X1 = x1; let Y1 = y1s;
+    if (sh) {
+      X0 = Math.min(X0, Math.floor(sh.gx - sh.gw / 2) - 1); X1 = Math.max(X1, Math.ceil(sh.gx + sh.gw / 2) + 1);
+      Y0 = Math.min(Y0, Math.floor(sh.gy - sh.gh / 2) - 1); Y1 = Math.max(Y1, Math.ceil(sh.gy + sh.gh / 2) + 1);
+      X0 = Math.max(0, X0); Y0 = Math.max(0, Y0);
+    }
+    const cw = X1 - X0;
+    const ch = Y1 - Y0;
+    if (cw <= 0 || ch <= 0) return null;
+    const out = document.createElement('canvas');
+    out.width = cw; out.height = ch;
+    const c2 = out.getContext('2d');
+    c2.imageSmoothingQuality = 'high';
+    if (sh) { c2.globalAlpha = sh.a; c2.drawImage(blob(), sh.gx - sh.gw / 2 - X0, sh.gy - sh.gh / 2 - Y0, sh.gw, sh.gh); c2.globalAlpha = 1; }
+    // 원본 전체를 (-X0,-Y0)만큼 옮겨 줄여 그림 — 캔버스 밖은 그려지지 않음
+    c2.translate(-X0, -Y0);
+    if (flip) { c2.translate(pw, 0); c2.scale(-1, 1); }
+    c2.drawImage(src, 0, 0, pw, ph);
+    out._ox = X0; out._oy = Y0; out._fw = pw; out._fh = ph;
+    return out;
+  }
+  /*
+   * 줄여 둔 그림을 ImageBitmap(바뀌지 않는 그림)으로 바꿔 둠: 캔버스를 찍으면 찍을 때마다 그 캔버스의
+   * 스냅숏을 확인하는 비용이 드는데(적 300마리면 프레임마다 수백 번), ImageBitmap은 그 과정이 없음.
+   * 바꾸는 동안에는 캔버스를 그대로 쓰고, 끝나면 같은 자리를 바꿔 끼움(그림은 같음).
+   */
+  // 바꾸기는 줄을 세워 프레임마다 몇 장씩만 (판 시작 직후 수백 장이 한꺼번에 바뀌면 그 몇 초가 끊겼음)
+  const bitmapQ = [];
+  function toBitmap(m, k, cv) {
+    if (typeof createImageBitmap !== 'function') return;
+    bitmapQ.push(m, k, cv);
+  }
+  function pumpBitmaps(n) {
+    let i = 0;
+    for (; i < bitmapQ.length && n > 0; i += 3) {
+      const m = bitmapQ[i];
+      const k = bitmapQ[i + 1];
+      const cv = bitmapQ[i + 2];
+      if (m.get(k) !== cv) continue; // 이미 버려진 것
+      n--;
+      createImageBitmap(cv).then((bm) => {
+        if (m.get(k) !== cv) { bm.close(); return; } // 그 사이 캐시가 비워졌으면 버림
+        bm._ox = cv._ox; bm._oy = cv._oy; bm._fw = cv._fw; bm._fh = cv._fh;
+        m.set(k, bm);
+      }, () => {});
+    }
+    bitmapQ.splice(0, i);
   }
   /*
    * 투명한 여백 잘라내기: 그림 캔버스는 동작(점프·기울기)을 위해 둘레에 여백이 넉넉한데,
@@ -28469,18 +30495,22 @@ RG.render = (() => {
     let cv = m.get(k);
     if (!cv) {
       if (m.size > 6) m.clear();
-      cv = document.createElement('canvas');
-      cv.width = Math.max(pw, gx + (gw >> 1) + 2);
-      cv.height = Math.max(ph, gy + (gh >> 1) + 2);
-      const c2 = cv.getContext('2d');
-      c2.imageSmoothingQuality = 'high';
-      c2.globalAlpha = sh[4];
-      c2.drawImage(blob(), gx - gw / 2, gy - gh / 2, gw, gh);
-      c2.globalAlpha = 1;
-      if (flip) { c2.translate(pw, 0); c2.scale(-1, 1); }
-      c2.drawImage(s.canvas, 0, 0, pw, ph);
-      cv = cropOpaque(cv);
+      cv = s.canvas._bb ? fitCropped(s.canvas, pw, ph, flip, { gx, gy, gw, gh, a: sh[4] }) : null;
+      if (!cv) {
+        cv = document.createElement('canvas');
+        cv.width = Math.max(pw, gx + (gw >> 1) + 2);
+        cv.height = Math.max(ph, gy + (gh >> 1) + 2);
+        const c2 = cv.getContext('2d');
+        c2.imageSmoothingQuality = 'high';
+        c2.globalAlpha = sh[4];
+        c2.drawImage(blob(), gx - gw / 2, gy - gh / 2, gw, gh);
+        c2.globalAlpha = 1;
+        if (flip) { c2.translate(pw, 0); c2.scale(-1, 1); }
+        c2.drawImage(s.canvas, 0, 0, pw, ph);
+        cv = cropOpaque(cv);
+      }
       m.set(k, cv);
+      toBitmap(m, k, cv);
     }
     return cv;
   }
@@ -28784,9 +30814,15 @@ RG.render = (() => {
 
   function drawPortals() {
     const m = game.map;
+    const lite = lowFx();
     for (const s of m.spawns) {
       const cx = X(s.x);
       const cy = Y(s.y);
+      if (lite) { // 가벼운 단계: 그라데이션·도는 고리 없이 어두운 원 하나
+        ctx.fillStyle = 'rgba(30,24,40,0.6)';
+        ctx.beginPath(); ctx.arc(cx, cy, T * 0.4, 0, Math.PI * 2); ctx.fill();
+        continue;
+      }
       ctx.save();
       const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, T * 0.55);
       g.addColorStop(0, 'rgba(30,24,40,0.9)');
@@ -28849,16 +30885,46 @@ RG.render = (() => {
   }
 
   /* ---------------- 장판·덫 ---------------- */
+  const ZONE_FLAT = { fire: 'rgba(255,120,60,0.4)', void: 'rgba(110,31,102,0.5)', thorn: 'rgba(74,122,38,0.4)', blizzard: 'rgba(200,236,255,0.35)' };
   function drawZones() {
     const st = game.state;
+    const lite = lowFx();
     for (const z of st.zones) {
       const cx = X(z.x);
       const cy = Y(z.y);
       const R = z.radius * T;
       const fade = Math.min(1, (z.until - st.time) / 0.4);
+      if (lite && ZONE_FLAT[z.kind]) { // 가벼운 단계: 무늬 없이 색 타원 하나
+        ctx.globalAlpha = fade;
+        ctx.fillStyle = ZONE_FLAT[z.kind];
+        ctx.beginPath(); ctx.ellipse(cx, cy, R, R * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+        continue;
+      }
       ctx.save();
       ctx.globalAlpha = 0.85 * fade;
-      if (z.kind === 'fire') {
+      if (z.kind === 'blizzard') {
+        // 눈보라: 옅은 하늘색 타원 + 도는 눈송이(한 경로) + 가장자리 바람 고리
+        ctx.fillStyle = 'rgba(200,236,255,0.28)';
+        ctx.beginPath(); ctx.ellipse(cx, cy, R, R * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(235,248,255,0.7)';
+        ctx.lineWidth = Math.max(1, T * 0.035);
+        for (let i = 0; i < 2; i++) {
+          const a = time * (2.2 + i) + i * 2;
+          ctx.beginPath(); ctx.ellipse(cx, cy, R * (0.7 + 0.25 * i), R * 0.8 * (0.7 + 0.25 * i), 0, a, a + 2.2); ctx.stroke();
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        const s0 = Math.max(1.5, T * 0.06);
+        for (let i = 0; i < 18; i++) {
+          const a = time * (1.6 + (i % 3) * 0.5) + i * 2.399;
+          const rr = R * (0.15 + 0.8 * ((i * 53) % 17) / 17);
+          const fx = cx + Math.cos(a) * rr;
+          const fy = cy + Math.sin(a) * rr * 0.8 - T * 0.25 * ((i * 7) % 5) / 5;
+          ctx.rect(fx - s0 / 2, fy - s0 / 2, s0, s0);
+        }
+        ctx.fill();
+      } else if (z.kind === 'fire') {
         const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, R);
         g.addColorStop(0, 'rgba(255,214,120,0.75)');
         g.addColorStop(0.55, 'rgba(255,107,61,0.45)');
@@ -28885,13 +30951,16 @@ RG.render = (() => {
         ctx.fillStyle = '#9fd36a';
         ctx.strokeStyle = '#2b4a17';
         ctx.lineWidth = 1;
+        // 가시 12개를 한 경로로 — 칠하기·선 긋기 호출을 24번 → 2번으로
+        ctx.beginPath();
         for (let i = 0; i < 12; i++) {
           const a = (i / 12) * Math.PI * 2;
           const rr = R * (0.45 + 0.4 * ((i * 37) % 10) / 10);
           const sx = cx + Math.cos(a) * rr;
           const sy = cy + Math.sin(a) * rr * 0.8;
-          ctx.beginPath(); ctx.moveTo(sx - T * 0.05, sy); ctx.lineTo(sx, sy - T * 0.16); ctx.lineTo(sx + T * 0.05, sy); ctx.closePath(); ctx.fill(); ctx.stroke();
+          ctx.moveTo(sx - T * 0.05, sy); ctx.lineTo(sx, sy - T * 0.16); ctx.lineTo(sx + T * 0.05, sy); ctx.closePath();
         }
+        ctx.fill(); ctx.stroke();
       }
       ctx.restore();
     }
@@ -28954,6 +31023,96 @@ RG.render = (() => {
     if (any) ctx.restore();
   }
 
+  /* ---------------- 불사조 (불사조 둥지) ---------------- */
+  /** 불사조: 시뮬과 같은 꽃잎 길(RG.sim.orbitPos)로 그리고, 날아가는 쪽을 보며 날갯짓, 뒤로 불꽃 조각 */
+  function drawOrbits(alpha) {
+    const st = game.state;
+    for (const t of st.towers) {
+      const c = t.calc;
+      if (!c || c.kind !== 'orbit' || !c.orbit || t.building) continue;
+      const O = c.orbit;
+      const a0 = (t.orbitA || 0) + (t.disabled ? 0 : O.speed * DT_SIM * alpha);
+      const n = O.birds || 1;
+      const sz = T * (0.85 + O.radius * 0.9);
+      for (let i = 0; i < n; i++) {
+        const [bx, by] = RG.sim.orbitPos(t, c, i, a0);
+        const [nx, ny] = RG.sim.orbitPos(t, c, i, a0 + 0.08);
+        const ang = Math.atan2(ny - by, nx - bx);
+        const hy = by - 0.55; // 땅에서 조금 떠서 남
+        const key = `fx:phoenix:${Math.floor(time * 9 + i * 2) % 2}`;
+        const S = RG.art.sprites;
+        if (!S.get(key)) { if (RG.art.fxSprite) S.load(key, () => RG.art.fxSprite('phoenix', key.endsWith('1') ? 1 : 0), 120, 120); continue; }
+        // 땅 그림자
+        ctx.fillStyle = 'rgba(30,10,10,0.22)';
+        ctx.beginPath(); ctx.ellipse(X(bx), Y(by), sz * 0.3, sz * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.save();
+        ctx.translate(X(bx), Y(hy));
+        const flip = Math.cos(ang) < 0;
+        ctx.rotate(flip ? ang + Math.PI : ang);
+        if (flip) ctx.scale(-1, 1);
+        sprite(key, 0, 0, sz, sz, 0.5, 0.5, false);
+        ctx.restore();
+        if (!t.disabled && Math.random() < (manyEnemies ? 0.25 : 0.7)) RG.fx.burst(bx - Math.cos(ang) * 0.25, hy - Math.sin(ang) * 0.25, Math.random() < 0.5 ? '#ffb347' : '#ffe08a', 1, 0.5, 0.45, 0.06, -0.8);
+      }
+    }
+  }
+
+  /* ---------------- 구르는 것 (폭풍의 눈·거인의 바위) ---------------- */
+  function drawRoller(R, alpha) {
+    const x = lerp(R.px, R.x, alpha);
+    const y = lerp(R.py, R.y, alpha);
+    const cx = X(x);
+    const cy = Y(y);
+    const fadeIn = Math.min(1, (game.state.time - R.startAt) / 0.2);
+    const left = R.length - R.travelled;
+    const fade = Math.min(fadeIn, Math.max(0, left / 0.4));
+    if (R.type === 'tornado') {
+      // 회오리: 위로 넓어지는 타원 고리를 겹쳐 쌓고 돌림
+      const H = T * (1.4 + R.radius * 1.2);
+      const W = T * R.radius * 1.15;
+      ctx.save();
+      ctx.globalAlpha = 0.85 * fade;
+      ctx.fillStyle = 'rgba(30,40,60,0.25)';
+      ctx.beginPath(); ctx.ellipse(cx, cy, W * 0.9, W * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = Math.max(1.5, T * 0.06);
+      const n = 6;
+      const spin = time * 9;
+      for (let i = 0; i < n; i++) {
+        const k = i / (n - 1);
+        const ry = cy - H * k;
+        const rx = W * (0.35 + 0.85 * k) * (1 + 0.08 * Math.sin(spin + i));
+        const sway = Math.sin(time * 3 + i * 0.7) * T * 0.12 * k;
+        ctx.strokeStyle = i % 2 ? 'rgba(220,232,255,0.85)' : 'rgba(150,170,210,0.8)';
+        const a = (spin + i * 1.3) % (Math.PI * 2);
+        ctx.beginPath(); ctx.ellipse(cx + sway, ry, rx, rx * 0.3, 0, a, a + Math.PI * 1.5); ctx.stroke();
+      }
+      if (R.stun) { // 번개 회오리: 감기는 번개
+        ctx.strokeStyle = 'rgba(200,180,255,0.9)';
+        ctx.beginPath();
+        for (let i = 0; i <= 5; i++) { const k = i / 5; const px = cx + Math.sin(spin * 1.7 + k * 9) * W * (0.4 + 0.6 * k); const py = cy - H * k; if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); }
+        ctx.stroke();
+      }
+      ctx.restore();
+      if (Math.random() < (manyEnemies ? 0.2 : 0.6)) RG.fx.burst(x + (Math.random() - 0.5) * R.radius, y, '#d8dfe8', 1, 1.4, 0.4, 0.05, -1);
+      return;
+    }
+    // 바위·철구: 구르는 그림(돌아감) + 그림자
+    const size = T * R.radius * 2.1;
+    const key = R.shred ? 'fx:ironball' : 'fx:boulder';
+    const S = RG.art.sprites;
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = 'rgba(20,12,24,0.32)';
+    ctx.beginPath(); ctx.ellipse(cx + T * 0.05, cy + size * 0.02, size * 0.5, size * 0.17, 0, 0, Math.PI * 2); ctx.fill();
+    if (!S.get(key)) { if (RG.art.fxSprite) S.load(key, () => RG.art.fxSprite(R.shred ? 'ironball' : 'boulder', 0), 120, 120); ctx.fillStyle = '#8a7a66'; ctx.beginPath(); ctx.arc(cx, cy - size * 0.45, size * 0.45, 0, Math.PI * 2); ctx.fill(); ctx.restore(); return; }
+    ctx.translate(cx, cy - size * 0.45);
+    const dir = R.path[Math.min(R.path.length - 1, R.seg + 1)];
+    const sgn = dir && dir.x < x - 0.01 ? -1 : 1;
+    ctx.rotate(sgn * (R.spin / (R.radius * 1.05)));
+    sprite(key, 0, 0, size, size, 0.5, 0.5, false);
+    ctx.restore();
+  }
+
   /* ---------------- 공명 선 ---------------- */
   /** 공명 선 목록 [탑, 이웃] (같은 짝은 한 번) */
   function linkPairs() {
@@ -28987,7 +31146,7 @@ RG.render = (() => {
   function drawLinks() {
     if (!shadeBaked) bakeLinks(ctx);
     const pairs = linkPairs();
-    if (!pairs.length) return;
+    if (!pairs.length || lowFx()) return; // 가벼운 단계: 선 위를 도는 빛은 생략(선 자체는 바탕에 구워져 있음)
     const r = Math.max(1.5, T * 0.05);
     ctx.save();
     ctx.fillStyle = '#ffffff';
@@ -29137,6 +31296,7 @@ RG.render = (() => {
     }
     if (td.kind === 'beam') return t.beamState && t.beamState.length ? 'fire' : 'idle';
     if (td.kind === 'sweep') { const ph = (time * 1.1 + t.id * 0.37) % 2; return t.anim > 0 ? (ph < 1 ? 'fire' : 'aim') : ph < 1.4 ? 'idle' : 'aim'; } // 등대: 렌즈가 돌며 번쩍
+    if (td.kind === 'orbit') return t.anim > 0 ? 'fire' : ((time * 0.9 + t.id * 0.37) % 2 < 1.3 ? 'idle' : 'aim'); // 불사조 둥지: 불사조가 적을 스치면 불꽃이 솟음
     if (t.anim > 0.11) return 'fire';
     const iv = (t.calc && t.calc.interval) || 1;
     if (t.cd > 0 && t.cd <= Math.max(0.22, iv * 0.4)) return 'aim';
@@ -29174,15 +31334,18 @@ RG.render = (() => {
     const key = poseSprite(RG.art.sprites.towerKey(t.type, t.level, t.branch, pose), RG.art.sprites.towerKey(t.type, t.level, t.branch, 'idle'),
       () => RG.art.tower(t.type, t.level, t.branch, pose), RG.art.sprites.TW, RG.art.sprites.TH);
     if (!shadeBaked) castShadow(key, cx, baseY, w, h, 0.5, 112 / 130, false, t.building ? 0.2 : 0.42);
-    ctx.save();
+    // 쏠 때 눌림은 적이 아주 많으면 생략 — 늘이기 변환이 끼면 줄여 둔 그림을 못 써서 느린 길로 그려짐(자세 그림이 동작을 보여 줌)
+    const squish = sy !== 1 && !manyEnemies;
+    const saved = t.building || squish;
+    if (saved) ctx.save();
     if (t.building) ctx.globalAlpha = 0.55;
-    if (sy !== 1) { ctx.translate(cx, baseY); ctx.scale(1 + (1 - sy) * 0.5, sy); ctx.translate(-cx, -baseY); }
+    if (squish) { ctx.translate(cx, baseY); ctx.scale(1 + (1 - sy) * 0.5, sy); ctx.translate(-cx, -baseY); }
     const ok = sprite(key, cx, baseY, w, h, 0.5, 112 / 130, false);
     if (!ok) {
       ctx.fillStyle = elColor(RG.data.towers[t.type].element);
       ctx.fillRect(cx - T * 0.3, baseY - T * 0.7, T * 0.6, T * 0.7);
     }
-    ctx.restore();
+    if (saved) ctx.restore();
     if (t.disabled) {
       ctx.save();
       ctx.globalAlpha = 0.5;
@@ -29193,6 +31356,22 @@ RG.render = (() => {
       ctx.restore();
     } else if (t.dampened) {
       icon('dampen', cx + T * 0.32, baseY - T * 0.95, T * 0.3);
+    }
+    if (t.calc && t.calc.harvest && t.souls > 0 && !t.building) {
+      // 영혼 수확자: 모은 영혼을 탑 위에 도는 작은 보랏빛 점으로
+      const H = t.calc.harvest;
+      const r0 = T * 0.42;
+      const dot = Math.max(1.5, T * 0.05);
+      ctx.fillStyle = t.souls >= H.max - 2 ? '#f0d8ff' : '#c890ff';
+      ctx.beginPath();
+      for (let i = 0; i < t.souls; i++) {
+        const a = time * 1.8 + (i / H.max) * Math.PI * 2;
+        const px = cx + Math.cos(a) * r0;
+        const py = baseY - T * 1.05 + Math.sin(a) * r0 * 0.35;
+        ctx.moveTo(px + dot, py);
+        ctx.arc(px, py, dot, 0, Math.PI * 2);
+      }
+      ctx.fill();
     }
     if (t.building) {
       const k = 1 - Math.max(0, t.buildUntil - game.state.time) / game.rules.buildTime;
@@ -29209,6 +31388,54 @@ RG.render = (() => {
       ctx.beginPath(); ctx.ellipse(cx, baseY, T * 0.46, T * 0.18, 0, 0, Math.PI * 2); ctx.stroke();
       ctx.restore();
     }
+  }
+
+  const stunPts = []; // 기절 별 자리 (프레임마다 모아 한 번에 칠함)
+  const isFrozenNow = (e) => game.state.time < e.ccUntil && e.ccKind === 'freeze';
+  /** 공포 표시 '!!' — 칸 크기·화면 배율마다 한 번 구워 둠 (적이 많을 때 글자 그리기 수백 번을 피함) */
+  let fearCv = null;
+  function fearMark() {
+    const fs = Math.max(10, Math.round(T * 0.3));
+    const k = `${fs}|${dpr}`;
+    if (fearCv && fearCv._k === k) return fearCv;
+    const w = Math.ceil(fs * 1.3);
+    const h = Math.ceil(fs * 1.3);
+    const cv = document.createElement('canvas');
+    cv.width = Math.ceil(w * dpr); cv.height = Math.ceil(h * dpr);
+    const c2 = cv.getContext('2d');
+    c2.scale(dpr, dpr);
+    c2.font = `900 ${fs}px system-ui, sans-serif`;
+    c2.textAlign = 'center';
+    c2.textBaseline = 'alphabetic';
+    c2.lineWidth = Math.max(2, T * 0.06);
+    c2.lineJoin = 'round';
+    c2.strokeStyle = '#2a0f30';
+    c2.fillStyle = '#e9a6ff';
+    c2.strokeText('!!', w / 2, h * 0.72); c2.fillText('!!', w / 2, h * 0.72);
+    cv._k = k; cv._w = w; cv._h = h;
+    fearCv = cv;
+    return cv;
+  }
+
+  /** 시간 멈춤 표시(모래시계) — 칸 크기·배율마다 한 번 구움 */
+  let clockCv = null;
+  function clockMark() {
+    const s0 = Math.max(10, Math.round(T * 0.34));
+    const k = `${s0}|${dpr}`;
+    if (clockCv && clockCv._k === k) return clockCv;
+    const w = s0;
+    const h = Math.round(s0 * 1.25);
+    const cv = document.createElement('canvas');
+    cv.width = Math.ceil(w * dpr); cv.height = Math.ceil(h * dpr);
+    const c2 = cv.getContext('2d');
+    c2.scale(dpr, dpr);
+    c2.lineJoin = 'round';
+    c2.fillStyle = '#ffe39a'; c2.strokeStyle = '#4a3010'; c2.lineWidth = Math.max(1.2, s0 * 0.09);
+    c2.beginPath(); c2.moveTo(w * 0.15, h * 0.1); c2.lineTo(w * 0.85, h * 0.1); c2.lineTo(w * 0.5, h * 0.5); c2.lineTo(w * 0.85, h * 0.9); c2.lineTo(w * 0.15, h * 0.9); c2.lineTo(w * 0.5, h * 0.5); c2.closePath(); c2.fill(); c2.stroke();
+    c2.fillStyle = '#fff8e0'; c2.beginPath(); c2.moveTo(w * 0.32, h * 0.82); c2.lineTo(w * 0.68, h * 0.82); c2.lineTo(w * 0.5, h * 0.62); c2.closePath(); c2.fill();
+    cv._k = k; cv._w = w; cv._h = h;
+    clockCv = cv;
+    return cv;
   }
 
   const iconCache = new Map();
@@ -29383,25 +31610,22 @@ RG.render = (() => {
       ctx.restore();
     }
     if (st.time < e.ccUntil && e.ccKind === 'stun') {
-      ctx.save();
-      ctx.fillStyle = '#ffe066';
+      // 기절 별 셋: 모아 두었다가 모든 적을 그린 뒤 한 경로로 (바위·회오리가 한꺼번에 여럿을 기절시킴)
       for (let i = 0; i < 3; i++) {
         const a = time * 6 + (i * Math.PI * 2) / 3;
-        ctx.beginPath(); ctx.arc(cx + Math.cos(a) * size * 0.3, top - 2 + Math.sin(a) * size * 0.08, Math.max(1.5, T * 0.04), 0, Math.PI * 2); ctx.fill();
+        stunPts.push(cx + Math.cos(a) * size * 0.3, top - 2 + Math.sin(a) * size * 0.08);
       }
-      ctx.restore();
     }
     if (st.time < e.ccUntil && e.ccKind === 'fear') {
       // 공포: 머리 위 보랏빛 '!' 두 개가 떨림
-      ctx.save();
-      ctx.font = `900 ${Math.max(10, Math.round(T * 0.3))}px system-ui, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.lineWidth = Math.max(2, T * 0.06);
-      ctx.strokeStyle = '#2a0f30';
-      ctx.fillStyle = '#e9a6ff';
       const jx = Math.sin(time * 30 + e.id) * T * 0.03;
-      ctx.strokeText('!!', cx + jx, top - 2); ctx.fillText('!!', cx + jx, top - 2);
-      ctx.restore();
+      const fm = fearMark();
+      ctx.drawImage(fm, Math.round((cx + jx - fm._w / 2) * dpr) / dpr, Math.round((top - 2 - fm._h * 0.72) * dpr) / dpr, fm._w, fm._h);
+    }
+    if (st.time < e.ccUntil && e.ccKind === 'stop') {
+      // 시간 멈춤: 금빛 모래시계 표시 (구워 둔 그림)
+      const cm = clockMark();
+      ctx.drawImage(cm, Math.round((cx - cm._w / 2) * dpr) / dpr, Math.round((top - cm._h * 0.9) * dpr) / dpr, cm._w, cm._h);
     }
     if (st.time < e.ccUntil && e.ccKind === 'root') {
       ctx.save();
@@ -29419,7 +31643,7 @@ RG.render = (() => {
       ctx.beginPath(); ctx.ellipse(cx, cy - size * 0.42, size * 0.5, size * 0.52, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       ctx.restore();
     }
-    if (st.time < e.st.slowUntil && !frozen) {
+    if (st.time < e.st.slowUntil && !frozen && !manyEnemies) { // 적이 많으면 그늘 단계에서 한 번에 그림
       ctx.save();
       ctx.strokeStyle = 'rgba(140,220,255,0.8)';
       ctx.lineWidth = Math.max(1, T * 0.03);
@@ -29772,6 +31996,13 @@ RG.render = (() => {
 
   /* ---------------- 한 프레임 ---------------- */
   let perfWin = 0;
+  /*
+   * 가벼운 효과 단계: 가장 낮은 화질(배율 1)에서도 2초 동안 프레임의 60% 넘게 늦으면 이 판에서 켬.
+   * 적이 많을 때(manyEnemies)만 적용 — 꾸밈 효과(공명 선 위를 도는 빛, 적 발밑 그늘·감속 고리, 장판 무늬,
+   * 출구 소용돌이, 터지는 조각 수)를 줄이고 게임 정보(체력 막대·빛줄기·상태 표시)는 그대로 둠.
+   */
+  let slowFx = false;
+  const lowFx = () => slowFx && manyEnemies;
   let perfRaised = false; // 이 판에서 화질을 다시 높인 적이 있는가
   let perfNoRaise = false; // 높였다가 다시 느려짐 → 이 판에서는 더 높이지 않음
   function watchSpeed() {
@@ -29780,14 +32011,15 @@ RG.render = (() => {
     perfLast = now;
     if (!gap || gap > 0.5) return; // 탭 전환·멈춤·그림 만들기 뒤 첫 프레임은 빼고
     perfT += gap;
-    if (perfT < 1.5) return; // 불러온 직후는 그림을 만드느라 느릴 수 있음
+    if (perfT < 0.6) return; // 불러온 직후는 그림을 만드느라 느릴 수 있음
     perfN++;
     perfWin += gap;
     if (gap > 1 / 30) perfSlow++;
     // 2초마다 판단 — 프레임 수가 아니라 시간으로 재야 아주 느릴 때도 빨리 반응함.
     // 화질을 바꿀 때마다 그림 캐시를 모두 다시 만들어 잠깐 멈추므로: 아주 느리면(평균 24fps 미만) 한 번에 가장 낮게,
     // 다시 높이는 것은 오래(20초) 부드러울 때만, 높였다가 다시 느려진 판에서는 더 높이지 않음(오르내림 반복 방지).
-    if (perfWin >= 2 && perfN >= 12 && perfSlow / perfN > 0.6 && dprCap > 1 && (window.devicePixelRatio || 1) > 1) {
+    // 낮추기는 빨리 판단(처음 1초, 그 뒤 2초마다) — 느린 휴대폰에서 판 시작 몇 초가 끊기지 않게
+    if (perfWin >= (dprCap >= 2 && !perfRaised ? 1 : 2) && perfN >= 10 && perfSlow / perfN > 0.6 && dprCap > 1 && (window.devicePixelRatio || 1) > 1) {
       const avg = perfWin / perfN;
       dprCap = avg > 1 / 24 ? 1 : Math.max(1, dprCap - 0.5);
       if (perfRaised) perfNoRaise = true;
@@ -29795,6 +32027,9 @@ RG.render = (() => {
       perfN = 0; perfSlow = 0; perfWin = 0;
     } else if (dprCap < 2 && !perfNoRaise && perfWin >= 20) {
       if (perfSlow / perfN < 0.03) { dprCap = Math.min(2, dprCap + 0.5); perfRaised = true; resize(); }
+      perfN = 0; perfSlow = 0; perfWin = 0;
+    } else if (perfWin >= 2 && perfN >= 12 && perfSlow / perfN > 0.6 && (dprCap <= 1 || (window.devicePixelRatio || 1) <= 1) && manyEnemies && !slowFx) {
+      slowFx = true; // 화질을 더 낮출 수 없는데도 늦음 → 꾸밈 효과를 줄임
       perfN = 0; perfSlow = 0; perfWin = 0;
     } else if ((dprCap >= 2 || perfNoRaise) && perfWin >= 2) {
       perfN = 0; perfSlow = 0; perfWin = 0;
@@ -29819,6 +32054,7 @@ RG.render = (() => {
   function frame(alpha, dt) {
     if (!game || !ctx) return;
     watchSpeed();
+    if (bitmapQ.length) pumpBitmaps(4);
     time += dt;
     RG.fx.update(dt);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -29882,8 +32118,10 @@ RG.render = (() => {
     let alive = 0;
     for (const e of st.enemies) if (!e.dead) alive++;
     manyEnemies = alive > 60;
-    RG.fx.setLite(alive > 120);
-    if (manyEnemies) {
+    RG.fx.setLite(alive > 120 ? (lowFx() ? 2 : 1) : 0);
+    if (manyEnemies && lowFx()) {
+      // 가벼운 단계: 그늘을 그림에 구운 적 말고는 발밑 그늘·감속 고리를 생략
+    } else if (manyEnemies) {
       // 적이 아주 많을 때: 발밑 그늘을 한 경로로 모아 한 번에 칠함 (땅·비행 두 번)
       // (그늘 그림 300장을 찍는 것보다 이쪽이 조금 빠름 — 그리기 호출 하나하나의 고정 비용이 큼)
       for (const fly of [false, true]) {
@@ -29900,6 +32138,24 @@ RG.render = (() => {
         ctx.fillStyle = fly ? 'rgba(12,7,20,0.22)' : 'rgba(12,7,20,0.36)';
         ctx.fill();
       }
+      // 감속 고리도 한 경로로 (발밑에 깔림)
+      ctx.beginPath();
+      let slowN = 0;
+      for (const e of st.enemies) {
+        if (e.dead || e.burrowed || !(st.time < e.st.slowUntil) || isFrozenNow(e)) continue;
+        const p = enemyScreen(e, alpha);
+        const size = e.size * T;
+        const ex = X(p.x);
+        const ey = Y(p.y) + 1;
+        ctx.moveTo(ex + size * 0.36, ey);
+        ctx.ellipse(ex, ey, size * 0.36, size * 0.12, 0, 0, Math.PI * 2);
+        slowN++;
+      }
+      if (slowN) {
+        ctx.strokeStyle = 'rgba(140,220,255,0.8)';
+        ctx.lineWidth = Math.max(1, T * 0.03);
+        ctx.stroke();
+      }
     } else {
       for (const e of st.enemies) {
         if (e.burrowed) continue;
@@ -29910,6 +32166,7 @@ RG.render = (() => {
     for (const u of st.units) if (!u.dead && u.kind !== 'drone') shadow(lerp(u.px, u.x, alpha), lerp(u.py, u.y, alpha), u.kind === 'wall' ? 0.45 : 0.22, 0.08, 0.3);
 
     barOn = true; barN = 0; // 체력 막대는 모아 두었다가 모든 적을 그린 뒤 위에 한 번에
+    stunPts.length = 0;
     // y 순서로 (그릴 것 목록은 매 프레임 새로 만들지 않고 다시 씀)
     dlN = 0;
     for (const t of st.towers) dlAdd(t.r + 0.82, 0, t);
@@ -29920,6 +32177,7 @@ RG.render = (() => {
     for (let i = 0; i < corpses.length; i++) { const c = corpses[i]; c.t += dt; if (c.t < c.dur) corpses[cn++] = c; }
     corpses.length = cn;
     for (let i = 0; i < corpses.length; i++) dlAdd(corpses[i].y - 0.001, 4, corpses[i]);
+    for (const R of st.rollers) if (st.time >= R.startAt && !R.done) dlAdd(lerp(R.py, R.y, alpha) + 0.05, 5, R);
     dlOrder.length = dlN;
     for (let i = 0; i < dlN; i++) dlOrder[i] = dlPool[i];
     dlOrder.sort(byY);
@@ -29931,6 +32189,7 @@ RG.render = (() => {
       else if (kind === 1) drawLantern();
       else if (kind === 2) drawEnemy(obj, alpha);
       else if (kind === 4) drawCorpse(obj);
+      else if (kind === 5) drawRoller(obj, alpha);
       else drawUnit(obj, alpha);
       it.o = null;
     }
@@ -29941,6 +32200,15 @@ RG.render = (() => {
     for (let i = 0; i < flyQ.length; i++) drawEnemy(flyQ[i], alpha);
     flyQ.length = 0;
     drawSweeps(alpha);
+    drawOrbits(alpha);
+    if (stunPts.length) {
+      const r = Math.max(1.5, T * 0.04);
+      ctx.fillStyle = '#ffe066';
+      ctx.beginPath();
+      for (let i = 0; i < stunPts.length; i += 2) { ctx.moveTo(stunPts[i] + r, stunPts[i + 1]); ctx.arc(stunPts[i], stunPts[i + 1], r, 0, Math.PI * 2); }
+      ctx.fill();
+      stunPts.length = 0;
+    }
     flushBars();
     // 건설 미리보기 탑 그림
     const gh = overlay.ghost;
@@ -31303,6 +33571,8 @@ RG.render = (() => {
     const prev = D().regions[r - 2];
     return prev ? `${prev.name}${josa(prev.name, '을', '를')} 깨면 뽑기에 들어옵니다` : '처음부터 뽑기에 있습니다';
   }
+  /** 잠긴 탑 카드의 짧은 글: '<앞 지역> 클리어' */
+  function lockText(t) { const prev = D().regions[P().towerRegion(t) - 2]; return prev ? `${prev.name} 클리어` : ''; }
   const josa = (w, a, b) => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c <= 11171 && c % 28 ? a : b; };
 
   UI.register('gacha', {
@@ -31337,6 +33607,8 @@ RG.render = (() => {
       const pool = P().gachaPool();
       const rates = G().ratesFor(pool);
       const toEpic = Math.max(1, G().PITY - (g.pity || 0));
+      const toLegend = Math.max(1, G().PITY_LEGEND - (g.pityL || 0));
+      const legendLocked = D().towerOrder.filter((t) => G().TIER[G().rarityOf(t)] >= G().TIER.legendary && !P().towerOpen(t)).sort((a, b) => P().towerRegion(a) - P().towerRegion(b));
       // 아직 잠긴 탑 중 가장 먼저 열리는 지역 묶음
       const locked = D().towerOrder.filter((t) => !P().towerOpen(t));
       const nextR = locked.length ? Math.min(...locked.map((t) => P().towerRegion(t))) : 0;
@@ -31359,8 +33631,9 @@ RG.render = (() => {
         el('div', { class: 'gc-rules' }, [
           el('p', { class: 'gc-pool' }, ['뽑기에 든 탑 ', el('b', { text: `${pool.length}종` }), ` / ${D().towerOrder.length}`, finals ? el('span', { class: 'gc-finals', text: ` · 최종 강화 ${finals}종(뽑기에서 빠짐)` }) : null,
             nextBatch.length ? el('span', { class: 'dim', text: ` · ${D().regions[nextR - 2].name}${josa(D().regions[nextR - 2].name, '을', '를')} 깨면 새 탑 ${nextBatch.length}종이 한꺼번에 들어옴` }) : null]),
-          el('div', { class: 'gc-rates' }, ['common', 'rare', 'epic'].map((r) => el('span', { class: rates[r] ? '' : 'off' }, [rarityBadge(r), ` ${rates[r] ? `${Math.round(rates[r] * 1000) / 10}%` : '아직 없음'}`]))),
-          rates.epic ? el('p', {}, [`영웅 등급 확정까지 `, el('b', { text: `${toEpic}회` })]) : el('p', { class: 'dim', text: epicLocked.length ? `영웅 등급 탑은 ${openText(epicLocked[0]).replace('뽑기에 들어옵니다', '뽑기에 들어옵니다.')}` : '' }),
+          el('div', { class: 'gc-rates' }, G().ORDER.map((r) => el('span', { class: rates[r] ? '' : 'off' }, [rarityBadge(r), ` ${rates[r] ? `${Math.round(rates[r] * 1000) / 10}%` : '아직 없음'}`]))),
+          rates.epic ? el('p', {}, [`영웅 이상 확정까지 `, el('b', { text: `${toEpic}회` })]) : el('p', { class: 'dim', text: epicLocked.length ? `영웅 등급 탑은 ${openText(epicLocked[0]).replace('뽑기에 들어옵니다', '뽑기에 들어옵니다.')}` : '' }),
+          rates.legendary || rates.mythic ? el('p', {}, [`전설 이상 확정까지 `, el('b', { class: 'gc-legend-pity', text: `${toLegend}회` })]) : el('p', { class: 'dim', text: legendLocked.length ? `전설·신화 탑은 ${openText(legendLocked[0]).replace('뽑기에 들어옵니다', '뽑기에 들어옵니다.')}` : '' }),
           el('p', { class: 'dim', text: `같은 탑이 또 나오면 그 탑이 강화됩니다(+1~+${G().MAX_RANK}, 단계마다 +${Math.round(G().RANK_PCT * 100)}%). +${G().MAX_RANK}에서 한 번 더 나오면 ★최종 강화(+${Math.round(G().FINAL_BONUS * 100)}%)가 되고, 그 탑은 뽑기에서 빠집니다. 최종 강화한 탑은 맵에 지을 때 같은 값으로 Lv2부터 지어집니다(강화는 도전 모드에서는 쓰지 않음).` }),
           el('p', { class: 'dim', text: `공명석은 맵 첫 클리어 ${G().REWARD.firstClear}, 새 별마다 ${G().REWARD.perStar}, 승리 ${G().REWARD.win}로 모입니다. 솔빛 들판의 탑은 처음부터 뽑기에 있고, 지역을 다 깨면 다음 지역의 탑이 한꺼번에 들어옵니다(바로 주지는 않습니다).` }),
         ]),
@@ -31370,7 +33643,7 @@ RG.render = (() => {
       const coll = el('div', { class: 'gc-collection' });
       const owned = P().ownedTowers().length;
       coll.appendChild(el('div', { class: 'gc-coll-head' }, [el('b', { text: '내 탑' }), el('span', { class: 'dim', text: ` ${owned}/${D().towerOrder.length}` })]));
-      for (const r of ['epic', 'rare', 'common']) {
+      for (const r of G().ORDER.slice().reverse()) {
         const list = D().towerOrder.filter((t) => G().rarityOf(t) === r);
         const grid = el('div', { class: 'gc-grid' });
         for (const t of list) {
@@ -31384,7 +33657,7 @@ RG.render = (() => {
           const card = el('div', { class: `gc-card rar-${r} el-${td.element} ${state}`, tabindex: '0', 'aria-label': `${has || open ? td.name : '잠긴 탑'} ${fin ? '최종 강화 · 뽑기에서 빠짐' : has ? `강화 ${rlabel}` : open ? '뽑기에서 나올 수 있음' : openText(t)}` }, [
             UI.towerImg(t, fin ? 4 : has ? Math.min(3, 1 + Math.floor(rank / 2)) : 1, fin ? 'A' : null, 'gc-img'),
             el('span', { class: 'gc-name', text: has || open ? td.name : '???' }),
-            has ? pips(rank) : open ? el('span', { class: 'gc-q in', text: '뽑기에 있음' }) : el('span', { class: 'gc-q' }, [UI.icon('lock', 'tiny'), ` ${D().regions[P().towerRegion(t) - 2] ? `${D().regions[P().towerRegion(t) - 2].name} 클리어` : ''}`]),
+            has ? pips(rank) : open ? el('span', { class: 'gc-q in', text: '뽑기에 있음' }) : el('span', { class: 'gc-q' }, [UI.icon('lock', 'tiny'), ` ${lockText(t)}`]),
             has && rank > 0 ? el('em', { class: `gc-rank ${fin ? 'fin' : ''}`, text: fin ? '★' : `+${rank}` }) : null,
           ]);
           UI.tooltipFor(card, () => (has || open ? `<b>${td.name}</b> <span style="color:${G().RARITIES[r].color}">${G().RARITIES[r].name}</span><br>${td.desc}<br>` : `<b>잠긴 탑</b> <span style="color:${G().RARITIES[r].color}">${G().RARITIES[r].name}</span><br>`)
@@ -31401,7 +33674,7 @@ RG.render = (() => {
   /* ---------- 뽑기 결과: 카드 뒤집기 ---------- */
   function reveal(sec, results, done) {
     clearTimers();
-    const best = results.some((r) => r.rarity === 'epic') ? 'epic' : results.some((r) => r.rarity === 'rare') ? 'rare' : 'common';
+    const best = results.reduce((b, r) => (G().TIER[r.rarity] > G().TIER[b] ? r.rarity : b), 'common');
     const ov = el('div', { class: `gc-reveal best-${best} n${results.length > 1 ? 'many' : 'one'}`, role: 'dialog', 'aria-label': '뽑기 결과' });
     const flash = el('div', { class: 'gc-flash' });
     const row = el('div', { class: 'gc-rcards' });
@@ -31432,8 +33705,9 @@ RG.render = (() => {
       if (card.classList.contains('open')) return;
       card.classList.add('open');
       opened++;
-      UI.sfx(r.isFinal || r.rarity === 'epic' ? 'unlock' : r.isNew ? 'star' : r.rarity === 'rare' ? 'upgrade' : 'build', { vol: 0.6 });
-      if (r.rarity === 'epic' || r.isFinal) { flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go'); }
+      const tier = G().TIER[r.rarity];
+      UI.sfx(tier >= G().TIER.legendary ? 'win' : r.isFinal || tier === G().TIER.epic ? 'unlock' : r.isNew ? 'star' : r.rarity === 'rare' ? 'upgrade' : 'build', { vol: tier >= G().TIER.legendary ? 0.7 : 0.6 });
+      if (tier >= G().TIER.epic || r.isFinal) { flash.className = `gc-flash fl-${r.rarity}`; void flash.offsetWidth; flash.classList.add('go'); }
       if (opened === cards.length) finish();
     }
     function finish() {
@@ -31506,6 +33780,7 @@ RG.render = (() => {
     mode = 'idle';
     sel = null; pick = null; drag = null; skillAim = null; bossTrackOn = false; keyCursor = null;
     speed = UI.getSettings().speed || 1;
+    simBudget = SIM_BUDGET_MAX;
     if (data.resume) {
       opts = data.resume.opts;
       game = RG.sim.replay(opts, data.resume.log, data.resume.tick);
@@ -31619,22 +33894,32 @@ RG.render = (() => {
   /* =====================================================
    * 루프
    * ===================================================== */
+  // 한 프레임의 시뮬 시간 상한(ms): 프레임이 늦으면(34ms 초과) 줄이고, 여유 있으면 천천히 늘림 — 보통 기기에서는 최대치에 머물러 닿지 않음
+  const SIM_BUDGET_MAX = 12;
+  const SIM_BUDGET_MIN = 3;
+  let simBudget = SIM_BUDGET_MAX;
   function loop(ts) {
     raf = requestAnimationFrame(loop);
     if (!game) return;
     const dt = Math.min(0.1, Math.max(0, (ts - last) / 1000));
     last = ts;
+    if (dt > 0.034) simBudget = Math.max(SIM_BUDGET_MIN, simBudget * 0.85); else if (dt < 0.03) simBudget = Math.min(SIM_BUDGET_MAX, simBudget + 0.3);
     const st = game.state;
     const events = [];
     const running = !paused && !UI.modalOpen() && !st.result && !root.classList.contains('loading');
     if (running) {
       acc += dt * speed;
       let n = 0;
+      const t0 = performance.now();
       while (acc >= DT() && n < 16) {
         game.step();
         if (st.events.length) events.push(...st.events);
         acc -= DT();
         n += 1;
+        // 한 프레임의 시뮬 시간 상한: 아주 느린 기기에서 높은 배속 + 적이 아주 많으면, 프레임이 느려질수록 한 프레임에
+        // 돌릴 틱이 늘어 더 느려지는 악순환이 생김. 상한을 넘으면 남은 시간은 버림 — 판이 잠깐 느리게 흐르는 대신 화면은 부드러움.
+        // (보통 기기는 한 틱이 1ms 안팎이라 닿지 않음. 결과는 틱 단위라 재현에는 영향 없음)
+        if (acc >= DT() && performance.now() - t0 > simBudget) { acc = 0; break; }
       }
       if (n >= 16) acc = 0;
     }
@@ -31668,6 +33953,11 @@ RG.render = (() => {
         case 'strike': UI.sfx(e.big ? 'explosion' : 'chain', { vol: 0.5, pitch: e.big ? -4 : 0 }); break;
         case 'thorns': UI.sfx('trap', { vol: 0.35, pitch: 3 }); break;
         case 'fear': UI.sfx('hex', { vol: 0.25, pitch: -5 }); break;
+        case 'shatter': UI.sfx('hit_frost', { vol: 0.55, pitch: -3 }); break;
+        case 'crush': UI.sfx('slam', { vol: 0.25, pitch: 4 }); break;
+        case 'smite': UI.sfx('explosion', { vol: 0.45, pitch: 6 }); break;
+        case 'soulStorm': UI.sfx('hex', { vol: 0.6, pitch: -8 }); break;
+        case 'chrono': UI.sfx('bell', { vol: 0.5, pitch: 7 }); break;
         case 'pulse': if (e.towerId) { const t = game.state.towers.find((q) => q.id === e.towerId); UI.sfx(t ? PULSE_SFX[t.type] || 'bell' : 'bell', { vol: 0.5 }); } break;
         case 'chain': if (!e.small) UI.sfx('chain', { vol: 0.5 }); break;
         case 'splash': if (e.element === 'fire' || e.big) UI.sfx('explosion', { vol: 0.55 }); break;
@@ -31701,7 +33991,7 @@ RG.render = (() => {
     if (sel && sel.kind === 'enemy' && !game.state.enemies.find((t) => t.id === sel.id)) closePanels();
   }
 
-  const FIRE_SFX = { arrow: 'arrow', bolt: 'bolt', gust: 'gust', mortar: 'mortar', orb: 'orb', ballista: 'ballista', rain: 'bolt', strike: 'chain' };
+  const FIRE_SFX = { arrow: 'arrow', bolt: 'bolt', gust: 'gust', mortar: 'mortar', orb: 'orb', ballista: 'ballista', rain: 'bolt', strike: 'chain', blizzard: 'hit_frost', roller: 'slam', smite: 'flash', breath: 'explosion' };
   const PULSE_SFX = { winter_bell: 'bell', quake_hammer: 'slam', radiance_spire: 'flash', dread_bell: 'hex' };
 
   function bossPhaseText(e) {
@@ -31759,27 +34049,33 @@ RG.render = (() => {
   /* =====================================================
    * 정보 띠 갱신
    * ===================================================== */
+  /* HUD 쓰기: 값이 바뀔 때만 DOM을 건드림 — 0.1초마다 같은 글자를 다시 써도 레이아웃을 다시 계산했음(휴대폰에서 프레임마다 1~3ms) */
+  const setT = (n, v) => { if (n && n.textContent !== v) n.textContent = v; };
+  const setH = (n, v) => { if (n && n._html !== v) { n._html = v; n.innerHTML = v; } };
+  const setC = (n, c, on) => { if (n && n.classList.contains(c) !== !!on) n.classList.toggle(c, !!on); };
+  const setW = (n, prop, pct) => { const v = `${Math.round(pct * 10) / 10}%`; if (n && n['_' + prop] !== v) { n['_' + prop] = v; n.style[prop] = v; } };
+
   function updateHud(force) {
     if (!game) return;
     const st = game.state;
-    R.lives.children[1].textContent = String(st.lives);
-    R.lives.children[2].textContent = `/${st.maxLives}`;
-    R.lives.classList.toggle('danger', st.lives <= 3);
-    R.gold.children[1].textContent = String(Math.floor(st.gold));
+    setT(R.lives.children[1], String(st.lives));
+    setT(R.lives.children[2], `/${st.maxLives}`);
+    setC(R.lives, 'danger', st.lives <= 3);
+    setT(R.gold.children[1], String(Math.floor(st.gold)));
     const w = st.wave;
-    R.wave.children[1].textContent = isFinite(w.total) ? `${w.index}/${w.total}` : `${w.index}`;
+    setT(R.wave.children[1], isFinite(w.total) ? `${w.index}/${w.total}` : `${w.index}`);
     // 호출 버튼
     const canCall = !st.result && w.index < w.total && (w.index === 0 || w.countdown !== null);
-    R.call.disabled = !canCall;
+    if (R.call.disabled !== !canCall) R.call.disabled = !canCall;
     const sub = R.call.querySelector('.call-sub');
     const label = R.call.querySelector('.call-label');
-    if (w.index === 0) { label.textContent = '전투 시작'; sub.textContent = 'Space'; } else if (w.countdown !== null) {
+    if (w.index === 0) { setT(label, '전투 시작'); setT(sub, 'Space'); } else if (w.countdown !== null) {
       const cd = game.challenge && game.challenge.type === 'countdown' ? game.challenge.value : D().rules.countdown;
       const bonus = Math.ceil(Math.max(0, w.countdown) * ((8 + 2 * w.index) / cd) * (1 + ((game.meta && game.meta.earlyBonusPct) || 0)));
-      label.textContent = '다음 웨이브';
-      sub.textContent = `${Math.ceil(w.countdown)}초 · +${bonus}`;
-    } else if (w.index >= w.total) { label.textContent = '마지막 웨이브'; sub.textContent = ''; } else { label.textContent = '적이 오는 중'; sub.textContent = ''; }
-    R.call.classList.toggle('pulse', canCall && (w.index === 0 || (w.countdown !== null && w.countdown < 6)));
+      setT(label, '다음 웨이브');
+      setT(sub, `${Math.ceil(w.countdown)}초 · +${bonus}`);
+    } else if (w.index >= w.total) { setT(label, '마지막 웨이브'); setT(sub, ''); } else { setT(label, '적이 오는 중'); setT(sub, ''); }
+    setC(R.call, 'pulse', canCall && (w.index === 0 || (w.countdown !== null && w.countdown < 6)));
     // 다음 웨이브 미리보기
     if (force || R.nextFor !== w.index) {
       R.nextFor = w.index;
@@ -31799,42 +34095,42 @@ RG.render = (() => {
     // 과제
     if (st.task && game.opts.mode === 'normal') {
       const tk = st.task;
-      R.task.classList.toggle('done', tk.done);
-      R.task.innerHTML = `<span class="task-head">공명 과제${tk.done ? ' ✓' : ''}</span><span>${esc(tk.def.text)}</span>${!tk.done && tk.need ? `<span class="dim">최고 ${Math.floor(tk.best)}/${tk.need}</span>` : ''}`;
+      setC(R.task, 'done', tk.done);
+      setH(R.task, `<span class="task-head">공명 과제${tk.done ? ' ✓' : ''}</span><span>${esc(tk.def.text)}</span>${!tk.done && tk.need ? `<span class="dim">최고 ${Math.floor(tk.best)}/${tk.need}</span>` : ''}`);
     } else if (game.challenge) {
-      R.task.innerHTML = `<span class="task-head">도전</span><span>${esc(game.challenge.text)}</span>`;
-    } else R.task.innerHTML = '';
+      setH(R.task, `<span class="task-head">도전</span><span>${esc(game.challenge.text)}</span>`);
+    } else setH(R.task, '');
     // 배속
-    R.speed.querySelector('.speed-label').textContent = `${speed}×`;
-    R.pause.classList.toggle('on', paused);
+    setT(R.speed.querySelector('.speed-label'), `${speed}×`);
+    setC(R.pause, 'on', paused);
     // 영웅
     const h = st.hero;
     if (h) {
-      R.heroLv.textContent = `Lv${h.level}`;
-      R.heroHp.firstChild.style.width = `${h.dead ? 0 : (h.hp / h.maxHp) * 100}%`;
+      setT(R.heroLv, `Lv${h.level}`);
+      setW(R.heroHp.firstChild, 'width', h.dead ? 0 : (h.hp / h.maxHp) * 100);
       const xpT = D().heroXp;
       const cur = xpT[h.level - 1] || 0;
       const nxt = xpT[h.level] || cur;
-      R.heroXp.firstChild.style.width = `${h.level >= xpT.length ? 100 : ((h.xp - cur) / Math.max(1, nxt - cur)) * 100}%`;
-      R.heroCard.classList.toggle('down', !!h.dead);
-      R.heroCard.classList.toggle('selected', mode === 'hero');
+      setW(R.heroXp.firstChild, 'width', h.level >= xpT.length ? 100 : ((h.xp - cur) / Math.max(1, nxt - cur)) * 100);
+      setC(R.heroCard, 'down', !!h.dead);
+      setC(R.heroCard, 'selected', mode === 'hero');
       const mood = h.dead || h.hp / h.maxHp < 0.35 ? 'worried' : 'normal';
       if (mood !== R.heroMood) { R.heroMood = mood; R.heroPortrait.src = RG.art.sprites.dataUrl(RG.art.portrait(h.heroId, mood)); }
       const hd = D().heroes[h.heroId];
       const cdMax = hd.skill.cooldown;
-      R.skill.disabled = !!h.dead;
-      R.skill.classList.toggle('ready', h.skillCd <= 0 && !h.dead);
-      R.skill.classList.toggle('aiming', mode === 'skill');
-      R.skillCd.style.height = `${Math.min(100, (h.skillCd / cdMax) * 100)}%`;
-      R.skillCd.textContent = h.dead ? `${Math.ceil(Math.max(0, h.downUntil - st.time))}` : (h.skillCd > 0 ? `${Math.ceil(h.skillCd)}` : '');
+      if (R.skill.disabled !== !!h.dead) R.skill.disabled = !!h.dead;
+      setC(R.skill, 'ready', h.skillCd <= 0 && !h.dead);
+      setC(R.skill, 'aiming', mode === 'skill');
+      setW(R.skillCd, 'height', Math.min(100, (h.skillCd / cdMax) * 100));
+      setT(R.skillCd, h.dead ? `${Math.ceil(Math.max(0, h.downUntil - st.time))}` : (h.skillCd > 0 ? `${Math.ceil(h.skillCd)}` : ''));
     }
     // 보스 막대
     const boss = st.enemies.find((e) => !e.dead && D().enemies[e.type].boss);
     if (boss) {
-      R.boss.classList.remove('hidden');
-      R.boss.querySelector('.boss-name').textContent = D().enemies[boss.type].name;
-      R.boss.querySelector('.boss-hp i').style.width = `${(boss.hp / boss.maxHp) * 100}%`;
-    } else R.boss.classList.add('hidden');
+      setC(R.boss, 'hidden', false);
+      setT(R.boss.querySelector('.boss-name'), D().enemies[boss.type].name);
+      setW(R.boss.querySelector('.boss-hp i'), 'width', (boss.hp / boss.maxHp) * 100);
+    } else setC(R.boss, 'hidden', true);
     // 열린 정보 창 갱신
     if (sel && sel.kind === 'tower') refreshTowerPanel();
     if (sel && sel.kind === 'enemy') refreshEnemyPanel();
@@ -32097,7 +34393,7 @@ RG.render = (() => {
       if (ban) R.banned[type] = ban;
       const lv0 = startLv(type);
       const card = el('button', {
-        class: `tower-card el-${td.element}${ban ? ' banned' : ''}`,
+        class: `tower-card el-${td.element} rar-${RG.gacha.rarityOf(type)}${ban ? ' banned' : ''}`,
         type: 'button',
         dataset: { type, cost: String(cost) },
         'aria-label': `${td.name} ${cost} 골드${lv0 > 1 ? ` · 최종 강화로 Lv${lv0}부터` : ''}${key ? ` (단축키 ${key})` : ''}`,
@@ -32515,10 +34811,21 @@ RG.render = (() => {
       else if (calc.kind === 'cone') out.push(['damage', '불길 피해', `${k(calc.damage)} · ${calc.cone >= 360 ? '사방' : `부채꼴 ${calc.cone}°`}`, calc.dmgBonus]);
       else if (calc.kind === 'rain') out.push(['damage', '고드름 피해', `${k(calc.damage)} × ${calc.rain.count}명`, calc.dmgBonus]);
       else if (calc.kind === 'strike') out.push(['damage', '번개 피해', `${k(calc.damage)}${calc.strike.count > 1 ? ` × ${calc.strike.count}명` : ''}`, calc.dmgBonus]);
+      else if (calc.kind === 'orbit') out.push(['damage', '불사조 초당 피해', `${k(calc.orbit.dps)}${calc.orbit.birds > 1 ? ` × ${calc.orbit.birds}마리` : ''}`, calc.dmgBonus]);
+      else if (calc.kind === 'blizzard') out.push(['damage', '눈보라', `초당 ${k(calc.blizzard.dps)} · ${calc.blizzard.dur}초 · 감속 ${round(calc.blizzard.slowPct * 100)}%${calc.blizzard.count > 1 ? ` · ${calc.blizzard.count}곳` : ''}`, calc.dmgBonus]);
+      else if (calc.kind === 'roller' && calc.roller.type === 'tornado') out.push(['damage', '회오리', `초당 ${k(calc.roller.dps)} · ${calc.roller.length}칸 · 밀기 ${calc.roller.push}칸/초`, calc.dmgBonus]);
+      else if (calc.kind === 'roller') out.push(['damage', '바위 깔기', `${k(calc.roller.crush)}${calc.roller.count > 1 ? ` × ${calc.roller.count}개` : ''} · ${calc.roller.length}칸`, calc.dmgBonus]);
+      else if (calc.kind === 'smite') out.push(['damage', '빛기둥', `${k(calc.damage)} + 최대 체력 ${round(calc.smite.pct * 100)}%${calc.smite.count > 1 ? ` · ${calc.smite.count}명` : ''}`, calc.dmgBonus]);
+      else if (calc.kind === 'breath') out.push(['damage', '불길(관통)', `${k(calc.damage)}${calc.breath.count > 1 ? ` × ${calc.breath.count}줄` : ''}`, calc.dmgBonus]);
       else out.push(['damage', '피해', `${k(calc.damage)}${calc.multishot ? ` ×${calc.multishot}발` : ''}`, calc.dmgBonus]);
       if (calc.fear) out.push(['curse', '공포', `${calc.fear.dur}초 (보스 제외)`]);
+      if (calc.blizzard) out.push(['freeze', '얼음 터짐', `${k(calc.blizzard.shatter)} (언 적 ×2)${calc.blizzard.freeze ? ` · 빙결 ${calc.blizzard.freeze}초` : ''}`]);
+      if (calc.roller && calc.roller.stun) out.push(['stun', '기절', `${calc.roller.stun}초 (보스 제외)`]);
+      if (calc.smite) out.push(['damage', '보스에게', `최대 체력 ${round(calc.smite.bossPct * 100, 1)}%`]);
+      if (calc.harvest) out.push(['curse', '영혼', `최대 ${calc.harvest.max}개 · 하나마다 +${round(calc.harvest.per * 100)}% · 폭풍 ${k(calc.harvest.storm)}`]);
+      if (calc.chrono) out.push(['freeze', '시간 멈춤', `${calc.chrono.every}초마다 ${calc.chrono.stop}초 · 되감기 ${calc.chrono.rewind}칸 · ${calc.chrono.radius}칸`]);
       if (calc.kind === 'sweep' && calc.detect) out.push(['stealth', '탐지', `${k(calc.detect)}칸`]);
-      if (calc.interval) out.push(['speed', calc.kind === 'snare' ? '덫 간격' : calc.kind === 'spikes' ? '가시밭 간격' : '공격 간격', `${k(calc.interval)}초`]);
+      if (calc.interval) out.push(['speed', calc.kind === 'snare' ? '덫 간격' : calc.kind === 'spikes' ? '가시밭 간격' : calc.kind === 'roller' ? '굴리는 간격' : calc.kind === 'blizzard' ? '눈보라 간격' : '공격 간격', `${k(calc.interval)}초`]);
       if (calc.range) out.push(['range', calc.kind === 'pulse' ? '범위' : '사거리', `${k(calc.range)}칸`]);
       out.push(['target', '대상', calc.targets === 'both' ? '지상·공중' : calc.targets === 'air' ? '공중만' : '지상만']);
     }
@@ -32682,6 +34989,13 @@ RG.render = (() => {
     if (spec.rain && cur.rain && spec.rain.count !== cur.rain.count) parts.push(`고드름 ${cur.rain.count}명 → ${spec.rain.count}명`);
     if (spec.strike && cur.strike && spec.strike.count !== cur.strike.count) parts.push(`번개 ${cur.strike.count}명 → ${spec.strike.count}명`);
     if (spec.fear && cur.fear) parts.push(`공포 ${cur.fear.dur} → ${spec.fear.dur}초`);
+    if (spec.orbit && cur.orbit) parts.push(`불사조 초당 ${cur.orbit.dps} → ${spec.orbit.dps}${spec.orbit.birds > cur.orbit.birds ? `, ${spec.orbit.birds}마리` : ''}`);
+    if (spec.blizzard && cur.blizzard) parts.push(`눈보라 초당 ${cur.blizzard.dps} → ${spec.blizzard.dps}, 터짐 ${cur.blizzard.shatter} → ${spec.blizzard.shatter}${spec.blizzard.count > cur.blizzard.count ? `, ${spec.blizzard.count}곳` : ''}`);
+    if (spec.roller && cur.roller) parts.push(spec.roller.type === 'tornado' ? `회오리 초당 ${cur.roller.dps} → ${spec.roller.dps}, ${cur.roller.length} → ${spec.roller.length}칸` : `깔기 ${cur.roller.crush} → ${spec.roller.crush}${spec.roller.count > cur.roller.count ? `, 바위 ${spec.roller.count}개` : ''}`);
+    if (spec.smite && cur.smite) parts.push(`체력 비례 ${round(cur.smite.pct * 100)}% → ${round(spec.smite.pct * 100)}%${spec.smite.count > cur.smite.count ? `, ${spec.smite.count}명` : ''}`);
+    if (spec.harvest && cur.harvest) parts.push(`영혼 폭풍 ${cur.harvest.storm} → ${spec.harvest.storm}`);
+    if (spec.chrono && cur.chrono) parts.push(`시간 멈춤 ${cur.chrono.stop} → ${spec.chrono.stop}초, 범위 ${cur.chrono.radius} → ${spec.chrono.radius}칸`);
+    if (spec.breath && cur.breath && spec.breath.count > cur.breath.count) parts.push(`불길 ${spec.breath.count}줄`);
     if (spec.cone && cur.cone && spec.cone !== cur.cone) parts.push(spec.cone >= 360 ? '사방으로 불길' : `부채꼴 ${cur.cone}° → ${spec.cone}°`);
     if (spec.interval && cur.interval) parts.push(`간격 ${round(RG.stats.specOf(t.type, t.level, t.branch).interval, 2)} → ${spec.interval}초`);
     if (spec.range && cur.range) parts.push(`사거리 ${round(RG.stats.specOf(t.type, t.level, t.branch).range, 1)} → ${spec.range}칸`);
