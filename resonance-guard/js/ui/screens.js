@@ -517,6 +517,9 @@
           mapId: def.id, mode, heroId: noHero ? null : hero, skills: P().get().skills.slice(),
           seed: (Math.random() * 1e9) >>> 0, towers, towerRanks: P().towerRanks(), finalLv2: true, branches: P().branchesUnlocked(),
         };
+        // 영웅 성장(인연 재능·장신구)은 시작 때 복사 — 도전 모드에서는 판이 쓰지 않음
+        const growth = !noHero && hero && mode !== 'challenge' ? P().heroGrowth(hero) : null;
+        if (growth) opts.heroGrowth = growth;
         const go = () => UI.show('game', { opts });
         const story = def.story && def.story.before;
         if (mode === 'normal' && story && D().story[story] && !P().seen('story', story)) UI.show('story', { id: story, then: go });

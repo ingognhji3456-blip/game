@@ -665,7 +665,7 @@ RG.render = (() => {
   }
 
   /* ---------------- 장판·덫 ---------------- */
-  const ZONE_FLAT = { fire: 'rgba(255,120,60,0.4)', void: 'rgba(110,31,102,0.5)', thorn: 'rgba(74,122,38,0.4)', blizzard: 'rgba(200,236,255,0.35)' };
+  const ZONE_FLAT = { fire: 'rgba(255,120,60,0.4)', lava: 'rgba(255,90,40,0.45)', void: 'rgba(110,31,102,0.5)', thorn: 'rgba(74,122,38,0.4)', blizzard: 'rgba(200,236,255,0.35)' };
   function drawZones() {
     const st = game.state;
     const lite = lowFx();
@@ -704,7 +704,7 @@ RG.render = (() => {
           ctx.rect(fx - s0 / 2, fy - s0 / 2, s0, s0);
         }
         ctx.fill();
-      } else if (z.kind === 'fire') {
+      } else if (z.kind === 'fire' || z.kind === 'lava') { // lava: 카라 고유 재능 '용암 자국'
         const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, R);
         g.addColorStop(0, 'rgba(255,214,120,0.75)');
         g.addColorStop(0.55, 'rgba(255,107,61,0.45)');

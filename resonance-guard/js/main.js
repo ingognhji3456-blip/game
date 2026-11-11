@@ -29,6 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
   const start = params.get('screen');
-  if (start === 'game') RG.ui.show('game', { opts: { mapId: params.get('map') || '1-1', heroId: params.get('hero') || 'kara', seed: 1, mode: 'normal', towers: RG.progress.towersFor(params.get('map') || '1-1'), towerRanks: RG.progress.towerRanks(), finalLv2: true, branches: true } });
+  if (start === 'game') RG.ui.show('game', { opts: { mapId: params.get('map') || '1-1', heroId: params.get('hero') || 'kara', seed: 1, mode: 'normal', towers: RG.progress.towersFor(params.get('map') || '1-1'), towerRanks: RG.progress.towerRanks(), finalLv2: true, branches: true, heroGrowth: RG.progress.heroGrowth(params.get('hero') || 'kara') || undefined } });
   else RG.ui.show(start || 'title', {});
 });

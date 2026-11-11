@@ -8,7 +8,7 @@ RG.progress = (() => {
   const D = () => RG.data;
 
   function blank() {
-    return { v: 1, maps: {}, skills: [], seen: { enemies: [], story: [], tips: [] }, endless: {}, lastMap: '1-1', lastHero: 'kara', gacha: blankGacha() };
+    return { v: 1, maps: {}, skills: [], seen: { enemies: [], story: [], tips: [] }, endless: {}, lastMap: '1-1', lastHero: 'kara', gacha: blankGacha(), heroes: {}, gear: {} };
   }
   /** 뽑기 상태: 가진 탑과 강화 단계, 공명석, 천장 */
   function blankGacha() {
@@ -23,6 +23,8 @@ RG.progress = (() => {
     const p = RG.save.get(RG.save.KEYS.progress, null);
     profile = p && p.v === 1 ? Object.assign(blank(), p) : blank();
     profile.seen = Object.assign({ enemies: [], story: [], tips: [] }, profile.seen || {});
+    if (!profile.heroes || typeof profile.heroes !== 'object') profile.heroes = {};
+    if (!profile.gear || typeof profile.gear !== 'object') profile.gear = {};
     if (!p || !p.gacha) {
       // 뽑기가 생기기 전 기록: 그때까지 해금했던 탑은 그대로 가진 것으로 (빼앗지 않음)
       const g = blankGacha();
@@ -169,6 +171,7 @@ RG.progress = (() => {
     const beforeHeroes = new Set(heroesFor(nextMapId(mapId) || mapId));
     const wasBranches = branchesUnlocked();
     const wasCleared = !!rec.cleared;
+    const wasChallenge = !!rec.challenge;
     let stars = 0;
     if (st.result === 'win') {
       const R = D().rules;
@@ -209,7 +212,100 @@ RG.progress = (() => {
       for (const e of D().endless || []) if (e.unlockAfter === mapId) unlocks.maps.push(e.id);
       unlocks.branches = !wasBranches && branchesUnlocked();
     }
-    return { stars, newStars: after - before, firstClear, unlocks, reward };
+    // 영웅 인연 경험치 · 장신구 (docs/design/hero-growth.md)
+    const heroId = st.hero && st.hero.heroId ? st.hero.heroId : st.heroId || null;
+    const bond = heroId && D().heroes[heroId] ? addBond(heroId, RG.growth.bondGain({ result: st.result, mode, newStars: after - before, waves: mode === 'endless' ? p.endless[mapId] || 0 : 0 })) : null;
+    const gear = [];
+    if (mode === 'challenge' && st.result === 'win' && !wasChallenge) gear.push(grantGear(rarityForRegion(mapRegion(mapId)), `ch:${mapId}`));
+    if (mode === 'endless') {
+      const now = p.endless[mapId] || 0;
+      D().growth.endlessMilestones.forEach((w, i) => { if (beforeEndless < w && now >= w) gear.push(grantGear(['common', 'rare', 'epic', 'epic'][i], `en:${mapId}:${w}`)); });
+    }
+    return { stars, newStars: after - before, firstClear, unlocks, reward, bond, gear };
+  }
+
+  /* ---------------- 영웅 성장 ---------------- */
+  function heroRec(id) {
+    const hs = get().heroes;
+    if (!hs[id]) hs[id] = { xp: 0, talents: [], gear: [null, null] };
+    const r = hs[id];
+    if (!Array.isArray(r.talents)) r.talents = [];
+    if (!Array.isArray(r.gear)) r.gear = [null, null];
+    return r;
+  }
+  const bondOf = (id) => RG.growth.levelOf(heroRec(id).xp);
+  function addBond(id, gain) {
+    const r = heroRec(id);
+    const before = RG.growth.levelOf(r.xp).level;
+    r.xp += Math.max(0, gain);
+    const now = RG.growth.levelOf(r.xp);
+    save();
+    return { heroId: id, gain, before, after: now.level, levelUp: now.level > before };
+  }
+  function takeTalent(heroId, talentId) {
+    const r = heroRec(heroId);
+    r.talents = RG.growth.cleanTalents(heroId, r.talents, bondOf(heroId).level);
+    const ok = RG.growth.canTake(heroId, r.talents, talentId, bondOf(heroId).level);
+    if (!ok.ok) return ok;
+    r.talents.push(talentId);
+    save();
+    return { ok: true };
+  }
+  function resetTalents(heroId) { heroRec(heroId).talents = []; save(); }
+  const talentsOf = (heroId) => RG.growth.cleanTalents(heroId, heroRec(heroId).talents, bondOf(heroId).level);
+  const ownedGear = () => Object.assign({}, get().gear);
+  /** 장신구 끼기/빼기: slot 0·1, gearId null = 빼기. 같은 장신구는 한 영웅의 두 칸에 함께 못 낌 */
+  function equipGear(heroId, slot, gearId) {
+    const r = heroRec(heroId);
+    if (slot !== 0 && slot !== 1) return { ok: false, reason: '없는 칸' };
+    if (gearId != null && !(gearId in get().gear)) return { ok: false, reason: '가지지 않은 장신구' };
+    if (gearId != null && r.gear[1 - slot] === gearId) r.gear[1 - slot] = null;
+    r.gear[slot] = gearId;
+    save();
+    return { ok: true };
+  }
+  function upgradeGear(gearId) {
+    const g = get().gear;
+    if (!(gearId in g)) return { ok: false, reason: '가지지 않은 장신구' };
+    const cost = RG.growth.upgradeCost(gearId, g[gearId]);
+    if (cost == null) return { ok: false, reason: '이미 최대로 강화했습니다' };
+    if (gachaState().crystals < cost) return { ok: false, reason: '공명석이 모자랍니다' };
+    gachaState().crystals -= cost;
+    g[gearId] += 1;
+    save();
+    return { ok: true, plus: g[gearId], cost };
+  }
+  const rarityForRegion = (r) => (r <= 2 ? 'common' : r <= 4 ? 'rare' : 'epic');
+  /** 장신구 하나 주기: 그 등급에서 아직 없는 것 중 하나(기록 문자열로 결정), 다 있으면 가장 낮은 강화 +1, 다 최대면 공명석 */
+  function grantGear(rarity, seedKey) {
+    const G = D().growth;
+    const g = get().gear;
+    const pool = G.gearOrder.filter((id) => G.gear[id].rarity === rarity);
+    const fresh = pool.filter((id) => !(id in g));
+    let h = 0;
+    for (const ch of `${seedKey}|${Object.keys(g).length}`) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    let out;
+    if (fresh.length) {
+      const id = fresh[h % fresh.length];
+      g[id] = 0;
+      out = { id, plus: 0, isNew: true };
+    } else {
+      const up = pool.filter((id) => g[id] < G.gearMaxPlus).sort((a, b) => g[a] - g[b] || pool.indexOf(a) - pool.indexOf(b))[0];
+      if (up) { g[up] += 1; out = { id: up, plus: g[up], isNew: false }; } else { gachaState().crystals += G.gearDupCrystals; out = { id: null, crystals: G.gearDupCrystals }; }
+    }
+    save();
+    return out;
+  }
+  /** 판에 넘길 성장 복사본 (opts.heroGrowth) — 재능·장신구가 하나도 없으면 null */
+  function heroGrowth(heroId) {
+    if (!D().heroes[heroId]) return null;
+    const r = heroRec(heroId);
+    const level = bondOf(heroId).level;
+    const talents = RG.growth.cleanTalents(heroId, r.talents, level);
+    const g = get().gear;
+    const gear = r.gear.filter((id) => id && id in g).map((id) => [id, g[id]]);
+    if (!talents.length && !gear.length) return null;
+    return { level, talents, gear };
   }
 
   function nextMapId(id) {
@@ -241,5 +337,6 @@ RG.progress = (() => {
     load, get, save, reset, hasSave, mapIndex, mapRec, mapUnlocked, towersFor, heroesFor, branchesUnlocked,
     gachaState, ownedTowers, ownsTower, towerRank, towerRanks, gachaPool, inPool, pullGacha, towersOpen, towerOpen, towerRegion, regionCleared, towerFinal,
     mapStars, starsTotal, starsSpent, starsFree, canLearn, learn, resetSkills, record, nextMapId, markSeen, seen, frontier, skillCost,
+    heroRec, bondOf, addBond, takeTalent, resetTalents, talentsOf, ownedGear, equipGear, upgradeGear, grantGear, heroGrowth, rarityForRegion,
   };
 })();
