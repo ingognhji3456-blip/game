@@ -189,7 +189,7 @@ test('그믐달 군주: 별 가리기(경고 뒤 탑 사거리 −40%, 5초 뒤 
   const before = g.state.enemies.filter((e) => e.type === 'stardust_moth' && !e.dead).length;
   b.hp = b.maxHp * 0.69;
   g.step();
-  assert.ok(g.state.enemies.filter((e) => e.type === 'stardust_moth' && !e.dead).length >= before + 6, '나방 소환');
+  assert.ok(g.state.enemies.filter((e) => e.type === 'stardust_moth' && !e.dead).length >= before + 4, '나방 소환');
   // 35%: 많이 맞은 원소(얼음)에 면역
   for (let i = 0; i < 5; i++) g.api.damage(b, 100, 'frost', SRC('frost'), {});
   g.api.damage(b, 100, 'fire', SRC('fire'), {});

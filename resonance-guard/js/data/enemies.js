@@ -273,7 +273,7 @@ RG.data.enemies = {
   },
   comet_knight: {
     name: '혜성 기사', region: 6, size: 0.7, hp: 1250, speed: 0.85, armor: 0.4, bounty: 44, lives: 1,
-    melee: { damage: 42, interval: 1.1 }, traits: { dash: { mult: 2.2, dur: 2.5 } }, affinity: { fire: 'resist' },
+    melee: { damage: 42, interval: 1.1 }, traits: { dash: { mult: 1.8, dur: 2 } }, affinity: { fire: 'resist' },
     desc: '두꺼운 갑옷. 처음 맞으면 혜성처럼 돌진합니다.',
   },
   nebula_jelly: {
@@ -307,7 +307,7 @@ RG.data.enemies = {
     bossData: {
       veil: { every: 12, radius: 2.6, pct: 0.4, dur: 5 }, trackEls: true,
       phases: [
-        { at: 0.7, summon: { type: 'stardust_moth', n: 6 } },
+        { at: 0.7, summon: { type: 'stardust_moth', n: 4 } },
         { at: 0.35, blink: 3, adaptImmune: true, summon: { type: 'phase_wraith', n: 2 } },
       ],
     },

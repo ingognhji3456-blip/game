@@ -20,7 +20,9 @@ RG.data.expedition = {
   actScale: [0.85, 1.0, 1.1],
   floorScale: 0.03,
   eliteScale: 1.25,
-  goldMult: 1.2,
+  goldMult: 1.5,             // 짧은 작전이라 경제가 덜 쌓임 → 시작 골드를 더 줌
+  waveWindow: 0.75,          // 전투·정예는 맵 웨이브의 앞 75%에서 고르게 고름 (마지막 웨이브는 경제가 쌓인 판 기준이라)
+  boss: { goldMult: 2.5, hpScale: [0.7, 0.7, 0.5] }, // 막 보스(막마다): 마지막 5웨이브를 앞 웨이브 경제 없이, 작은 덱으로 치르므로
   waves: { battle: 6, elite: 7, boss: 5 },
   silver: { battle: 20, elite: 40, boss: 80, perAct: 5, skip: 25 },
   shop: { tower: 60, relic: 110, heal: 45, healLives: 3, upgrade: 70 },

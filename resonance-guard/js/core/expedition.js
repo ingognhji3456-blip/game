@@ -43,11 +43,13 @@ RG.expedition = (() => {
     return RG.data.maps.filter((m) => regs.includes(m.region) && !m.boss).map((m) => m.id);
   }
   const isBossFloor = (run) => run.floor > E().floors;
+  /** 이 막의 보스 맵 (막을 시작할 때부터 정해져 있음 → 지도에서 미리 보여 줌) */
+  const actBossMap = (run, act = run.act) => pick(rngOf(run, 'floor', act, E().floors + 1), E().actBoss[act - 1]);
 
   /** 이번 층의 노드 2~3개 (보스 층은 보스 하나) */
   function floorNodes(run) {
     const r = rngOf(run, 'floor', run.act, run.floor);
-    if (isBossFloor(run)) return [{ kind: 'boss', mapId: pick(r, E().actBoss[run.act - 1]) }];
+    if (isBossFloor(run)) return [{ kind: 'boss', mapId: actBossMap(run) }];
     const n = 2 + (r() < 0.6 ? 1 : 0);
     const maps = shuffled(r, actMaps(run.act));
     const out = [];
@@ -106,17 +108,19 @@ RG.expedition = (() => {
       waves = Array.from({ length: k }, (_, i) => L - k + i);
     } else {
       const k = Math.min(node.kind === 'elite' ? E().waves.elite : E().waves.battle, L);
-      waves = Array.from({ length: k }, (_, i) => Math.round((i * (L - 1)) / Math.max(1, k - 1)));
+      const span = Math.max(k, Math.round(L * (E().waveWindow || 1)));
+      waves = Array.from({ length: k }, (_, i) => Math.round((i * (span - 1)) / Math.max(1, k - 1)));
     }
     const m = mods(run, node.kind === 'boss' ? null : node.rule);
-    const hpScale = E().actScale[run.act - 1] * (1 + E().floorScale * (Math.min(run.floor, E().floors) - 1)) * (node.kind === 'elite' ? E().eliteScale : 1) * (1 + (m.hpScale || 0));
+    const boss = node.kind === 'boss';
+    const hpScale = E().actScale[run.act - 1] * (1 + E().floorScale * (Math.min(run.floor, E().floors) - 1)) * (node.kind === 'elite' ? E().eliteScale : 1) * (boss ? E().boss.hpScale[run.act - 1] : 1) * (1 + (m.hpScale || 0));
     const meta = {};
     for (const [k, v] of Object.entries(m)) if (!['hpScale', 'armorAdd', 'countdownMul', 'silverPct', 'winLife'].includes(k)) meta[k] = v;
     return {
       mapId: node.mapId,
       hpMult: Math.round(hpScale * 10000) / 10000,
       expedition: {
-        waves, lives: run.lives, goldMult: E().goldMult, meta, upgraded: run.up.slice(),
+        waves, lives: run.lives, goldMult: boss ? E().boss.goldMult : E().goldMult, meta, upgraded: run.up.slice(),
         armorAdd: m.armorAdd || 0, countdownMul: m.countdownMul ? Math.max(0.25, 0.5 ** Math.round(m.countdownMul / 0.5)) : 1, // 절반 효과가 겹치면 ¼까지
         act: run.act, floor: run.floor, kind: node.kind, rule: node.kind === 'boss' ? null : node.rule,
       },
@@ -263,5 +267,5 @@ RG.expedition = (() => {
   /** 지금 몇 번째 층인가(전체): 1막 1층 = 1 */
   const depth = (run) => (run.act - 1) * (E().floors + 1) + run.floor;
 
-  return { newRun, pickDeck, floorNodes, mods, choose, battleSetup, applyBattle, takeReward, advance, eventChoose, shopStock, shopBuy, shopLeave, rest, finish, rewardsOf, actMaps, depth, isBossFloor };
+  return { newRun, pickDeck, floorNodes, mods, choose, battleSetup, applyBattle, takeReward, advance, eventChoose, shopStock, shopBuy, shopLeave, rest, finish, rewardsOf, actMaps, depth, isBossFloor, actBossMap };
 })();

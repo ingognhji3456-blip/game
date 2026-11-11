@@ -388,9 +388,60 @@ async function gachaRun(browser) {
   return { name: '탑 뽑기', ok, detail: `뽑은 탑 "${pulled.join(', ')}"(${gotType}${g1.owned[gotType] > 0 ? ` 강화 +${g1.owned[gotType]}` : ' 새 탑'}), 공명석 ${g0.crystals}→${g1.crystals}, 모자라면 버튼 꺼짐 ${disabled}, 출정 준비 내 탑 ${briefCount}개, 전투 탑 목록 ${dock.length}개`, errors };
 }
 
+/* ---------------- 원정: 출발 → 덱 → 노드 → 전투(실제 판) → 보상 → 그만두기 → 보상 받기 ---------------- */
+async function expeditionRun(browser) {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await page.goto(URL);
+  await page.waitForTimeout(300);
+  await page.evaluate(() => {
+    const P = RG.progress; P.reset();
+    const st = { result: 'win', lives: 20, task: { done: true }, wave: { index: 8 } };
+    for (const m of RG.data.maps) { if (m.id === '4-1') break; P.record(m.id, 'normal', st); }
+    for (const t of ['ember_archer', 'frost_crystal', 'stone_barracks', 'sun_lens', 'forge', 'lightning_rod']) P.gachaState().owned[t] = 0;
+    P.save();
+    RG.ui.show('world', {});
+  });
+  await page.waitForTimeout(400);
+  await page.click('.btn-exp');
+  await page.waitForSelector('#screen-expedition.active');
+  await page.click('[data-focus="start"]');
+  await page.waitForTimeout(200);
+  const offer = await page.evaluate(() => RG.progress.expRun().offer);
+  for (const t of offer.slice(0, 4)) { await page.click(`[data-focus="deck-${t}"]`); await page.waitForTimeout(80); }
+  await page.click('#screen-expedition .ex-panel .btn-primary');
+  await page.waitForTimeout(200);
+  const nodes = await page.evaluate(() => RG.progress.expRun().nodes.map((n) => n.kind));
+  await page.click('[data-focus="node-0"]');
+  await page.waitForFunction(() => RG.ui.game.game && !document.querySelector('#screen-game').classList.contains('loading'));
+  const g = await page.evaluate(() => ({ mode: RG.ui.game.game.opts.mode, waves: RG.ui.game.game.state.wave.total, deck: RG.ui.game.game.opts.towers.length }));
+  // 판을 빠르게 이긴 것으로 (전투 규칙은 단위 테스트가 다룸)
+  await page.evaluate(() => { const gm = RG.ui.game.game; gm.state.result = 'win'; gm.state.lives = 11; });
+  await page.waitForSelector('#screen-expedition.active', { timeout: 8000 });
+  const afterBattle = await page.evaluate(() => { const r = RG.progress.expRun(); return { phase: r.phase, lives: r.lives, silver: r.silver, offer: r.offer.length }; });
+  await page.click('#screen-expedition .ex-picks .ex-pick');
+  await page.waitForTimeout(200);
+  const after = await page.evaluate(() => { const r = RG.progress.expRun(); return { floor: r.floor, deck: r.deck.length, phase: r.phase }; });
+  // 그만두기 → 보상 받기
+  await page.click('.ex-quit');
+  await page.waitForTimeout(150);
+  await page.click('.modal .btn-primary');
+  await page.waitForTimeout(200);
+  const c0 = await page.evaluate(() => RG.progress.gachaState().crystals);
+  await page.click('[data-focus="claim"]');
+  await page.waitForTimeout(200);
+  const end = await page.evaluate(() => ({ run: RG.progress.expRun(), crystals: RG.progress.gachaState().crystals, stats: RG.progress.expStats() }));
+  await page.close();
+  const ok = g.mode === 'expedition' && g.waves === 6 && g.deck === 4 && nodes.every((k) => k === 'battle') && afterBattle.phase === 'reward' && afterBattle.lives === 11 && afterBattle.silver > 0
+    && after.floor === 2 && after.deck === 5 && after.phase === 'map' && !end.run && end.crystals > c0 && end.stats.runs === 1;
+  return { name: '원정', ok, detail: `전투 ${g.waves}웨이브·덱 ${g.deck} → 보상(${afterBattle.offer}개, 불꽃 ${afterBattle.lives}, 은화 ${afterBattle.silver}) → ${after.floor}층·덱 ${after.deck} → 그만두기·보상 공명석 ${c0}→${end.crystals}, 원정 기록 ${end.stats.runs}회`, errors };
+}
+
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
-  const runs = { keyboard: keyboardRun, touch: touchRun, mouse: mouseRun, resume: resumeRun, world: worldRun, gacha: gachaRun };
+  const runs = { keyboard: keyboardRun, touch: touchRun, mouse: mouseRun, resume: resumeRun, world: worldRun, gacha: gachaRun, expedition: expeditionRun };
   let fail = 0;
   for (const [k, fn] of Object.entries(runs)) {
     if (only && only !== k) continue;

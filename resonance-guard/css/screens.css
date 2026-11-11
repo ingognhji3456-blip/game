@@ -960,7 +960,7 @@
 .hp-bond { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: linear-gradient(180deg, #ffd0e0, #ff9ab8); color: #4a1428; font-style: normal; font-size: 0.7rem; font-weight: 900; display: grid; place-items: center; box-shadow: 0 0 0 2px #1a1028; }
 
 /* ---------- 원정 (docs/design/expedition.md) ---------- */
-#screen-expedition { display: flex; flex-direction: column; }
+#screen-expedition.active { display: flex; flex-direction: column; }
 .ex-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 12px 16px calc(16px + var(--safe-b)); max-width: 1100px; width: 100%; margin: 0 auto; }
 .ex-quit { margin-left: auto; }
 .btn-exp.ready { box-shadow: 0 0 0 2px #ffe7a8, 0 0 12px #ffe7a866; }
@@ -979,6 +979,10 @@
 .ex-panel .dim { max-width: 640px; }
 .ex-log { padding: 6px 12px; border-radius: 10px; background: #ffe7a81a; border: 1px solid #ffe7a855; color: #fff4d0; font-weight: 700; }
 .ex-nodes { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; width: 100%; }
+.ex-bossline { display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 8px; border-radius: 12px; background: #2a0f1e99; border: 1px solid #ff7a9a66; color: #ffdfe6; text-align: left; cursor: pointer; }
+.ex-bossline .ex-boss-img { width: 44px; height: 44px; object-fit: contain; }
+.ex-bossline span { display: flex; flex-direction: column; line-height: 1.2; }
+.ex-bossline small { color: #ffb3c4; font-size: 0.75rem; }
 .ex-node { appearance: none; font: inherit; color: var(--text); cursor: pointer; width: 220px; min-height: 170px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 12px; border-radius: 16px; background: linear-gradient(180deg, #2d2340, #1a1228); border: 2px solid #5a4a72; transition: transform 0.15s, box-shadow 0.15s; }
 .ex-node:hover, .ex-node:focus-visible { transform: translateY(-3px); box-shadow: 0 8px 18px #0008, 0 0 0 2px var(--gold2); outline: none; }
 .ex-node-ico { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: #0008; }

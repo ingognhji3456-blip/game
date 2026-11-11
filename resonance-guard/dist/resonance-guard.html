@@ -1127,7 +1127,7 @@ button { font-family: var(--font); color: inherit; }
 .hp-bond { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: linear-gradient(180deg, #ffd0e0, #ff9ab8); color: #4a1428; font-style: normal; font-size: 0.7rem; font-weight: 900; display: grid; place-items: center; box-shadow: 0 0 0 2px #1a1028; }
 
 /* ---------- 원정 (docs/design/expedition.md) ---------- */
-#screen-expedition { display: flex; flex-direction: column; }
+#screen-expedition.active { display: flex; flex-direction: column; }
 .ex-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 12px 16px calc(16px + var(--safe-b)); max-width: 1100px; width: 100%; margin: 0 auto; }
 .ex-quit { margin-left: auto; }
 .btn-exp.ready { box-shadow: 0 0 0 2px #ffe7a8, 0 0 12px #ffe7a866; }
@@ -1146,6 +1146,10 @@ button { font-family: var(--font); color: inherit; }
 .ex-panel .dim { max-width: 640px; }
 .ex-log { padding: 6px 12px; border-radius: 10px; background: #ffe7a81a; border: 1px solid #ffe7a855; color: #fff4d0; font-weight: 700; }
 .ex-nodes { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; width: 100%; }
+.ex-bossline { display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 8px; border-radius: 12px; background: #2a0f1e99; border: 1px solid #ff7a9a66; color: #ffdfe6; text-align: left; cursor: pointer; }
+.ex-bossline .ex-boss-img { width: 44px; height: 44px; object-fit: contain; }
+.ex-bossline span { display: flex; flex-direction: column; line-height: 1.2; }
+.ex-bossline small { color: #ffb3c4; font-size: 0.75rem; }
 .ex-node { appearance: none; font: inherit; color: var(--text); cursor: pointer; width: 220px; min-height: 170px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 12px; border-radius: 16px; background: linear-gradient(180deg, #2d2340, #1a1228); border: 2px solid #5a4a72; transition: transform 0.15s, box-shadow 0.15s; }
 .ex-node:hover, .ex-node:focus-visible { transform: translateY(-3px); box-shadow: 0 8px 18px #0008, 0 0 0 2px var(--gold2); outline: none; }
 .ex-node-ico { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: #0008; }
@@ -2612,7 +2616,7 @@ RG.data.enemies = {
   },
   comet_knight: {
     name: '혜성 기사', region: 6, size: 0.7, hp: 1250, speed: 0.85, armor: 0.4, bounty: 44, lives: 1,
-    melee: { damage: 42, interval: 1.1 }, traits: { dash: { mult: 2.2, dur: 2.5 } }, affinity: { fire: 'resist' },
+    melee: { damage: 42, interval: 1.1 }, traits: { dash: { mult: 1.8, dur: 2 } }, affinity: { fire: 'resist' },
     desc: '두꺼운 갑옷. 처음 맞으면 혜성처럼 돌진합니다.',
   },
   nebula_jelly: {
@@ -2646,7 +2650,7 @@ RG.data.enemies = {
     bossData: {
       veil: { every: 12, radius: 2.6, pct: 0.4, dur: 5 }, trackEls: true,
       phases: [
-        { at: 0.7, summon: { type: 'stardust_moth', n: 6 } },
+        { at: 0.7, summon: { type: 'stardust_moth', n: 4 } },
         { at: 0.35, blink: 3, adaptImmune: true, summon: { type: 'phase_wraith', n: 2 } },
       ],
     },
@@ -3086,7 +3090,9 @@ RG.data.expedition = {
   actScale: [0.85, 1.0, 1.1],
   floorScale: 0.03,
   eliteScale: 1.25,
-  goldMult: 1.2,
+  goldMult: 1.5,             // 짧은 작전이라 경제가 덜 쌓임 → 시작 골드를 더 줌
+  waveWindow: 0.75,          // 전투·정예는 맵 웨이브의 앞 75%에서 고르게 고름 (마지막 웨이브는 경제가 쌓인 판 기준이라)
+  boss: { goldMult: 2.5, hpScale: [0.7, 0.7, 0.5] }, // 막 보스(막마다): 마지막 5웨이브를 앞 웨이브 경제 없이, 작은 덱으로 치르므로
   waves: { battle: 6, elite: 7, boss: 5 },
   silver: { battle: 20, elite: 40, boss: 80, perAct: 5, skip: 25 },
   shop: { tower: 60, relic: 110, heal: 45, healLives: 3, upgrade: 70 },
@@ -4304,18 +4310,18 @@ RG.data.maps = [
     ramp: [0.6, 0.75, 0.9],
     waves: [
       'comet_knight*1/2',
-      'stardust_moth*4/0.6 ; comet_knight*1/1.6@5',
+      'stardust_moth*3/0.6 ; comet_knight*1/1.6@5',
       'cloud_sheep*1/2.4 ; comet_knight*1/1.6@5',
-      'comet_knight*3/1.4 ; stardust_moth*4/0.6@6',
+      'comet_knight*3/1.4 ; stardust_moth*3/0.6@6',
       'grey_legionnaire*4/1 ; cloud_sheep*1/2@6',
-      'comet_knight*3/1.2 ; stardust_moth*7/0.5@6',
+      'comet_knight*3/1.2 ; stardust_moth*5/0.5@6',
       'cloud_sheep*3/2 ; comet_knight*2/1.4@7',
-      'stardust_moth*11/0.4 ; comet_knight*2/1.4@8',
+      'stardust_moth*8/0.4 ; comet_knight*2/1.4@8',
       'comet_knight*4/1.1 ; cloud_sheep*2/2@8',
       'cloud_sheep*3/1.8 ; grey_legionnaire*4/1@8',
-      'comet_knight*5/1 ; stardust_moth*9/0.45@8',
+      'comet_knight*5/1 ; stardust_moth*6/0.45@8',
       'cloud_sheep*4/1.6 ; comet_knight*4/1.1@8',
-      'comet_knight*7/0.9 ; cloud_sheep*3/1.8@10 ; stardust_moth*11/0.4@14',
+      'comet_knight*7/0.9 ; cloud_sheep*3/1.8@10 ; stardust_moth*8/0.4@14',
       'cloud_sheep*4/1.5 ; comet_knight*4/1@10',
     ],
     task: { type: 'distinct', n: 6, text: '서로 다른 공명 효과 6가지 동시에' },
@@ -4457,26 +4463,26 @@ RG.data.maps = [
     hpMult: 0.5, // 탐색 봇 ★3 기준 난이도 계수
     ramp: [0.6, 0.75, 0.9],
     waves: [
-      'comet_knight*2/1.4>0',
+      'comet_knight*1/1.4>0',
       'stardust_moth*6/0.5>1 ; phase_wraith*1/1.4@5>0',
       'cloud_sheep*1/2>0 ; eclipse_priest*1/2@4>1',
-      'umbral_stargazer*2/1.2>1 ; comet_knight*2/1.2@5>0',
+      'umbral_stargazer*2/1.2>1 ; comet_knight*1/1.2@5>0',
       'meteor_golem*1/2.2>0 ; nebula_jelly*2/1.4@5>1',
       'phase_wraith*3/1.1>1 ; eclipse_priest*1/2@6>0',
-      'cloud_sheep*2/1.8>0 ; comet_knight*2/1.1@6>1',
+      'cloud_sheep*2/1.8>0 ; comet_knight*1/1.1@6>1',
       'umbral_stargazer*3/1>1 ; meteor_golem*1/2@7>0',
       'nebula_jelly*4/1.1>0 ; phase_wraith*3/1@7>1',
       'eclipse_priest*2/1.6>1 ; cloud_sheep*2/1.6@6>0 ; stardust_moth*8/0.45@10>1',
-      'meteor_golem*2/2>0 ; comet_knight*4/1@8>1',
+      'meteor_golem*2/2>0 ; comet_knight*3/1@8>1',
       'phase_wraith*5/0.9>1 ; umbral_stargazer*3/1@8>0',
       'cloud_sheep*4/1.4>0 ; eclipse_priest*2/1.5@8>1',
       'nebula_jelly*5/1>1 ; meteor_golem*2/1.8@9>0',
-      'comet_knight*7/0.8>0 ; phase_wraith*4/1@9>1',
+      'comet_knight*5/0.8>0 ; phase_wraith*4/1@9>1',
       'umbral_stargazer*5/0.9>1 ; eclipse_priest*2/1.4@9>0 ; cloud_sheep*2/1.6@14>1',
       'meteor_golem*3/1.6>0 ; nebula_jelly*5/1@10>1',
-      'stardust_moth*21/0.3>1 ; comet_knight*5/0.9@10>0',
+      'stardust_moth*21/0.3>1 ; comet_knight*4/0.9@10>0',
       'cloud_sheep*5/1.2>0 ; phase_wraith*6/0.8@10>1 ; eclipse_priest*2/1.5@15>0',
-      'gloom_monarch*1/2>0 ; comet_knight*3/1.1@3>1 ; eclipse_priest*2/1.6@8>0',
+      'gloom_monarch*1/2>0 ; comet_knight*2/1.1@3>1 ; eclipse_priest*2/1.6@8>0',
     ],
     task: { type: 'pureAll', text: '여섯 원소 순수 공명 모두 켜기' },
     challenge: { type: 'lives', value: 3, text: '불꽃 3개로 시작' },
@@ -5861,11 +5867,13 @@ RG.expedition = (() => {
     return RG.data.maps.filter((m) => regs.includes(m.region) && !m.boss).map((m) => m.id);
   }
   const isBossFloor = (run) => run.floor > E().floors;
+  /** 이 막의 보스 맵 (막을 시작할 때부터 정해져 있음 → 지도에서 미리 보여 줌) */
+  const actBossMap = (run, act = run.act) => pick(rngOf(run, 'floor', act, E().floors + 1), E().actBoss[act - 1]);
 
   /** 이번 층의 노드 2~3개 (보스 층은 보스 하나) */
   function floorNodes(run) {
     const r = rngOf(run, 'floor', run.act, run.floor);
-    if (isBossFloor(run)) return [{ kind: 'boss', mapId: pick(r, E().actBoss[run.act - 1]) }];
+    if (isBossFloor(run)) return [{ kind: 'boss', mapId: actBossMap(run) }];
     const n = 2 + (r() < 0.6 ? 1 : 0);
     const maps = shuffled(r, actMaps(run.act));
     const out = [];
@@ -5924,17 +5932,19 @@ RG.expedition = (() => {
       waves = Array.from({ length: k }, (_, i) => L - k + i);
     } else {
       const k = Math.min(node.kind === 'elite' ? E().waves.elite : E().waves.battle, L);
-      waves = Array.from({ length: k }, (_, i) => Math.round((i * (L - 1)) / Math.max(1, k - 1)));
+      const span = Math.max(k, Math.round(L * (E().waveWindow || 1)));
+      waves = Array.from({ length: k }, (_, i) => Math.round((i * (span - 1)) / Math.max(1, k - 1)));
     }
     const m = mods(run, node.kind === 'boss' ? null : node.rule);
-    const hpScale = E().actScale[run.act - 1] * (1 + E().floorScale * (Math.min(run.floor, E().floors) - 1)) * (node.kind === 'elite' ? E().eliteScale : 1) * (1 + (m.hpScale || 0));
+    const boss = node.kind === 'boss';
+    const hpScale = E().actScale[run.act - 1] * (1 + E().floorScale * (Math.min(run.floor, E().floors) - 1)) * (node.kind === 'elite' ? E().eliteScale : 1) * (boss ? E().boss.hpScale[run.act - 1] : 1) * (1 + (m.hpScale || 0));
     const meta = {};
     for (const [k, v] of Object.entries(m)) if (!['hpScale', 'armorAdd', 'countdownMul', 'silverPct', 'winLife'].includes(k)) meta[k] = v;
     return {
       mapId: node.mapId,
       hpMult: Math.round(hpScale * 10000) / 10000,
       expedition: {
-        waves, lives: run.lives, goldMult: E().goldMult, meta, upgraded: run.up.slice(),
+        waves, lives: run.lives, goldMult: boss ? E().boss.goldMult : E().goldMult, meta, upgraded: run.up.slice(),
         armorAdd: m.armorAdd || 0, countdownMul: m.countdownMul ? Math.max(0.25, 0.5 ** Math.round(m.countdownMul / 0.5)) : 1, // 절반 효과가 겹치면 ¼까지
         act: run.act, floor: run.floor, kind: node.kind, rule: node.kind === 'boss' ? null : node.rule,
       },
@@ -6081,7 +6091,7 @@ RG.expedition = (() => {
   /** 지금 몇 번째 층인가(전체): 1막 1층 = 1 */
   const depth = (run) => (run.act - 1) * (E().floors + 1) + run.floor;
 
-  return { newRun, pickDeck, floorNodes, mods, choose, battleSetup, applyBattle, takeReward, advance, eventChoose, shopStock, shopBuy, shopLeave, rest, finish, rewardsOf, actMaps, depth, isBossFloor };
+  return { newRun, pickDeck, floorNodes, mods, choose, battleSetup, applyBattle, takeReward, advance, eventChoose, shopStock, shopBuy, shopLeave, rest, finish, rewardsOf, actMaps, depth, isBossFloor, actBossMap };
 })();
 
 </script>
@@ -37779,7 +37789,20 @@ RG.render = (() => {
       el('h3', { text: boss ? `${run.act}막 보스` : `${run.act}막 ${run.floor}층 — 갈 길을 고르세요` }),
       lastLog ? el('p', { class: 'ex-log', text: lastLog }) : null,
       el('div', { class: 'ex-nodes' }, run.nodes.map((n, i) => nodeCard(run, n, i))),
+      boss ? null : bossPreview(run),
     ]);
+  }
+
+  /** 이 막 보스 미리보기 — 덱·유물을 미리 대비할 수 있게 */
+  function bossPreview(run) {
+    const def = D().maps.find((m) => m.id === EX().actBossMap(run));
+    const ed = D().enemies[def.boss];
+    const row = el('button', { class: 'ex-bossline', 'data-focus': 'boss-preview', title: ed.desc }, [
+      UI.enemyImg(def.boss, 'ex-boss-img'),
+      el('span', {}, [el('small', { text: `${run.act}막 보스 · ${def.id} ${def.name}` }), el('b', { text: ed.name })]),
+    ]);
+    row.addEventListener('click', () => UI.toast(`${ed.name}: ${ed.desc}`, 'info', 4200));
+    return row;
   }
 
   function battlePanel(run) {

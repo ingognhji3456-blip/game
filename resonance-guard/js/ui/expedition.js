@@ -142,7 +142,20 @@
       el('h3', { text: boss ? `${run.act}막 보스` : `${run.act}막 ${run.floor}층 — 갈 길을 고르세요` }),
       lastLog ? el('p', { class: 'ex-log', text: lastLog }) : null,
       el('div', { class: 'ex-nodes' }, run.nodes.map((n, i) => nodeCard(run, n, i))),
+      boss ? null : bossPreview(run),
     ]);
+  }
+
+  /** 이 막 보스 미리보기 — 덱·유물을 미리 대비할 수 있게 */
+  function bossPreview(run) {
+    const def = D().maps.find((m) => m.id === EX().actBossMap(run));
+    const ed = D().enemies[def.boss];
+    const row = el('button', { class: 'ex-bossline', 'data-focus': 'boss-preview', title: ed.desc }, [
+      UI.enemyImg(def.boss, 'ex-boss-img'),
+      el('span', {}, [el('small', { text: `${run.act}막 보스 · ${def.id} ${def.name}` }), el('b', { text: ed.name })]),
+    ]);
+    row.addEventListener('click', () => UI.toast(`${ed.name}: ${ed.desc}`, 'info', 4200));
+    return row;
   }
 
   function battlePanel(run) {

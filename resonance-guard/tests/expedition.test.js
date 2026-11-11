@@ -57,6 +57,7 @@ test('노드 규칙: 첫 층은 전투만, 층마다 2~3개, 전투가 하나 �
     const boss = EX.floorNodes(run);
     assert.strictEqual(boss.length, 1);
     assert.ok(boss[0].kind === 'boss' && XD.actBoss[0].includes(boss[0].mapId));
+    assert.strictEqual(boss[0].mapId, EX.actBossMap(run), '지도에서 미리 보여 준 막 보스와 같음');
   }
 });
 
