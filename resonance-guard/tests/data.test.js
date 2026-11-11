@@ -115,6 +115,7 @@ test('모든 자세가 오류 없이 그려진다 (엄격 모드: 그리다 실�
     for (const e of Object.keys(D.enemies)) for (const f of RG.art.ENEMY_FRAMES) assert.ok(RG.art.enemy(e, f).includes('<svg'), `${e} ${f}`);
     for (const h of [...Object.keys(D.heroes), 'tori_giant']) for (const p of RG.art.HERO_POSES) assert.ok(RG.art.hero(h, p).includes('<svg'), `${h} ${p}`);
     for (const u of ['stone_soldier', 'granite_guard', 'obsidian_blade', 'drone', 'rock_wall', 'snowman', 'tori_giant']) for (const p of RG.art.UNIT_POSES) assert.ok(RG.art.unit(u, p).includes('<svg'), `${u} ${p}`);
+    for (const g of D.growth.gearOrder) assert.ok(RG.art.GEAR_ICONS.includes(g) && RG.art.gearIcon(g).includes('<svg'), `장신구 ${g}`);
     // 영웅마다 초상화 3표정이 자리표시(물음표 얼굴)가 아닌 진짜 그림
     const placeholder = RG.art.portrait('__없는_영웅__', 'normal').replace(/id="[^"]*"|url\(#[^)]*\)/g, '');
     for (const h of D.heroOrder) for (const m of ['normal', 'happy', 'worried']) {

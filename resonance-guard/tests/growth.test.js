@@ -345,6 +345,8 @@ test('장신구 얻기: 도전 첫 클리어(지역에 맞는 등급) · 무한 
   const re = P.record('E1', 'endless', { result: 'lose', lives: 0, wave: { index: 32 } });
   assert.deepStrictEqual(plain(re.gear).map((g) => GD.gear[g.id].rarity), ['common', 'rare', 'epic'], '10·20·30');
   assert.strictEqual(P.record('E1', 'endless', { result: 'lose', lives: 0, wave: { index: 25 } }).gear.length, 0, '기록을 못 넘으면 없음');
+  // 무한 인연 경험치는 이번 판 웨이브로 (최고 기록 32가 아니라 이번 11 → 1)
+  assert.strictEqual(P.record('E1', 'endless', { result: 'lose', lives: 0, wave: { index: 12 }, hero: { heroId: 'sera' } }).bond.gain, 1);
   // 일반 6종을 다 가지면 강화 → 다 +3이면 공명석
   for (const id of GD.gearOrder) if (GD.gear[id].rarity === 'common') P.get().gear[id] = 0;
   const up = P.grantGear('common', 'x');

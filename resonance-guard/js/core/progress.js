@@ -214,7 +214,8 @@ RG.progress = (() => {
     }
     // 영웅 인연 경험치 · 장신구 (docs/design/hero-growth.md)
     const heroId = st.hero && st.hero.heroId ? st.hero.heroId : st.heroId || null;
-    const bond = heroId && D().heroes[heroId] ? addBond(heroId, RG.growth.bondGain({ result: st.result, mode, newStars: after - before, waves: mode === 'endless' ? p.endless[mapId] || 0 : 0 })) : null;
+    const runWaves = mode === 'endless' ? Math.max(0, st.wave.index - (st.result === 'lose' ? 1 : 0)) : 0; // 이번 판에 버틴 웨이브 (최고 기록 아님)
+    const bond = heroId && D().heroes[heroId] ? addBond(heroId, RG.growth.bondGain({ result: st.result, mode, newStars: after - before, waves: runWaves })) : null;
     const gear = [];
     if (mode === 'challenge' && st.result === 'win' && !wasChallenge) gear.push(grantGear(rarityForRegion(mapRegion(mapId)), `ch:${mapId}`));
     if (mode === 'endless') {

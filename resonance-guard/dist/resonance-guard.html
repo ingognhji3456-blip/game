@@ -1045,6 +1045,86 @@ button { font-family: var(--font); color: inherit; }
 .rg-panel.zooming .rg-art { transform: scale(1); filter: saturate(1.1) brightness(1.05); }
 .rg-panel.zooming .rg-shade { opacity: 0; transition: opacity 0.4s; }
 
+/* ---------- 수호대: 소개 / 성장 탭 · 성장 패널 (docs/design/hero-growth.md) ---------- */
+.hx-tabs { display: flex; gap: 6px; padding: 2px; border-radius: 14px; background: #0c0814; border: 1px solid color-mix(in srgb, var(--ec) 30%, transparent); position: sticky; top: 0; z-index: 2; }
+.hx-tab { flex: 1; appearance: none; border: 0; border-radius: 11px; padding: 8px 10px; background: transparent; color: var(--dim); font: inherit; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.hx-tab.on { background: linear-gradient(180deg, color-mix(in srgb, var(--ec) 40%, #2a1e3a), color-mix(in srgb, var(--ec) 18%, #1a1228)); color: #fff; box-shadow: inset 0 1px 0 #ffffff30; }
+.hx-tab:focus-visible { outline: 2px solid var(--gold2); outline-offset: 1px; }
+.hx-tab-lv { font-size: 0.72rem; font-weight: 800; padding: 1px 6px; border-radius: 8px; background: #0008; color: var(--gold2); }
+.gr-panel { display: flex; flex-direction: column; gap: 10px; }
+.gr-bond { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 16px; background: linear-gradient(180deg, color-mix(in srgb, var(--ec) 16%, #1a1228), #110b1c); border: 1px solid color-mix(in srgb, var(--ec) 40%, transparent); }
+.gr-bond-lv { display: flex; flex-direction: column; align-items: center; min-width: 56px; padding: 4px 8px; border-radius: 12px; background: #0008; }
+.gr-bond-lv small { font-size: 0.7rem; color: var(--dim); font-weight: 700; }
+.gr-bond-lv b { font-size: 1.2rem; color: var(--gold2); }
+.gr-bond-mid { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.gr-bond-bar { height: 10px; border-radius: 6px; background: #0009; box-shadow: inset 0 0 0 1px #ffffff14; overflow: hidden; }
+.gr-bond-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ffb6d0, #ffe7a8); box-shadow: 0 0 8px #ffb6d080; }
+.gr-bond-txt { font-size: 0.78rem; color: var(--dim); }
+.gr-head { display: flex; align-items: center; gap: 10px; padding: 2px 4px; }
+.gr-head .hx-kind { margin-right: auto; }
+.gr-pts { font-size: 0.82rem; font-weight: 800; color: var(--dim); }
+.gr-pts.has { color: var(--gold2); }
+.gr-tree { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.gr-col { display: flex; flex-direction: column; gap: 6px; position: relative; }
+.gr-col-h { display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 0.8rem; font-weight: 800; color: #f1e8fc; }
+.gr-node { position: relative; appearance: none; text-align: left; font: inherit; color: var(--dim); cursor: pointer; display: flex; flex-direction: column; gap: 2px; padding: 8px 9px; border-radius: 12px; background: #150f20; border: 1.5px dashed #4a3b5e; min-height: 64px; }
+.gr-node + .gr-node::before { content: ''; position: absolute; left: 50%; top: -8px; width: 2px; height: 7px; background: #4a3b5e; }
+.gr-node b { font-size: 0.84rem; color: #d8cce8; }
+.gr-node span { font-size: 0.74rem; line-height: 1.35; }
+.gr-node em { font-style: normal; font-size: 0.68rem; font-weight: 800; color: color-mix(in srgb, var(--ec) 70%, #fff); }
+.gr-node.can { border-style: solid; border-color: color-mix(in srgb, var(--ec) 70%, #fff); background: linear-gradient(180deg, color-mix(in srgb, var(--ec) 16%, #1d1528), #150f20); box-shadow: 0 0 10px color-mix(in srgb, var(--ec) 35%, transparent); animation: gr-pulse 1.8s ease-in-out infinite; }
+.gr-node.on { border-style: solid; border-color: var(--gold); background: linear-gradient(180deg, #4a3618, #2a1e10); color: #fff1c4; box-shadow: inset 0 1px 0 #fff3, 0 0 12px #e9c47a55; cursor: default; }
+.gr-node.on b { color: #fff; }
+.gr-node.on + .gr-node::before, .gr-node.on + .gr-node.on::before { background: var(--gold); }
+.gr-node.uniq { min-height: 82px; }
+.gr-node.uniq.on { background: linear-gradient(180deg, color-mix(in srgb, var(--ec) 45%, #4a3618), #2a1e10); }
+.gr-node:focus-visible, .gr-slot:focus-visible, .gr-item-main:focus-visible { outline: 2px solid var(--gold2); outline-offset: 2px; }
+@keyframes gr-pulse { 50% { box-shadow: 0 0 2px color-mix(in srgb, var(--ec) 25%, transparent); } }
+.gr-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.gr-slot { appearance: none; font: inherit; color: #f1e8fc; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 14px; background: #150f20; border: 2px solid #4a3b5e; min-height: 70px; }
+.gr-slot.empty { border-style: dashed; color: var(--dim); }
+.gr-slot.sel { box-shadow: 0 0 0 2px var(--gold2), 0 0 12px #ffdf9a55; }
+.gr-slot-plus { width: 46px; height: 46px; flex: none; display: grid; place-items: center; border-radius: 12px; background: #0008; font-size: 1.6rem; font-weight: 900; color: #6a5a80; }
+.gr-slot-t, .gr-item-t { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gr-slot-t b, .gr-item-t b { font-size: 0.86rem; }
+.gr-slot-t span, .gr-item-t span { font-size: 0.74rem; color: var(--dim); line-height: 1.35; }
+.gr-slot-t em { font-style: normal; font-size: 0.68rem; font-weight: 800; color: var(--good); }
+.gr-ico { width: 46px; height: 46px; flex: none; border-radius: 12px; background: radial-gradient(circle at 40% 35%, #3a2e4e, #120c1c); }
+.r-common { border-color: #8a8298; }
+.r-rare { border-color: #6fb8ff; }
+.r-epic { border-color: #c890ff; }
+.gr-slot.r-common .gr-ico, .gr-item.r-common .gr-ico { box-shadow: inset 0 0 0 2px #8a829880; }
+.gr-slot.r-rare .gr-ico, .gr-item.r-rare .gr-ico { box-shadow: inset 0 0 0 2px #6fb8ffaa, 0 0 8px #6fb8ff55; }
+.gr-slot.r-epic .gr-ico, .gr-item.r-epic .gr-ico { box-shadow: inset 0 0 0 2px #c890ffcc, 0 0 10px #c890ff77; }
+.gr-inv { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.gr-item { display: flex; align-items: stretch; border-radius: 14px; background: #150f20; border: 1.5px solid #3a2e4c; overflow: hidden; }
+.gr-item.worn { border-color: var(--gold); background: linear-gradient(180deg, #2a2014, #150f20); }
+.gr-item-main { flex: 1; min-width: 0; appearance: none; border: 0; background: none; font: inherit; color: #f1e8fc; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 7px; position: relative; }
+.gr-rar { font-size: 0.68rem; font-weight: 800; color: var(--dim); }
+.gr-item.r-rare .gr-rar { color: #8fc8ff; }
+.gr-item.r-epic .gr-rar { color: #d8a8ff; }
+.gr-worn { position: absolute; top: 5px; right: 6px; font-style: normal; font-size: 0.64rem; font-weight: 900; padding: 1px 6px; border-radius: 8px; background: var(--gold); color: #2a1a08; }
+.gr-up { flex: none; align-self: stretch; border-radius: 0; min-width: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 0.78rem; }
+.gr-empty, .gr-note { font-size: 0.8rem; color: var(--dim); padding: 4px 6px; }
+.gr-empty { padding: 12px; border-radius: 12px; border: 1px dashed #4a3b5e; text-align: center; }
+@media (max-width: 520px) {
+  .gr-tree { gap: 5px; }
+  .gr-node { padding: 6px; min-height: 58px; }
+  .gr-node span { font-size: 0.7rem; }
+  .gr-slots { grid-template-columns: 1fr; }
+  .gr-inv { grid-template-columns: 1fr; }
+}
+/* 판 결과: 인연 · 새 장신구 */
+.growth-box { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.gb-bond, .gb-gear { display: flex; align-items: center; gap: 8px; justify-content: center; border-radius: 10px; padding: 6px 8px; font-weight: 700; background: #ffb6d014; border: 1px solid #ffb6d040; animation: node-in 0.4s 1.4s both; }
+.gb-bond.up { background: #ffb6d026; border-color: #ffb6d0aa; box-shadow: 0 0 14px #ffb6d040; }
+.gb-gear { background: #c890ff14; border-color: #8a8298; }
+.gb-gear.r-rare { border-color: #6fb8ff; } .gb-gear.r-epic { border-color: #c890ff; box-shadow: 0 0 14px #c890ff40; }
+.gb-ico { width: 34px; height: 34px; }
+/* 출정 준비: 인연 레벨 배지 */
+.hp-item { position: relative; }
+.hp-bond { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: linear-gradient(180deg, #ffd0e0, #ff9ab8); color: #4a1428; font-style: normal; font-size: 0.7rem; font-weight: 900; display: grid; place-items: center; box-shadow: 0 0 0 2px #1a1028; }
+
 </style>
   <style>/* css/game.css */
 /* =========================================================
@@ -2715,6 +2795,142 @@ RG.data.heroes = {
 };
 
 RG.data.heroOrder = ['kara', 'sera', 'sio', 'zena', 'bawi', 'yaro', 'haru', 'dohan', 'narae', 'tori', 'byeori', 'mujin'];
+
+</script>
+  <script>/* js/data/growth.js */
+'use strict';
+
+/* =========================================================
+ * 영웅 성장 — 인연 레벨 · 재능 나무 · 장신구
+ * 설계: docs/design/hero-growth.md (계산: js/core/growth.js, 판 반영: sim.js GR)
+ * 효과 키(mods): hpPct damagePct atkSpeedPct takenPct(받는 피해 감소) cooldownPct skillPct respawnPct speedPct
+ *   rangeAdd meleeDmgPct regenPct blockAdd bountyPct burnPct(초당 공격력 비율, 2초) slowPct
+ *   chainPct(1.5칸 안 다른 적 하나) skillBoostPct(기술 후 주변 탑 공격 속도) towerAuraPct killCdr
+ * 재능 고유 효과는 talent id(예: 'kara_atk')를 GR.has(...)로 읽음.
+ * ========================================================= */
+
+RG.data.growth = {
+  bond: {
+    max: 10,
+    win: 3, perStar: 2, lose: 1, endlessPer: 10, endlessMax: 4,
+    /** 다음 레벨까지 필요한 경험치 */
+    need: (lv) => 4 + 2 * (lv - 1),
+  },
+
+  /** 공용 재능 칸 (갈래 · 단계). 3단계 공격·기술은 영웅 고유(아래 unique) */
+  tree: {
+    atk: [
+      { id: 'atk1', name: '날 선 공격', desc: '공격력 +10%', mods: { damagePct: 0.1 } },
+      { id: 'atk2', name: '빠른 손', desc: '공격 속도 +10%', mods: { atkSpeedPct: 0.1 } },
+    ],
+    sur: [
+      { id: 'sur1', name: '단단한 몸', desc: '체력 +15%', mods: { hpPct: 0.15 } },
+      { id: 'sur2', name: '버티기', desc: '받는 피해 −10%', mods: { takenPct: 0.1 } },
+      { id: 'sur3', name: '되살아남', desc: '부활 시간 −40%', mods: { respawnPct: 0.4 } },
+    ],
+    sk: [
+      { id: 'sk1', name: '익숙한 손놀림', desc: '기술 재사용 −10%', mods: { cooldownPct: 0.1 } },
+      { id: 'sk2', name: '깊은 울림', desc: '기술 위력 +15%', mods: { skillPct: 0.15 } },
+    ],
+  },
+  branches: [
+    { key: 'atk', name: '공격', icon: 'damage' },
+    { key: 'sur', name: '생존', icon: 'hp' },
+    { key: 'sk', name: '기술', icon: 'skill' },
+  ],
+
+  /** 영웅 고유 재능 — [공격 갈래 끝, 기술 갈래 끝] */
+  unique: {
+    kara: [
+      { name: '달군 망치', desc: '공격에 화상(초당 공격력의 40%, 2초)', mods: { burnPct: 0.4 } },
+      { name: '용암 자국', desc: '내려찍은 자리에 4초 불길 장판(반경 1.2칸, 초당 18)', lava: { radius: 1.2, dps: 18, dur: 4 } },
+    ],
+    sera: [
+      { name: '빛 퍼짐', desc: '공격이 맞힌 적 둘레 0.6칸에 60% 피해', splash: { radius: 0.6, pct: 0.6 } },
+      { name: '새벽의 축복', desc: '기도 반경 안의 탑 6초 공격 속도 +25%', boost: { pct: 0.25, dur: 6 } },
+    ],
+    sio: [
+      { name: '꿰뚫는 화살', desc: '맞힌 적 뒤(1칸 안)의 적 하나도 60% 피해', pierce: { radius: 1.0, pct: 0.6 } },
+      { name: '깊은 얼음', desc: '화살비 반경 +0.4칸, 빙결 +1초', radiusAdd: 0.4, freezeAdd: 1 },
+    ],
+    zena: [
+      { name: '과충전', desc: '연쇄 +2회', chainAdd: 2 },
+      { name: '쌍둥이 드론', desc: '드론이 둘', drones: 2 },
+    ],
+    bawi: [
+      { name: '지진 주먹', desc: '세 번째 공격마다 주변 1칸 적 0.6초 기절(보스 제외)', quake: { every: 3, radius: 1.0, stun: 0.6 } },
+      { name: '가시 벽', desc: '벽에 붙잡힌 적은 초당 25 피해', wallDps: 25 },
+    ],
+    yaro: [
+      { name: '급소', desc: '치명타 확률 +15%p, 치명타 2.5배', crit: { chance: 0.15, mult: 2.5 } },
+      { name: '그림자 분신', desc: '습격 뒤 1.5칸 안 다른 적 하나에게 60% 습격', echo: { radius: 1.5, pct: 0.6 } },
+    ],
+    haru: [
+      { name: '큰 눈덩이', desc: '눈덩이가 0.6칸 범위에 60% 피해', splash: { radius: 0.6, pct: 0.6 } },
+      { name: '눈사람 대가족', desc: '눈사람 +1, 눈사람 체력 +30%', countAdd: 1, hpPct: 0.3 },
+    ],
+    dohan: [
+      { name: '튕기는 망치', desc: '맞힌 뒤 1.5칸 안 다른 적 하나에 60% 피해', bounce: { radius: 1.5, pct: 0.6 } },
+      { name: '이웃 담금질', desc: '고른 탑과 이웃한 탑(1.5칸 안)도 함께 담금질', spread: 1.5 },
+    ],
+    narae: [
+      { name: '바람 칼날', desc: '공격이 적을 0.15칸 밀어냄(보스·큰 적 제외)', push: 0.15 },
+      { name: '회오리 급강하', desc: '내리꽂은 자리 반경 1.2칸 적 0.8초 기절(보스 제외)', landStun: { radius: 1.2, stun: 0.8 } },
+    ],
+    tori: [
+      { name: '독 포자', desc: '맞은 적 3초 동안 초당 공격력의 35% 피해', poison: { pct: 0.35, dur: 3 } },
+      { name: '오래가는 거인', desc: '변신 +5초, 변신할 때 주변 1.5칸 적 1초 기절(보스 제외)', durAdd: 5, roar: { radius: 1.5, stun: 1 } },
+    ],
+    byeori: [
+      { name: '큰곰자리', desc: '별자리가 다섯 번째 → 세 번째 공격마다', every: 3 },
+      { name: '유성우', desc: '큰 유성 둘레에 작은 유성 둘(각 60% 피해)', shower: { count: 2, pct: 0.6, offset: 1.1, radius: 0.9 } },
+    ],
+    mujin: [
+      { name: '무거운 종소리', desc: '고요한 종 반경 +1칸, 받는 피해 +5%p', radiusAdd: 1, vulnAdd: 0.05 },
+      { name: '긴 울림', desc: '멈춤 +1초, 탑 공격 속도 +20%p', stopAdd: 1, towerAdd: 0.2 },
+    ],
+  },
+
+  /** 장신구 18종 — rarity: common·rare·epic. mods 값은 +0 기준(강화 단계마다 +20%, 같은 원소 영웅 +25%) */
+  gearRarities: {
+    common: { name: '일반', costs: [30, 60, 90], color: '#c9c3d6' },
+    rare: { name: '희귀', costs: [50, 100, 150], color: '#6fb8ff' },
+    epic: { name: '영웅', costs: [80, 160, 240], color: '#c890ff' },
+  },
+  gearMaxPlus: 3,
+  gearPlusStep: 0.2,
+  gearSameElement: 0.25,
+  gearDupCrystals: 50,
+  gear: {
+    ember_ring: { name: '불씨 반지', element: 'fire', rarity: 'common', desc: '공격에 화상(초당 공격력의 {burnPct}, 2초)', mods: { burnPct: 0.2 } },
+    frost_bead: { name: '서리 구슬', element: 'frost', rarity: 'common', desc: '공격에 맞은 적 {slowPct} 감속(1초)', mods: { slowPct: 0.15 } },
+    wind_feather: { name: '바람 깃털', element: 'storm', rarity: 'common', desc: '이동 속도 +{speedPct}', mods: { speedPct: 0.25 } },
+    pebble_charm: { name: '조약돌 부적', element: 'earth', rarity: 'common', desc: '체력 +{hpPct}', mods: { hpPct: 0.15 } },
+    light_shard: { name: '빛 조각', element: 'light', rarity: 'common', desc: '원거리 사거리 +{rangeAdd}칸 (근접은 공격력 +{meleeDmgPct})', mods: { rangeAdd: 0.4, meleeDmgPct: 0.08 } },
+    shadow_ribbon: { name: '그림자 리본', element: 'dark', rarity: 'common', desc: '영웅이 처치한 적의 현상금 +{bountyPct}', mods: { bountyPct: 0.2 } },
+    forge_glove: { name: '대장간 장갑', element: 'fire', rarity: 'rare', desc: '공격력 +{damagePct}', mods: { damagePct: 0.12 } },
+    snow_brooch: { name: '눈꽃 브로치', element: 'frost', rarity: 'rare', desc: '받는 피해 −{takenPct}', mods: { takenPct: 0.12 } },
+    thunder_bell: { name: '번개 방울', element: 'storm', rarity: 'rare', desc: '공격 속도 +{atkSpeedPct}', mods: { atkSpeedPct: 0.12 } },
+    moss_cloak: { name: '이끼 망토', element: 'earth', rarity: 'rare', desc: '매초 최대 체력 {regenPct} 회복', mods: { regenPct: 0.015 } },
+    lantern_shard: { name: '등불 조각', element: 'light', rarity: 'rare', desc: '기술을 쓰면 주변 2칸 탑 5초 공격 속도 +{skillBoostPct}', mods: { skillBoostPct: 0.15 } },
+    night_key: { name: '밤의 열쇠', element: 'dark', rarity: 'rare', desc: '기술 재사용 −{cooldownPct}', mods: { cooldownPct: 0.12 } },
+    phoenix_plume: { name: '불사조 깃', element: 'fire', rarity: 'epic', desc: '부활 시간 −{respawnPct}', mods: { respawnPct: 0.5 } },
+    glacier_heart: { name: '빙하 심장', element: 'frost', rarity: 'epic', desc: '기술 위력 +{skillPct}', mods: { skillPct: 0.2 } },
+    storm_gem: { name: '폭풍 눈', element: 'storm', rarity: 'epic', desc: '공격이 1.5칸 안 다른 적 하나에게 튐({chainPct} 피해)', mods: { chainPct: 0.5 } },
+    titan_belt: { name: '거인의 허리띠', element: 'earth', rarity: 'epic', desc: '붙잡기 +1, 체력 +{hpPct}', mods: { blockAdd: 1, hpPct: 0.1 } },
+    dawn_circlet: { name: '새벽 왕관', element: 'light', rarity: 'epic', desc: '영웅 주변 2칸 탑 피해 +{towerAuraPct}', mods: { towerAuraPct: 0.08 } },
+    void_ring: { name: '공허 반지', element: 'dark', rarity: 'epic', desc: '영웅이 처치할 때마다 기술 재사용 대기 −{killCdr}초', mods: { killCdr: 0.6 } },
+  },
+  gearOrder: ['ember_ring', 'frost_bead', 'wind_feather', 'pebble_charm', 'light_shard', 'shadow_ribbon',
+    'forge_glove', 'snow_brooch', 'thunder_bell', 'moss_cloak', 'lantern_shard', 'night_key',
+    'phoenix_plume', 'glacier_heart', 'storm_gem', 'titan_belt', 'dawn_circlet', 'void_ring'],
+  /** 정수로 남는 효과(강화·원소 배율을 받지 않음) */
+  flatMods: ['blockAdd'],
+  /** 비율 합계 상한 */
+  caps: { takenPct: 0.5, cooldownPct: 0.5, respawnPct: 0.8 },
+  /** 무한 기록 보상 웨이브 */
+  endlessMilestones: [10, 20, 30, 40],
+};
 
 </script>
   <script>/* js/data/maps.js */
@@ -4833,6 +5049,132 @@ RG.bosses = (() => {
 })();
 
 </script>
+  <script>/* js/core/growth.js */
+'use strict';
+
+/* =========================================================
+ * 영웅 성장 계산 (순수 함수) — 인연 레벨, 재능 점수·선행 검사, 장신구 수치, 판에 넘길 효과 합(GR)
+ * 설계: docs/design/hero-growth.md · 데이터: js/data/growth.js
+ * ========================================================= */
+RG.growth = (() => {
+  const G = () => RG.data.growth;
+  const MOD_KEYS = ['hpPct', 'damagePct', 'atkSpeedPct', 'takenPct', 'cooldownPct', 'skillPct', 'respawnPct', 'speedPct', 'rangeAdd', 'meleeDmgPct',
+    'regenPct', 'blockAdd', 'bountyPct', 'burnPct', 'slowPct', 'chainPct', 'skillBoostPct', 'towerAuraPct', 'killCdr'];
+
+  /** 인연 경험치 → { level, into(이번 레벨에서 모은 양), need(다음 레벨까지 필요), max } */
+  function levelOf(xp) {
+    const B = G().bond;
+    let lv = 1;
+    let rest = Math.max(0, Math.floor(xp || 0));
+    while (lv < B.max && rest >= B.need(lv)) { rest -= B.need(lv); lv += 1; }
+    return { level: lv, into: lv >= B.max ? 0 : rest, need: lv >= B.max ? 0 : B.need(lv), max: lv >= B.max };
+  }
+  const points = (level) => Math.max(0, Math.min(G().bond.max, level) - 1);
+  /** 판 결과로 얻는 인연 경험치 */
+  function bondGain(r) {
+    const B = G().bond;
+    if (r.mode === 'endless') return Math.min(B.endlessMax, Math.floor((r.waves || 0) / B.endlessPer)) + (r.result === 'win' ? B.win : 0);
+    if (r.result === 'win') return B.win + B.perStar * Math.max(0, r.newStars || 0);
+    return B.lose;
+  }
+
+  /** 영웅의 재능 칸 id: 갈래마다 [1칸, 2칸, 3칸] */
+  function branchIds(heroId, key) {
+    const t = G().tree[key];
+    if (key === 'sur') return t.map((n) => n.id);
+    return [t[0].id, t[1].id, `${heroId}_${key}`];
+  }
+  function allIds(heroId) { return G().branches.flatMap((b) => branchIds(heroId, b.key)); }
+  /** 재능 칸 정의 { id, name, desc, mods, unique?, branch, tier } */
+  function node(heroId, id) {
+    for (const b of G().branches) {
+      const ids = branchIds(heroId, b.key);
+      const tier = ids.indexOf(id);
+      if (tier < 0) continue;
+      if (tier === 2 && b.key !== 'sur') {
+        const u = (G().unique[heroId] || [])[b.key === 'atk' ? 0 : 1];
+        if (!u) return null;
+        return Object.assign({ id, unique: true, mods: u.mods || {} }, u, { branch: b.key, tier });
+      }
+      return Object.assign({}, G().tree[b.key][tier], { branch: b.key, tier });
+    }
+    return null;
+  }
+  /** 칸을 찍을 수 있나: { ok, reason } */
+  function canTake(heroId, talents, id, level) {
+    const n = node(heroId, id);
+    if (!n) return { ok: false, reason: '없는 재능' };
+    if (talents.includes(id)) return { ok: false, reason: '이미 찍었습니다' };
+    if (talents.length >= points(level)) return { ok: false, reason: '재능 점수가 모자랍니다' };
+    if (n.tier > 0 && !talents.includes(branchIds(heroId, n.branch)[n.tier - 1])) return { ok: false, reason: '앞 칸을 먼저 찍어야 합니다' };
+    return { ok: true };
+  }
+  /** 저장된 재능을 규칙에 맞게 정리 (점수·선행·없는 칸) — 찍은 순서대로 받아들임 */
+  function cleanTalents(heroId, talents, level) {
+    const out = [];
+    for (const id of talents || []) if (canTake(heroId, out, id, level).ok) out.push(id);
+    return out;
+  }
+
+  /** 장신구 하나의 실제 수치: 강화 단계 +20%씩, 같은 원소 영웅 +25% (정수 효과는 그대로) */
+  function gearMods(id, plus, heroElement) {
+    const gd = G().gear[id];
+    if (!gd) return {};
+    const k = (1 + G().gearPlusStep * Math.max(0, Math.min(G().gearMaxPlus, plus || 0))) * (heroElement && gd.element === heroElement ? 1 + G().gearSameElement : 1);
+    const out = {};
+    for (const [key, v] of Object.entries(gd.mods)) out[key] = G().flatMods.includes(key) ? v : Math.round(v * k * 10000) / 10000;
+    return out;
+  }
+  /** 장신구 설명 글 (수치 채움) */
+  function gearText(id, plus, heroElement) {
+    const gd = G().gear[id];
+    const m = gearMods(id, plus, heroElement);
+    return gd.desc.replace(/\{(\w+)\}/g, (_, key) => {
+      const v = m[key] || 0;
+      if (key === 'rangeAdd' || key === 'killCdr') return String(Math.round(v * 100) / 100);
+      return `${Math.round(v * 1000) / 10}%`;
+    });
+  }
+  const upgradeCost = (id, plus) => {
+    const gd = G().gear[id];
+    if (!gd || plus >= G().gearMaxPlus) return null;
+    return G().gearRarities[gd.rarity].costs[plus];
+  };
+
+  /**
+   * 판에 넘길 효과 합: growth = { level, talents:[id], gear:[[id, plus]] }
+   * 돌려줌: { hpPct …(MOD_KEYS), atkU, skU(고유 재능 정의), has(id) } — 성장이 없으면 null
+   */
+  function mods(heroId, growth) {
+    const hd = RG.data.heroes[heroId];
+    if (!growth || !hd) return null;
+    const out = { talents: [] };
+    for (const k of MOD_KEYS) out[k] = 0;
+    const add = (m) => { for (const [k, v] of Object.entries(m || {})) if (k in out) out[k] += v; };
+    const talents = cleanTalents(heroId, growth.talents, growth.level || 1);
+    for (const id of talents) {
+      const n = node(heroId, id);
+      add(n.mods);
+      if (n.unique) out[n.branch === 'atk' ? 'atkU' : 'skU'] = n;
+      out.talents.push(id);
+    }
+    const seen = new Set();
+    for (const [id, plus] of (growth.gear || []).slice(0, 2)) {
+      if (seen.has(id) || !G().gear[id]) continue;
+      seen.add(id);
+      add(gearMods(id, plus, hd.element));
+    }
+    for (const [k, cap] of Object.entries(G().caps)) out[k] = Math.min(cap, out[k]);
+    for (const k of MOD_KEYS) out[k] = Math.round(out[k] * 10000) / 10000;
+    const set = new Set(out.talents);
+    out.has = (id) => set.has(id);
+    return out;
+  }
+
+  return { MOD_KEYS, levelOf, points, bondGain, branchIds, allIds, node, canTake, cleanTalents, gearMods, gearText, upgradeCost, mods };
+})();
+
+</script>
   <script>/* js/core/sim.js */
 'use strict';
 
@@ -4949,8 +5291,14 @@ RG.sim = (() => {
       if (challenge && challenge.type === 'maxLevel' && challenge.value < 2) return 1;
       return 2;
     }
+    /* 영웅 성장(인연 재능·장신구) — 판 시작 때 복사한 o.heroGrowth로 계산, 도전 모드는 쓰지 않음.
+     * 성장이 없으면 GR = null 이고 모든 계산이 예전과 같음 */
+    const GR = o.mode === 'challenge' || !o.heroGrowth || !RG.growth ? null : RG.growth.mods(o.heroId, o.heroGrowth);
+    const gv = (k) => (GR ? GR[k] : 0);
+    const atkU = GR && GR.atkU ? GR.atkU : null;   // 공격 갈래 끝 (영웅 고유)
+    const skU = GR && GR.skU ? GR.skU : null;      // 기술 갈래 끝 (영웅 고유)
     const game = {
-      opts: o, def, map, rules, meta, ranks, challenge, state: st, log, DT,
+      opts: o, def, map, rules, meta, ranks, challenge, state: st, log, DT, growth: GR,
       tileTower: (c, r) => (c >= 0 && r >= 0 && c < map.cols && r < map.rows ? tileTowers[r * map.cols + c] : null),
     };
 
@@ -4967,6 +5315,13 @@ RG.sim = (() => {
       const lv = h.level - 1;
       const k = 1 + D().heroLevelBonus.stat * lv;
       const gi = h.giantUntil > st.time && hd.skill.giant ? hd.skill.giant : null; // 토리: 거인 변신 중
+      if (GR) {
+        return {
+          maxHp: hd.hp * k * (1 + (meta.heroHpPct || 0)) * (gi ? gi.hpMult : 1) * (1 + GR.hpPct),
+          damage: hd.damage * k * (1 + (meta.heroDamagePct || 0)) * (gi ? gi.damageMult : 1) * (1 + GR.damagePct + (hd.melee || gi ? GR.meleeDmgPct : 0)),
+          skillK: (1 + D().heroLevelBonus.skill * lv) * (1 + (meta.heroDamagePct || 0)) * (1 + GR.skillPct),
+        };
+      }
       return {
         maxHp: hd.hp * k * (1 + (meta.heroHpPct || 0)) * (gi ? gi.hpMult : 1),
         damage: hd.damage * k * (1 + (meta.heroDamagePct || 0)) * (gi ? gi.damageMult : 1),
@@ -4974,22 +5329,35 @@ RG.sim = (() => {
       };
     }
     /** 영웅의 지금 전투 방식 (토리 거인 변신 중이면 거인의 근접 광역) */
+    let heroBase = null; // 성장을 반영한 영웅 기본 전투 방식 (한 번만 만듦)
     function heroForm(h, hd) {
       const gi = h.giantUntil > st.time && hd.skill.giant ? hd.skill.giant : null;
-      if (!gi) return hd;
-      return { melee: true, range: gi.range, splash: gi.splash, speed: gi.speed, targets: 'ground', interval: hd.interval, element: hd.element };
+      if (!gi) {
+        if (!GR) return hd;
+        if (!heroBase) heroBase = Object.assign({}, hd, { range: hd.melee ? hd.range : hd.range + GR.rangeAdd, interval: hd.interval / (1 + GR.atkSpeedPct), speed: hd.speed * (1 + GR.speedPct) });
+        return heroBase;
+      }
+      if (GR) return { melee: true, range: gi.range, splash: gi.splash, speed: gi.speed * (1 + GR.speedPct), targets: 'ground', interval: hd.interval / (1 + GR.atkSpeedPct), element: hd.element, giant: true };
+      return { melee: true, range: gi.range, splash: gi.splash, speed: gi.speed, targets: 'ground', interval: hd.interval, element: hd.element, giant: true };
     }
+    /** 붙잡기 수 (장신구 거인의 허리띠) */
+    const heroBlock = (hd) => hd.block + (GR ? GR.blockAdd : 0);
 
     /* 영웅 패시브 오라 (틱마다 한 번 계산 — 피해 계산에서 매번 찾지 않게) */
     let auraSmith = null; let auraSmithR2 = 0; let auraSmithPct = 0;
     let auraQuiet = null; let auraQuietR2 = 0; let auraQuietPct = 0;
+    let auraGear = null; const auraGearR2 = 4; const auraGearPct = gv('towerAuraPct'); // 새벽 왕관: 주변 2칸 탑 피해
     function refreshHeroAuras() {
-      auraSmith = null; auraQuiet = null;
+      auraSmith = null; auraQuiet = null; auraGear = null;
       const h = st.hero;
       if (!h || h.dead) return;
       const ps = D().heroes[h.heroId].passive;
       if (ps.id === 'smith_hand') { auraSmith = h; auraSmithR2 = ps.radius * ps.radius; auraSmithPct = ps.damagePct; }
-      else if (ps.id === 'quiet_bell') { auraQuiet = h; auraQuietR2 = ps.radius * ps.radius; auraQuietPct = ps.vulnPct; }
+      else if (ps.id === 'quiet_bell') {
+        const r = ps.radius + (atkU && atkU.radiusAdd ? atkU.radiusAdd : 0); // 무진 고유: 무거운 종소리
+        auraQuiet = h; auraQuietR2 = r * r; auraQuietPct = ps.vulnPct + (atkU && atkU.vulnAdd ? atkU.vulnAdd : 0);
+      }
+      if (auraGearPct) auraGear = h;
     }
 
     function heroStartTile() {
@@ -5016,7 +5384,7 @@ RG.sim = (() => {
       const h = {
         id: nextId++, kind: 'hero', heroId: o.heroId, x: tile.c + 0.5, y: tile.r + 0.5, px: 0, py: 0,
         level: Math.max(1, meta.heroStartLevel || 1), xp: 0, hp: 0, maxHp: 0, armor: hd.armor,
-        cd: 0, skillCd: 0, path: [], blocking: [], block: hd.block, downUntil: 0, dead: false, dir: 1, attackAnim: 0,
+        cd: 0, skillCd: 0, path: [], blocking: [], block: heroBlock(hd), downUntil: 0, dead: false, dir: 1, attackAnim: 0,
         regenT: 0,
       };
       if (h.level > 1) h.xp = D().heroXp[h.level - 1];
@@ -5193,6 +5561,7 @@ RG.sim = (() => {
         if (tw) {
           // 도한: 대장장이의 손 (주변 탑 피해 +), 담금질·되울림 종을 받은 '계속 쏘는' 탑은 피해로 대신
           if (auraSmith && d2(tw.x, tw.y, auraSmith.x, auraSmith.y) <= auraSmithR2) bonus += auraSmithPct;
+          if (auraGear && d2(tw.x, tw.y, auraGear.x, auraGear.y) <= auraGearR2) bonus += auraGearPct;
           if (o2.beamTick && tw.boostUntil > st.time) bonus += (tw.boostMult - 1) * 0.5;
         }
       }
@@ -5251,6 +5620,7 @@ RG.sim = (() => {
       let b = meta.bountyPct || 0;
       if (src && src.calc && src.calc.mods && src.calc.mods.bountyPct) b += src.calc.mods.bountyPct;
       if (src && src.heroHit && st.hero && st.hero.heroId === 'yaro') b += D().heroes.yaro.passive.bountyPct;
+      if (GR && GR.bountyPct && src && src.heroHit) b += GR.bountyPct;
       for (const t of st.towers) {
         if (!t.calc || !t.calc.bountyAura || t.disabled) continue;
         if (d2(t.x, t.y, e.x, e.y) <= t.calc.bountyAura.radius ** 2) { b += t.calc.bountyAura.pct; break; }
@@ -5279,6 +5649,7 @@ RG.sim = (() => {
       st.gold += bounty;
       st.stats.goldEarned += bounty;
       st.stats.kills += 1;
+      if (GR && GR.killCdr && src && src.heroHit && st.hero) st.hero.skillCd = Math.max(0, st.hero.skillCd - GR.killCdr); // 공허 반지
       ev('kill', { enemyId: e.id, enemyType: e.type, x: e.x, y: e.y, bounty, boss: !!ed.boss, flying: e.flying, dir: e.dir, size: e.size }); // dir·size는 죽는 연출용
       harvestSoul(e);
       // 경험치
@@ -5561,6 +5932,7 @@ RG.sim = (() => {
       if (u.kind === 'hero') {
         const hd = D().heroes[u.heroId];
         if (hd.passive.id === 'unyielding' && u.hp / u.maxHp <= hd.passive.threshold) dmg *= 1 - hd.passive.reduce;
+        if (GR && GR.takenPct) dmg *= 1 - GR.takenPct;
       }
       u.hp -= dmg;
       ev('unitHit', { unitId: u.id, amount: dmg, x: u.x, y: u.y });
@@ -5573,7 +5945,7 @@ RG.sim = (() => {
       if (u.kind === 'hero') {
         u.dead = true;
         u.path = [];
-        u.downUntil = st.time + rules.heroRespawn * (1 + (meta.heroRespawnPct || 0));
+        u.downUntil = st.time + rules.heroRespawn * (1 + (meta.heroRespawnPct || 0)) * (GR ? 1 - GR.respawnPct : 1);
         ev('heroDown', { heroId: u.heroId, x: u.x, y: u.y });
       } else if (u.kind === 'soldier') {
         u.dead = true;
@@ -6646,6 +7018,10 @@ RG.sim = (() => {
           const burnSrc = Object.assign({}, src, { calc: { element: 'fire', dmgBonus: 0, mods: {}, onHit: { burn: { dps: sk.burn.dps * k, dur: sk.burn.dur } } } });
           for (const e of enemiesInRadius(h.x, h.y, sk.radius, 'ground')) hitEnemy(e, sk.damage * k, burnSrc, { area: true, noCrit: true });
           ev('splash', { x: h.x, y: h.y, radius: sk.radius, element: 'fire', big: true });
+          if (skU && skU.lava) { // 고유 재능: 용암 자국 (땅 장판)
+            const L = skU.lava;
+            st.zones.push({ id: nextId++, kind: 'lava', element: 'fire', x: h.x, y: h.y, radius: L.radius, until: st.time + L.dur, born: st.time, dur: L.dur, dps: L.dps * k, slowPct: 0, meltArmor: 0, owner: 0, src, shatter: 0, freeze: 0, shattered: false });
+          }
           break;
         }
         case 'dawn_prayer': {
@@ -6656,25 +7032,32 @@ RG.sim = (() => {
           const bsrc = Object.assign({}, src, { calc: { element: 'light', dmgBonus: 0, mods: {}, onHit: { blind: sk.blind } } });
           for (const e of enemiesInRadius(x, y, sk.radius)) hitEnemy(e, sk.damage * k, bsrc, { area: true, noCrit: true });
           ev('pulse', { x, y, radius: sk.radius, element: 'light', big: true });
+          if (skU && skU.boost) for (const t of st.towers) if (d2(t.x, t.y, x, y) <= sk.radius * sk.radius) boostTower(t, 1 + skU.boost.pct, skU.boost.dur, false);
           break;
         }
         case 'frost_volley': {
-          ev('warnArea', { x, y, radius: sk.radius, dur: sk.delay, element: 'frost' });
+          const rad = sk.radius + (skU && skU.radiusAdd ? skU.radiusAdd : 0);
+          const frz = sk.freeze + (skU && skU.freezeAdd ? skU.freezeAdd : 0);
+          ev('warnArea', { x, y, radius: rad, dur: sk.delay, element: 'frost' });
           delayed.push({
             at: st.time + sk.delay,
             fn: () => {
-              for (const e of enemiesInRadius(x, y, sk.radius)) {
+              for (const e of enemiesInRadius(x, y, rad)) {
                 damage(e, sk.damage * k, 'frost', src, { area: true });
-                if (!e.dead) hardCC(e, 'freeze', sk.freeze);
+                if (!e.dead) hardCC(e, 'freeze', frz);
               }
-              ev('pulse', { x, y, radius: sk.radius, element: 'frost', big: true });
+              ev('pulse', { x, y, radius: rad, element: 'frost', big: true });
             },
           });
           break;
         }
         case 'thunder_drone': {
           const dr = sk.drone;
-          st.units.push({ id: nextId++, kind: 'drone', x, y, px: x, py: y, hp: 1, maxHp: 1, armor: 0, blocking: [], block: 0, dead: false, until: st.time + sk.duration, cd: 0, damage: dr.damage * k, interval: dr.interval, range: dr.range, chain: dr.chain, dir: 1 });
+          const nd = skU && skU.drones ? skU.drones : 1;
+          for (let i = 0; i < nd; i++) {
+            const dx = nd > 1 ? (i - (nd - 1) / 2) * 0.9 : 0;
+            st.units.push({ id: nextId++, kind: 'drone', x: x + dx, y, px: x + dx, py: y, hp: 1, maxHp: 1, armor: 0, blocking: [], block: 0, dead: false, until: st.time + sk.duration, cd: i * 0.3, damage: dr.damage * k, interval: dr.interval, range: dr.range, chain: dr.chain, dir: 1 });
+          }
           ev('drone', { x, y });
           break;
         }
@@ -6682,7 +7065,7 @@ RG.sim = (() => {
           const c = Math.floor(x);
           const r = Math.floor(y);
           if (!RG.grid.enemyWalkable(map, blocked, c, r)) return fail('벽은 길 위에만 세울 수 있습니다');
-          st.units.push({ id: nextId++, kind: 'wall', x: c + 0.5, y: r + 0.5, px: c + 0.5, py: r + 0.5, hp: sk.wallHp * k, maxHp: sk.wallHp * k, armor: 0.2, blocking: [], block: 99, dead: false, until: st.time + sk.duration, dir: 1 });
+          st.units.push({ id: nextId++, kind: 'wall', x: c + 0.5, y: r + 0.5, px: c + 0.5, py: r + 0.5, hp: sk.wallHp * k, maxHp: sk.wallHp * k, armor: 0.2, blocking: [], block: 99, dead: false, until: st.time + sk.duration, dir: 1, dps: skU && skU.wallDps ? skU.wallDps * k : 0, src });
           ev('wall', { x: c + 0.5, y: r + 0.5 });
           break;
         }
@@ -6705,6 +7088,14 @@ RG.sim = (() => {
           h.path = [];
           if (!ed.boss && target.hp / target.maxHp <= sk.execute) { ev('execute', { x: target.x, y: target.y }); kill(target, src, { executed: true }); } else damage(target, sk.damage * k * (ed.boss ? sk.bossMult : 1), 'dark', src, {});
           ev('splash', { x: target.x, y: target.y, radius: 0.6, element: 'dark' });
+          if (skU && skU.echo) { // 고유 재능: 그림자 분신 — 근처 다른 적 하나에게 약한 습격(처형 없음)
+            const other = nearestOther(target, skU.echo.radius, hd);
+            if (other) {
+              const ed2 = D().enemies[other.type];
+              damage(other, sk.damage * k * skU.echo.pct * (ed2.boss ? sk.bossMult : 1), 'dark', src, {});
+              ev('splash', { x: other.x, y: other.y, radius: 0.5, element: 'dark' });
+            }
+          }
           break;
         }
         case 'snow_friends': {
@@ -6713,11 +7104,13 @@ RG.sim = (() => {
           const r = Math.floor(y);
           if (!RG.grid.enemyWalkable(map, blocked, c, r)) return fail('눈사람은 길 위에만 세울 수 있습니다');
           const sm = sk.snowman;
-          for (let i = 0; i < sk.count; i++) {
-            const ox = (i - (sk.count - 1) / 2) * 0.42;
+          const cnt = sk.count + (skU && skU.countAdd ? skU.countAdd : 0);
+          const shp = sm.hp * k * (skU && skU.hpPct ? 1 + skU.hpPct : 1);
+          for (let i = 0; i < cnt; i++) {
+            const ox = (i - (cnt - 1) / 2) * 0.42;
             const ux = c + 0.5 + ox;
             const uy = r + 0.5 + (i % 2 ? 0.12 : -0.12);
-            st.units.push({ id: nextId++, kind: 'snowman', x: ux, y: uy, px: ux, py: uy, homeX: ux, homeY: uy, hp: sm.hp * k, maxHp: sm.hp * k, armor: sm.armor, blocking: [], block: sm.block, dead: false, until: st.time + sk.duration, cd: 0, damage: sm.damage * k, interval: sm.interval, dir: 1, attackAnim: 0 });
+            st.units.push({ id: nextId++, kind: 'snowman', x: ux, y: uy, px: ux, py: uy, homeX: ux, homeY: uy, hp: shp, maxHp: shp, armor: sm.armor, blocking: [], block: sm.block, dead: false, until: st.time + sk.duration, cd: 0, damage: sm.damage * k, interval: sm.interval, dir: 1, attackAnim: 0 });
           }
           ev('snowmen', { x: c + 0.5, y: r + 0.5 });
           break;
@@ -6729,6 +7122,13 @@ RG.sim = (() => {
           if (!best) return fail('담금질할 탑을 골라 주세요');
           boostTower(best, 1 + sk.speedPct * k, sk.duration, true);
           ev('temper', { towerId: best.id, x: best.x, y: best.y });
+          if (skU && skU.spread) {
+            for (const t of st.towers) {
+              if (t === best || d2(t.x, t.y, best.x, best.y) > skU.spread * skU.spread) continue;
+              boostTower(t, 1 + sk.speedPct * k, sk.duration, true);
+              ev('temper', { towerId: t.id, x: t.x, y: t.y });
+            }
+          }
           break;
         }
         case 'gale_dive': {
@@ -6749,15 +7149,20 @@ RG.sim = (() => {
           releaseUnit(h);
           h.x = tx; h.y = ty; h.px = tx; h.py = ty; h.path = [];
           ev('galeDive', { x1: ox, y1: oy, x2: tx, y2: ty, width: sk.width });
+          if (skU && skU.landStun) {
+            for (const e of enemiesInRadius(tx, ty, skU.landStun.radius, null)) if (!D().enemies[e.type].boss) hardCC(e, 'stun', skU.landStun.stun);
+            ev('cyclone', { x: tx, y: ty, radius: skU.landStun.radius });
+          }
           break;
         }
         case 'giant_form': {
           // 토리: 거인 변신 (체력 비율 유지)
           const ratio = h.hp / h.maxHp;
-          h.giantUntil = st.time + sk.duration;
+          h.giantUntil = st.time + sk.duration + (skU && skU.durAdd ? skU.durAdd : 0);
           const s2 = heroStat(h);
           h.maxHp = s2.maxHp; h.hp = h.maxHp * ratio;
-          h.block = sk.giant.block; h.armor = sk.giant.armor;
+          h.block = sk.giant.block + (GR ? GR.blockAdd : 0); h.armor = sk.giant.armor;
+          if (skU && skU.roar) for (const e of enemiesInRadius(h.x, h.y, skU.roar.radius, null)) if (!D().enemies[e.type].boss) hardCC(e, 'stun', skU.roar.stun);
           ev('giantForm', { heroId: h.heroId, x: h.x, y: h.y });
           break;
         }
@@ -6765,6 +7170,24 @@ RG.sim = (() => {
           // 별이: 1.2초 뒤 유성
           ev('warnArea', { x, y, radius: sk.radius, dur: sk.delay, element: 'light' });
           ev('meteorCall', { x, y, delay: sk.delay });
+          if (skU && skU.shower) { // 고유 재능: 유성우 — 큰 유성 좌우(결정적 자리)에 작은 유성
+            const S2 = skU.shower;
+            for (let i = 0; i < S2.count; i++) {
+              const a = (i / S2.count) * Math.PI * 2 + 0.6;
+              const mx = Math.max(0.5, Math.min(map.cols - 0.5, x + Math.cos(a) * S2.offset));
+              const my = Math.max(0.5, Math.min(map.rows - 0.5, y + Math.sin(a) * S2.offset));
+              ev('warnArea', { x: mx, y: my, radius: S2.radius, dur: sk.delay + 0.2, element: 'light' });
+              ev('meteorCall', { x: mx, y: my, delay: sk.delay + 0.2 });
+              delayed.push({
+                at: st.time + sk.delay + 0.2,
+                fn: () => {
+                  for (const e of enemiesInRadius(mx, my, S2.radius)) damage(e, sk.damage * k * S2.pct, 'light', src, { area: true });
+                  ev('splash', { x: mx, y: my, radius: S2.radius, element: 'light' });
+                  ev('meteor', { x: mx, y: my, radius: S2.radius, small: true });
+                },
+              });
+            }
+          }
           delayed.push({
             at: st.time + sk.delay,
             fn: () => {
@@ -6780,18 +7203,23 @@ RG.sim = (() => {
         }
         case 'echo_bell': {
           // 무진: 되울림 종 — 적 멈춤(보스는 느림) + 탑 공격 속도
+          const stop = sk.stop + (skU && skU.stopAdd ? skU.stopAdd : 0);
+          const tsp = sk.towerSpeed + (skU && skU.towerAdd ? skU.towerAdd : 0);
           for (const e of enemiesInRadius(x, y, sk.radius)) {
-            if (D().enemies[e.type].boss) applySlow(e, sk.bossSlow, sk.stop * 2);
-            else hardCC(e, 'stop', sk.stop);
+            if (D().enemies[e.type].boss) applySlow(e, sk.bossSlow, stop * 2);
+            else hardCC(e, 'stop', stop);
           }
-          for (const t of st.towers) if (d2(t.x, t.y, x, y) <= sk.radius * sk.radius) boostTower(t, 1 + sk.towerSpeed * k, sk.towerDur, false);
+          for (const t of st.towers) if (d2(t.x, t.y, x, y) <= sk.radius * sk.radius) boostTower(t, 1 + tsp * k, sk.towerDur, false);
           ev('echoBell', { x, y, radius: sk.radius });
           break;
         }
         default:
           return fail('알 수 없는 기술');
       }
-      h.skillCd = sk.cooldown * (1 + (meta.heroCooldownPct || 0)) * (h.level >= 5 ? 1 - D().heroLevelBonus.lv5Cooldown : 1);
+      h.skillCd = sk.cooldown * (1 + (meta.heroCooldownPct || 0)) * (h.level >= 5 ? 1 - D().heroLevelBonus.lv5Cooldown : 1) * (GR ? 1 - GR.cooldownPct : 1);
+      if (GR && GR.skillBoostPct) { // 등불 조각: 기술을 쓰면 영웅 주변 2칸 탑 공격 속도
+        for (const t of st.towers) if (d2(t.x, t.y, h.x, h.y) <= 4) boostTower(t, 1 + GR.skillBoostPct, 5, false);
+      }
       h.castAnim = 0.5; // 기술 자세 (그림용)
       ev('heroSkill', { heroId: h.heroId, skill: sk.id, x, y });
       return { ok: true };
@@ -7318,15 +7746,63 @@ RG.sim = (() => {
       const ps = hd.passive;
       const base = p.base * (ps.flyingBonus && e.flying ? 1 + ps.flyingBonus : 1);
       hitEnemy(e, base, src, { noCrit: true });
-      heroOnHit(e, hd);
-      if (hd.splash) for (const o3 of enemiesInRadius(e.x, e.y, hd.splash, hd.targets === 'ground' ? 'ground' : null)) if (o3 !== e) { hitEnemy(o3, base * 0.6, src, { area: true, noCrit: true, procMult: 0 }); heroOnHit(o3, hd); }
+      heroOnHit(e, hd, base);
+      if (hd.splash) for (const o3 of enemiesInRadius(e.x, e.y, hd.splash, hd.targets === 'ground' ? 'ground' : null)) if (o3 !== e) { hitEnemy(o3, base * 0.6, src, { area: true, noCrit: true, procMult: 0 }); heroOnHit(o3, hd, base * 0.6); }
+      if (GR) heroPrimaryHit(e, base, src, hd);
     }
-    /** 영웅 패시브의 명중 효과: 하루 눈싸움(감속), 토리 포자(갑옷 깎기) */
-    function heroOnHit(e, hd) {
+    /** 영웅 패시브·성장의 명중 효과(맞은 적마다): 하루 눈싸움(감속), 토리 포자(갑옷 깎기), 화상·독·감속·밀기 */
+    function heroOnHit(e, hd, base) {
       if (e.dead) return;
       const ps = hd.passive;
       if (ps.slow) applySlow(e, ps.slow.pct, ps.slow.dur);
       if (ps.shred) addShred(e, 'spores', ps.shred.pct, ps.shred.max, ps.shred.dur);
+      if (!GR || !base) return;
+      const gsrc = heroGrowthSrc();
+      if (GR.burnPct) addDot(e, 'burn', 'heroBurn', base * GR.burnPct, 2, 'fire', gsrc);
+      if (atkU && atkU.poison) addDot(e, 'burn', 'heroPoison', base * atkU.poison.pct, atkU.poison.dur, hd.element, gsrc);
+      if (GR.slowPct) applySlow(e, GR.slowPct, 1);
+      if (atkU && atkU.push && !e.dead) push(e, atkU.push);
+    }
+    let gSrc = null;
+    function heroGrowthSrc() {
+      if (!gSrc) { const hd = D().heroes[st.hero.heroId]; gSrc = { heroHit: true, unit: st.hero, element: hd.element, calc: { element: hd.element, dmgBonus: 0, mods: {}, onHit: {} } }; }
+      return gSrc;
+    }
+    /** 가장 가까운 다른 적 하나 (r칸 안, 이미 맞은 적 제외) */
+    function nearestOther(e, r, hd) {
+      let best = null;
+      let bd = r * r;
+      for (const o3 of st.enemies) {
+        if (o3 === e || o3.dead || !targetable(o3) || !attackable(o3, hd.element)) continue;
+        if (hd.targets === 'ground' && o3.flying) continue;
+        const dd = d2(o3.x, o3.y, e.x, e.y);
+        if (dd < bd) { bd = dd; best = o3; }
+      }
+      return best;
+    }
+    /** 성장의 '첫 표적' 효과(공격 한 번에 한 번): 빛 퍼짐·큰 눈덩이(범위), 꿰뚫기, 튕기기, 폭풍 눈(튐), 지진 주먹 */
+    function heroPrimaryHit(e, base, src, hd) {
+      const h = st.hero;
+      const opt = { area: true, noCrit: true, procMult: 0 };
+      if (atkU && atkU.splash) {
+        for (const o3 of enemiesInRadius(e.x, e.y, atkU.splash.radius, hd.targets === 'ground' ? 'ground' : null)) if (o3 !== e) hitEnemy(o3, base * atkU.splash.pct, src, opt);
+      }
+      const jump = atkU && (atkU.pierce || atkU.bounce);
+      if (jump) {
+        const nb = nearestOther(e, jump.radius, hd);
+        if (nb) { hitEnemy(nb, base * jump.pct, src, opt); ev('chain', { points: [[e.x, e.y - 0.3], [nb.x, nb.y - 0.3]], element: hd.element, small: true }); }
+      }
+      if (GR.chainPct) {
+        const nb = nearestOther(e, 1.5, hd);
+        if (nb) { hitEnemy(nb, base * GR.chainPct, src, opt); ev('chain', { points: [[e.x, e.y - 0.3], [nb.x, nb.y - 0.3]], element: 'storm', small: true }); }
+      }
+      if (atkU && atkU.quake) {
+        h.hitN = (h.hitN || 0) + 1;
+        if (h.hitN % atkU.quake.every === 0) {
+          for (const o3 of enemiesInRadius(e.x, e.y, atkU.quake.radius, 'ground')) if (!D().enemies[o3.type].boss) hardCC(o3, 'stun', atkU.quake.stun);
+          ev('splash', { x: e.x, y: e.y, radius: atkU.quake.radius, element: 'earth' });
+        }
+      }
     }
 
     function updateUnits(time) {
@@ -7334,6 +7810,9 @@ RG.sim = (() => {
         if (u.kind === 'hero') { updateHero(u, time); continue; }
         if (u.kind === 'wall') {
           if (time >= u.until && !u.dead) { u.dead = true; u.remove = true; releaseUnit(u); ev('unitDown', { unitId: u.id, x: u.x, y: u.y }); }
+          else if (u.dps && !u.dead) { // 고유 재능: 가시 벽 (붙잡힌 적에게 초당 피해)
+            for (let i = 0; i < u.blocking.length; i++) { const e = enemyById(u.blocking[i]); if (e && !e.dead) damage(e, u.dps * DT, 'earth', u.src, ZONE_HIT); }
+          }
           continue;
         }
         if (u.kind === 'drone') {
@@ -7459,13 +7938,14 @@ RG.sim = (() => {
         h.giantUntil = 0;
         const s0 = heroStat(h);
         h.maxHp = s0.maxHp; h.hp = h.maxHp * ratio;
-        h.block = hd.block; h.armor = hd.armor;
+        h.block = heroBlock(hd); h.armor = hd.armor;
         releaseUnit(h);
         ev('giantEnd', { heroId: h.heroId, x: h.x, y: h.y });
       }
       const form = heroForm(h, hd);
       // 회복: 패시브, 성소
       if (hd.passive.regen) h.hp = Math.min(h.maxHp, h.hp + h.maxHp * hd.passive.regen * DT);
+      if (GR && GR.regenPct) h.hp = Math.min(h.maxHp, h.hp + h.maxHp * GR.regenPct * DT); // 이끼 망토
       for (const s of st.towers) {
         if (s.calc && s.calc.heal && !s.disabled && !s.building && d2(s.x, s.y, h.x, h.y) <= s.calc.heal.radius ** 2) { h.hp = Math.min(h.maxHp, h.hp + s.calc.heal.hps * DT); break; }
       }
@@ -7502,19 +7982,23 @@ RG.sim = (() => {
       h.cd = form.interval || hd.interval;
       h.attackAnim = 0.3;
       h.dir = target.x > h.x ? 1 : -1;
-      const src = { heroHit: true, unit: h, element: hd.element, calc: { element: hd.element, dmgBonus: 0, mods: {}, onHit: {}, crit: hd.crit || null } };
+      const crit = atkU && atkU.crit && hd.crit ? { chance: hd.crit.chance + atkU.crit.chance, mult: atkU.crit.mult } : hd.crit || null;
+      const src = { heroHit: true, unit: h, element: hd.element, calc: { element: hd.element, dmgBonus: 0, mods: {}, onHit: {}, crit } };
       if (form.melee) {
         if (form.splash) {
-          for (const e of enemiesInRadius(target.x, target.y, form.splash, 'ground')) { hitEnemy(e, stat.damage, src, {}); heroOnHit(e, hd); }
-        } else { hitEnemy(target, stat.damage, src, {}); heroOnHit(target, hd); }
-        ev('heroAttack', { heroId: h.heroId, x: target.x, y: target.y, element: hd.element, melee: true, giant: form !== hd });
+          for (const e of enemiesInRadius(target.x, target.y, form.splash, 'ground')) { hitEnemy(e, stat.damage, src, {}); heroOnHit(e, hd, stat.damage); }
+        } else { hitEnemy(target, stat.damage, src, {}); heroOnHit(target, hd, stat.damage); }
+        if (GR) heroPrimaryHit(target, stat.damage, src, hd);
+        ev('heroAttack', { heroId: h.heroId, x: target.x, y: target.y, element: hd.element, melee: true, giant: !!form.giant });
       } else if (hd.chain) {
         const pts = [[h.x, h.y - 0.5], [target.x, target.y]];
         hitEnemy(target, stat.damage, src, { noCrit: true });
+        if (GR) { heroOnHit(target, hd, stat.damage); heroPrimaryHit(target, stat.damage, src, hd); }
         let cur = target;
         const seen = new Set([target.id]);
         let dmg = stat.damage;
-        for (let k = 0; k < hd.chain.count; k++) {
+        const links = hd.chain.count + (atkU && atkU.chainAdd ? atkU.chainAdd : 0); // 제나 고유: 과충전
+        for (let k = 0; k < links; k++) {
           dmg *= 1 - hd.chain.falloff;
           let nb = null;
           let nd = hd.chain.radius ** 2;
@@ -7536,8 +8020,8 @@ RG.sim = (() => {
         const cst = hd.passive.id === 'constellation' ? hd.passive : null;
         if (cst) {
           h.shotN = (h.shotN || 0) + 1;
-          if (h.shotN % cst.every === 0) {
-            const R2 = hd.range * hd.range;
+          if (h.shotN % (atkU && atkU.every ? atkU.every : cst.every) === 0) {
+            const R2 = form.range * form.range;
             const more = st.enemies.filter((e) => e !== target && !e.dead && targetable(e) && attackable(e, hd.element) && d2(e.x, e.y, h.x, h.y) <= R2).sort((a, b) => a.prog - b.prog || a.id - b.id);
             targets = targets.concat(more.slice(0, cst.split - 1));
           }
@@ -7924,7 +8408,7 @@ RG.progress = (() => {
   const D = () => RG.data;
 
   function blank() {
-    return { v: 1, maps: {}, skills: [], seen: { enemies: [], story: [], tips: [] }, endless: {}, lastMap: '1-1', lastHero: 'kara', gacha: blankGacha() };
+    return { v: 1, maps: {}, skills: [], seen: { enemies: [], story: [], tips: [] }, endless: {}, lastMap: '1-1', lastHero: 'kara', gacha: blankGacha(), heroes: {}, gear: {} };
   }
   /** 뽑기 상태: 가진 탑과 강화 단계, 공명석, 천장 */
   function blankGacha() {
@@ -7939,6 +8423,8 @@ RG.progress = (() => {
     const p = RG.save.get(RG.save.KEYS.progress, null);
     profile = p && p.v === 1 ? Object.assign(blank(), p) : blank();
     profile.seen = Object.assign({ enemies: [], story: [], tips: [] }, profile.seen || {});
+    if (!profile.heroes || typeof profile.heroes !== 'object') profile.heroes = {};
+    if (!profile.gear || typeof profile.gear !== 'object') profile.gear = {};
     if (!p || !p.gacha) {
       // 뽑기가 생기기 전 기록: 그때까지 해금했던 탑은 그대로 가진 것으로 (빼앗지 않음)
       const g = blankGacha();
@@ -8085,6 +8571,7 @@ RG.progress = (() => {
     const beforeHeroes = new Set(heroesFor(nextMapId(mapId) || mapId));
     const wasBranches = branchesUnlocked();
     const wasCleared = !!rec.cleared;
+    const wasChallenge = !!rec.challenge;
     let stars = 0;
     if (st.result === 'win') {
       const R = D().rules;
@@ -8125,7 +8612,101 @@ RG.progress = (() => {
       for (const e of D().endless || []) if (e.unlockAfter === mapId) unlocks.maps.push(e.id);
       unlocks.branches = !wasBranches && branchesUnlocked();
     }
-    return { stars, newStars: after - before, firstClear, unlocks, reward };
+    // 영웅 인연 경험치 · 장신구 (docs/design/hero-growth.md)
+    const heroId = st.hero && st.hero.heroId ? st.hero.heroId : st.heroId || null;
+    const runWaves = mode === 'endless' ? Math.max(0, st.wave.index - (st.result === 'lose' ? 1 : 0)) : 0; // 이번 판에 버틴 웨이브 (최고 기록 아님)
+    const bond = heroId && D().heroes[heroId] ? addBond(heroId, RG.growth.bondGain({ result: st.result, mode, newStars: after - before, waves: runWaves })) : null;
+    const gear = [];
+    if (mode === 'challenge' && st.result === 'win' && !wasChallenge) gear.push(grantGear(rarityForRegion(mapRegion(mapId)), `ch:${mapId}`));
+    if (mode === 'endless') {
+      const now = p.endless[mapId] || 0;
+      D().growth.endlessMilestones.forEach((w, i) => { if (beforeEndless < w && now >= w) gear.push(grantGear(['common', 'rare', 'epic', 'epic'][i], `en:${mapId}:${w}`)); });
+    }
+    return { stars, newStars: after - before, firstClear, unlocks, reward, bond, gear };
+  }
+
+  /* ---------------- 영웅 성장 ---------------- */
+  function heroRec(id) {
+    const hs = get().heroes;
+    if (!hs[id]) hs[id] = { xp: 0, talents: [], gear: [null, null] };
+    const r = hs[id];
+    if (!Array.isArray(r.talents)) r.talents = [];
+    if (!Array.isArray(r.gear)) r.gear = [null, null];
+    return r;
+  }
+  const bondOf = (id) => RG.growth.levelOf(heroRec(id).xp);
+  function addBond(id, gain) {
+    const r = heroRec(id);
+    const before = RG.growth.levelOf(r.xp).level;
+    r.xp += Math.max(0, gain);
+    const now = RG.growth.levelOf(r.xp);
+    save();
+    return { heroId: id, gain, before, after: now.level, levelUp: now.level > before };
+  }
+  function takeTalent(heroId, talentId) {
+    const r = heroRec(heroId);
+    r.talents = RG.growth.cleanTalents(heroId, r.talents, bondOf(heroId).level);
+    const ok = RG.growth.canTake(heroId, r.talents, talentId, bondOf(heroId).level);
+    if (!ok.ok) return ok;
+    r.talents.push(talentId);
+    save();
+    return { ok: true };
+  }
+  function resetTalents(heroId) { heroRec(heroId).talents = []; save(); }
+  const talentsOf = (heroId) => RG.growth.cleanTalents(heroId, heroRec(heroId).talents, bondOf(heroId).level);
+  const ownedGear = () => Object.assign({}, get().gear);
+  /** 장신구 끼기/빼기: slot 0·1, gearId null = 빼기. 같은 장신구는 한 영웅의 두 칸에 함께 못 낌 */
+  function equipGear(heroId, slot, gearId) {
+    const r = heroRec(heroId);
+    if (slot !== 0 && slot !== 1) return { ok: false, reason: '없는 칸' };
+    if (gearId != null && !(gearId in get().gear)) return { ok: false, reason: '가지지 않은 장신구' };
+    if (gearId != null && r.gear[1 - slot] === gearId) r.gear[1 - slot] = null;
+    r.gear[slot] = gearId;
+    save();
+    return { ok: true };
+  }
+  function upgradeGear(gearId) {
+    const g = get().gear;
+    if (!(gearId in g)) return { ok: false, reason: '가지지 않은 장신구' };
+    const cost = RG.growth.upgradeCost(gearId, g[gearId]);
+    if (cost == null) return { ok: false, reason: '이미 최대로 강화했습니다' };
+    if (gachaState().crystals < cost) return { ok: false, reason: '공명석이 모자랍니다' };
+    gachaState().crystals -= cost;
+    g[gearId] += 1;
+    save();
+    return { ok: true, plus: g[gearId], cost };
+  }
+  const rarityForRegion = (r) => (r <= 2 ? 'common' : r <= 4 ? 'rare' : 'epic');
+  /** 장신구 하나 주기: 그 등급에서 아직 없는 것 중 하나(기록 문자열로 결정), 다 있으면 가장 낮은 강화 +1, 다 최대면 공명석 */
+  function grantGear(rarity, seedKey) {
+    const G = D().growth;
+    const g = get().gear;
+    const pool = G.gearOrder.filter((id) => G.gear[id].rarity === rarity);
+    const fresh = pool.filter((id) => !(id in g));
+    let h = 0;
+    for (const ch of `${seedKey}|${Object.keys(g).length}`) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    let out;
+    if (fresh.length) {
+      const id = fresh[h % fresh.length];
+      g[id] = 0;
+      out = { id, plus: 0, isNew: true };
+    } else {
+      const up = pool.filter((id) => g[id] < G.gearMaxPlus).sort((a, b) => g[a] - g[b] || pool.indexOf(a) - pool.indexOf(b))[0];
+      if (up) { g[up] += 1; out = { id: up, plus: g[up], isNew: false }; } else { gachaState().crystals += G.gearDupCrystals; out = { id: null, crystals: G.gearDupCrystals }; }
+    }
+    save();
+    return out;
+  }
+  /** 판에 넘길 성장 복사본 (opts.heroGrowth) — 재능·장신구가 하나도 없으면 null */
+  function heroGrowth(heroId) {
+    if (!D().heroes[heroId]) return null;
+    const r = heroRec(heroId);
+    const level = bondOf(heroId).level;
+    const talents = RG.growth.cleanTalents(heroId, r.talents, level);
+    const g = get().gear;
+    const gear = r.gear.filter((id) => id && id in g).map((id) => [id, g[id]]);
+    if (!talents.length && !gear.length) return null;
+    return { level, talents, gear };
   }
 
   function nextMapId(id) {
@@ -8157,6 +8738,7 @@ RG.progress = (() => {
     load, get, save, reset, hasSave, mapIndex, mapRec, mapUnlocked, towersFor, heroesFor, branchesUnlocked,
     gachaState, ownedTowers, ownsTower, towerRank, towerRanks, gachaPool, inPool, pullGacha, towersOpen, towerOpen, towerRegion, regionCleared, towerFinal,
     mapStars, starsTotal, starsSpent, starsFree, canLearn, learn, resetSkills, record, nextMapId, markSeen, seen, frontier, skillCost,
+    heroRec, bondOf, addBond, takeTalent, resetTalents, talentsOf, ownedGear, equipGear, upgradeGear, grantGear, heroGrowth, rarityForRegion,
   };
 })();
 
@@ -25663,6 +26245,84 @@ RG.art.enemy = (() => {
 })();
 
 </script>
+  <script>/* js/art/gear.js */
+'use strict';
+
+/* =========================================================
+ * 장신구 아이콘 18종 (64×64) — 설계: docs/design/hero-growth.md §3
+ * 빛은 왼쪽 위, 굵은 외곽선. 등급 테두리는 화면(CSS)이 그림.
+ * ========================================================= */
+(() => {
+  const X = RG.art._hr;
+  const { h, num, sh, IL, P, C, E, T, G, op, SPEC, pad, wrap, OLC } = X;
+  const star = (x, y, r, col = '#fff', w = 0) => P(h().starPath(x, y, r, r * 0.36, 4, 0), col, w);
+  const gem = (c, x, y, r, col) => P(`M${x} ${y - r}L${x + r * 0.9} ${y - r * 0.2}L${x + r * 0.55} ${y + r}L${x - r * 0.55} ${y + r}L${x - r * 0.9} ${y - r * 0.2}Z`, c.g(col, 0.35), 2.4)
+    + P(`M${x - r * 0.9} ${y - r * 0.2}L${x + r * 0.9} ${y - r * 0.2}L${x} ${y + r}Z`, sh(col, -0.25), 0, op(0.5))
+    + P(`M${x} ${y - r}L${x - r * 0.45} ${y - r * 0.2}L${x + r * 0.2} ${y - r * 0.2}Z`, '#fff', 0, op(0.7));
+  const ring = (c, col, band = 4.4) => E(32, 40, 15, 12, 'none', 0, ` stroke="${OLC}" stroke-width="${band + 3.4}"`) + E(32, 40, 15, 12, 'none', 0, ` stroke="${col}" stroke-width="${band}"`)
+    + T('M20 36Q24 30 32 29', sh(col, 0.55), 1.6, op(0.9)) + T('M44 46Q40 51 32 52', sh(col, -0.35), 1.6, op(0.8));
+
+  const ICONS = {
+    ember_ring: (c) => ring(c, '#e8b84a') + C(32, 26, 11, c.halo('#ff8a3d', 0.8), 0) + gem(c, 32, 26, 8.5, '#ff6a3d')
+      + P('M32 9C36 13 37 16 34 19C33 16 31 15 30 13C29 15 28 16 28 18C26 15 27 12 32 9Z', c.g('#ffd23a', 0.3), 1.6),
+    frost_bead: (c) => T('M10 12Q32 30 54 12', '#7a5a3a', 2.4) + C(32, 36, 14, c.r('#bfefff', 0.35), 3) + C(32, 36, 14, c.halo('#ffffff', 0.4), 0)
+      + T('M32 28V44M25 32L39 40M25 40L39 32', '#ffffff', 2) + SPEC(27, 30, 2.4) + C(32, 21, 3, '#e8b84a', 2),
+    wind_feather: (c) => G(P('M0 -26C10 -18 12 4 2 24L-2 24C-10 4 -10 -18 0 -26Z', c.g('#5cc8e6', 0.3), 2.6)
+      + T('M0 -22V26', '#e8fbff', 1.6) + T('M0 -12L7 -16M0 -4L8 -8M0 4L7 0M0 -12L-7 -16M0 -4L-8 -8M0 4L-7 0', '#2e86b4', 1.2), 'translate(32 32) rotate(28)')
+      + T('M8 50Q16 46 22 48M42 14Q48 12 54 14', '#dff6ff', 2, op(0.9)),
+    pebble_charm: (c) => T('M18 10Q32 22 46 10', '#a8784a', 2.4) + E(32, 38, 17, 14, c.r('#a8a8a0', 0.3), 3)
+      + P('M16 34C20 26 30 24 38 26C34 30 26 32 18 38Z', '#7ccf4a', 0) + T('M18 36l2 -3M23 32l1 -3M28 29l1 -3', '#b8f070', 1.2)
+      + C(38, 42, 2.4, '#8a8a82', 0) + C(26, 46, 1.6, '#8a8a82', 0) + SPEC(24, 33, 2),
+    light_shard: (c) => C(32, 32, 20, c.halo('#fff4a0', 0.8), 0) + P('M32 6L42 26L36 58L26 40L22 22Z', c.gl('#ffe08a', 120, 0.4), 2.8)
+      + P('M32 6L36 58L26 40Z', '#fff8d0', 0, op(0.7)) + star(48, 14, 4) + star(14, 46, 3),
+    shadow_ribbon: (c) => P('M32 30C24 18 10 16 10 26C10 34 22 36 32 32Z', c.g('#b05ad8', 0.3), 2.6) + P('M32 30C40 18 54 16 54 26C54 34 42 36 32 32Z', c.g('#b05ad8', 0.3), 2.6)
+      + P('M30 32L20 56L27 52L31 58L33 34Z', c.g('#8a3ab8', 0.3), 2.4) + P('M34 32L44 56L37 52L33 58L31 34Z', c.g('#8a3ab8', 0.3), 2.4)
+      + C(32, 31, 5, c.g('#d890ff', 0.3), 2.4) + T('M16 24Q20 21 26 24', '#f0d8ff', 1.4, op(0.8)),
+    forge_glove: (c) => P('M18 58L18 34C18 30 20 28 22 28L22 16C22 12 28 12 28 16L28 26L30 12C30 8 36 8 36 12L35 26L38 14C38 10 44 10 44 14L41 30L46 26C49 23 53 27 50 31L42 44L42 58Z', c.g('#a8603a', 0.28), 2.8)
+      + T('M18 48H42', '#5a3424', 3) + T('M22 52H38', '#e8c07a', 1.4, ' stroke-dasharray="2 2"') + T('M24 18L24 26M30 14L30 24', '#d8905a', 1.4, op(0.8)),
+    snow_brooch: (c) => C(32, 32, 20, c.r('#e8eef8', 0.25), 3) + C(32, 32, 15, 'none', 0, ' stroke="#9ab0c8" stroke-width="1.6"')
+      + G([0, 60, 120].map((a) => G(T('M0 -12V12M-4 -8L0 -12L4 -8M-4 8L0 12L4 8', '#5fb8f0', 2.4), `rotate(${a})`)).join(''), 'translate(32 32)') + C(32, 32, 3, '#ffffff', 1.6) + SPEC(24, 22, 2.4),
+    thunder_bell: (c) => T('M32 6V12', '#7a5a3a', 3) + P('M32 12C22 12 18 22 18 34C18 40 14 44 12 46H52C50 44 46 40 46 34C46 22 42 12 32 12Z', c.gl('#b8a8ff', 0, 0.35), 2.8)
+      + C(32, 50, 4, c.g('#e8b84a', 0.3), 2) + P('M34 18L26 32H32L28 44L40 28H33Z', '#fff4a0', 1.6) + T('M22 26Q22 20 26 17', '#ffffff', 1.6, op(0.8)),
+    moss_cloak: (c) => P('M20 12L44 12L54 56Q32 62 10 56Z', c.g('#6aa83e', 0.28), 2.8) + P('M20 12L44 12L42 22Q32 26 22 22Z', c.g('#4a7a2a', 0.3), 2.2)
+      + T('M28 24L24 54M36 24L40 54', '#4a7a2a', 1.6) + P('M32 16C36 14 40 18 36 22C34 22 32 20 32 16Z', c.g('#b8f070', 0.3), 1.6) + T('M14 50l3 -3M48 52l-3 -3M30 58l2 -3', '#b8f070', 1.4),
+    lantern_shard: (c) => C(32, 34, 20, c.halo('#ffd890', 0.9), 0) + P('M18 20L44 14L50 40L30 54L14 40Z', c.gl('#ffe8a8', 110, 0.4), 2.8)
+      + P('M18 20L44 14L36 28Z', '#fffbe8', 0, op(0.8)) + T('M22 24L40 20M20 36L46 30', '#c08a2e', 1.6, op(0.7)) + C(32, 34, 4, '#ffffff', 0, op(0.9)),
+    night_key: (c) => G(C(0, -14, 10, 'none', 0, ` stroke="${OLC}" stroke-width="8"`) + C(0, -14, 10, 'none', 0, ' stroke="#6a5a8a" stroke-width="4.4"')
+      + P('M-3 -4H3V24H-3Z', c.g('#6a5a8a', 0.3), 2.4) + P('M3 12H10V16H3ZM3 19H8V23H3Z', c.g('#6a5a8a', 0.3), 2)
+      + P('M-4 -18A6 6 0 1 0 2 -9A5 5 0 1 1 -4 -18Z', '#ffe7a8', 0), 'translate(32 32) rotate(-20)'),
+    phoenix_plume: (c) => C(32, 30, 22, c.halo('#ff8a3d', 0.7), 0) + G(P('M0 -28C12 -16 12 8 2 26L-2 26C-12 8 -12 -16 0 -28Z', c.g('#ff6a3d', 0.3), 2.6)
+      + P('M0 -20C6 -12 6 4 1 18L-1 18C-6 4 -6 -12 0 -20Z', c.g('#ffd23a', 0.3), 0) + T('M0 -24V26', '#fff4c0', 1.2), 'translate(32 32) rotate(-24)')
+      + C(48, 12, 2, '#ffd23a', 0) + C(14, 20, 1.6, '#ffb03a', 0) + C(50, 30, 1.4, '#fff2a8', 0),
+    glacier_heart: (c) => C(32, 34, 20, c.halo('#bfefff', 0.6), 0) + P('M32 56C20 46 8 38 8 24C8 14 16 8 24 10C28 11 31 14 32 18C33 14 36 11 40 10C48 8 56 14 56 24C56 38 44 46 32 56Z', c.gl('#7ad0ff', 120, 0.4), 3)
+      + P('M32 18L32 56M8 24L56 24M16 12L32 30L48 12', '#ffffff', 0, op(0)) + T('M32 18L24 30L32 50L40 30Z', '#e8fbff', 1.6, op(0.8)) + SPEC(18, 18, 3),
+    storm_gem: (c) => C(32, 32, 22, c.halo('#b8a8ff', 0.6), 0) + gem(c, 32, 32, 20, '#8a6ae8') + C(32, 34, 6, 'none', 0, ' stroke="#ffffff" stroke-width="2"')
+      + T('M32 28a3 3 0 1 1 -3 3', '#e8e0ff', 1.6) + T('M8 14l5 3M52 50l5 3M50 10l-4 4', '#e8e0ff', 1.6, op(0.9)),
+    titan_belt: (c) => P('M4 26Q32 34 60 26L60 38Q32 46 4 38Z', c.g('#8a5a32', 0.3), 2.8) + T('M8 32Q32 40 56 32', '#5a3424', 1.2, ' stroke-dasharray="2 2"')
+      + P('M20 22H44V48H20Z', c.g('#a8a8a0', 0.3), 3) + P('M24 26H40V44H24Z', c.g('#7a7a72', 0.3), 1.8) + P('M26 30C30 26 36 28 38 32C34 32 30 34 26 36Z', '#7ccf4a', 0) + SPEC(23, 25, 1.6),
+    dawn_circlet: (c) => E(32, 40, 24, 10, 'none', 0, ` stroke="${OLC}" stroke-width="9"`) + E(32, 40, 24, 10, 'none', 0, ' stroke="#e8b84a" stroke-width="5"')
+      + P('M20 34L24 24L28 32L32 18L36 32L40 24L44 34Z', c.g('#ffd86a', 0.3), 2.4) + C(32, 30, 12, c.halo('#fff4a0', 0.8), 0) + C(32, 30, 5, c.r('#fff4c0', 0.3), 2)
+      + T('M32 16V12M24 20l-3 -3M40 20l3 -3', '#fff4a0', 1.8),
+    void_ring: (c) => ring(c, '#4a3a5a') + C(32, 26, 13, c.halo('#b05ad8', 0.7), 0) + C(32, 26, 9, c.r('#2a1446', 0.2), 2.6)
+      + T('M26 24a6 6 0 0 1 10 -2', '#d890ff', 1.6) + C(35, 28, 1.6, '#f0d8ff', 0),
+  };
+
+  RG.art.GEAR_ICONS = Object.keys(ICONS);
+  /** 장신구 아이콘 SVG */
+  RG.art.gearIcon = function gearIcon(id) {
+    const c = pad();
+    let body;
+    try {
+      body = (ICONS[id] || ((cc) => C(32, 32, 18, cc.g('#9a9aa8', 0.2), 3) + T('M26 26q0-6 6-6t6 6q0 5-6 6v4M32 42v2', OLC, 4)))(c);
+    } catch (e) {
+      if (RG.art._strict) throw e;
+      body = C(32, 32, 18, '#9a9aa8', 3);
+    }
+    return wrap('0 0 64 64', c, body);
+  };
+})();
+
+</script>
   <script>/* js/art/terrain.js */
 'use strict';
 
@@ -32264,7 +32924,7 @@ RG.render = (() => {
   }
 
   /* ---------------- 장판·덫 ---------------- */
-  const ZONE_FLAT = { fire: 'rgba(255,120,60,0.4)', void: 'rgba(110,31,102,0.5)', thorn: 'rgba(74,122,38,0.4)', blizzard: 'rgba(200,236,255,0.35)' };
+  const ZONE_FLAT = { fire: 'rgba(255,120,60,0.4)', lava: 'rgba(255,90,40,0.45)', void: 'rgba(110,31,102,0.5)', thorn: 'rgba(74,122,38,0.4)', blizzard: 'rgba(200,236,255,0.35)' };
   function drawZones() {
     const st = game.state;
     const lite = lowFx();
@@ -32303,7 +32963,7 @@ RG.render = (() => {
           ctx.rect(fx - s0 / 2, fy - s0 / 2, s0, s0);
         }
         ctx.fill();
-      } else if (z.kind === 'fire') {
+      } else if (z.kind === 'fire' || z.kind === 'lava') { // lava: 카라 고유 재능 '용암 자국'
         const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, R);
         g.addColorStop(0, 'rgba(255,214,120,0.75)');
         g.addColorStop(0.55, 'rgba(255,107,61,0.45)');
@@ -34294,11 +34954,15 @@ RG.render = (() => {
             class: `hp-item ${hero === h ? 'on' : ''} ${unlocked && !banned ? '' : 'locked'}`,
             title: unlocked ? `${hd.name} — ${hd.title}` : '아직 만나지 못한 영웅',
             onclick: () => { if (!unlocked || banned) return; UI.sfx('click'); UI.show('brief', { mapId: def.id, mode, hero: h }); },
-          }, [unlocked ? UI.portrait(h, hero === h ? 'happy' : 'normal', 'hp-portrait') : el('span', { class: 'hp-q', text: '?' }), el('span', { text: unlocked ? hd.name : '???' })]));
+          }, [unlocked ? UI.portrait(h, hero === h ? 'happy' : 'normal', 'hp-portrait') : el('span', { class: 'hp-q', text: '?' }), el('span', { text: unlocked ? hd.name : '???' }),
+            unlocked && P().bondOf(h).level > 1 ? el('i', { class: 'hp-bond', title: `인연 Lv${P().bondOf(h).level}`, text: P().bondOf(h).level }) : null]));
         }
       }
       const hd = hero && D().heroes[hero];
-      const heroInfo = hd && !noHero ? el('p', { class: 'hero-blurb' }, [el('b', { text: `${hd.name} · ${hd.title}` }), ` — ${hd.skill.name}: ${hd.skill.desc}`]) : null;
+      const grow = hd && !noHero ? P().heroGrowth(hero) : null;
+      const growNote = !grow ? null : mode === 'challenge' ? el('small', { class: 'dim', text: ' · 도전에서는 영웅 성장(재능·장신구)이 쓰이지 않습니다' })
+        : el('small', { class: 'good', text: ` · 인연 Lv${grow.level} 재능 ${grow.talents.length}칸${grow.gear.length ? ` · 장신구 ${grow.gear.map(([id, pl]) => `${D().growth.gear[id].name}${pl ? `+${pl}` : ''}`).join(', ')}` : ''}` });
+      const heroInfo = hd && !noHero ? el('p', { class: 'hero-blurb' }, [el('b', { text: `${hd.name} · ${hd.title}` }), ` — ${hd.skill.name}: ${hd.skill.desc}`, growNote]) : null;
 
       // 탑과 적
       const towerRow = el('div', { class: 'chip-row' });
@@ -34333,6 +34997,9 @@ RG.render = (() => {
           mapId: def.id, mode, heroId: noHero ? null : hero, skills: P().get().skills.slice(),
           seed: (Math.random() * 1e9) >>> 0, towers, towerRanks: P().towerRanks(), finalLv2: true, branches: P().branchesUnlocked(),
         };
+        // 영웅 성장(인연 재능·장신구)은 시작 때 복사 — 도전 모드에서는 판이 쓰지 않음
+        const growth = !noHero && hero && mode !== 'challenge' ? P().heroGrowth(hero) : null;
+        if (growth) opts.heroGrowth = growth;
         const go = () => UI.show('game', { opts });
         const story = def.story && def.story.before;
         if (mode === 'normal' && story && D().story[story] && !P().seen('story', story)) UI.show('story', { id: story, then: go });
@@ -34406,6 +35073,30 @@ RG.render = (() => {
         if (un.branches) ul.appendChild(el('div', { class: 'unlock' }, [UI.icon('upgrade', 'small'), el('span', { text: '분기 강화(Lv4)가 열렸습니다!' })]));
         box.appendChild(ul);
         setTimeout(() => UI.sfx('unlock'), 1300);
+      }
+      // 영웅 인연 · 새 장신구 (docs/design/hero-growth.md)
+      const bd = data.rec.bond;
+      const gearGot = (data.rec.gear || []).filter((g) => g && (g.id || g.crystals));
+      if ((bd && bd.gain > 0) || gearGot.length) {
+        const gb = el('div', { class: 'growth-box' });
+        if (bd && bd.gain > 0) {
+          const hn = D().heroes[bd.heroId].name;
+          gb.appendChild(el('div', { class: `gb-bond ${bd.levelUp ? 'up' : ''}` }, [
+            UI.portrait(bd.heroId, bd.levelUp ? 'happy' : 'normal', 'mini-portrait'),
+            el('span', { text: bd.levelUp ? `${hn} 인연 Lv${bd.after}! 재능 점수 +${bd.after - bd.before}` : `${hn} 인연 +${bd.gain}` }),
+            bd.levelUp ? el('button', { class: 'btn small', onclick: () => UI.show('heroes', { hero: bd.heroId, tab: 'grow', back: { screen: 'world', data: {} } }) }, ['재능 찍기']) : null,
+          ]));
+        }
+        for (const g of gearGot) {
+          if (!g.id) { gb.appendChild(el('div', { class: 'gb-gear' }, [UI.icon('crystal', 'small'), el('span', { text: `장신구를 모두 최대로 강화해서 공명석 +${g.crystals}` })])); continue; }
+          const gd = D().growth.gear[g.id];
+          gb.appendChild(el('div', { class: `gb-gear r-${gd.rarity}` }, [
+            UI.svgImg(RG.art.gearIcon(g.id), 'gb-ico', ''),
+            el('span', { text: g.isNew ? `새 장신구: ${gd.name} (${D().growth.gearRarities[gd.rarity].name})` : `${gd.name} +${g.plus} (이미 가진 장신구라 강화됨)` }),
+          ]));
+        }
+        box.appendChild(gb);
+        if ((bd && bd.levelUp) || gearGot.some((g) => g.isNew)) setTimeout(() => UI.sfx('unlock'), 1600);
       }
       // 통계
       const dmg = Object.entries(data.stats.damage || {}).map(([id, v]) => [data.stats.towers.find((t) => String(t.id) === id), v]).filter(([t]) => t).sort((a, b) => b[1] - a[1]).slice(0, 6);
@@ -34662,6 +35353,8 @@ RG.render = (() => {
   let heroSel = 'kara';
   let heroBack = null; // 뒤로 갈 곳 (로비에서 왔으면 로비)
   let heroTapped = false; // 무대를 한 번이라도 눌렀나 ('눌러 보세요' 안내는 그 뒤로 숨김)
+  let heroTab = 'info';    // 오른쪽 패널: 'info' 소개 · 'grow' 성장(인연·재능·장신구)
+  let gearSlot = 0;        // 장신구를 끼울 칸
   /** 받침 고르기: 받침이 있으면 a, 없으면 b (예: 과/와, 을/를, 이/가) */
   const josa = (word, a, b) => { const c = word.charCodeAt(word.length - 1) - 0xac00; return c >= 0 && c <= 11171 && c % 28 ? a : b; };
   /** 꾸미기용 그림 (화면 읽기 프로그램이 내부 이름을 읽지 않게 alt는 비움) */
@@ -34683,6 +35376,7 @@ RG.render = (() => {
       sec.innerHTML = '';
       const unlocked = P().heroesFor(P().frontier());
       const lead = unlocked.includes(P().get().lastHero) ? P().get().lastHero : unlocked[0];
+      if (data.tab) heroTab = data.tab;
       if (data.hero && D().heroes[data.hero]) heroSel = data.hero;
       else heroSel = lead; // 새로 들어올 때는 출정 영웅부터 (처음부터 다시 뒤 잠긴 영웅에 머물지 않게)
       const back = heroBack && heroBack.screen ? () => UI.show(heroBack.screen, heroBack.data || {}) : null;
@@ -34717,6 +35411,8 @@ RG.render = (() => {
         // 다시 그린 뒤 키보드 위치를 되돌림 (매번 맨 위부터 다시 탭하지 않게)
         if (data.focus === 'pick' && on) on.focus({ preventScroll: true });
         else if (data.focus === 'lead') { const f = sec.querySelector('.hx-lead, .hx-lead-badge'); if (f) f.focus({ preventScroll: true }); }
+        else if (data.focus) { const f = sec.querySelector(`[data-focus="${data.focus}"]`); if (f) f.focus({ preventScroll: true }); }
+        if (data.scroll != null) { const inf = sec.querySelector('.hx-info'); if (inf) inf.scrollTop = data.scroll; }
       });
     },
   });
@@ -34842,6 +35538,13 @@ RG.render = (() => {
       );
       return info;
     }
+    // 소개 / 성장 탭
+    const tabs = el('div', { class: 'hx-tabs', role: 'tablist' }, [['info', '소개'], ['grow', '성장']].map(([id, name]) => el('button', {
+      class: `hx-tab ${heroTab === id ? 'on' : ''}`, role: 'tab', 'aria-selected': heroTab === id ? 'true' : 'false', 'data-focus': `tab-${id}`,
+      onclick: () => { if (heroTab !== id) { UI.sfx('click'); heroTab = id; UI.show('heroes', { hero: h, focus: `tab-${id}` }); } },
+    }, [name, id === 'grow' ? el('small', { class: 'hx-tab-lv', text: `인연 Lv${P().bondOf(h).level}` }) : null])));
+    info.appendChild(tabs);
+    if (heroTab === 'grow') { info.appendChild(growthPanel(h)); return info; }
     // 대사: 말풍선이 돌려 보여 주는 인사말 말고, 상황별 한마디
     const said = [['기술을 쓸 때', hd.lines.skill], ['쓰러질 때', hd.lines.down], ['다시 일어날 때', hd.lines.revive], ['이겼을 때', hd.lines.win]]
       .filter(([, l]) => l && l.length).map(([when, l]) => el('div', { class: 'hx-line' }, [el('span', { class: 'hx-when', text: when }), el('q', { text: l[0] })]));
@@ -34853,6 +35556,128 @@ RG.render = (() => {
       el('div', { class: 'hx-sec' }, [el('span', { class: 'hx-kind', text: '대사' }), el('div', { class: 'hx-lines' }, said)]),
     );
     return info;
+  }
+
+  /* ---------- 성장: 인연 레벨 · 재능 나무 · 장신구 (docs/design/hero-growth.md) ---------- */
+  function growthPanel(h) {
+    const hd = D().heroes[h];
+    const G = D().growth;
+    const GW = RG.growth;
+    const bond = P().bondOf(h);
+    const talents = P().talentsOf(h);
+    const pts = GW.points(bond.level);
+    const left = pts - talents.length;
+    const keep = (focus) => { const inf = document.querySelector('#screen-heroes .hx-info'); UI.show('heroes', { hero: h, focus, scroll: inf ? inf.scrollTop : 0 }); };
+    const wrap = el('div', { class: 'gr-panel' });
+
+    // 인연
+    wrap.appendChild(el('div', { class: 'gr-bond' }, [
+      el('div', { class: 'gr-bond-lv' }, [el('small', { text: '인연' }), el('b', { text: `Lv ${bond.level}` })]),
+      el('div', { class: 'gr-bond-mid' }, [
+        el('div', { class: 'gr-bond-bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(bond.need || 1), 'aria-valuenow': String(bond.max ? 1 : bond.into) }, [el('i', { style: `width:${bond.max ? 100 : Math.round((bond.into / bond.need) * 100)}%` })]),
+        el('span', { class: 'gr-bond-txt', text: bond.max ? '인연 최고 레벨!' : `다음 레벨까지 ${bond.need - bond.into} (판을 끝내면 승리 3 · 새 별마다 2 · 패배 1)` }),
+      ]),
+    ]));
+
+    // 재능
+    const resetBtn = el('button', {
+      class: 'btn small gr-reset', 'data-focus': 'reset', disabled: talents.length ? null : '',
+      onclick: () => { UI.sfx('click'); P().resetTalents(h); keep('reset'); },
+    }, ['초기화']);
+    wrap.appendChild(el('div', { class: 'gr-head' }, [el('span', { class: 'hx-kind', text: '재능' }), el('span', { class: `gr-pts ${left > 0 ? 'has' : ''}`, text: `남은 점수 ${left} / ${pts}` }), resetBtn]));
+    const tree = el('div', { class: 'gr-tree' });
+    for (const b of G.branches) {
+      const col = el('div', { class: `gr-col gr-${b.key}` }, [el('div', { class: 'gr-col-h' }, [deco(RG.art.icon(b.icon), 'icon tiny'), b.name])]);
+      for (const id of GW.branchIds(h, b.key)) {
+        const n = GW.node(h, id);
+        const taken = talents.includes(id);
+        const can = !taken && GW.canTake(h, talents, id, bond.level).ok;
+        col.appendChild(el('button', {
+          class: `gr-node ${taken ? 'on' : ''} ${can ? 'can' : ''} ${n.unique ? 'uniq' : ''}`, 'data-focus': `t-${id}`,
+          'aria-pressed': taken ? 'true' : 'false', 'aria-label': `${n.name}: ${n.desc}${taken ? ' · 찍음' : can ? ' · 찍을 수 있음' : ''}`,
+          onclick: () => {
+            if (taken) return;
+            const r = P().takeTalent(h, id);
+            if (!r.ok) { UI.sfx('error'); UI.toast(r.reason, 'warn'); return; }
+            UI.sfx('upgrade');
+            keep(`t-${id}`);
+          },
+        }, [el('b', { text: n.name }), el('span', { text: n.desc }), n.unique ? el('em', { text: `${hd.name}만의 재능` }) : null]));
+      }
+      tree.appendChild(col);
+    }
+    wrap.appendChild(tree);
+
+    // 장신구
+    const owned = P().ownedGear();
+    const rec = P().heroRec(h);
+    const crystals = P().gachaState().crystals;
+    wrap.appendChild(el('div', { class: 'gr-head' }, [el('span', { class: 'hx-kind', text: '장신구' }), el('span', { class: 'gr-pts', text: `공명석 ${crystals}` })]));
+    const slots = el('div', { class: 'gr-slots' });
+    [0, 1].forEach((i) => {
+      const id = rec.gear[i] && rec.gear[i] in owned ? rec.gear[i] : null;
+      const gd = id ? G.gear[id] : null;
+      slots.appendChild(el('button', {
+        class: `gr-slot ${gearSlot === i ? 'sel' : ''} ${id ? `r-${gd.rarity}` : 'empty'}`, 'data-focus': `slot-${i}`,
+        'aria-label': id ? `${i + 1}번 칸: ${gd.name} — 누르면 빼기` : `${i + 1}번 칸: 비어 있음 — 아래에서 장신구를 고르면 여기에 낍니다`,
+        onclick: () => {
+          UI.sfx('click');
+          if (id) { P().equipGear(h, i, null); gearSlot = i; } else gearSlot = i;
+          keep(`slot-${i}`);
+        },
+      }, id ? [deco(RG.art.gearIcon(id), 'gr-ico'), el('div', { class: 'gr-slot-t' }, [el('b', { text: `${gd.name}${owned[id] ? ` +${owned[id]}` : ''}` }), el('span', { text: GW.gearText(id, owned[id], hd.element) }), gd.element === hd.element ? el('em', { text: '같은 원소 +25%' }) : null])]
+        : [el('span', { class: 'gr-slot-plus', text: '+' }), el('div', { class: 'gr-slot-t' }, [el('b', { text: '빈 칸' }), el('span', { text: '아래 장신구를 누르면 낍니다' })])]));
+    });
+    wrap.appendChild(slots);
+    const ids = G.gearOrder.filter((id) => id in owned);
+    if (!ids.length) {
+      wrap.appendChild(el('p', { class: 'gr-empty', text: '아직 장신구가 없습니다. 도전 모드를 처음 깨거나 무한 모드에서 10·20·30·40웨이브를 처음 넘기면 얻습니다.' }));
+    } else {
+      const inv = el('div', { class: 'gr-inv' });
+      for (const id of ids) {
+        const gd = G.gear[id];
+        const plus = owned[id];
+        const on = rec.gear.indexOf(id);
+        const cost = GW.upgradeCost(id, plus);
+        inv.appendChild(el('div', { class: `gr-item r-${gd.rarity} ${on >= 0 ? 'worn' : ''}` }, [
+          el('button', {
+            class: 'gr-item-main', 'data-focus': `g-${id}`,
+            'aria-label': `${gd.name} ${G.gearRarities[gd.rarity].name}${plus ? ` +${plus}` : ''}: ${GW.gearText(id, plus, hd.element)}${on >= 0 ? ' · 끼는 중(누르면 빼기)' : ''}`,
+            onclick: () => {
+              UI.sfx('click');
+              if (on >= 0) P().equipGear(h, on, null);
+              else {
+                const slot = rec.gear[gearSlot] ? (rec.gear[1 - gearSlot] ? gearSlot : 1 - gearSlot) : gearSlot;
+                P().equipGear(h, slot, id);
+              }
+              keep(`g-${id}`);
+            },
+          }, [
+            deco(RG.art.gearIcon(id), 'gr-ico'),
+            el('div', { class: 'gr-item-t' }, [
+              el('b', { text: `${gd.name}${plus ? ` +${plus}` : ''}` }),
+              el('small', { class: 'gr-rar', text: `${G.gearRarities[gd.rarity].name} · ${D().elements[gd.element].name}` }),
+              el('span', { text: GW.gearText(id, plus, hd.element) }),
+            ]),
+            on >= 0 ? el('i', { class: 'gr-worn', text: '끼는 중' }) : null,
+          ]),
+          el('button', {
+            class: 'btn small gr-up', 'data-focus': `up-${id}`, disabled: cost == null || crystals < cost ? '' : null,
+            'aria-label': cost == null ? `${gd.name} 최대 강화` : `${gd.name} 강화 — 공명석 ${cost}`,
+            onclick: () => {
+              const r = P().upgradeGear(id);
+              if (!r.ok) { UI.sfx('error'); UI.toast(r.reason, 'warn'); return; }
+              UI.sfx('upgrade');
+              UI.toast(`${gd.name} +${r.plus}!`, 'good');
+              keep(`up-${id}`);
+            },
+          }, cost == null ? ['최대'] : [deco(RG.art.icon('upgrade'), 'icon tiny'), String(cost)]),
+        ]));
+      }
+      wrap.appendChild(inv);
+    }
+    wrap.appendChild(el('p', { class: 'gr-note', text: '재능과 장신구는 다음 출정부터 적용됩니다 · 도전 모드에서는 쓰이지 않습니다 · 같은 장신구를 여러 영웅이 함께 낄 수 있어요' }));
+    return wrap;
   }
 
   /** 능력치 막대: 영웅 여섯 중 가장 높은 값을 가득으로 (레벨 1 기준) */
@@ -35769,7 +36594,8 @@ RG.render = (() => {
     }
     mode = 'skill';
     skillAim = sk;
-    RG.render.overlay.skill = { radius: sk.radius || 0.5 };
+    const skU = game.growth && game.growth.skU;
+    RG.render.overlay.skill = { radius: (sk.radius || 0.5) + (skU && skU.radiusAdd ? skU.radiusAdd : 0) }; // 시오 고유 재능 '깊은 얼음'
     const tip = sk.target === 'enemy' ? '노릴 적을 누르세요'
       : sk.target === 'tower' ? '담금질할 탑을 누르세요'
         : sk.target === 'path' ? (sk.snowman ? '눈사람을 세울 길을 누르세요' : '벽을 세울 길을 누르세요')
@@ -36765,7 +37591,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
   const start = params.get('screen');
-  if (start === 'game') RG.ui.show('game', { opts: { mapId: params.get('map') || '1-1', heroId: params.get('hero') || 'kara', seed: 1, mode: 'normal', towers: RG.progress.towersFor(params.get('map') || '1-1'), towerRanks: RG.progress.towerRanks(), finalLv2: true, branches: true } });
+  if (start === 'game') RG.ui.show('game', { opts: { mapId: params.get('map') || '1-1', heroId: params.get('hero') || 'kara', seed: 1, mode: 'normal', towers: RG.progress.towersFor(params.get('map') || '1-1'), towerRanks: RG.progress.towerRanks(), finalLv2: true, branches: true, heroGrowth: RG.progress.heroGrowth(params.get('hero') || 'kara') || undefined } });
   else RG.ui.show(start || 'title', {});
 });
 

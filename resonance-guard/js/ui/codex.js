@@ -137,6 +137,8 @@
   let heroSel = 'kara';
   let heroBack = null; // 뒤로 갈 곳 (로비에서 왔으면 로비)
   let heroTapped = false; // 무대를 한 번이라도 눌렀나 ('눌러 보세요' 안내는 그 뒤로 숨김)
+  let heroTab = 'info';    // 오른쪽 패널: 'info' 소개 · 'grow' 성장(인연·재능·장신구)
+  let gearSlot = 0;        // 장신구를 끼울 칸
   /** 받침 고르기: 받침이 있으면 a, 없으면 b (예: 과/와, 을/를, 이/가) */
   const josa = (word, a, b) => { const c = word.charCodeAt(word.length - 1) - 0xac00; return c >= 0 && c <= 11171 && c % 28 ? a : b; };
   /** 꾸미기용 그림 (화면 읽기 프로그램이 내부 이름을 읽지 않게 alt는 비움) */
@@ -158,6 +160,7 @@
       sec.innerHTML = '';
       const unlocked = P().heroesFor(P().frontier());
       const lead = unlocked.includes(P().get().lastHero) ? P().get().lastHero : unlocked[0];
+      if (data.tab) heroTab = data.tab;
       if (data.hero && D().heroes[data.hero]) heroSel = data.hero;
       else heroSel = lead; // 새로 들어올 때는 출정 영웅부터 (처음부터 다시 뒤 잠긴 영웅에 머물지 않게)
       const back = heroBack && heroBack.screen ? () => UI.show(heroBack.screen, heroBack.data || {}) : null;
@@ -192,6 +195,8 @@
         // 다시 그린 뒤 키보드 위치를 되돌림 (매번 맨 위부터 다시 탭하지 않게)
         if (data.focus === 'pick' && on) on.focus({ preventScroll: true });
         else if (data.focus === 'lead') { const f = sec.querySelector('.hx-lead, .hx-lead-badge'); if (f) f.focus({ preventScroll: true }); }
+        else if (data.focus) { const f = sec.querySelector(`[data-focus="${data.focus}"]`); if (f) f.focus({ preventScroll: true }); }
+        if (data.scroll != null) { const inf = sec.querySelector('.hx-info'); if (inf) inf.scrollTop = data.scroll; }
       });
     },
   });
@@ -317,6 +322,13 @@
       );
       return info;
     }
+    // 소개 / 성장 탭
+    const tabs = el('div', { class: 'hx-tabs', role: 'tablist' }, [['info', '소개'], ['grow', '성장']].map(([id, name]) => el('button', {
+      class: `hx-tab ${heroTab === id ? 'on' : ''}`, role: 'tab', 'aria-selected': heroTab === id ? 'true' : 'false', 'data-focus': `tab-${id}`,
+      onclick: () => { if (heroTab !== id) { UI.sfx('click'); heroTab = id; UI.show('heroes', { hero: h, focus: `tab-${id}` }); } },
+    }, [name, id === 'grow' ? el('small', { class: 'hx-tab-lv', text: `인연 Lv${P().bondOf(h).level}` }) : null])));
+    info.appendChild(tabs);
+    if (heroTab === 'grow') { info.appendChild(growthPanel(h)); return info; }
     // 대사: 말풍선이 돌려 보여 주는 인사말 말고, 상황별 한마디
     const said = [['기술을 쓸 때', hd.lines.skill], ['쓰러질 때', hd.lines.down], ['다시 일어날 때', hd.lines.revive], ['이겼을 때', hd.lines.win]]
       .filter(([, l]) => l && l.length).map(([when, l]) => el('div', { class: 'hx-line' }, [el('span', { class: 'hx-when', text: when }), el('q', { text: l[0] })]));
@@ -328,6 +340,128 @@
       el('div', { class: 'hx-sec' }, [el('span', { class: 'hx-kind', text: '대사' }), el('div', { class: 'hx-lines' }, said)]),
     );
     return info;
+  }
+
+  /* ---------- 성장: 인연 레벨 · 재능 나무 · 장신구 (docs/design/hero-growth.md) ---------- */
+  function growthPanel(h) {
+    const hd = D().heroes[h];
+    const G = D().growth;
+    const GW = RG.growth;
+    const bond = P().bondOf(h);
+    const talents = P().talentsOf(h);
+    const pts = GW.points(bond.level);
+    const left = pts - talents.length;
+    const keep = (focus) => { const inf = document.querySelector('#screen-heroes .hx-info'); UI.show('heroes', { hero: h, focus, scroll: inf ? inf.scrollTop : 0 }); };
+    const wrap = el('div', { class: 'gr-panel' });
+
+    // 인연
+    wrap.appendChild(el('div', { class: 'gr-bond' }, [
+      el('div', { class: 'gr-bond-lv' }, [el('small', { text: '인연' }), el('b', { text: `Lv ${bond.level}` })]),
+      el('div', { class: 'gr-bond-mid' }, [
+        el('div', { class: 'gr-bond-bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(bond.need || 1), 'aria-valuenow': String(bond.max ? 1 : bond.into) }, [el('i', { style: `width:${bond.max ? 100 : Math.round((bond.into / bond.need) * 100)}%` })]),
+        el('span', { class: 'gr-bond-txt', text: bond.max ? '인연 최고 레벨!' : `다음 레벨까지 ${bond.need - bond.into} (판을 끝내면 승리 3 · 새 별마다 2 · 패배 1)` }),
+      ]),
+    ]));
+
+    // 재능
+    const resetBtn = el('button', {
+      class: 'btn small gr-reset', 'data-focus': 'reset', disabled: talents.length ? null : '',
+      onclick: () => { UI.sfx('click'); P().resetTalents(h); keep('reset'); },
+    }, ['초기화']);
+    wrap.appendChild(el('div', { class: 'gr-head' }, [el('span', { class: 'hx-kind', text: '재능' }), el('span', { class: `gr-pts ${left > 0 ? 'has' : ''}`, text: `남은 점수 ${left} / ${pts}` }), resetBtn]));
+    const tree = el('div', { class: 'gr-tree' });
+    for (const b of G.branches) {
+      const col = el('div', { class: `gr-col gr-${b.key}` }, [el('div', { class: 'gr-col-h' }, [deco(RG.art.icon(b.icon), 'icon tiny'), b.name])]);
+      for (const id of GW.branchIds(h, b.key)) {
+        const n = GW.node(h, id);
+        const taken = talents.includes(id);
+        const can = !taken && GW.canTake(h, talents, id, bond.level).ok;
+        col.appendChild(el('button', {
+          class: `gr-node ${taken ? 'on' : ''} ${can ? 'can' : ''} ${n.unique ? 'uniq' : ''}`, 'data-focus': `t-${id}`,
+          'aria-pressed': taken ? 'true' : 'false', 'aria-label': `${n.name}: ${n.desc}${taken ? ' · 찍음' : can ? ' · 찍을 수 있음' : ''}`,
+          onclick: () => {
+            if (taken) return;
+            const r = P().takeTalent(h, id);
+            if (!r.ok) { UI.sfx('error'); UI.toast(r.reason, 'warn'); return; }
+            UI.sfx('upgrade');
+            keep(`t-${id}`);
+          },
+        }, [el('b', { text: n.name }), el('span', { text: n.desc }), n.unique ? el('em', { text: `${hd.name}만의 재능` }) : null]));
+      }
+      tree.appendChild(col);
+    }
+    wrap.appendChild(tree);
+
+    // 장신구
+    const owned = P().ownedGear();
+    const rec = P().heroRec(h);
+    const crystals = P().gachaState().crystals;
+    wrap.appendChild(el('div', { class: 'gr-head' }, [el('span', { class: 'hx-kind', text: '장신구' }), el('span', { class: 'gr-pts', text: `공명석 ${crystals}` })]));
+    const slots = el('div', { class: 'gr-slots' });
+    [0, 1].forEach((i) => {
+      const id = rec.gear[i] && rec.gear[i] in owned ? rec.gear[i] : null;
+      const gd = id ? G.gear[id] : null;
+      slots.appendChild(el('button', {
+        class: `gr-slot ${gearSlot === i ? 'sel' : ''} ${id ? `r-${gd.rarity}` : 'empty'}`, 'data-focus': `slot-${i}`,
+        'aria-label': id ? `${i + 1}번 칸: ${gd.name} — 누르면 빼기` : `${i + 1}번 칸: 비어 있음 — 아래에서 장신구를 고르면 여기에 낍니다`,
+        onclick: () => {
+          UI.sfx('click');
+          if (id) { P().equipGear(h, i, null); gearSlot = i; } else gearSlot = i;
+          keep(`slot-${i}`);
+        },
+      }, id ? [deco(RG.art.gearIcon(id), 'gr-ico'), el('div', { class: 'gr-slot-t' }, [el('b', { text: `${gd.name}${owned[id] ? ` +${owned[id]}` : ''}` }), el('span', { text: GW.gearText(id, owned[id], hd.element) }), gd.element === hd.element ? el('em', { text: '같은 원소 +25%' }) : null])]
+        : [el('span', { class: 'gr-slot-plus', text: '+' }), el('div', { class: 'gr-slot-t' }, [el('b', { text: '빈 칸' }), el('span', { text: '아래 장신구를 누르면 낍니다' })])]));
+    });
+    wrap.appendChild(slots);
+    const ids = G.gearOrder.filter((id) => id in owned);
+    if (!ids.length) {
+      wrap.appendChild(el('p', { class: 'gr-empty', text: '아직 장신구가 없습니다. 도전 모드를 처음 깨거나 무한 모드에서 10·20·30·40웨이브를 처음 넘기면 얻습니다.' }));
+    } else {
+      const inv = el('div', { class: 'gr-inv' });
+      for (const id of ids) {
+        const gd = G.gear[id];
+        const plus = owned[id];
+        const on = rec.gear.indexOf(id);
+        const cost = GW.upgradeCost(id, plus);
+        inv.appendChild(el('div', { class: `gr-item r-${gd.rarity} ${on >= 0 ? 'worn' : ''}` }, [
+          el('button', {
+            class: 'gr-item-main', 'data-focus': `g-${id}`,
+            'aria-label': `${gd.name} ${G.gearRarities[gd.rarity].name}${plus ? ` +${plus}` : ''}: ${GW.gearText(id, plus, hd.element)}${on >= 0 ? ' · 끼는 중(누르면 빼기)' : ''}`,
+            onclick: () => {
+              UI.sfx('click');
+              if (on >= 0) P().equipGear(h, on, null);
+              else {
+                const slot = rec.gear[gearSlot] ? (rec.gear[1 - gearSlot] ? gearSlot : 1 - gearSlot) : gearSlot;
+                P().equipGear(h, slot, id);
+              }
+              keep(`g-${id}`);
+            },
+          }, [
+            deco(RG.art.gearIcon(id), 'gr-ico'),
+            el('div', { class: 'gr-item-t' }, [
+              el('b', { text: `${gd.name}${plus ? ` +${plus}` : ''}` }),
+              el('small', { class: 'gr-rar', text: `${G.gearRarities[gd.rarity].name} · ${D().elements[gd.element].name}` }),
+              el('span', { text: GW.gearText(id, plus, hd.element) }),
+            ]),
+            on >= 0 ? el('i', { class: 'gr-worn', text: '끼는 중' }) : null,
+          ]),
+          el('button', {
+            class: 'btn small gr-up', 'data-focus': `up-${id}`, disabled: cost == null || crystals < cost ? '' : null,
+            'aria-label': cost == null ? `${gd.name} 최대 강화` : `${gd.name} 강화 — 공명석 ${cost}`,
+            onclick: () => {
+              const r = P().upgradeGear(id);
+              if (!r.ok) { UI.sfx('error'); UI.toast(r.reason, 'warn'); return; }
+              UI.sfx('upgrade');
+              UI.toast(`${gd.name} +${r.plus}!`, 'good');
+              keep(`up-${id}`);
+            },
+          }, cost == null ? ['최대'] : [deco(RG.art.icon('upgrade'), 'icon tiny'), String(cost)]),
+        ]));
+      }
+      wrap.appendChild(inv);
+    }
+    wrap.appendChild(el('p', { class: 'gr-note', text: '재능과 장신구는 다음 출정부터 적용됩니다 · 도전 모드에서는 쓰이지 않습니다 · 같은 장신구를 여러 영웅이 함께 낄 수 있어요' }));
+    return wrap;
   }
 
   /** 능력치 막대: 영웅 여섯 중 가장 높은 값을 가득으로 (레벨 1 기준) */

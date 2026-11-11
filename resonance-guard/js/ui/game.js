@@ -630,7 +630,8 @@
     }
     mode = 'skill';
     skillAim = sk;
-    RG.render.overlay.skill = { radius: sk.radius || 0.5 };
+    const skU = game.growth && game.growth.skU;
+    RG.render.overlay.skill = { radius: (sk.radius || 0.5) + (skU && skU.radiusAdd ? skU.radiusAdd : 0) }; // 시오 고유 재능 '깊은 얼음'
     const tip = sk.target === 'enemy' ? '노릴 적을 누르세요'
       : sk.target === 'tower' ? '담금질할 탑을 누르세요'
         : sk.target === 'path' ? (sk.snowman ? '눈사람을 세울 길을 누르세요' : '벽을 세울 길을 누르세요')

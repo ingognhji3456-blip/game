@@ -478,11 +478,15 @@
             class: `hp-item ${hero === h ? 'on' : ''} ${unlocked && !banned ? '' : 'locked'}`,
             title: unlocked ? `${hd.name} — ${hd.title}` : '아직 만나지 못한 영웅',
             onclick: () => { if (!unlocked || banned) return; UI.sfx('click'); UI.show('brief', { mapId: def.id, mode, hero: h }); },
-          }, [unlocked ? UI.portrait(h, hero === h ? 'happy' : 'normal', 'hp-portrait') : el('span', { class: 'hp-q', text: '?' }), el('span', { text: unlocked ? hd.name : '???' })]));
+          }, [unlocked ? UI.portrait(h, hero === h ? 'happy' : 'normal', 'hp-portrait') : el('span', { class: 'hp-q', text: '?' }), el('span', { text: unlocked ? hd.name : '???' }),
+            unlocked && P().bondOf(h).level > 1 ? el('i', { class: 'hp-bond', title: `인연 Lv${P().bondOf(h).level}`, text: P().bondOf(h).level }) : null]));
         }
       }
       const hd = hero && D().heroes[hero];
-      const heroInfo = hd && !noHero ? el('p', { class: 'hero-blurb' }, [el('b', { text: `${hd.name} · ${hd.title}` }), ` — ${hd.skill.name}: ${hd.skill.desc}`]) : null;
+      const grow = hd && !noHero ? P().heroGrowth(hero) : null;
+      const growNote = !grow ? null : mode === 'challenge' ? el('small', { class: 'dim', text: ' · 도전에서는 영웅 성장(재능·장신구)이 쓰이지 않습니다' })
+        : el('small', { class: 'good', text: ` · 인연 Lv${grow.level} 재능 ${grow.talents.length}칸${grow.gear.length ? ` · 장신구 ${grow.gear.map(([id, pl]) => `${D().growth.gear[id].name}${pl ? `+${pl}` : ''}`).join(', ')}` : ''}` });
+      const heroInfo = hd && !noHero ? el('p', { class: 'hero-blurb' }, [el('b', { text: `${hd.name} · ${hd.title}` }), ` — ${hd.skill.name}: ${hd.skill.desc}`, growNote]) : null;
 
       // 탑과 적
       const towerRow = el('div', { class: 'chip-row' });
@@ -593,6 +597,30 @@
         if (un.branches) ul.appendChild(el('div', { class: 'unlock' }, [UI.icon('upgrade', 'small'), el('span', { text: '분기 강화(Lv4)가 열렸습니다!' })]));
         box.appendChild(ul);
         setTimeout(() => UI.sfx('unlock'), 1300);
+      }
+      // 영웅 인연 · 새 장신구 (docs/design/hero-growth.md)
+      const bd = data.rec.bond;
+      const gearGot = (data.rec.gear || []).filter((g) => g && (g.id || g.crystals));
+      if ((bd && bd.gain > 0) || gearGot.length) {
+        const gb = el('div', { class: 'growth-box' });
+        if (bd && bd.gain > 0) {
+          const hn = D().heroes[bd.heroId].name;
+          gb.appendChild(el('div', { class: `gb-bond ${bd.levelUp ? 'up' : ''}` }, [
+            UI.portrait(bd.heroId, bd.levelUp ? 'happy' : 'normal', 'mini-portrait'),
+            el('span', { text: bd.levelUp ? `${hn} 인연 Lv${bd.after}! 재능 점수 +${bd.after - bd.before}` : `${hn} 인연 +${bd.gain}` }),
+            bd.levelUp ? el('button', { class: 'btn small', onclick: () => UI.show('heroes', { hero: bd.heroId, tab: 'grow', back: { screen: 'world', data: {} } }) }, ['재능 찍기']) : null,
+          ]));
+        }
+        for (const g of gearGot) {
+          if (!g.id) { gb.appendChild(el('div', { class: 'gb-gear' }, [UI.icon('crystal', 'small'), el('span', { text: `장신구를 모두 최대로 강화해서 공명석 +${g.crystals}` })])); continue; }
+          const gd = D().growth.gear[g.id];
+          gb.appendChild(el('div', { class: `gb-gear r-${gd.rarity}` }, [
+            UI.svgImg(RG.art.gearIcon(g.id), 'gb-ico', ''),
+            el('span', { text: g.isNew ? `새 장신구: ${gd.name} (${D().growth.gearRarities[gd.rarity].name})` : `${gd.name} +${g.plus} (이미 가진 장신구라 강화됨)` }),
+          ]));
+        }
+        box.appendChild(gb);
+        if ((bd && bd.levelUp) || gearGot.some((g) => g.isNew)) setTimeout(() => UI.sfx('unlock'), 1600);
       }
       // 통계
       const dmg = Object.entries(data.stats.damage || {}).map(([id, v]) => [data.stats.towers.find((t) => String(t.id) === id), v]).filter(([t]) => t).sort((a, b) => b[1] - a[1]).slice(0, 6);

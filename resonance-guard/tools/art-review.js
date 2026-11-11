@@ -44,6 +44,7 @@ const ENEMY_SIZE = {
 const HEROES = ['kara', 'sera', 'sio', 'zena', 'bawi', 'yaro', 'haru', 'dohan', 'narae', 'tori', 'byeori', 'mujin'];
 const PORTRAITS = [...HEROES, 'elder', 'bellkeeper'];
 const UNITS = ['stone_soldier', 'granite_guard', 'obsidian_blade', 'drone', 'rock_wall', 'snowman', 'tori_giant'];
+const RG_GEAR = ['ember_ring', 'frost_bead', 'wind_feather', 'pebble_charm', 'light_shard', 'shadow_ribbon', 'forge_glove', 'snow_brooch', 'thunder_bell', 'moss_cloak', 'lantern_shard', 'night_key', 'phoenix_plume', 'glacier_heart', 'storm_gem', 'titan_belt', 'dawn_circlet', 'void_ring'];
 const ICONS = ['fire', 'frost', 'storm', 'earth', 'light', 'dark',
   'flying', 'armor', 'regen', 'split', 'stealth', 'shield', 'healer', 'shielder', 'burrow', 'dash', 'undying', 'deathburst',
   'ranged', 'shock', 'silence', 'adaptive', 'dampen', 'unstoppable',
@@ -75,6 +76,7 @@ const CATEGORY_DEFS = {
     id,
     items: ['idle', 'walk0', 'walk1', 'aim', 'attack'].map((p) => ({ label: p, call: ['unit', id, p], vb: [100, 100], tile: id === 'rock_wall' ? 1 : 0.6 })),
   })),
+  gear: () => [{ id: 'gear', items: (RG_GEAR).map((name) => ({ label: name, call: ['gearIcon', name], vb: [64, 64], tile: 0, big: 120, small: 40 })) }],
   icons: () => [{ id: 'icons', items: ICONS.map((name) => ({ label: name, call: ['icon', name], vb: [64, 64], tile: 0, big: 96, small: 24 })) }],
   terrain: () => [{ id: 'terrain', terrain: true }],
 };
