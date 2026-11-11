@@ -113,8 +113,17 @@ test('모든 자세가 오류 없이 그려진다 (엄격 모드: 그리다 실�
   try {
     for (const t of Object.keys(D.towers)) for (const [lv, br] of [[1], [2], [3], [4, 'A'], [4, 'B']]) for (const p of RG.art.TOWER_POSES) assert.ok(RG.art.tower(t, lv, br, p).includes('<svg'), `${t} ${lv}${br || ''} ${p}`);
     for (const e of Object.keys(D.enemies)) for (const f of RG.art.ENEMY_FRAMES) assert.ok(RG.art.enemy(e, f).includes('<svg'), `${e} ${f}`);
-    for (const h of Object.keys(D.heroes)) for (const p of RG.art.HERO_POSES) assert.ok(RG.art.hero(h, p).includes('<svg'), `${h} ${p}`);
-    for (const u of ['stone_soldier', 'granite_guard', 'obsidian_blade', 'drone', 'rock_wall']) for (const p of RG.art.UNIT_POSES) assert.ok(RG.art.unit(u, p).includes('<svg'), `${u} ${p}`);
+    for (const h of [...Object.keys(D.heroes), 'tori_giant']) for (const p of RG.art.HERO_POSES) assert.ok(RG.art.hero(h, p).includes('<svg'), `${h} ${p}`);
+    for (const u of ['stone_soldier', 'granite_guard', 'obsidian_blade', 'drone', 'rock_wall', 'snowman', 'tori_giant']) for (const p of RG.art.UNIT_POSES) assert.ok(RG.art.unit(u, p).includes('<svg'), `${u} ${p}`);
+    // 영웅마다 초상화 3표정이 자리표시(물음표 얼굴)가 아닌 진짜 그림
+    const placeholder = RG.art.portrait('__없는_영웅__', 'normal').replace(/id="[^"]*"|url\(#[^)]*\)/g, '');
+    for (const h of D.heroOrder) for (const m of ['normal', 'happy', 'worried']) {
+      const svg = RG.art.portrait(h, m);
+      assert.ok(svg.includes('<svg') && svg.replace(/id="[^"]*"|url\(#[^)]*\)/g, '') !== placeholder, `${h} ${m} 초상화`);
+    }
+    // 영웅 전신도 자리표시가 아님
+    const heroPh = RG.art.hero('__없는_영웅__', 'idle0').replace(/id="[^"]*"|url\(#[^)]*\)/g, '');
+    for (const h of D.heroOrder) assert.notStrictEqual(RG.art.hero(h, 'idle0').replace(/id="[^"]*"|url\(#[^)]*\)/g, ''), heroPh, `${h} 전신`);
   } finally { RG.art._strict = false; }
 });
 

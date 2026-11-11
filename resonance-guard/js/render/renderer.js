@@ -1137,6 +1137,17 @@ RG.render = (() => {
     } else if (t.dampened) {
       icon('dampen', cx + T * 0.32, baseY - T * 0.95, T * 0.3);
     }
+    if (t.boostUntil > game.state.time && !t.building) {
+      // 도한의 담금질(주황 불티 고리) · 무진의 되울림 종(보랏빛 고리) — 공격 속도가 오른 탑
+      const temper = t.temperUntil > game.state.time;
+      ctx.save();
+      ctx.globalAlpha = 0.55 + 0.25 * Math.sin(time * 9 + t.id);
+      ctx.strokeStyle = temper ? '#ffb03a' : '#c8a8f0';
+      ctx.lineWidth = Math.max(1.5, T * 0.05);
+      ctx.beginPath(); ctx.ellipse(cx, baseY, T * 0.44, T * 0.17, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+      if (temper && !lowFx() && Math.random() < 0.12) RG.fx.burst(t.x + (Math.random() - 0.5) * 0.5, t.y - 0.6, '#ffd23a', 1, 0.8, 0.4, 0.05, -1.2);
+    }
     if (t.calc && t.calc.harvest && t.souls > 0 && !t.building) {
       // 영혼 수확자: 모은 영혼을 탑 위에 도는 작은 보랏빛 점으로
       const H = t.calc.harvest;
@@ -1459,8 +1470,12 @@ RG.render = (() => {
     if (u.kind === 'hero') {
       const moving = u.walking;
       const pose = heroPose(u, moving);
-      const size = T * 0.95;
-      const bob = moving ? Math.abs(Math.sin(time * 9)) * T * 0.04 : Math.sin(time * 2.2) * T * 0.012;
+      // 토리 거인 변신: 다른 그림(이끼 거인)을 크게. 나래(공중): 새가 그림 안에서 떠 있으므로 그림자만 작게
+      const giant = u.giantUntil > st.time;
+      const art = giant ? `${u.heroId}_giant` : u.heroId;
+      const hdat = RG.data.heroes[u.heroId] || {};
+      const size = T * (giant ? 1.6 : 0.95);
+      const bob = hdat.flying ? Math.sin(time * 3.2 + u.id) * T * 0.05 : moving ? Math.abs(Math.sin(time * 9)) * T * 0.04 : Math.sin(time * 2.2) * T * 0.012;
       if (overlay.heroSelected) {
         ctx.save();
         ctx.strokeStyle = '#ffe68a';
@@ -1468,11 +1483,14 @@ RG.render = (() => {
         ctx.beginPath(); ctx.ellipse(cx, cy, T * 0.42, T * 0.16, 0, 0, Math.PI * 2); ctx.stroke();
         ctx.restore();
       }
-      const hk = poseSprite(RG.art.sprites.heroKey(u.heroId, pose), RG.art.sprites.heroKey(u.heroId, 'idle0'), () => RG.art.hero(u.heroId, pose), 160, 160);
-      castShadow(hk, cx, cy, size, size, 0.5, 0.9, flip, 0.32, bob);
+      const px = giant ? 256 : 160;
+      const hk = poseSprite(RG.art.sprites.heroKey(art, pose), RG.art.sprites.heroKey(art, 'idle0'), () => RG.art.hero(art, pose), px, px);
+      if (hdat.flying) shadow(x, y, 0.26, 0.09, 0.28);
+      else castShadow(hk, cx, cy, size, size, 0.5, 0.9, flip, 0.32, bob);
       sprite(hk, cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
-      if (u.stunUntil > st.time) icon('stun', cx, cy - size * 1.0, T * 0.3);
-      bar(cx, cy - size * 0.98, Math.max(22, T * 0.8), u.hp / u.maxHp, '#6fd3ff', 0, false);
+      const top = giant ? size * 0.78 : size;
+      if (u.stunUntil > st.time) icon('stun', cx, cy - top * 1.0, T * 0.3);
+      bar(cx, cy - top * 0.98, Math.max(22, T * 0.8), u.hp / u.maxHp, '#6fd3ff', 0, false);
       // 레벨
       ctx.save();
       ctx.font = `800 ${Math.max(9, Math.round(T * 0.22))}px system-ui, sans-serif`;
@@ -1481,8 +1499,8 @@ RG.render = (() => {
       ctx.strokeStyle = '#1c1426';
       ctx.fillStyle = '#ffe68a';
       const lx = cx - Math.max(22, T * 0.8) / 2 - T * 0.12;
-      ctx.strokeText(String(u.level), lx, cy - size * 0.9);
-      ctx.fillText(String(u.level), lx, cy - size * 0.9);
+      ctx.strokeText(String(u.level), lx, cy - top * 0.9);
+      ctx.fillText(String(u.level), lx, cy - top * 0.9);
       ctx.restore();
       return;
     }
@@ -1496,6 +1514,18 @@ RG.render = (() => {
       if (!manyEnemies) castShadow(uk, cx, cy, size, size, 0.5, 0.9, flip, 0.3, bob);
       sprite(uk, cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
       if (u.hp < u.maxHp) bar(cx, cy - size * 1.0, Math.max(14, T * 0.5), u.hp / u.maxHp, '#b8e986', 0, false);
+      return;
+    }
+    if (u.kind === 'snowman') {
+      // 하루의 눈사람 친구: 사라질 때가 가까우면 깜박임
+      const size = T * 0.66;
+      const walking = (Math.abs(u.x - u.px) + Math.abs(u.y - u.py)) > 0.001;
+      const pose = u.attackAnim > 0.1 ? 'attack' : u.engaged && u.cd <= 0.3 ? 'aim' : walking ? (Math.floor(time * 6 + u.id) % 2 ? 'walk1' : 'walk0') : 'idle';
+      const uk = poseSprite(RG.art.sprites.unitKey('snowman', pose), RG.art.sprites.unitKey('snowman', 'idle'), () => RG.art.unit('snowman', pose), 128, 128);
+      const fade = u.until - st.time < 2 ? 0.55 + 0.45 * Math.abs(Math.sin(time * 8)) : 1;
+      if (!manyEnemies) castShadow(uk, cx, cy, size, size, 0.5, 0.9, flip, 0.3, 0);
+      sprite(uk, cx, cy, size, size, 0.5, 0.9, flip, fade);
+      if (u.hp < u.maxHp) bar(cx, cy - size * 0.95, Math.max(14, T * 0.5), u.hp / u.maxHp, '#bfefff', 0, false);
       return;
     }
     if (u.kind === 'wall') {

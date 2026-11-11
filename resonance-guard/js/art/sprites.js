@@ -137,8 +137,14 @@ RG.art.sprites = (() => {
     for (const id of RG.data.heroOrder) {
       if (game.opts.heroId !== id) continue;
       for (const p of (A.HERO_POSES || ['idle0'])) jobs.push(load(heroKey(id, p), () => A.hero(id, p), 160, 160));
+      // 토리: 거인 변신 그림도 미리 (크게)
+      const hd = RG.data.heroes[id];
+      if (hd && hd.skill && hd.skill.giant) for (const p of (A.HERO_POSES || ['idle0'])) jobs.push(load(heroKey(`${id}_giant`, p), () => A.hero(`${id}_giant`, p), 256, 256));
     }
-    for (const k of ['stone_soldier', 'granite_guard', 'obsidian_blade', 'drone', 'rock_wall']) {
+    const heroSkill = game.opts.heroId && RG.data.heroes[game.opts.heroId] && RG.data.heroes[game.opts.heroId].skill;
+    const unitKinds = ['stone_soldier', 'granite_guard', 'obsidian_blade', 'drone', 'rock_wall'];
+    if (heroSkill && heroSkill.snowman) unitKinds.push('snowman');
+    for (const k of unitKinds) {
       for (const p of (A.UNIT_POSES || ['idle', 'attack'])) jobs.push(load(unitKey(k, p), () => A.unit(k, p), 128, 128));
     }
     for (const s of LANTERN_STEPS) jobs.push(load(`lantern:${s}`, () => A.lantern(s), TW, TH));

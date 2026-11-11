@@ -11,6 +11,7 @@ RG.fx = (() => {
   const texts = [];      // 떠오르는 글자
   const areas = [];      // 바닥 경고 원
   const drops = [];      // 떨어지는 고드름 (고드름 구름)
+  const meteors = [];    // 별이의 유성: 하늘 오른쪽 위에서 고른 곳으로 비스듬히 떨어짐
   const marks = [];      // 심판의 표식 (적을 따라감)
   const pillars = [];    // 빛기둥 (심판의 첨탑)
   const wisps = [];      // 영혼 (죽은 자리 → 영혼 수확자)
@@ -263,6 +264,51 @@ RG.fx = (() => {
         case 'heroSkill':
           ring(e.x, e.y, 1.8, '#ffffff', 0.6, 0.12);
           break;
+        // 확장 영웅 6명의 기술
+        case 'snowmen':
+          ring(e.x, e.y, 0.9, '#dff6ff', 0.5, 0.1);
+          burst(e.x, e.y - 0.3, '#ffffff', lite ? 8 : 24, 2, 0.7, 0.07, 1.2);
+          break;
+        case 'temper':
+          ring(e.x, e.y, 0.8, '#ffb03a', 0.5, 0.12);
+          burst(e.x, e.y - 0.8, '#ffd23a', lite ? 8 : 22, 2.4, 0.6, 0.06, 1.6);
+          burst(e.x, e.y - 0.8, '#fff2a8', lite ? 3 : 8, 1.4, 0.5, 0.05, -0.8);
+          break;
+        case 'galeDive': {
+          line(e.x1, e.y1 - 0.5, e.x2, e.y2 - 0.3, '#c8f4ff', 0.4, Math.max(0.12, e.width * 0.5));
+          line(e.x1, e.y1 - 0.5, e.x2, e.y2 - 0.3, '#ffffff', 0.3, 0.06);
+          const n = lite ? 4 : 10;
+          for (let i = 0; i <= n; i++) {
+            const k = i / n;
+            burst(e.x1 + (e.x2 - e.x1) * k, e.y1 + (e.y2 - e.y1) * k - 0.2, '#e8fbff', 1, 1.6, 0.4, 0.06, -0.6);
+          }
+          ring(e.x2, e.y2, 0.9, '#c8f4ff', 0.4, 0.1);
+          addShake(0.12);
+          break;
+        }
+        case 'giantForm':
+          ring(e.x, e.y, 1.4, '#b8f070', 0.6, 0.16);
+          burst(e.x, e.y - 0.4, '#9ad060', lite ? 10 : 28, 2.6, 0.7, 0.08, 1.4);
+          burst(e.x, e.y - 0.2, '#8a8a7a', lite ? 4 : 12, 2.2, 0.6, 0.09, 2.4);
+          addShake(0.25);
+          break;
+        case 'giantEnd':
+          burst(e.x, e.y - 0.4, '#b8f070', lite ? 6 : 16, 1.6, 0.7, 0.06, -0.4);
+          break;
+        case 'meteorCall':
+          meteors.push({ x: e.x, y: e.y, t: 0, delay: Math.max(0.2, (e.delay || 1.2) / gameSpeed) });
+          break;
+        case 'meteor':
+          ring(e.x, e.y, e.radius, '#ffd890', 0.6, 0.18);
+          burst(e.x, e.y - 0.3, '#ffb860', lite ? 12 : 36, 3.4, 0.7, 0.09, 1.6);
+          burst(e.x, e.y - 0.3, '#fff4c0', lite ? 6 : 16, 2, 0.6, 0.06, -0.6);
+          addShake(0.35);
+          break;
+        case 'echoBell':
+          ring(e.x, e.y, e.radius, '#b08ad8', 0.7, 0.12);
+          ring(e.x, e.y, e.radius * 0.66, '#e8d8ff', 0.55, 0.08);
+          ring(e.x, e.y, e.radius * 0.33, '#ffffff', 0.4, 0.06);
+          break;
         case 'execute':
           text(e.x, e.y - 0.9, '처형!', '#ff7ad9', true);
           break;
@@ -340,6 +386,7 @@ RG.fx = (() => {
     }
     for (const t of texts) t.y -= dt * (t.big ? 0.9 : 1.2);
     for (let i = drops.length - 1; i >= 0; i--) { drops[i].t += dt; if (drops[i].t >= drops[i].delay) drops.splice(i, 1); }
+    for (let i = meteors.length - 1; i >= 0; i--) { meteors[i].t += dt; if (meteors[i].t >= meteors[i].delay) meteors.splice(i, 1); }
     shake = Math.max(0, shake - dt * 2.2);
   }
 
@@ -474,6 +521,35 @@ RG.fx = (() => {
       }
       ctx.globalCompositeOperation = 'lighter';
     }
+    // 유성: 오른쪽 위 하늘에서 가속하며 비스듬히 떨어짐 (꼬리 + 불덩이 + 떨어질 자리 그림자)
+    if (meteors.length) {
+      ctx.globalCompositeOperation = 'source-over';
+      for (const m of meteors) {
+        const k = Math.min(1, m.t / m.delay);
+        const f = 1 - k * k;
+        const x = m.x + 2.6 * f;
+        const y = m.y - 4.2 * f;
+        const cx = X(x);
+        const cy = Y(y);
+        const R = T * 0.26;
+        ctx.globalAlpha = 0.25 + 0.4 * k;
+        ctx.fillStyle = '#3a1e10';
+        ctx.beginPath(); ctx.ellipse(X(m.x), Y(m.y), R * 2.2 * (0.5 + k * 0.5), R * 0.9 * (0.5 + k * 0.5), 0, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 0.6;
+        ctx.strokeStyle = '#ffd890';
+        ctx.lineCap = 'round';
+        ctx.lineWidth = R * 1.2;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + T * 0.9, cy - T * 1.45); ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#ffb860';
+        ctx.strokeStyle = '#5a2a10';
+        ctx.lineWidth = Math.max(1, T * 0.03);
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#fff4c0';
+        ctx.beginPath(); ctx.arc(cx - R * 0.3, cy - R * 0.3, R * 0.4, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalCompositeOperation = 'lighter';
+    }
     // 조각: 같은 색·비슷한 투명도(6단계)끼리 한 경로로 모아 한 번에 칠함 (조각마다 칠하면 수백 번)
     pFrame++;
     pOrder.length = 0;
@@ -524,7 +600,7 @@ RG.fx = (() => {
     ctx.restore();
   }
 
-  function clear() { parts.length = 0; rings.length = 0; bolts.length = 0; texts.length = 0; areas.length = 0; drops.length = 0; marks.length = 0; pillars.length = 0; wisps.length = 0; breaths.length = 0; shake = 0; curGame = null; }
+  function clear() { parts.length = 0; rings.length = 0; bolts.length = 0; texts.length = 0; areas.length = 0; drops.length = 0; meteors.length = 0; marks.length = 0; pillars.length = 0; wisps.length = 0; breaths.length = 0; shake = 0; curGame = null; }
 
   return { onEvents, update, draw, drawUnder, drawTexts, shakeOffset, clear, settings, burst, ring, text, colorOf, lightOf, setLite, setSpeed };
 })();

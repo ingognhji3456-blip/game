@@ -228,6 +228,11 @@
         case 'smite': UI.sfx('explosion', { vol: 0.45, pitch: 6 }); break;
         case 'soulStorm': UI.sfx('hex', { vol: 0.6, pitch: -8 }); break;
         case 'chrono': UI.sfx('bell', { vol: 0.5, pitch: 7 }); break;
+        case 'temper': UI.sfx('upgrade', { vol: 0.5, pitch: -4 }); break;
+        case 'galeDive': UI.sfx('chain', { vol: 0.45, pitch: 5 }); break;
+        case 'giantForm': UI.sfx('slam', { vol: 0.6, pitch: -6 }); break;
+        case 'meteor': UI.sfx('explosion', { vol: 0.6, pitch: -3 }); break;
+        case 'echoBell': UI.sfx('bell', { vol: 0.55, pitch: -5 }); break;
         case 'pulse': if (e.towerId) { const t = game.state.towers.find((q) => q.id === e.towerId); UI.sfx(t ? PULSE_SFX[t.type] || 'bell' : 'bell', { vol: 0.5 }); } break;
         case 'chain': if (!e.small) UI.sfx('chain', { vol: 0.5 }); break;
         case 'splash': if (e.element === 'fire' || e.big) UI.sfx('explosion', { vol: 0.55 }); break;
@@ -618,10 +623,19 @@
     if (h.skillCd > 0) { UI.toast(`기술을 ${Math.ceil(h.skillCd)}초 뒤에 쓸 수 있습니다`, 'warn'); return; }
     closePanels();
     const sk = D().heroes[h.heroId].skill;
+    if (sk.target === 'self') {
+      // 토리 거인 변신처럼 자기에게 쓰는 기술은 고를 곳 없이 바로
+      doCmd({ type: 'heroSkill', x: round(h.x, 3), y: round(h.y, 3) });
+      return;
+    }
     mode = 'skill';
     skillAim = sk;
     RG.render.overlay.skill = { radius: sk.radius || 0.5 };
-    UI.toast(sk.target === 'enemy' ? '노릴 적을 누르세요' : sk.target === 'path' ? '벽을 세울 길을 누르세요' : '기술을 쓸 곳을 누르세요', 'info', 1400);
+    const tip = sk.target === 'enemy' ? '노릴 적을 누르세요'
+      : sk.target === 'tower' ? '담금질할 탑을 누르세요'
+        : sk.target === 'path' ? (sk.snowman ? '눈사람을 세울 길을 누르세요' : '벽을 세울 길을 누르세요')
+          : sk.id === 'gale_dive' ? '내리꽂을 곳을 누르세요' : '기술을 쓸 곳을 누르세요';
+    UI.toast(tip, 'info', 1400);
   }
   function endSkill() { mode = 'idle'; skillAim = null; RG.render.overlay.skill = null; }
 

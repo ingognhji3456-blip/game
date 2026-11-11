@@ -789,8 +789,186 @@
   };
   function mujin(c, pose) { return humanHero(c, pose, MUJIN_CFG); }
 
+  /* =========================================================
+   * 초상화 (200×200) — heroes.js의 human() 조립기 사용. 표정: normal · happy · worried
+   * ========================================================= */
+  const { pEye, BROW, sweat } = X;
+  const MO = X.MOUTH;
+  const star4 = (x, y, r) => `<path d="${h().starPath(x, y, r, r * 0.32, 4, 0)}"/>`;
+
+  // 하루: 기존 초상화에 귀마개를 더함 (설계: 귀마개 달린 털모자)
+  const P_HARU0 = PORTRAITS.haru;
+  const P_HARU2 = Object.assign({}, P_HARU0, {
+    front(c, mood) {
+      return P_HARU0.front(c, mood)
+        + P('M58 72C50 76 48 96 54 110C58 118 70 118 72 108L70 76Z', c.g('#5fb8f0', 0.25), 4)
+        + FURI('M56 110Q63 118 71 108', '#f4f8ff', '#c9d6ea', 4.6, 4.2, 2.4)
+        + T('M58 82Q56 94 59 104', '#bfe6ff', 2.6, op(0.8));
+    },
+  });
+
+  const P_DOHAN = {
+    bg: '#e8743a', skin: '#d9a07a', iris: '#6a3a24', browC: '#5a4a44', lid: 0.32,
+    motif: '<circle cx="32" cy="60" r="3"/><circle cx="44" cy="36" r="2"/><circle cx="168" cy="46" r="3"/><circle cx="176" cy="122" r="2.4"/>',
+    brows: { normal: ['M72 76L97 73', 'M114 73L136 76'], happy: ['M72 73Q85 67 97 71', 'M114 71Q125 67 136 74'], worried: ['M73 77Q86 75 96 69', 'M115 69Q124 75 135 78'] },
+    mouth: { normal: 'flat', happy: 'soft', worried: 'frown' },
+    eyes: { happy: { closed: true }, worried: { small: true, ly: 2 } },
+    sweatX: 152,
+    back(c) {
+      // 어깨에 걸친 단조 망치
+      return L('M30 206L58 132', '#8a5a32', 8, 4) + G(P('M-14 -10h28v20h-28z', c.g('#6a6e80', 0.35), 4) + P('M-14 4h28v6h-28z', '#ffb43a', 0) + T('M-8 -6v12', '#a8aec4', 3), 'translate(60 126) rotate(-20)');
+    },
+    body(c) {
+      return P('M18 206C20 170 46 154 84 150L120 150C158 154 184 170 186 206Z', c.g('#b8644a', 0.25), 4)
+        + P('M64 170C80 164 124 164 140 170L146 206H58Z', c.g('#7a4a30', 0.25), 4)
+        + L('M70 172L56 152', '#5a3424', 8, 4) + L('M134 172L148 152', '#5a3424', 8, 4)
+        + C(70, 176, 3, '#e8c07a', 2) + C(134, 176, 3, '#e8c07a', 2)
+        + STITCH('M68 180Q102 174 136 180', '#a87a50', 1.6, '3 3');
+    },
+    faceExtra: () => T('M80 62q8 -3 16 0', '#000', 1.4, op(0.12)),
+    front(c, mood) {
+      const S = DOHAN_C;
+      return P('M64 82C58 54 74 30 104 30C132 30 150 48 148 78L140 62Q104 50 70 64Z', c.g(S.hair, 0.25), 4)
+        + T('M80 40Q100 32 120 36M70 58Q72 48 78 42', S.hairG, 3, op(0.85))
+        // 붉은 두건 + 매듭
+        + P('M60 62C80 48 128 46 150 60L148 72C126 60 82 60 62 74Z', c.g(S.band, 0.25), 4) + T('M68 62Q104 50 144 62', sh(S.band, 0.4), 2.4, op(0.85))
+        + P('M62 66L40 60L44 76Z', c.g(S.band, 0.25), 3.5) + P('M60 70L42 86L56 88Z', c.g(sh(S.band, -0.1), 0.25), 3.5) + C(60, 68, 6, c.g(S.band, 0.25), 3.5)
+        // 짧은 수염 (입 주변을 비우고) + 콧수염
+        + P('M64 98C64 126 82 148 104 150C128 148 146 126 146 98C142 112 136 122 128 126Q118 136 106 136Q94 136 84 126C76 122 68 112 64 98Z', c.g(S.hair, 0.22), 3.8)
+        + T('M86 136l2 6M98 140v6M112 140v6M124 134l-2 6', S.hairG, 2.2)
+        + P(mood === 'happy' ? 'M90 114Q106 108 122 114Q114 120 106 118Q98 120 90 114Z' : 'M90 116Q106 110 122 116Q114 121 106 119Q98 121 90 116Z', c.g(S.hair, 0.2), 3);
+    },
+    mouthY: 125,
+  };
+
+  const P_NARAE = {
+    bg: '#7ad8ff', skin: '#f4caa4', iris: '#2a7a9a', browC: '#7a4a32', lash: true,
+    motif: '<path d="M24 60q10-8 20 0M156 40q10-8 20 0M164 124q8-6 16 0" fill="none" stroke="#fff" stroke-width="3"/>',
+    mouth: { normal: (x, y) => MO.grin(x, y, 0.85), happy: (x, y) => MO.grin(x, y, 1.2), worried: 'o' },
+    eyes: { happy: { closed: true }, worried: { small: true, ly: 2.5, lx: -1 } },
+    back(c) {
+      const S = NARAE_C;
+      // 오른쪽 어깨 뒤에서 고개를 내민 바람새 솔개
+      return G(P('M0 0C-4 -22 14 -36 34 -32C50 -28 56 -12 50 2C44 14 22 18 4 12Z', c.g(S.bird, 0.24), 4)
+        + P('M44 -20C58 -24 70 -18 72 -8C64 -10 58 -8 52 -4Z', c.g(S.beak, 0.3), 3.4)
+        + C(36, -16, 5, '#22202e', 0) + C(34.4, -17.6, 1.8, '#fff', 0)
+        + P('M2 -8L-14 -18L-2 -2Z', c.g(S.birdD, 0.25), 3) + P('M8 4C20 10 36 10 46 4C40 12 22 16 8 10Z', S.belly, 0), 'translate(126 132) scale(0.84)')
+        // 뒤로 날리는 머리
+        + P('M60 86C52 60 60 36 82 28L48 22L76 18L52 6L92 12C120 6 148 26 150 62Z', c.g(S.hair, 0.25), 4);
+    },
+    body(c) {
+      const S = NARAE_C;
+      const fth = (x, y, a, l, col) => G(P(`M0 0Q${l * 0.5} -9 ${l} 0Q${l * 0.5} 9 0 0Z`, c.g(col, 0.2), 3) + T(`M0 0L${l * 0.9} 0`, IL(col, 0.35), 1.6), `translate(${x} ${y}) rotate(${a})`);
+      return P(TORSO, c.g(S.jacket, 0.25), 4)
+        + P('M98 156L106 156L110 206H94Z', S.jacketL, 2.4)
+        + fth(66, 160, 160, 40, S.scarfD) + fth(64, 166, 186, 44, S.scarf)
+        + P('M62 156C60 142 144 142 142 156C144 170 124 176 102 176C80 176 60 170 62 156Z', c.g(S.scarf, 0.18), 4)
+        + T('M74 156l6 8M90 152l4 10M106 152l2 10M122 154l-2 9M134 156l-4 8', S.scarfD, 2.4);
+    },
+    front(c) {
+      const S = NARAE_C;
+      return P('M62 86C56 56 74 30 104 30C132 30 152 50 148 80L138 64L134 74L124 58L118 70L108 56L100 68L92 56C84 64 72 70 66 78Z', c.g(S.hair, 0.25), 4)
+        + T('M78 42Q96 32 118 36', sh(S.hair, 0.45), 3, op(0.8))
+        // 이마 위 고글
+        + P('M56 62C80 46 128 44 152 58L150 68C126 56 82 58 58 72Z', c.g(S.strap, 0.25), 3.4)
+        + C(88, 52, 14, c.r(S.goggle, 0.35), 4) + C(122, 52, 12, c.r(S.goggle, 0.35), 4)
+        + T('M80 46l6 -4M116 46l5 -4', '#fff', 3) + T('M101 52h8', S.strap, 4);
+    },
+  };
+
+  const P_BYEORI = {
+    bg: '#ffe7a8', skin: '#fde0c8', iris: '#6a5ab8', browC: '#c0924a', lash: true, eyeY: 96, mouthY: 124,
+    motif: star4(30, 56, 7) + star4(170, 44, 6) + star4(176, 122, 4.5) + star4(24, 128, 4) + star4(48, 30, 3),
+    mouth: { normal: 'soft', happy: (x, y) => MO.grin(x, y, 0.7), worried: 'wavy' },
+    eyes: { happy: { closed: true }, worried: { small: true, ly: 2.5, tear: false } },
+    brows: { normal: ['M74 75Q85 71 96 74', 'M115 74Q125 71 135 75'], happy: ['M74 72Q85 66 96 70', 'M115 70Q125 66 135 72'], worried: ['M74 76Q86 74 96 68', 'M115 68Q124 74 135 77'] },
+    back(c) {
+      const S = BYEORI_C;
+      return G(P('M-9 0H9V-60H-9Z', c.gl(S.brass, 0, 0.3), 4) + P('M-12 -60H12V-80H-12Z', c.gl(S.brass, 0, 0.3), 4) + T('M-9 -20H9M-9 -40H9', S.brassD, 3) + T('M-6 -76V-64', '#fff', 2.6, op(0.8)), 'translate(160 176) rotate(18)')
+        + P('M58 96C50 60 72 30 104 30C136 30 158 58 150 98C152 120 148 140 140 150L68 150C60 140 56 120 58 96Z', c.g(S.hair, 0.22), 4);
+    },
+    body(c) {
+      const S = BYEORI_C;
+      return P(TORSO, c.g(S.cape, 0.25), 4)
+        + P('M84 154L102 172L120 154L118 206H86Z', c.g(S.shirt, 0.12), 3.4)
+        + P('M102 160L94 168L102 166L110 170L106 160Z', c.g(S.capeIn, 0.25), 2.4)
+        + G(star4(48, 180, 5) + star4(152, 176, 4.5) + star4(66, 196, 3.5) + star4(140, 198, 3.5), '', ` fill="${S.star}"`)
+        + P(h().starPath(102, 158, 7, 3, 5, -90), c.r(S.star, 0.3), 2.4);
+    },
+    front(c) {
+      const S = BYEORI_C;
+      return P('M60 92C56 58 76 32 104 32C132 32 152 52 148 86C142 74 132 66 120 64L116 72L110 62C98 62 84 66 72 76C66 80 62 86 60 92Z', c.g(S.hair, 0.22), 4)
+        + T('M78 44Q96 34 118 38', '#fff4d0', 3, op(0.85))
+        + P(h().starPath(70, 58, 8, 3.4, 5, -90), c.r(S.star, 0.3), 2.6)
+        // 커다란 동그란 안경
+        + C(86, 97, 18, '#ffffff', 0, op(0.16)) + C(124, 97, 16, '#ffffff', 0, op(0.16))
+        + C(86, 97, 18, 'none', 0, ` stroke="${S.glass}" stroke-width="3.6"`) + C(124, 97, 16, 'none', 0, ` stroke="${S.glass}" stroke-width="3.4"`)
+        + T('M104 95Q106 91 108 95M68 94L60 90', S.glass, 3.2) + T('M76 86l5 -4M116 87l4 -3', '#fff', 2.6, op(0.9));
+    },
+  };
+
+  const P_MUJIN = {
+    bg: '#b08ad8', skin: '#e8c0a0', iris: '#5a4a6a', browC: '#f2f0f4', lid: 0.42,
+    motif: '<circle cx="34" cy="60" r="10" fill="none" stroke="#fff" stroke-width="2.5"/><circle cx="34" cy="60" r="18" fill="none" stroke="#fff" stroke-width="1.6"/><circle cx="168" cy="48" r="3"/><circle cx="176" cy="126" r="2.4"/>',
+    brows: { normal: ['M70 76Q84 68 98 74', 'M113 74Q126 68 138 77'], happy: ['M70 73Q84 64 98 70', 'M113 70Q126 64 138 74'], worried: ['M72 78Q86 76 97 67', 'M114 67Q124 76 137 80'] },
+    mouth: { normal: 'flat', happy: 'soft', worried: 'frown' },
+    eyes: { happy: { closed: true }, worried: { small: true, ly: 2, lid: 0.2 } },
+    mouthY: 124,
+    back(c) {
+      const S = MUJIN_C;
+      // 정수리 상투 + 옆머리
+      return P('M88 34C84 14 100 4 114 10C124 16 124 30 116 36Z', c.g(S.hair, 0.2), 4)
+        + P('M86 30L118 34L117 41L86 38Z', c.g(S.goreum, 0.25), 3);
+    },
+    body(c) {
+      const S = MUJIN_C;
+      return P(TORSO, c.g(S.shirt, 0.22), 4)
+        + P('M80 152L118 196L128 190L94 150Z', S.collar, 3) + P('M124 152L100 186L92 180L112 150Z', c.g(sh(S.shirt, -0.08), 0.2), 3)
+        + T('M50 176Q58 190 54 204M154 176Q146 190 150 204', IL(S.shirt, 0.4), 2.4)
+        + G(handBell(c, V(0, 0), 90, 0), 'translate(40 168) scale(2.2)');
+    },
+    faceExtra: () => T('M84 56Q100 52 116 56M88 64Q100 61 112 64', '#5a3a2a', 1.6, op(0.3)) + T('M126 116q4 4 8 2', '#5a3a2a', 1.4, op(0.25)),
+    front(c, mood) {
+      const S = MUJIN_C;
+      return P('M62 96C56 82 58 64 66 56C70 66 72 78 70 92Z', c.g(S.hair, 0.2), 3.6) + P('M146 92C150 80 150 64 142 56C140 66 138 78 140 90Z', c.g(S.hair, 0.2), 3.6)
+        + T('M66 52Q104 30 142 52', IL(S.hair, 0.25), 3, op(0.7))
+        // 긴 흰 수염 + 콧수염 (입은 비움)
+        + P('M70 112C70 150 88 186 108 200C124 182 140 150 140 112C134 124 126 130 120 132Q106 138 92 132C84 130 76 124 70 112Z', c.g(S.hair, 0.2), 3.8)
+        + T('M92 146Q96 168 104 188M114 146Q114 166 110 184M100 140Q102 160 106 176', S.hairD, 2)
+        + P(mood === 'happy' ? 'M84 116Q106 104 128 116Q118 124 106 120Q94 124 84 116Z' : 'M84 118Q106 108 128 118Q118 124 106 121Q94 124 84 118Z', c.g(S.hair, 0.2), 3);
+    },
+  };
+
+  /** 토리 초상화: 큰 버섯 갓 + 둥근 얼굴 + 큰 눈 */
+  function toriPortrait(c, mood) {
+    const S = TORI_C;
+    const happy = mood === 'happy';
+    const worried = mood === 'worried';
+    const eye = (x, y, r, k) => {
+      if (happy) return T(`M${x - r} ${y + 3}Q${x} ${y - r * 1.1} ${x + r} ${y + 3}`, OLC, 4);
+      return E(x, y, r, r * 1.25, S.eye, 0) + C(x - r * 0.35, y - r * 0.45, r * 0.38, '#fff', 0) + C(x + r * 0.35, y + r * 0.45, r * 0.16, '#fff', 0)
+        + (worried ? P(`M${x + r * 0.4} ${y + r * 1.2}q-4 7-1 10q4 1 4-4q0-3-3-6z`, '#bfeaff', 2) : '') + (k ? '' : '');
+    };
+    const bodyD = 'M100 66C142 66 160 100 160 140C160 180 136 204 100 204C64 204 40 180 40 140C40 100 58 66 100 66Z';
+    const bid = c.clip(bodyD);
+    return plate(c, '#9ad060', '<circle cx="30" cy="60" r="4"/><circle cx="172" cy="48" r="3"/><circle cx="178" cy="124" r="2.6"/><circle cx="22" cy="130" r="3"/>')
+      // 등의 새싹
+      + T('M58 96Q40 76 44 56', S.capD, 7) + T('M58 96Q40 76 44 56', S.sprout, 3.4)
+      + P('M44 56C30 54 20 44 22 34C36 34 44 44 44 56Z', c.g(S.sprout, 0.25), 3.4) + P('M44 56C46 42 58 34 68 38C66 48 56 56 44 56Z', c.g(S.sprout, 0.25), 3.4)
+      + P(bodyD, c.r(S.body, 0.25), 4)
+      + CL(bid, SHD('M140 80C164 110 166 170 140 204H170V80Z', 0.18) + P('M40 150Q50 136 64 142Q60 158 44 164Z', S.moss, 0, op(0.85)) + P('M130 186Q144 178 160 186V204H124Z', S.moss, 0, op(0.85)))
+      + OUT(bodyD, 4)
+      + eye(84, 132, 11) + eye(126, 130, 9.6)
+      + E(66, 152, 9, 5, '#ff9a7a', 0, op(happy ? 0.55 : 0.35)) + E(144, 150, 7, 4.4, '#ff9a7a', 0, op(happy ? 0.55 : 0.35))
+      + (happy ? MO.grin(106, 158, 0.6) : worried ? MO.wavy(106, 160) : MO.soft(106, 158))
+      + mushCap(c, 102, 92, 150, 1.6)
+      + (worried ? sweat(c, 160, 104) : '');
+  }
+
   /* 등록 (나머지 영웅은 아래에서 이어서) */
   Object.assign(HEROES, { haru, dohan, narae, tori, tori_giant: toriGiant, byeori, mujin });
+  Object.assign(PORTRAITS, { haru: P_HARU2, dohan: P_DOHAN, narae: P_NARAE, byeori: P_BYEORI, mujin: P_MUJIN });
+  Object.assign(PORTRAIT_FN, { tori: toriPortrait });
   Object.assign(UNITS, { snowman: snowmanUnit, tori_giant: (c, pose) => toriGiant(c, { idle: 'idle0', walk0: 'walk0', walk1: 'walk2' }[pose] || pose) });
   RG.art._hrx = { humanHero, poses, robeSkirt, star, snowball, smithHammer, WALK };
 })();

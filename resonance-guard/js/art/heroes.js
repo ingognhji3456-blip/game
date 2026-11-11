@@ -1880,6 +1880,7 @@
     try {
       body = PORTRAIT_FN[id] ? PORTRAIT_FN[id](c, m) : PORTRAITS[id] ? human(c, PORTRAITS[id], m) : portraitPlaceholder(c);
     } catch (e) {
+      if (RG.art._strict) throw e;
       body = portraitPlaceholder(c);
     }
     return wrap('0 0 200 200', c, body);
