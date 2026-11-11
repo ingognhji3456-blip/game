@@ -1689,6 +1689,17 @@
       for (const a of map.airSpawns) body.push(`<ellipse cx="${a.c * 100 + 50}" cy="${a.r * 100 + 56}" rx="44" ry="36" fill="${aG}"/>`);
     }
 
+    /* ---- 14b. 6지역 별다리 자리: 옅은 금빛 점선 판자(어느 무리가 열릴지는 렌더러가 위에 그림) — 준비 화면 미리보기에서도 길이 이어져 보이게 ---- */
+    {
+      let bd = '';
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+        const k = raw(c, r);
+        if (k !== K.BRIDGE_A && k !== K.BRIDGE_B) continue;
+        bd += `M${c * 100 + 8} ${r * 100 + 16}h84v68h-84Z`;
+      }
+      if (bd) body.push(`<path d="${bd}" fill="#ffe7a8" fill-opacity="0.16" stroke="#ffe7a8" stroke-opacity="0.75" stroke-width="3" stroke-dasharray="10 8"/>`);
+    }
+
     /* ---- 15. 가장자리 살짝 어둡게 ---- */
     const vG = def('vig', (id) => h.rg(id, [[0.62, OL, 0], [1, OL, region === 2 ? 0.16 : 0.24]], 0.5, 0.5, 0.75));
     body.push(`<rect width="${W}" height="${H}" fill="${vG}"/>`);

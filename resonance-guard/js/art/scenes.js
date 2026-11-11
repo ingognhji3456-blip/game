@@ -729,7 +729,7 @@
   const MH = 900;
   const BASE_NODES = [[180, 690], [440, 560], [700, 690], [960, 545], [1210, 660], [1430, 450], [1180, 250]];
   RG.art.REGION_NODES = {};
-  for (let r = 1; r <= 5; r++) {
+  for (let r = 1; r <= 6; r++) {
     // 지역마다 조금씩 다르게: 짝수 지역은 위아래를 뒤집고, 살짝 흔듦
     const R = prng(`nodes-${r}`);
     RG.art.REGION_NODES[r] = BASE_NODES.map(([x, y], i) => {
@@ -744,6 +744,7 @@
     3: { g0: '#d98a52', g1: '#b8653a', g2: '#f0b277', road: '#f3d8a0', roadD: '#a8703c', edge: '#7a3a22', water: '#ff7a2a', waterL: '#ffd27a' },
     4: { g0: '#7fae8e', g1: '#5e8e78', g2: '#a8cfa0', road: '#ead7a4', roadD: '#9a8458', edge: '#355e5a', water: '#2a6aa8', waterL: '#8fd8f0' },
     5: { g0: '#7a6e9a', g1: '#5c5280', g2: '#a597c8', road: '#e8c66a', roadD: '#8a6a2a', edge: '#2e2648', water: '#3a2a6a', waterL: '#c9a6ff' },
+    6: { g0: '#2a2868', g1: '#1a1848', g2: '#4a44a0', road: '#fff0c0', roadD: '#c8a85a', edge: '#4a3a7a', water: '#100e38', waterL: '#c8d8ff' },
   };
 
   function nearRoad(samples, x, y, d) {
@@ -809,7 +810,7 @@
   }
 
   RG.art.regionMap = function regionMap(r) {
-    r = Math.max(1, Math.min(5, Number(r) || 1));
+    r = Math.max(1, Math.min(6, Number(r) || 1));
     const B = bag();
     const R = prng(`region-map-${r}`);
     const P = PAL[r];
@@ -887,6 +888,27 @@
       place(14, 90, (x, y) => { add(y, mesa(x, y, 100 + R() * 70, 40 + R() * 30, '#6a8a80', R)); return ''; }, [0, 0, 1300, 600]);
       place(40, 60, (x, y) => { add(y, treeTop(x, y, 13 + R() * 8, '#2f7a5a', R)); return ''; }, [0, 0, 1300, 750]);
       add(470, `<g>${fill(ell(1505, 470, 30, 10), '#1a1030', 0.3)}${fill('M1490 470L1494 380L1516 380L1520 470Z', '#f4efe4', 1, ol(2.4, '#5a4a4a'))}${fill('M1494 410h22v14h-22Z', '#c84a3a')}${fill('M1488 380h34l-6 -18h-22Z', '#3a3a5a', 1, ol(2, '#1a1030'))}<circle cx="1505" cy="372" r="8" fill="#fff3c4"/><path d="M1505 372L1640 330L1640 410Z" fill="#fff3c4" opacity="0.35"/></g>`);
+    } else if (r === 6) {
+      // 밤하늘 위 구름 섬: 별·별자리, 구름 덩어리, 별다리 활, 오른쪽 위 별종 첨탑과 그믐달
+      for (let i = 0; i < 160; i++) s += fill(circ(R() * MW, R() * MH, 0.8 + R() * 2.2), i % 4 ? '#ffffff' : '#ffe7a8', 0.5 + R() * 0.45);
+      for (let i = 0; i < 26; i++) s += fill(sparkle(R() * MW, R() * MH, 3 + R() * 5), '#ffe7a8', 0.85);
+      s += line(smooth([[120, 120], [260, 70], [380, 140], [520, 90]]), '#c8d8ff', 2, 0.45) + line(smooth([[1000, 820], [1120, 760], [1260, 800]]), '#c8d8ff', 2, 0.45);
+      const cloudIsland = (x, y, w, hh) => {
+        let g = fill(ell(x + w * 0.1, y + hh * 0.5, w * 0.55, hh * 0.35), '#0a0828', 0.35);
+        const pts = [];
+        for (let i = 0; i < 7; i++) pts.push([x - w * 0.5 + (w * i) / 6, y + (R() - 0.5) * hh * 0.3, hh * (0.45 + R() * 0.35)]);
+        g += pts.map(([cx, cy, rr]) => fill(circ(cx, cy, rr), '#d8d2f4', 1, ol(2.4, '#6a60a8'))).join('');
+        g += pts.map(([cx, cy, rr]) => fill(circ(cx - rr * 0.25, cy - rr * 0.3, rr * 0.55), '#ffffff', 0.75)).join('');
+        return g;
+      };
+      place(16, 110, (x, y) => { add(y, cloudIsland(x, y, 120 + R() * 120, 40 + R() * 30)); return ''; });
+      // 별다리 활 두 개 (하나는 놓이고 하나는 사라지는 중)
+      s += line(smooth([[300, 860], [520, 760], [740, 840]]), '#ffe7a8', 10, 0.85) + line(smooth([[300, 860], [520, 760], [740, 840]]), '#fff8e0', 3);
+      s += line(smooth([[900, 120], [1100, 60], [1300, 130]]), '#ffe7a8', 8, 0.4, ' stroke-dasharray="14 18"');
+      // 별종 첨탑 (무한 맵 옆)
+      const bx = nodes[6][0] + 170; const by = nodes[6][1] + 60;
+      add(by, `<g>${fill(ell(bx + 18, by + 8, 60, 14), '#0a0828', 0.4)}${fill(`M${bx - 26} ${by}L${bx - 14} ${by - 150}L${bx - 6} ${by - 166}H${bx + 6}L${bx + 14} ${by - 150}L${bx + 26} ${by}Z`, B.lgu(bx - 26, 0, bx + 26, 0, [[0, '#d6d0f4'], [0.5, '#a69ed0'], [1, '#5a5290']]), 1, ol(3, '#2c2656'))}${line(`M${bx - 20} ${by - 40}H${bx + 20}M${bx - 17} ${by - 90}H${bx + 17}`, '#6a62a0', 2.4)}<circle cx="${bx}" cy="${by - 190}" r="46" fill="#ffe7a8" opacity="0.25"/>${fill(`M${bx} ${by - 214}C${bx - 18} ${by - 214} ${bx - 22} ${by - 196} ${bx - 22} ${by - 184}C${bx - 22} ${by - 176} ${bx - 28} ${by - 172} ${bx - 30} ${by - 170}H${bx + 30}C${bx + 28} ${by - 172} ${bx + 22} ${by - 176} ${bx + 22} ${by - 184}C${bx + 22} ${by - 196} ${bx + 18} ${by - 214} ${bx} ${by - 214}Z`, B.lgu(bx - 22, 0, bx + 22, 0, [[0, '#fff4c8'], [0.5, '#e8c070'], [1, '#9a7030']]), 1, ol(3, '#4a3410'))}</g>`);
+      s += `<circle cx="1480" cy="110" r="70" fill="#ffe7a8" opacity="0.18"/>` + fill('M1480 70A40 40 0 1 0 1508 140A31 31 0 1 1 1480 70Z', '#fff4d0', 1, ol(2.4, '#8a7a4a'));
     } else {
       // 보랏빛 폐허: 깨진 담, 기둥, 금빛 균열, 가운데 깨진 대종
       // 금빛 균열 그물 + 보랏빛 안개

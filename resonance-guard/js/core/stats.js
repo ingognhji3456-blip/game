@@ -108,6 +108,9 @@ RG.stats = (() => {
       c.kind = def.kind;
       c.targets = spec.targets || def.targets;
       c.dmgBonus = 0;
+      // 원정 유물: 원소 탑 피해 (meta.elFire …)
+      const elKey = `el${def.element[0].toUpperCase()}${def.element.slice(1)}`;
+      if (meta[elKey]) c.dmgBonus += meta[elKey];
       c.speedBonus = 0;
       c.rangeBonus = meta.rangePct || 0;
       // 6지역 별빛 건설지: 사거리 +15%

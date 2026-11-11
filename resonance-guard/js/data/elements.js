@@ -110,6 +110,7 @@ RG.data.supportAmpPerLink = 0.1;
 RG.data.rules = {
   lives: 12,
   starLives: [6, 11],          // ★2, ★3에 필요한 남은 불꽃
+  starRange: 0.15,             // 6지역 별빛 건설지(*)의 사거리 보너스
   buildTime: 1.0,              // 전투 중 건설 준비 시간(초)
   soldTileLock: 5,             // 판 칸 재건설 금지(초)
   sellRate: 0.7,

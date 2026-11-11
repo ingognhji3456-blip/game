@@ -767,6 +767,25 @@ RG.audio = (() => {
       ],
     },
 
+    // 6지역 첨탑 — D장조(리디안 G#이 반짝임), 3/4, 84bpm. 첼레스타 선율 + 하프 분산화음 + 합창 패드 + 낮은 서브 + 별빛 종.
+    sky: {
+      bpm: 84, beats: 3, sub: 2, rev: 0.55, vol: 1.0,
+      sec: {
+        A: { ch: 'Dmaj7 E/D Bm7 Gmaj7 Dmaj7 E/D F#m7 A',
+          mel: 'f#5 - a5 - d6 - | e6 - - - c#6 b5 | a5 - - - f#5 - | g#5 - - - - - | f#5 - a5 - c#6 - | e6 - d6 - b5 - | c#6 - a5 - f#5 - | e5 - - - - -' },
+        B: { ch: 'Gmaj7 A/G F#m7 Bm7 Em7 F#m7 Gmaj7 Asus4',
+          mel: 'b5 - - - d6 - | c#6 - - - a5 - | a5 - c#6 - f#6 - | e6 - - - d6 - | b5 - - - e6 - | c#6 - - - a5 - | b5 - d6 - g#6 - | e6 - - - - -' },
+      },
+      form: 'AB',
+      parts: [
+        { t: 'mel', inst: 'celesta', v: 0.85 },
+        { t: 'arp', inst: 'harp', low: 57, pat: ['0.1.2.', '3.2.1.'], v: 0.3 },
+        { t: 'pad', inst: 'choir', low: 52, n: 4, v: 0.22 },
+        { t: 'bass', inst: 'sub', low: 38, pat: ['r.....'], v: 0.5 },
+        { t: 'drum', k: 'ting', pat: ['x.....', '...o..'], v: 0.4 },
+      ],
+    },
+
     // 보스 — B단조(프리지안 ♭II 섞음), 4/4, 150bpm. 8분음표 신스 베이스, 스타카토 현, 금관 선율, 킥·스네어·톰, 합창.
     boss: {
       bpm: 150, beats: 4, sub: 2, rev: 0.2, vol: 1.45,

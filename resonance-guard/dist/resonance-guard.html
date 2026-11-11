@@ -376,6 +376,7 @@ button { font-family: var(--font); color: inherit; }
 .region-board.theme-canyon .mn-medal::before { background: radial-gradient(circle at 40% 35%, #ff9a5a, #a8401e 70%, #5a1a0a); }
 .region-board.theme-coast .mn-medal::before { background: radial-gradient(circle at 40% 35%, #6ad0c8, #1e6a78 70%, #0e3040); }
 .region-board.theme-bell .mn-medal::before { background: radial-gradient(circle at 40% 35%, #c8a0ff, #5a3a9a 70%, #2a1650); }
+.region-board.theme-sky .mn-medal::before { background: radial-gradient(circle at 40% 35%, #fff0c0, #5a50b0 70%, #1a1848); }
 .mn-medal::after { content: ''; position: absolute; left: 22%; top: 16%; width: 30%; height: 18%; border-radius: 50%; background: #ffffff70; transform: rotate(-24deg); filter: blur(1px); }
 .map-node .mn-id { position: relative; z-index: 1; font-weight: 900; font-size: calc(var(--m) * 0.27); color: #fff6d6; text-shadow: 0 2px 0 #1a0e2a, 0 0 8px #000a; letter-spacing: 0.02em; }
 .map-node .mn-lock { position: absolute; z-index: 1; width: 46%; height: 46%; opacity: 0.95; }
@@ -932,7 +933,7 @@ button { font-family: var(--font); color: inherit; }
   box-shadow: 0 0 0 2px #1a0e06, 0 0 0 4px color-mix(in srgb, var(--rc) 70%, #3a2208), 0 14px 30px #000b;
   transition: flex-grow 0.55s cubic-bezier(.2,.9,.25,1), box-shadow 0.3s, transform 0.25s;
 }
-.rg-panel.theme-meadow { --rc: #7ac04e; } .rg-panel.theme-frost { --rc: #9cc8f0; } .rg-panel.theme-canyon { --rc: #f08a4a; } .rg-panel.theme-coast { --rc: #4ab8b0; } .rg-panel.theme-bell { --rc: #b08af0; }
+.rg-panel.theme-meadow { --rc: #7ac04e; } .rg-panel.theme-frost { --rc: #9cc8f0; } .rg-panel.theme-canyon { --rc: #f08a4a; } .rg-panel.theme-coast { --rc: #4ab8b0; } .rg-panel.theme-bell { --rc: #b08af0; } .rg-panel.theme-sky { --rc: #ffe7a8; }
 .rg-panel.on { flex-grow: 6; cursor: default; box-shadow: 0 0 0 2px #1a0e06, 0 0 0 5px #e9c47a, 0 0 0 7px #3a2208, 0 0 36px color-mix(in srgb, var(--rc) 55%, transparent), 0 18px 40px #000c; }
 .rg-panel:not(.on):hover { transform: translateY(-4px); box-shadow: 0 0 0 2px #1a0e06, 0 0 0 4px var(--rc), 0 0 22px color-mix(in srgb, var(--rc) 60%, transparent), 0 16px 30px #000b; }
 .rg-panel:focus-visible { box-shadow: 0 0 0 2px #1a0e06, 0 0 0 5px #fff2c4, 0 16px 30px #000b; }
@@ -990,7 +991,7 @@ button { font-family: var(--font); color: inherit; }
 .wm-step { min-width: 42px; min-height: 42px; font-size: 0.9rem; }
 .wm-step:disabled { opacity: 0.35; cursor: default; }
 .wm-title { --rc: #8a7ab0; display: inline-flex; align-items: center; gap: 8px; padding: 4px 14px 4px 5px; min-height: 42px; border-radius: 999px; background: linear-gradient(90deg, color-mix(in srgb, var(--rc) 45%, #2a2040), #1c1530); border: 2px solid color-mix(in srgb, var(--rc) 70%, #000); box-shadow: 0 3px 0 #0008; }
-.wm-title.theme-meadow { --rc: #7ac04e; } .wm-title.theme-frost { --rc: #9cc8f0; } .wm-title.theme-canyon { --rc: #f08a4a; } .wm-title.theme-coast { --rc: #4ab8b0; } .wm-title.theme-bell { --rc: #b08af0; }
+.wm-title.theme-meadow { --rc: #7ac04e; } .wm-title.theme-frost { --rc: #9cc8f0; } .wm-title.theme-canyon { --rc: #f08a4a; } .wm-title.theme-coast { --rc: #4ab8b0; } .wm-title.theme-bell { --rc: #b08af0; } .wm-title.theme-sky { --rc: #ffe7a8; }
 .wm-title b { font-size: 1.05rem; text-shadow: 0 1px 2px #000; }
 .wm-stars { display: inline-flex; align-items: center; gap: 2px; color: var(--gold2); font-weight: 800; font-size: 0.85rem; }
 
@@ -1124,6 +1125,76 @@ button { font-family: var(--font); color: inherit; }
 /* 출정 준비: 인연 레벨 배지 */
 .hp-item { position: relative; }
 .hp-bond { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: linear-gradient(180deg, #ffd0e0, #ff9ab8); color: #4a1428; font-style: normal; font-size: 0.7rem; font-weight: 900; display: grid; place-items: center; box-shadow: 0 0 0 2px #1a1028; }
+
+/* ---------- 원정 (docs/design/expedition.md) ---------- */
+#screen-expedition { display: flex; flex-direction: column; }
+.ex-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 12px 16px calc(16px + var(--safe-b)); max-width: 1100px; width: 100%; margin: 0 auto; }
+.ex-quit { margin-left: auto; }
+.btn-exp.ready { box-shadow: 0 0 0 2px #ffe7a8, 0 0 12px #ffe7a866; }
+.ex-progress { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.ex-act { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 12px; background: #150f20; border: 1px solid var(--line); opacity: 0.7; }
+.ex-act.on { opacity: 1; border-color: var(--gold); }
+.ex-act b { font-size: 0.8rem; color: var(--gold2); }
+.ex-steps { display: flex; gap: 4px; align-items: center; }
+.ex-step { width: 12px; height: 12px; border-radius: 50%; background: #2d2340; border: 2px solid #4a3b5e; }
+.ex-step.boss { width: 16px; height: 16px; border-radius: 4px; transform: rotate(45deg); }
+.ex-step.done { background: var(--gold); border-color: #8a6a2a; }
+.ex-step.cur { background: #fff4c0; border-color: #fff; box-shadow: 0 0 8px #ffe7a8; }
+.ex-hero { display: flex; align-items: center; gap: 8px; justify-content: center; font-weight: 800; }
+.ex-panel { display: flex; flex-direction: column; gap: 12px; align-items: center; text-align: center; padding: 18px; border-radius: 18px; background: linear-gradient(180deg, #221a32, #150f20); border: 1px solid #4a3b5e; box-shadow: 0 10px 24px #0007; }
+.ex-panel h3 { font-size: 1.15rem; color: #fff1c4; }
+.ex-panel .dim { max-width: 640px; }
+.ex-log { padding: 6px 12px; border-radius: 10px; background: #ffe7a81a; border: 1px solid #ffe7a855; color: #fff4d0; font-weight: 700; }
+.ex-nodes { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; width: 100%; }
+.ex-node { appearance: none; font: inherit; color: var(--text); cursor: pointer; width: 220px; min-height: 170px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 12px; border-radius: 16px; background: linear-gradient(180deg, #2d2340, #1a1228); border: 2px solid #5a4a72; transition: transform 0.15s, box-shadow 0.15s; }
+.ex-node:hover, .ex-node:focus-visible { transform: translateY(-3px); box-shadow: 0 8px 18px #0008, 0 0 0 2px var(--gold2); outline: none; }
+.ex-node-ico { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: #0008; }
+.ex-node-ico .icon { width: 34px; height: 34px; }
+.ex-node b { font-size: 1.05rem; }
+.ex-node-map { font-size: 0.82rem; color: var(--gold2); font-weight: 700; }
+.ex-node-rule { font-size: 0.74rem; padding: 2px 8px; border-radius: 8px; background: #ff9a6a22; color: #ffc8a8; }
+.ex-node small { font-size: 0.74rem; color: var(--dim); line-height: 1.35; }
+.ex-node.k-elite { border-color: #d86a6a; } .ex-node.k-boss { border-color: var(--gold); background: linear-gradient(180deg, #3a2a18, #1a1228); }
+.ex-node.k-event { border-color: #6fb8ff; } .ex-node.k-shop { border-color: #e8c070; } .ex-node.k-rest { border-color: #8fe38a; }
+.ex-picks { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.ex-pick { appearance: none; font: inherit; color: var(--text); cursor: pointer; width: 150px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px; border-radius: 14px; background: #1d1528; border: 2px solid #4a3b5e; position: relative; }
+.ex-pick .tower-img { width: 72px; height: 94px; }
+.ex-pick b { font-size: 0.88rem; }
+.ex-pick small { font-size: 0.72rem; color: var(--dim); line-height: 1.3; }
+.ex-pick.on { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold2), 0 0 14px #ffdf9a55; background: linear-gradient(180deg, #3a2c18, #1d1528); }
+.ex-pick:disabled { opacity: 0.45; cursor: default; }
+.ex-pick:focus-visible { outline: 2px solid var(--gold2); outline-offset: 2px; }
+.ex-picks.small .ex-pick { width: 110px; }
+.ex-picks.small .tower-img { width: 54px; height: 70px; }
+.ex-relic-ico { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 14px; background: radial-gradient(circle at 40% 35%, #4a3a6a, #120c1c); }
+.ex-relic-ico .icon { width: 36px; height: 36px; }
+.ex-price { display: inline-flex; align-items: center; gap: 3px; font-weight: 800; color: var(--gold2); }
+.ex-shopitem.sold { opacity: 0.4; }
+.ex-options { display: flex; flex-direction: column; gap: 8px; width: min(100%, 460px); }
+.ex-option { width: 100%; text-align: left; padding: 0.7em 1em; }
+.ex-story { max-width: 560px; line-height: 1.6; color: #f1e8fc; }
+.ex-upgrade { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.ex-done.win h3 { color: #ffe7a8; } .ex-done.lose h3 { color: #ffb0a0; }
+.ex-status { display: grid; grid-template-columns: auto 1fr; grid-template-areas: 'res res' 'deck deck' 'relic relic'; gap: 8px; padding: 12px; border-radius: 16px; background: #120c1c; border: 1px solid var(--line); }
+.ex-res { grid-area: res; display: flex; gap: 16px; justify-content: center; font-size: 1.05rem; }
+.ex-res > span { display: inline-flex; align-items: center; gap: 4px; }
+.ex-res b { color: #fff4d0; }
+.ex-deckwrap { grid-area: deck; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ex-relicwrap { grid-area: relic; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ex-lbl { font-size: 0.74rem; font-weight: 800; color: var(--dim); min-width: 56px; }
+.ex-deck { display: flex; gap: 4px; flex-wrap: wrap; }
+.ex-card { position: relative; width: 42px; height: 52px; display: grid; place-items: center; border-radius: 10px; background: #1d1528; border: 1.5px solid #4a3b5e; }
+.ex-card .tower-img { width: 34px; height: 44px; }
+.ex-up { position: absolute; top: -4px; right: -4px; font-style: normal; font-size: 0.7rem; color: #2a1a08; background: var(--gold); border-radius: 8px; padding: 0 4px; font-weight: 900; }
+.ex-relics { display: flex; gap: 4px; flex-wrap: wrap; }
+.ex-relic { font-size: 0.74rem; font-weight: 700; padding: 3px 8px; border-radius: 10px; background: #2d2340; border: 1px solid #5a4a72; }
+.ex-relic.k-curse { border-color: #d86a6a; color: #ffc0b8; } .ex-relic.k-element { border-color: #e8a86a; } .ex-relic.k-hero { border-color: #6fd3ff; } .ex-relic.k-life { border-color: #8fe38a; }
+.ex-intro .hero-pick { justify-content: center; }
+.ex-stats { font-size: 0.82rem; }
+@media (max-width: 600px) {
+  .ex-node { width: 100%; min-height: 0; }
+  .ex-pick { width: calc(50% - 6px); }
+}
 
 </style>
   <style>/* css/game.css */
@@ -1407,6 +1478,7 @@ body.rg-dragging, body.rg-dragging * { cursor: grabbing !important; }
     <section class="screen" id="screen-heroes"></section>
     <section class="screen" id="screen-tree"></section>
     <section class="screen" id="screen-gacha"></section>
+    <section class="screen" id="screen-expedition"></section>
   </div>
   <div id="modal-root"></div>
   <div id="tooltip" class="tooltip" role="tooltip"></div>
@@ -1651,6 +1723,7 @@ RG.data.supportAmpPerLink = 0.1;
 RG.data.rules = {
   lives: 12,
   starLives: [6, 11],          // ★2, ★3에 필요한 남은 불꽃
+  starRange: 0.15,             // 6지역 별빛 건설지(*)의 사거리 보너스
   buildTime: 1.0,              // 전투 중 건설 준비 시간(초)
   soldTileLock: 5,             // 판 칸 재건설 금지(초)
   sellRate: 0.7,
@@ -1687,6 +1760,8 @@ RG.data.traits = {
   adaptive: { name: '적응', icon: 'adaptive', desc: '같은 원소에 연속으로 맞으면 그 원소에 대한 저항이 쌓입니다. 다른 원소에 맞으면 사라집니다.' },
   dampen: { name: '공명 차단', icon: 'dampen', desc: '주변 탑의 공명 연결을 끊습니다.' },
   unstoppable: { name: '붙잡기 불가', icon: 'unstoppable', desc: '영웅과 병사에게 붙잡히지 않습니다.' },
+  fluffy: { name: '푹신', icon: 'fluffy', desc: '폭발·파동·장판 같은 범위 공격의 피해를 절반만 받습니다. 한 대상을 노리는 공격이 좋습니다.' },
+  phase: { name: '위상 이동', icon: 'phase', desc: '주기적으로 일렁이다가 길을 따라 몇 칸 앞으로 순간이동합니다. 붙잡혀 있어도 빠져나갑니다.' },
 };
 
 /** 원소 친화 */
@@ -2265,7 +2340,7 @@ RG.data.towerOrder = [
 'use strict';
 
 /* =========================================================
- * 적 40종 + 보스 6종 — 설계: docs/design/enemies.md
+ * 적 48종 + 보스 7종 — 설계: docs/design/enemies.md (6지역: docs/design/region6.md)
  * 필드 뜻: docs/ARCHITECTURE.md §3.3
  *  hp, speed(칸/초), armor(0~1), bounty(골드), lives(등불 불꽃), size(칸)
  *  melee: 붙잡혔을 때의 공격, traits: 특성, affinity: 원소 친화
@@ -2523,6 +2598,60 @@ RG.data.enemies = {
     },
     desc: '안개의 근원. 페이즈마다 면역 원소가 바뀝니다.',
   },
+
+  /* ============ 6지역 · 별울림 첨탑 (확장) ============ */
+  stardust_moth: {
+    name: '별가루 나방', region: 6, size: 0.5, hp: 300, speed: 1.75, armor: 0, bounty: 8, lives: 1,
+    melee: null, traits: { flying: true }, affinity: { frost: 'weak' },
+    desc: '별가루를 흩뿌리며 떼로 날아오는 빠른 나방. 얼음에 약합니다.',
+  },
+  cloud_sheep: {
+    name: '구름 양', region: 6, size: 0.9, hp: 2300, speed: 0.6, armor: 0, bounty: 60, lives: 2, elite: true,
+    melee: { damage: 36, interval: 1.4 }, traits: { fluffy: { pct: 0.5 } }, affinity: { storm: 'weak' },
+    desc: '푹신한 털이 폭발·범위 공격을 절반 흡수합니다. 바람(폭풍)에 약합니다.',
+  },
+  comet_knight: {
+    name: '혜성 기사', region: 6, size: 0.7, hp: 1250, speed: 0.85, armor: 0.4, bounty: 44, lives: 1,
+    melee: { damage: 42, interval: 1.1 }, traits: { dash: { mult: 2.2, dur: 2.5 } }, affinity: { fire: 'resist' },
+    desc: '두꺼운 갑옷. 처음 맞으면 혜성처럼 돌진합니다.',
+  },
+  nebula_jelly: {
+    name: '성운 해파리', region: 6, size: 0.7, hp: 1000, speed: 0.85, armor: 0, bounty: 36, lives: 1,
+    melee: null, traits: { flying: true, split: { into: 'nebula_jelly', n: 3, hpPct: 0.2, fragment: true } }, affinity: { light: 'weak' },
+    desc: '하늘을 떠다니다 죽으면 작은 해파리 셋으로 갈라집니다(작은 것은 더 갈라지지 않음).',
+  },
+  umbral_stargazer: {
+    name: '그림자 별지기', region: 6, size: 0.7, hp: 900, speed: 0.85, armor: 0, bounty: 38, lives: 1,
+    melee: { damage: 18, interval: 1.2 }, traits: { stealth: true, ranged: { range: 3.0, damage: 32, interval: 1.8 } }, affinity: { light: 'weak', dark: 'resist' },
+    desc: '숨어서 망원경으로 겨누고 영웅·병사에게 별빛 화살을 쏩니다.',
+  },
+  eclipse_priest: {
+    name: '일식 사제', region: 6, size: 0.7, hp: 980, speed: 0.75, armor: 0, bounty: 40, lives: 1,
+    melee: { damage: 16, interval: 1.2 }, traits: { healer: { radius: 2.0, pct: 0.06, every: 5 }, shielder: { radius: 2.0, pct: 0.15, every: 7 } }, affinity: {},
+    desc: '주변 적을 치유하고 보호막을 씌웁니다. 먼저 잡으세요.',
+  },
+  meteor_golem: {
+    name: '유성 골렘', region: 6, size: 0.9, hp: 2900, speed: 0.55, armor: 0.2, bounty: 85, lives: 3, elite: true,
+    melee: { damage: 60, interval: 1.6 }, traits: { deathburst: { radius: 1.4, damage: 150 } }, affinity: { frost: 'weak', fire: 'immune' },
+    desc: '불타는 운석 덩어리. 죽을 때 터져 주변 영웅·병사에게 큰 피해. 불에 면역, 얼음에 약합니다.',
+  },
+  phase_wraith: {
+    name: '위상 망령', region: 6, size: 0.7, hp: 950, speed: 0.9, armor: 0, bounty: 40, lives: 1,
+    melee: { damage: 26, interval: 1.0 }, traits: { phase: { every: 4, tiles: 2, warn: 0.6 } }, affinity: { dark: 'resist', light: 'weak' },
+    desc: '4초마다 일렁이다가 길을 따라 2칸 앞으로 순간이동합니다(붙잡혀 있어도 빠져나감).',
+  },
+  gloom_monarch: {
+    name: '그믐달 군주', region: 6, size: 2.0, hp: 52000, speed: 0.38, armor: 0.1, bounty: 0, lives: 99, boss: true, elite: true,
+    melee: { damage: 220, interval: 1.5 }, traits: {}, affinity: {},
+    bossData: {
+      veil: { every: 12, radius: 2.6, pct: 0.4, dur: 5 }, trackEls: true,
+      phases: [
+        { at: 0.7, summon: { type: 'stardust_moth', n: 6 } },
+        { at: 0.35, blink: 3, adaptImmune: true, summon: { type: 'phase_wraith', n: 2 } },
+      ],
+    },
+    desc: '별빛을 삼킨 그믐달. 12초마다 주변 탑의 별빛을 가려 사거리를 줄이고, 체력이 줄면 나방을 부르고 가장 많이 맞은 원소에 면역이 됩니다.',
+  },
 };
 
 /** 설계서 순서 */
@@ -2532,6 +2661,7 @@ RG.data.enemyOrder = [
   'cinder_lizard', 'sand_burrower', 'magma_brute', 'thermal_vulture', 'dune_raider', 'obsidian_beetle', 'flame_spirit', 'canyon_slinger', 'pyre_worm',
   'rock_crab', 'volt_jelly', 'spray_sprite', 'drowned_corsair', 'coral_colossus', 'volt_eel', 'mist_mariner', 'tide_caller', 'tempest_whale',
   'grey_legionnaire', 'hush_monk', 'void_stalker', 'ashen_paladin', 'echo_shade', 'bellshard_golem', 'silent_drake', 'resonance_eater', 'bellkeeper', 'the_silence',
+  'stardust_moth', 'cloud_sheep', 'comet_knight', 'nebula_jelly', 'umbral_stargazer', 'eclipse_priest', 'meteor_golem', 'phase_wraith', 'gloom_monarch',
 ];
 
 </script>
@@ -2933,6 +3063,121 @@ RG.data.growth = {
 };
 
 </script>
+  <script>/* js/data/expedition.js */
+'use strict';
+
+/* =========================================================
+ * 원정 모드 데이터 — 설계: docs/design/expedition.md
+ * 유물 mods 키: 기술 나무 meta 키(startGoldPct·bountyPct·earlyBonusPct·buildCostPct·upgradeCostPct·mineIncomePct·purePct·ampPct·
+ *   tripleDamagePct·quadSpeedPct·rangePct·branchCostPct·branchDamagePct·heroHpPct·heroDamagePct·heroCooldownPct·heroRespawnPct·
+ *   heroStartLevel·leakShield) + 원정 전용(elFire…elDark: 원소 탑 피해, hpScale: 적 체력, armorAdd: 적 갑옷, countdownMul,
+ *   silverPct: 은화, winLife: 이기면 불꽃)
+ * ========================================================= */
+RG.data.expedition = {
+  unlockAfter: '3-6',
+  acts: 3,
+  floors: 5,                 // 막마다 일반 층 수 (그 뒤 막 보스)
+  startLives: 12,
+  maxLives: 20,
+  startDeck: { offer: 6, pick: 4 },
+  maxDeck: 10,
+  actRegions: [[1, 2], [3, 4], [5, 6]],
+  actBoss: [['1-6', '2-6'], ['3-6', '4-6'], ['5-6', '6-6']],
+  actScale: [0.85, 1.0, 1.1],
+  floorScale: 0.03,
+  eliteScale: 1.25,
+  goldMult: 1.2,
+  waves: { battle: 6, elite: 7, boss: 5 },
+  silver: { battle: 20, elite: 40, boss: 80, perAct: 5, skip: 25 },
+  shop: { tower: 60, relic: 110, heal: 45, healLives: 3, upgrade: 70 },
+  rest: { heal: 3 },
+  reward: { perFloor: 15, win: 150 },
+  /** 노드 종류 가중치 (층 2부터 정예, 층 3부터 상점·쉼터) */
+  nodeWeights: { battle: 45, elite: 15, event: 20, shop: 10, rest: 10 },
+  nodeInfo: {
+    battle: { name: '전투', icon: 'wave', desc: '짧은 작전 6웨이브. 이기면 탑 하나를 덱에 넣거나 은화.' },
+    elite: { name: '정예', icon: 'skull', desc: '강한 7웨이브. 이기면 유물 하나를 고름.' },
+    event: { name: '사건', icon: 'book', desc: '무슨 일이 기다리고 있을까요?' },
+    shop: { name: '상점', icon: 'gold', desc: '원정 은화로 탑·유물·불꽃·강화를 삽니다.' },
+    rest: { name: '쉼터', icon: 'lives', desc: '불꽃 +3 또는 탑 하나 원정 강화.' },
+    boss: { name: '막 보스', icon: 'crown', desc: '이 막 지역 보스 맵의 마지막 5웨이브.' },
+  },
+
+  /** 변형 규칙 (전투·정예마다 하나) */
+  rules: {
+    clear: { name: '맑은 하늘', desc: '특별한 일 없음.', mods: {} },
+    fog: { name: '짙은 안개', desc: '탑 사거리 −10%.', mods: { rangePct: -0.1 } },
+    gold: { name: '황금 웨이브', desc: '현상금 +30%.', mods: { bountyPct: 0.3 } },
+    steel: { name: '강철 무리', desc: '적 갑옷 +10%p.', mods: { armorAdd: 0.1 } },
+    hurry: { name: '서두르는 밤', desc: '웨이브 카운트다운 절반, 조기 호출 보너스 +50%.', mods: { countdownMul: 0.5, earlyBonusPct: 0.5 } },
+    fat: { name: '살찐 무리', desc: '적 체력 +15%, 현상금 +20%.', mods: { hpScale: 0.15, bountyPct: 0.2 } },
+  },
+  ruleOrder: ['clear', 'fog', 'gold', 'steel', 'hurry', 'fat'],
+
+  /** 유물 30종 */
+  relics: {
+    coin_pouch: { name: '금화 주머니', kind: 'eco', desc: '시작 골드 +25%', mods: { startGoldPct: 0.25 } },
+    bounty_book: { name: '현상금 수첩', kind: 'eco', desc: '현상금 +20%', mods: { bountyPct: 0.2 } },
+    early_bell: { name: '이른 종소리', kind: 'eco', desc: '조기 호출 보너스 +60%', mods: { earlyBonusPct: 0.6 } },
+    cheap_hammer: { name: '할인 망치', kind: 'eco', desc: '건설비 −10%', mods: { buildCostPct: -0.1 } },
+    file_rasp: { name: '숙련공의 줄', kind: 'eco', desc: '강화비 −15%', mods: { upgradeCostPct: -0.15 } },
+    mine_lamp: { name: '광산 등불', kind: 'eco', desc: '광산 수입 +50%', mods: { mineIncomePct: 0.5 } },
+    ember_heart: { name: '불꽃 심장', kind: 'element', desc: '불 탑 피해 +15%', mods: { elFire: 0.15 } },
+    frost_shard: { name: '서리 조각', kind: 'element', desc: '얼음 탑 피해 +15%', mods: { elFrost: 0.15 } },
+    storm_quill: { name: '폭풍 깃', kind: 'element', desc: '폭풍 탑 피해 +15%', mods: { elStorm: 0.15 } },
+    earth_core: { name: '대지 핵', kind: 'element', desc: '대지 탑 피해 +15%', mods: { elEarth: 0.15 } },
+    dawn_mirror: { name: '새벽 거울', kind: 'element', desc: '빛 탑 피해 +15%', mods: { elLight: 0.15 } },
+    shadow_thorn: { name: '그림자 가시', kind: 'element', desc: '어둠 탑 피해 +15%', mods: { elDark: 0.15 } },
+    pure_fork: { name: '순수 소리굽쇠', kind: 'resonance', desc: '순수 공명 효과 +20%', mods: { purePct: 0.2 } },
+    amp_crystal: { name: '증폭 수정', kind: 'resonance', desc: '지원 탑 증폭 +5%p', mods: { ampPct: 0.05 } },
+    triple_knot: { name: '세 갈래 매듭', kind: 'resonance', desc: '세 원소 이상 공명 피해 +10%', mods: { tripleDamagePct: 0.1 } },
+    quad_drum: { name: '네 박자 북', kind: 'resonance', desc: '네 원소 공명 공격 속도 +10%', mods: { quadSpeedPct: 0.1 } },
+    far_lens: { name: '망원 렌즈', kind: 'tower', desc: '탑 사거리 +10%', mods: { rangePct: 0.1 } },
+    branch_plan: { name: '분기 설계도', kind: 'tower', desc: '분기 강화 비용 −20%', mods: { branchCostPct: -0.2 } },
+    branch_blade: { name: '분기 칼날', kind: 'tower', desc: '분기한 탑 피해 +10%', mods: { branchDamagePct: 0.1 } },
+    hero_cloak: { name: '영웅의 망토', kind: 'hero', desc: '영웅 체력 +25%', mods: { heroHpPct: 0.25 } },
+    hero_blade: { name: '영웅의 칼', kind: 'hero', desc: '영웅 공격력 +20%', mods: { heroDamagePct: 0.2 } },
+    clockwork: { name: '시계태엽', kind: 'hero', desc: '영웅 기술 재사용 −20%', mods: { heroCooldownPct: -0.2 } },
+    quick_rise: { name: '빠른 부활', kind: 'hero', desc: '영웅 부활 시간 −40%', mods: { heroRespawnPct: -0.4 } },
+    lore_book: { name: '경험의 책', kind: 'hero', desc: '영웅이 Lv2로 시작', mods: { heroStartLevel: 1 } },
+    lamp_shield: { name: '등불 방패', kind: 'life', desc: '판마다 새는 적 2마리를 막음', mods: { leakShield: 2 } },
+    life_dew: { name: '생명 이슬', kind: 'life', desc: '판을 이기면 불꽃 +1', mods: { winLife: 1 } },
+    piggy_bank: { name: '은화 저금통', kind: 'life', desc: '은화 +25%', mods: { silverPct: 0.25 } },
+    cursed_crown: { name: '저주받은 금관', kind: 'curse', desc: '적 체력 +10%, 은화 +50%', mods: { hpScale: 0.1, silverPct: 0.5 } },
+    heavy_armor: { name: '무거운 갑옷', kind: 'curse', desc: '적 갑옷 +10%p, 시작 골드 +40%', mods: { armorAdd: 0.1, startGoldPct: 0.4 } },
+    broken_glass: { name: '깨진 모래시계', kind: 'curse', desc: '카운트다운 절반, 현상금 +30%', mods: { countdownMul: 0.5, bountyPct: 0.3 } },
+  },
+
+  /** 사건 12종: 선택지 effect 키 — silver, lives, relic('random'|'curse'), upgrade('random'), addTower('random'), removeTower('random') */
+  events: [
+    { id: 'smith', title: '떠도는 대장장이', text: '망치를 멘 대장장이가 모닥불 곁에 앉아 있습니다. "은화 몇 닢이면 탑 하나 손봐 주지."', options: [
+      { text: '은화 40을 내고 원정 강화', cost: { silver: 40 }, effect: { upgrade: 'random' } }, { text: '고맙다고 하고 지나간다', effect: {} }] },
+    { id: 'spring', title: '별빛 샘', text: '구름 사이로 별빛이 고인 작은 샘이 반짝입니다.', options: [
+      { text: '샘물을 마신다 (불꽃 +2)', effect: { lives: 2 } }, { text: '바닥의 동전을 줍는다 (은화 +30)', effect: { silver: 30 } }] },
+    { id: 'chest', title: '수상한 상자', text: '길가에 이끼 낀 상자가 놓여 있습니다. 안에서 무언가 울립니다.', options: [
+      { text: '연다 (유물 — 저주일지도)', effect: { relic: 'gamble' } }, { text: '건드리지 않는다', effect: {} }] },
+    { id: 'spirit', title: '길 잃은 정령', text: '작은 정령이 길을 잃고 울고 있습니다. 데려다주면 보답하겠다고 합니다.', options: [
+      { text: '데려다준다 (불꽃 −1, 원정 강화)', effect: { lives: -1, upgrade: 'random' } }, { text: '방향만 알려 준다 (은화 +15)', effect: { silver: 15 } }] },
+    { id: 'fork', title: '안개 낀 갈림길', text: '지름길은 짙은 안개 속으로 이어집니다.', options: [
+      { text: '안개 속 지름길 (은화 +60, 불꽃 −2)', effect: { silver: 60, lives: -2 } }, { text: '돌아간다', effect: {} }] },
+    { id: 'recruit', title: '망루 수리공', text: '부서진 망루를 고치던 장인이 함께 가겠다고 합니다.', options: [
+      { text: '함께 간다 (덱에 탑 하나)', effect: { addTower: 'random' } }, { text: '은화를 받는다 (은화 +25)', effect: { silver: 25 } }] },
+    { id: 'shrine', title: '잊힌 사당', text: '금 간 종이 걸린 사당. 기도하면 무언가 바뀔 것 같습니다.', options: [
+      { text: '기도한다 (유물 하나)', cost: { lives: 2 }, effect: { relic: 'random' } }, { text: '종을 닦아 준다 (불꽃 +1)', effect: { lives: 1 } }] },
+    { id: 'merchant', title: '떠돌이 상인', text: '"오늘만 특가! 은화 50에 귀한 물건 하나!"', options: [
+      { text: '산다 (은화 −50, 유물)', cost: { silver: 50 }, effect: { relic: 'random' } }, { text: '구경만 한다', effect: {} }] },
+    { id: 'storm', title: '갑작스런 폭풍', text: '바람이 거세게 불어 장비가 날아갑니다.', options: [
+      { text: '탑 하나를 지킨다 (덱에서 하나 빠짐, 은화 +40)', effect: { removeTower: 'random', silver: 40 } }, { text: '몸을 숙여 버틴다 (불꽃 −1)', effect: { lives: -1 } }] },
+    { id: 'library', title: '별지기의 서고', text: '먼지 쌓인 두루마리에 탑을 다루는 비법이 적혀 있습니다.', options: [
+      { text: '밤새 읽는다 (원정 강화)', effect: { upgrade: 'random' } }, { text: '책을 팔아 은화로 (은화 +35)', effect: { silver: 35 } }] },
+    { id: 'gambler', title: '주사위 노름꾼', text: '"이기면 두 배, 지면 빈손이지."', options: [
+      { text: '은화 30을 건다', cost: { silver: 30 }, effect: { gamble: 60 } }, { text: '거절한다', effect: {} }] },
+    { id: 'campfire', title: '다른 수호대의 모닥불', text: '먼저 지나간 수호대가 남긴 따뜻한 모닥불입니다.', options: [
+      { text: '쉬어 간다 (불꽃 +1)', effect: { lives: 1 } }, { text: '남은 보급품을 챙긴다 (은화 +20)', effect: { silver: 20 } }] },
+  ],
+};
+
+</script>
   <script>/* js/data/maps.js */
 'use strict';
 
@@ -2948,6 +3193,7 @@ RG.data.regions = [
   { id: 3, name: '붉은 협곡', theme: 'canyon', music: 'canyon', desc: '불과 모래의 협곡. 약탈자들이 숨어 산다.' },
   { id: 4, name: '폭풍 해안', theme: 'coast', music: 'coast', desc: '폭풍이 그치지 않는 바닷가. 하늘에서도 적이 온다.' },
   { id: 5, name: '깨진 대종', theme: 'bell', music: 'bell', desc: '땅의 심장. 금 간 대종에서 안개가 흘러나온다.' },
+  { id: 6, name: '별울림 첨탑', theme: 'sky', music: 'sky', desc: '구름 위 하늘에 걸린 별종. 하늘로 올라간 안개가 별빛을 갉아먹는다.' },
 ];
 
 RG.data.maps = [
@@ -4001,6 +4247,242 @@ RG.data.maps = [
     newEnemies: ['the_silence'], boss: 'the_silence',
     story: { before: 's5_6', after: 'ending' },
   },
+
+  /* ===================== 6지역 · 별울림 첨탑 (확장 — docs/design/region6.md) ===================== */
+  {
+    id: '6-1', region: 6, name: '구름 나루', type: 'fixed',
+    grid: [
+      'TT###*###*###TTT',
+      'S............#TT',
+      'T##*####*###.#TT',
+      '^##..........##^',
+      'T##.##*####*##TT',
+      'T##..........##T',
+      'TT###*###*##.##T',
+      'TT##*##*####L#TT',
+      'TT###TT###TT##TT',
+    ],
+    startGold: 1300,
+    hpMult: 0.95, // 탐색 봇 ★3 기준 난이도 계수
+    ramp: [0.6, 0.75, 0.9],
+    waves: [
+      'stardust_moth*8/0.8',
+      'stardust_moth*10/0.7 ; grey_legionnaire*2/2@5',
+      'cloud_sheep*1/2 ; stardust_moth*8/0.7@4',
+      'grey_legionnaire*5/1.2 ; stardust_moth*10/0.6@5',
+      'cloud_sheep*2/2.5 ; grey_legionnaire*4/1.5@6',
+      'stardust_moth*20/0.5 ; cloud_sheep*1/2@8',
+      'grey_legionnaire*6/1.2 ; cloud_sheep*2/2.5@6',
+      'cloud_sheep*4/2.2 ; stardust_moth*15/0.5@6',
+      'grey_legionnaire*10/1 ; ashen_paladin*1/2@6 ; stardust_moth*12/0.5@10',
+      'cloud_sheep*6/2 ; stardust_moth*20/0.45@6',
+      'ashen_paladin*4/1.6 ; cloud_sheep*4/2@8',
+      'cloud_sheep*8/1.8 ; grey_legionnaire*10/1@6 ; stardust_moth*25/0.4@10',
+    ],
+    task: { type: 'links', n: 8, text: '공명 연결 8개 동시에' },
+    challenge: { type: 'maxTowers', value: 8, text: '탑 8개 이하' },
+    newEnemies: ['stardust_moth', 'cloud_sheep'], hero: 'haru',
+    story: { before: 's6_1' },
+    tips: ['star', 'fluffy'],
+  },
+  {
+    id: '6-2', region: 6, name: '흔들 별다리', type: 'mixed',
+    grid: [
+      '^^^^##*##*##^^^^',
+      'S......BBBB....^',
+      '^##*##.~~~~##.#^',
+      '^##*##.~~~~##.#^',
+      '^#.....bbbb....L',
+      '^#.,,,,~~~~,,,#^',
+      '^##*##*~~~~*##*^',
+      '^^^^##*##*##^^^^',
+      '^^^^^^^^^^^^^^^^',
+    ],
+    bridges: { period: 14 },
+    startGold: 1350,
+    hpMult: 0.5, // 탐색 봇 ★3 기준 난이도 계수
+    ramp: [0.6, 0.75, 0.9],
+    waves: [
+      'comet_knight*1/2',
+      'stardust_moth*4/0.6 ; comet_knight*1/1.6@5',
+      'cloud_sheep*1/2.4 ; comet_knight*1/1.6@5',
+      'comet_knight*3/1.4 ; stardust_moth*4/0.6@6',
+      'grey_legionnaire*4/1 ; cloud_sheep*1/2@6',
+      'comet_knight*3/1.2 ; stardust_moth*7/0.5@6',
+      'cloud_sheep*3/2 ; comet_knight*2/1.4@7',
+      'stardust_moth*11/0.4 ; comet_knight*2/1.4@8',
+      'comet_knight*4/1.1 ; cloud_sheep*2/2@8',
+      'cloud_sheep*3/1.8 ; grey_legionnaire*4/1@8',
+      'comet_knight*5/1 ; stardust_moth*9/0.45@8',
+      'cloud_sheep*4/1.6 ; comet_knight*4/1.1@8',
+      'comet_knight*7/0.9 ; cloud_sheep*3/1.8@10 ; stardust_moth*11/0.4@14',
+      'cloud_sheep*4/1.5 ; comet_knight*4/1@10',
+    ],
+    task: { type: 'distinct', n: 6, text: '서로 다른 공명 효과 6가지 동시에' },
+    challenge: { type: 'noOpenBuild', text: '공터에 짓지 않기' },
+    newEnemies: ['comet_knight'], hero: 'dohan',
+    story: { before: 's6_2' },
+    tips: ['bridges'],
+  },
+  {
+    id: '6-3', region: 6, name: '바람 정원', type: 'maze',
+    grid: [
+      '^^^^^^^^^^^^^^^^',
+      '^,,,,,,,,,,,,,,^',
+      '^,,,,*,,,,*,,,,^',
+      'S,,,,,,,,,,,,,,^',
+      '^,,*,,,,,,,,*,,L',
+      '^,,,,,,,,,,,,,,^',
+      '^,,,,*,,,,*,,,,^',
+      '^,,,,,,,,,,,,,,^',
+      '^^^^^^^^^^^^^^^^',
+    ],
+    startGold: 1450,
+    hpMult: 0.65, // 탐색 봇 ★3 기준 난이도 계수
+    ramp: [0.6, 0.75, 0.9],
+    waves: [
+      'nebula_jelly*2/2',
+      'stardust_moth*10/0.6 ; nebula_jelly*1/2@6',
+      'cloud_sheep*2/2.4 ; nebula_jelly*2/2@5',
+      'comet_knight*4/1.4 ; nebula_jelly*2/2@6',
+      'nebula_jelly*4/1.6 ; stardust_moth*10/0.5@6',
+      'cloud_sheep*4/2 ; comet_knight*3/1.4@7',
+      'nebula_jelly*6/1.4 ; cloud_sheep*2/2@7',
+      'stardust_moth*24/0.4 ; nebula_jelly*3/1.6@8',
+      'comet_knight*8/1 ; nebula_jelly*4/1.4@8',
+      'cloud_sheep*6/1.6 ; nebula_jelly*5/1.4@8',
+      'nebula_jelly*9/1.2 ; comet_knight*5/1.1@8',
+      'cloud_sheep*7/1.5 ; stardust_moth*24/0.4@8',
+      'nebula_jelly*10/1 ; cloud_sheep*5/1.6@10',
+      'comet_knight*12/0.9 ; nebula_jelly*8/1.1@10 ; cloud_sheep*4/1.6@14',
+    ],
+    task: { type: 'amp', tower: 'forge', n: 4, text: '대장간 하나에 공명 4가지' },
+    challenge: { type: 'maxLevel', value: 2, text: '탑은 Lv2까지' },
+    newEnemies: ['nebula_jelly'], hero: 'narae',
+    story: { before: 's6_3' },
+  },
+  {
+    id: '6-4', region: 6, name: '유성 폭포', type: 'mixed',
+    grid: [
+      '^^##*###*###*##^',
+      'S..........,,,#^',
+      '^##*##*###.,,,#^',
+      '^##.......,,,,.L',
+      '^##.##*##.,,,,#^',
+      'S...##*##.,,,,#^',
+      '^##.......,,,,#^',
+      '^##*##*##*##*##^',
+      '^^^^^^^^^^^^^^^^',
+    ],
+    startGold: 1550,
+    hpMult: 0.8, // 탐색 봇 ★3 기준 난이도 계수
+    ramp: [0.6, 0.75, 0.9],
+    waves: [
+      'phase_wraith*2/2>0',
+      'stardust_moth*10/0.6>1 ; phase_wraith*2/1.6@5>0',
+      'meteor_golem*1/2>0 ; comet_knight*2/1.6@4>1',
+      'phase_wraith*4/1.4>1 ; cloud_sheep*2/2@6>0',
+      'nebula_jelly*4/1.6>0 ; phase_wraith*3/1.4@6>1',
+      'meteor_golem*2/2.5>1 ; comet_knight*4/1.2@6>0',
+      'phase_wraith*6/1.2>0 ; stardust_moth*14/0.45@6>1',
+      'cloud_sheep*4/1.8>1 ; meteor_golem*2/2.5@7>0',
+      'phase_wraith*8/1.1>0 ; nebula_jelly*4/1.4@8>1',
+      'meteor_golem*3/2.2>1 ; comet_knight*6/1.1@8>0',
+      'phase_wraith*10/1>0 ; cloud_sheep*4/1.8@8>1',
+      'meteor_golem*4/2>1 ; nebula_jelly*6/1.2@8>0',
+      'phase_wraith*12/0.9>0 ; comet_knight*8/1@9>1 ; stardust_moth*20/0.4@12>0',
+      'meteor_golem*5/1.8>1 ; phase_wraith*10/0.9@9>0',
+      'cloud_sheep*8/1.4>0 ; meteor_golem*4/2@10>1 ; phase_wraith*8/1@14>0',
+    ],
+    task: { type: 'stack', n: 4, text: '탑 하나에 공명 4가지 겹치기' },
+    challenge: { type: 'noHero', text: '영웅 없이' },
+    newEnemies: ['phase_wraith', 'meteor_golem'], hero: 'tori',
+    story: { before: 's6_4' },
+    tips: ['phase'],
+  },
+  {
+    id: '6-5', region: 6, name: '별지기의 탑', type: 'fixed',
+    grid: [
+      '^#*##*##*##*##*^',
+      'S..............^',
+      '^#*##*##*##*##.^',
+      '^..............^',
+      '^.#*##*##*##*##^',
+      '^..............^',
+      '^#*##*##*##*##.^',
+      '^L.............^',
+      '^##############^',
+    ],
+    startGold: 1650,
+    hpMult: 0.7, // 탐색 봇 ★3 기준 난이도 계수
+    ramp: [0.6, 0.75, 0.9],
+    waves: [
+      'umbral_stargazer*2/1.6',
+      'eclipse_priest*1/2 ; comet_knight*3/1.4@3',
+      'umbral_stargazer*3/1.4 ; cloud_sheep*2/2@5',
+      'eclipse_priest*2/2 ; phase_wraith*3/1.4@5',
+      'umbral_stargazer*4/1.2 ; meteor_golem*1/2@6',
+      'eclipse_priest*2/2 ; cloud_sheep*3/2@4 ; stardust_moth*12/0.5@8',
+      'umbral_stargazer*6/1.1 ; comet_knight*5/1.1@6',
+      'eclipse_priest*3/1.8 ; meteor_golem*2/2.2@6',
+      'nebula_jelly*6/1.2 ; umbral_stargazer*4/1.2@7',
+      'eclipse_priest*3/1.8 ; phase_wraith*8/1@6 ; cloud_sheep*2/2@11',
+      'umbral_stargazer*8/1 ; meteor_golem*3/2@8',
+      'eclipse_priest*4/1.6 ; comet_knight*8/1@6 ; stardust_moth*16/0.45@11',
+      'umbral_stargazer*10/0.9 ; eclipse_priest*3/1.6@8 ; meteor_golem*3/2@12',
+      'cloud_sheep*8/1.4 ; eclipse_priest*4/1.6@8 ; phase_wraith*8/1@12',
+      'meteor_golem*6/1.8 ; umbral_stargazer*8/1@8 ; eclipse_priest*4/1.6@13',
+      'comet_knight*14/0.8 ; eclipse_priest*5/1.4@9 ; nebula_jelly*8/1@14',
+    ],
+    task: { type: 'elementEffects', element: 'light', n: 4, text: '빛이 들어간 공명 효과 4가지' },
+    challenge: { type: 'lives', value: 3, text: '불꽃 3개로 시작' },
+    newEnemies: ['umbral_stargazer', 'eclipse_priest'], hero: 'byeori',
+    story: { before: 's6_5' },
+  },
+  {
+    id: '6-6', region: 6, name: '별종의 방', type: 'mixed',
+    grid: [
+      '^^##*##~~##*##^^',
+      'S......BB.....,^',
+      '^##*##.~~##*#.#^',
+      '^##*##.~~##*#.#^',
+      '^,,,,,.~~,,,,..L',
+      '^##*##.~~##*#.#^',
+      '^##*##.~~##*#.#^',
+      'S......bb.....,^',
+      '^^##*##~~##*##^^',
+    ],
+    bridges: { period: 14 },
+    startGold: 1800,
+    hpMult: 0.5, // 탐색 봇 ★3 기준 난이도 계수
+    ramp: [0.6, 0.75, 0.9],
+    waves: [
+      'comet_knight*2/1.4>0',
+      'stardust_moth*6/0.5>1 ; phase_wraith*1/1.4@5>0',
+      'cloud_sheep*1/2>0 ; eclipse_priest*1/2@4>1',
+      'umbral_stargazer*2/1.2>1 ; comet_knight*2/1.2@5>0',
+      'meteor_golem*1/2.2>0 ; nebula_jelly*2/1.4@5>1',
+      'phase_wraith*3/1.1>1 ; eclipse_priest*1/2@6>0',
+      'cloud_sheep*2/1.8>0 ; comet_knight*2/1.1@6>1',
+      'umbral_stargazer*3/1>1 ; meteor_golem*1/2@7>0',
+      'nebula_jelly*4/1.1>0 ; phase_wraith*3/1@7>1',
+      'eclipse_priest*2/1.6>1 ; cloud_sheep*2/1.6@6>0 ; stardust_moth*8/0.45@10>1',
+      'meteor_golem*2/2>0 ; comet_knight*4/1@8>1',
+      'phase_wraith*5/0.9>1 ; umbral_stargazer*3/1@8>0',
+      'cloud_sheep*4/1.4>0 ; eclipse_priest*2/1.5@8>1',
+      'nebula_jelly*5/1>1 ; meteor_golem*2/1.8@9>0',
+      'comet_knight*7/0.8>0 ; phase_wraith*4/1@9>1',
+      'umbral_stargazer*5/0.9>1 ; eclipse_priest*2/1.4@9>0 ; cloud_sheep*2/1.6@14>1',
+      'meteor_golem*3/1.6>0 ; nebula_jelly*5/1@10>1',
+      'stardust_moth*21/0.3>1 ; comet_knight*5/0.9@10>0',
+      'cloud_sheep*5/1.2>0 ; phase_wraith*6/0.8@10>1 ; eclipse_priest*2/1.5@15>0',
+      'gloom_monarch*1/2>0 ; comet_knight*3/1.1@3>1 ; eclipse_priest*2/1.6@8>0',
+    ],
+    task: { type: 'pureAll', text: '여섯 원소 순수 공명 모두 켜기' },
+    challenge: { type: 'lives', value: 3, text: '불꽃 3개로 시작' },
+    newEnemies: ['gloom_monarch'], boss: 'gloom_monarch', hero: 'mujin',
+    story: { before: 's6_6', after: 'ending2' },
+  },
 ];
 
 /** 무한 맵 (지역 보스 처치 후) */
@@ -4075,6 +4557,20 @@ RG.data.endless = [
       '^^^^###S###^^^^^',
     ],
   },
+  {
+    id: 'E6', region: 6, name: '끝없는 밤하늘', type: 'maze', unlockAfter: '6-6', startGold: 1500,
+    grid: [
+      '^^^^^^^^^^^^^^^^',
+      'S,,,,,,,,,,,,,,^',
+      '^,,*,,,,,,,,*,,^',
+      '^,,,,,,,,,,,,,,^',
+      'S,,,,,,,*,,,,,,L',
+      '^,,,,,,,,,,,,,,^',
+      '^,,*,,,,,,,,*,,^',
+      'S,,,,,,,,,,,,,,^',
+      '^^^^^^^^^^^^^^^^',
+    ],
+  },
 ];
 
 /** 지역별 적 목록 (무한 모드 웨이브 생성용) */
@@ -4084,6 +4580,7 @@ RG.data.regionPools = {
   3: ['cinder_lizard', 'sand_burrower', 'magma_brute', 'thermal_vulture', 'dune_raider', 'obsidian_beetle', 'flame_spirit', 'canyon_slinger'],
   4: ['rock_crab', 'volt_jelly', 'spray_sprite', 'drowned_corsair', 'coral_colossus', 'volt_eel', 'mist_mariner', 'tide_caller'],
   5: ['grey_legionnaire', 'hush_monk', 'void_stalker', 'ashen_paladin', 'echo_shade', 'bellshard_golem', 'silent_drake', 'resonance_eater'],
+  6: ['stardust_moth', 'cloud_sheep', 'comet_knight', 'nebula_jelly', 'umbral_stargazer', 'eclipse_priest', 'meteor_golem', 'phase_wraith'],
 };
 
 </script>
@@ -4162,6 +4659,7 @@ RG.data.speakers = {
   narration: { name: '' },
   kara: { name: '카라' }, sera: { name: '세라' }, sio: { name: '시오' }, zena: { name: '제나' }, bawi: { name: '바위' }, yaro: { name: '야로' },
   elder: { name: '모아 할머니' }, bellkeeper: { name: '종지기' }, haru: { name: '하루' },
+  dohan: { name: '도한' }, narae: { name: '나래' }, tori: { name: '토리' }, byeori: { name: '별이' }, mujin: { name: '무진' },
 };
 
 RG.data.story = {
@@ -4384,6 +4882,87 @@ RG.data.story = {
     ],
   },
 
+  /* ===================== 6막 · 별울림 첨탑 (확장) ===================== */
+  s6_1: {
+    title: '구름 위의 대답', region: 6,
+    lines: [
+      { who: 'narration', text: '대종이 다시 울린 지 사흘째 밤. 종소리가 하늘로 올라가더니, 구름 위에서 대답하듯 맑은 소리가 돌아왔다.' },
+      { who: 'zena', mood: 'happy', text: '들었어요? 저건 메아리가 아니에요. 다른 종이에요! 대종이랑 음이 똑같은 쌍둥이 종!' },
+      { who: 'elder', mood: 'worried', text: '옛이야기에 하늘에 걸린 별종이 있다고 했지. 그런데… 저기 별이 하나 꺼졌구나.' },
+      { who: 'sio', mood: 'worried', text: '땅에서 쫓겨난 안개가 사라진 게 아니었다. 하늘로 올라갔다.' },
+      { who: 'haru', mood: 'happy', text: '형! 나도 갈래! 구름 위는 눈이 제일 먼저 오는 데잖아. 나 눈사람 진짜 잘 만들어!' },
+      { who: 'sio', mood: 'normal', text: '…위험하다. 그래도 너는 말려도 따라오겠지. 내 옆에서 떨어지지 마라.' },
+      { who: 'kara', mood: 'happy', text: '좋아! 하루도 오늘부터 공명 수호대야. 구름 나루로 가자!' },
+    ],
+  },
+  s6_2: {
+    title: '하늘 다리의 닻', region: 6,
+    lines: [
+      { who: 'narration', text: '구름과 구름 사이에는 별빛으로 엮은 다리가 놓여 있었다. 다리는 숨 쉬듯 번갈아 사라졌다 나타났다.' },
+      { who: 'dohan', mood: 'normal', text: '다리 닻이 녹슬었군. 별빛은 쇠에 걸어야 오래 버티는 법이다.' },
+      { who: 'kara', mood: 'worried', text: '아빠?! 여긴 어떻게 왔어? 대장간은?' },
+      { who: 'dohan', mood: 'normal', text: '망치 소리가 하늘까지 들렸다. 네가 두드리는 소리가 아직 서툴러서 말이다.' },
+      { who: 'dohan', mood: 'happy', text: '닻은 내가 벼린다. 너희는 다리가 바뀌는 때를 잘 봐라. 깜박이면 곧 닫힌다.' },
+      { who: 'kara', mood: 'happy', text: '…응! 아빠 망치 소리, 오랜만이다.' },
+    ],
+  },
+  s6_3: {
+    title: '바람새 기수', region: 6,
+    lines: [
+      { who: 'narration', text: '바람 정원. 구름이 끝나는 곳에서 커다란 하늘색 새가 날아와 내려앉았다.' },
+      { who: 'narae', mood: 'happy', text: '안녕! 하늘 나루의 나래야. 얘는 솔개! 너희가 땅에서 종을 울린 애들이구나?' },
+      { who: 'narae', mood: 'worried', text: '요즘 바람이 이상해. 성운 해파리들이 별빛을 먹고 떼로 몰려다녀. 죽이면 셋으로 갈라지고.' },
+      { who: 'zena', mood: 'happy', text: '분열하는 공중 개체라니! 범위 공격으로 한 번에… 아, 연구는 나중에.' },
+      { who: 'narae', mood: 'happy', text: '하늘길은 나한테 맡겨. 막힌 데도 솔개는 곧장 날아가거든!' },
+    ],
+  },
+  s6_4: {
+    title: '이끼 숲의 작은 정령', region: 6,
+    lines: [
+      { who: 'narration', text: '유성 폭포. 떨어진 별똥별이 바위가 되어 쌓이고, 그 틈에 오래된 이끼 숲이 자라 있었다.' },
+      { who: 'tori', mood: 'worried', text: '…누구야아. 숲을 밟으면, 아파.' },
+      { who: 'bawi', mood: 'happy', text: '오, 이끼 정령이로군. 나와 같은 돌과 이끼의 아이요. 무서워하지 마시오.' },
+      { who: 'tori', mood: 'normal', text: '…바위 할아버지 냄새 나. 그럼, 좋은 사람.' },
+      { who: 'tori', mood: 'worried', text: '불타는 돌이 숲을 태워. 망령도… 갑자기 앞으로 뛰어.' },
+      { who: 'tori', mood: 'happy', text: '…같이 가도 돼? 화나면, 나 숲만큼 커져.' },
+    ],
+  },
+  s6_5: {
+    title: '별지기의 기록', region: 6,
+    lines: [
+      { who: 'narration', text: '별지기의 탑. 계단마다 별의 길을 적은 두루마리가 쌓여 있었다. 꼭대기에서 커다란 안경을 쓴 아이가 망원경을 들여다보고 있었다.' },
+      { who: 'byeori', mood: 'worried', text: '아, 안녕하세요… 별이예요. 별이 하나씩 꺼지는 걸 백 일째 기록하고 있어요.' },
+      { who: 'byeori', mood: 'normal', text: '계산해 보면… 별종이 멈추는 날, 마지막 별이 꺼져요. 남은 건 엿새.' },
+      { who: 'sera', mood: 'normal', text: '스승님 일지에도 하늘의 등불 이야기가 있었어요. 별종이 하늘의 울림등이었구나.' },
+      { who: 'byeori', mood: 'happy', text: '그림자 별지기들이 꼭대기 길을 막고 있어요. 그리고 일식 사제들이 그들을 지켜요. 사제부터예요!' },
+    ],
+  },
+  s6_6: {
+    title: '별종의 방', region: 6,
+    lines: [
+      { who: 'narration', text: '첨탑 꼭대기, 별종의 방. 별종 앞에 회보라 두루마기를 입은 노인이 홀로 서서 종메를 쥐고 있었다.' },
+      { who: 'yaro', mood: 'worried', text: '…무진 스승님?' },
+      { who: 'mujin', mood: 'normal', text: '야로로구나. 대종이 다시 울리는 소리를 들었네. 그래서 나는 여기로 왔지. 이번에는… 지키려고.' },
+      { who: 'mujin', mood: 'worried', text: '별빛을 삼킨 것이 오네. 그믐달 군주. 별종이 멈추면 밤하늘이 영영 꺼지네.' },
+      { who: 'byeori', mood: 'worried', text: '군주는 가장 많이 맞은 원소를 배워서 막아요! 여러 원소로… 고르게요!' },
+      { who: 'kara', mood: 'happy', text: '열두 울림이 다 모였어. 땅의 종도, 하늘의 종도 우리가 지킨다!' },
+    ],
+  },
+  ending2: {
+    title: '두 종의 울림', region: 6,
+    lines: [
+      { who: 'narration', text: '그믐달이 깨지고, 삼켰던 별빛이 쏟아져 나왔다. 무진이 종메를 들어 별종을 두드렸다.' },
+      { who: 'narration', text: '하늘의 별종과 땅의 대종이 함께 울렸다. 꺼졌던 별이 하나씩 다시 켜졌다.' },
+      { who: 'mujin', mood: 'happy', text: '좋은 울림이었네. 이것은 내 것이 아니라, 모두의 것이지.' },
+      { who: 'byeori', mood: 'happy', text: '기록 마지막 줄… "별은 꺼지지 않았다. 열두 울림이 함께 켰다."' },
+      { who: 'narae', mood: 'happy', text: '솔개야, 다 같이 태우고 땅까지 내려가자! 축제 해야지!' },
+      { who: 'dohan', mood: 'happy', text: '돌아가면 대장간 불부터 지피마. 너희 이름을 종에 새겨 주지.' },
+      { who: 'tori', mood: 'happy', text: '…다 같이 해서, 좋아아.' },
+      { who: 'haru', mood: 'happy', text: '형! 구름 위에 눈사람 세워 놓고 왔어! 별이 지켜 줄 거야!' },
+      { who: 'kara', mood: 'happy', text: '하늘과 땅이 이어졌어. 이제 진짜, 모두 함께야!' },
+    ],
+  },
+
   ending: {
     title: '다시 울리는 종', region: 5,
     lines: [
@@ -4412,18 +4991,20 @@ RG.data.story = {
 RG.grid = (() => {
   const T = {
     PATH: 1, OPEN: 2, BUILD: 3, WATER: 4, ROCK: 5, TREE: 6, LAVA: 7, PILLAR: 8, SPAWN: 9, AIR: 10, LANTERN: 11,
+    BRIDGE_A: 12, BRIDGE_B: 13, STAR: 14, // 6지역: 별다리 두 무리(번갈아 열림) · 별빛 건설지(사거리 +15%)
   };
   const CHAR = {
     '.': T.PATH, ',': T.OPEN, '#': T.BUILD, '~': T.WATER, '^': T.ROCK, T: T.TREE, '%': T.LAVA, '=': T.PILLAR,
-    S: T.SPAWN, A: T.AIR, L: T.LANTERN,
+    S: T.SPAWN, A: T.AIR, L: T.LANTERN, B: T.BRIDGE_A, b: T.BRIDGE_B, '*': T.STAR,
   };
   const SQRT2 = Math.SQRT2;
   /** 8방향: 북, 북동, 동, 남동, 남, 남서, 서, 북서 */
   const DIRS = [[0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1]];
 
-  const isEnemyWalkKind = (k) => k === T.PATH || k === T.OPEN || k === T.SPAWN || k === T.LANTERN;
-  const isBuildKind = (k) => k === T.BUILD || k === T.OPEN;
-  const isHeroWalkKind = (k) => k === T.PATH || k === T.OPEN || k === T.BUILD || k === T.SPAWN || k === T.LANTERN;
+  const isEnemyWalkKind = (k) => k === T.PATH || k === T.OPEN || k === T.SPAWN || k === T.LANTERN || k === T.BRIDGE_A || k === T.BRIDGE_B;
+  const isBuildKind = (k) => k === T.BUILD || k === T.OPEN || k === T.STAR;
+  const isHeroWalkKind = (k) => k === T.PATH || k === T.OPEN || k === T.BUILD || k === T.SPAWN || k === T.LANTERN || k === T.BRIDGE_A || k === T.BRIDGE_B || k === T.STAR;
+  const isBridgeKind = (k) => k === T.BRIDGE_A || k === T.BRIDGE_B;
 
   /** 맵 정의 → 해석된 맵. 오류가 있으면 예외 */
   function parseMap(def) {
@@ -4453,11 +5034,24 @@ RG.grid = (() => {
     if (!lantern) throw new Error(`${def.id}: 울림등(L)이 없음`);
     if (!spawns.length) throw new Error(`${def.id}: 입구(S)가 없음`);
     const map = { id: def.id, def, cols, rows, kinds, spawns, airSpawns, lantern };
-    const empty = new Uint8Array(n);
-    const dist = computeFlow(map, empty);
-    for (const s of spawns) {
-      if (!isFinite(dist[s.r * cols + s.c])) throw new Error(`${def.id}: 입구 (${s.c},${s.r})에서 울림등까지 길이 없음`);
-    }
+    // 별다리: A 무리가 먼저 열리고(B 닫힘) 주기마다 번갈아 — 두 상태 모두 입구에서 울림등까지 길이 있어야 함
+    const bridgeA = [];
+    const bridgeB = [];
+    for (let i = 0; i < n; i++) { if (kinds[i] === T.BRIDGE_A) bridgeA.push(i); else if (kinds[i] === T.BRIDGE_B) bridgeB.push(i); }
+    map.bridgeA = bridgeA;
+    map.bridgeB = bridgeB;
+    map.hasBridges = bridgeA.length + bridgeB.length > 0;
+    const states = map.hasBridges ? [bridgeB, bridgeA] : [[]]; // 닫힌 무리
+    let dist = null;
+    states.forEach((closed, si) => {
+      const blk = new Uint8Array(n);
+      for (const i of closed) blk[i] = 1;
+      const d = computeFlow(map, blk);
+      for (const s of spawns) {
+        if (!isFinite(d[s.r * cols + s.c])) throw new Error(`${def.id}: 입구 (${s.c},${s.r})에서 울림등까지 길이 없음${map.hasBridges ? ` (별다리 ${si ? 'b' : 'B'} 무리만 열렸을 때)` : ''}`);
+      }
+      if (!dist) dist = d;
+    });
     map.baseDist = dist;
     return map;
   }
@@ -4658,9 +5252,12 @@ RG.grid = (() => {
     return out;
   }
 
+  /** 별다리 phase(0: A 열림·B 닫힘, 1: 반대)일 때 닫힌 칸 목록 */
+  const closedBridges = (map, phase) => (!map.hasBridges ? [] : phase ? map.bridgeA : map.bridgeB);
+
   return {
     T, CHAR, DIRS, parseMap, parseWaves, computeFlow, nextStep, enemyWalkable, heroWalkable, heroPath,
-    nearestHeroTile, nearestEnemyTile, neighbors8, isEnemyWalkKind, isBuildKind, isHeroWalkKind, idx, inBounds,
+    nearestHeroTile, nearestEnemyTile, neighbors8, isEnemyWalkKind, isBuildKind, isHeroWalkKind, isBridgeKind, closedBridges, idx, inBounds,
   };
 })();
 
@@ -4776,8 +5373,15 @@ RG.stats = (() => {
       c.kind = def.kind;
       c.targets = spec.targets || def.targets;
       c.dmgBonus = 0;
+      // 원정 유물: 원소 탑 피해 (meta.elFire …)
+      const elKey = `el${def.element[0].toUpperCase()}${def.element.slice(1)}`;
+      if (meta[elKey]) c.dmgBonus += meta[elKey];
       c.speedBonus = 0;
       c.rangeBonus = meta.rangePct || 0;
+      // 6지역 별빛 건설지: 사거리 +15%
+      if (game.map && game.map.kinds[t.r * game.map.cols + t.c] === RG.grid.T.STAR) c.rangeBonus += RG.data.rules.starRange || 0.15;
+      // 그믐달 군주 '별 가리기': 잠시 사거리 감소
+      if (t.veilUntil > game.state.time) c.rangeBonus -= t.veilPct || 0;
       c.critBonus = 0;
       c.mods = {};
       c.resIds = [];
@@ -4926,6 +5530,15 @@ RG.bosses = (() => {
     if (!st.alerts.length) return;
     st.alerts = st.alerts.filter((a) => {
       if (st.time < a.at) return true;
+      if (a.veil) { // 별 가리기: 그 순간 원 안의 탑 사거리 감소
+        const R2 = a.veil.radius * a.veil.radius;
+        const hit = [];
+        for (const t of st.towers) if ((t.x - a.x) ** 2 + (t.y - a.y) ** 2 <= R2) { t.veilUntil = st.time + a.dur; t.veilPct = a.veil.pct; hit.push(t.id); }
+        st.veilEnd = Math.max(st.veilEnd || 0, st.time + a.dur);
+        if (api.markStats) api.markStats();
+        api.ev('bossAbility', { ability: 'veil', x: a.x, y: a.y, targets: hit, radius: a.veil.radius });
+        return false;
+      }
       for (const id of a.towerIds) {
         const t = st.towers.find((x) => x.id === id);
         if (t) api.disableTower(t, a.dur, a.ability);
@@ -5023,6 +5636,33 @@ RG.bosses = (() => {
         api.ev('enemyShield', { x: e.x, y: e.y, radius: bd.ward.radius });
       }
       if (phaseCheck(game, e, api, bd.phase)) summon(game, e, api, bd.phase.summon);
+    },
+
+    gloom_monarch(game, e, api, bd) {
+      const st = game.state;
+      // ① 별 가리기: 경고(원) 뒤 반경 안 탑의 사거리 −40% (5초)
+      if (timer(e, 'veil', bd.veil.every, 6)) {
+        const V = bd.veil;
+        const alert = { id: `${e.id}:${st.tick}`, towerIds: [], at: st.time + D().rules.bossWarn, dur: V.dur, ability: 'veil', x: e.x, y: e.y, veil: V };
+        st.alerts.push(alert);
+        api.ev('warnArea', { x: e.x, y: e.y, radius: V.radius, dur: D().rules.bossWarn, element: 'dark' });
+        api.ev('bossAbility', { enemyId: e.id, ability: 'veilWarn', x: e.x, y: e.y });
+      }
+      // ② 70%: 나방 떼 · ③ 35%: 순간이동 + 가장 많이 맞은 원소에 면역
+      const phases = bd.phases;
+      const idx = e.boss.phase;
+      if (idx < phases.length && e.hp / e.maxHp <= phases[idx].at) {
+        const ph = phases[idx];
+        e.boss.phase = idx + 1;
+        if (ph.blink) { const fx = e.x; const fy = e.y; api.advance(e, ph.blink); api.ev('bossAbility', { enemyId: e.id, ability: 'blink', x: e.x, y: e.y, fromX: fx, fromY: fy }); }
+        let immune = null;
+        if (ph.adaptImmune && e.boss.els) {
+          immune = Object.keys(e.boss.els).sort((a, b) => e.boss.els[b] - e.boss.els[a] || (a < b ? -1 : 1))[0] || null;
+          if (immune) e.immuneEls = [immune];
+        }
+        if (ph.summon) summon(game, e, api, ph.summon);
+        api.ev('bossPhase', { enemyId: e.id, phase: idx + 2, x: e.x, y: e.y, immune: immune ? [immune] : undefined });
+      }
     },
 
     the_silence(game, e, api, bd) {
@@ -5175,6 +5815,276 @@ RG.growth = (() => {
 })();
 
 </script>
+  <script>/* js/core/expedition.js */
+'use strict';
+
+/* =========================================================
+ * 원정 진행 (순수 함수 — 저장할 상태 run을 받아 바꿈) — 설계: docs/design/expedition.md
+ * 모든 무작위는 원정 시드에서 파생한 시드 난수(RG.util.makeRng)로 정해짐 → 같은 시드·같은 선택 = 같은 원정.
+ * run.phase: 'deck'(시작 덱 고르기) → 'map'(층 노드 고르기) → 'battle'(판 중) → 'reward'(보상 고르기) / 'event' / 'shop' / 'rest' → 'map' … → 'done'
+ * ========================================================= */
+RG.expedition = (() => {
+  const E = () => RG.data.expedition;
+  const U = () => RG.util;
+  /** (원정 시드, 이름표) → 새 난수 */
+  const rngOf = (run, ...tags) => U().makeRng(U().hashStr(`${run.seed}|${tags.join('|')}`) >>> 0);
+  const pick = (r, list) => list[Math.floor(r() * list.length) % list.length];
+  function shuffled(r, list) {
+    const a = list.slice();
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+
+  /** 새 원정: owned = 가진 탑 목록(뽑기), 시작 덱 후보 6종 */
+  function newRun(seed, heroId, owned) {
+    const run = {
+      v: 1, seed: seed >>> 0, heroId, act: 1, floor: 1, lives: E().startLives, silver: 0,
+      owned: owned.slice(), deck: [], up: [], relics: [], phase: 'deck', offer: [], node: null, nodes: null,
+      history: [], shopBought: [], floorsCleared: 0, actsCleared: 0, result: null, battles: 0,
+    };
+    run.offer = shuffled(rngOf(run, 'deck'), owned).slice(0, Math.min(E().startDeck.offer, owned.length));
+    return run;
+  }
+  function pickDeck(run, types) {
+    if (run.phase !== 'deck') return { ok: false, reason: '덱을 고르는 때가 아닙니다' };
+    const n = Math.min(E().startDeck.pick, run.offer.length);
+    if (types.length !== n || types.some((t) => !run.offer.includes(t)) || new Set(types).size !== n) return { ok: false, reason: `${n}종을 골라 주세요` };
+    run.deck = types.slice();
+    run.phase = 'map';
+    run.nodes = floorNodes(run);
+    return { ok: true };
+  }
+
+  /** 막 지역의 보스 아닌 맵들 */
+  function actMaps(act) {
+    const regs = E().actRegions[act - 1];
+    return RG.data.maps.filter((m) => regs.includes(m.region) && !m.boss).map((m) => m.id);
+  }
+  const isBossFloor = (run) => run.floor > E().floors;
+
+  /** 이번 층의 노드 2~3개 (보스 층은 보스 하나) */
+  function floorNodes(run) {
+    const r = rngOf(run, 'floor', run.act, run.floor);
+    if (isBossFloor(run)) return [{ kind: 'boss', mapId: pick(r, E().actBoss[run.act - 1]) }];
+    const n = 2 + (r() < 0.6 ? 1 : 0);
+    const maps = shuffled(r, actMaps(run.act));
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      let kind = 'battle';
+      if (run.floor > 1) {
+        const W = E().nodeWeights;
+        const kinds = Object.keys(W).filter((k) => (k !== 'elite' || run.floor >= 2) && ((k !== 'shop' && k !== 'rest') || run.floor >= 3));
+        const tot = kinds.reduce((a, k) => a + W[k], 0);
+        let x = r() * tot;
+        for (const k of kinds) { x -= W[k]; if (x <= 0) { kind = k; break; } }
+      }
+      const node = { kind };
+      if (kind === 'battle' || kind === 'elite') {
+        node.mapId = maps[i % maps.length];
+        node.rule = pick(r, E().ruleOrder);
+      }
+      if (kind === 'event') node.event = pick(r, E().events).id;
+      out.push(node);
+    }
+    // 같은 층에 전투가 하나도 없으면 첫 노드를 전투로 (진행이 너무 쉬워지지 않게)
+    if (!out.some((x) => x.kind === 'battle' || x.kind === 'elite')) { out[0] = { kind: 'battle', mapId: maps[0], rule: pick(r, E().ruleOrder) }; }
+    return out;
+  }
+
+  /** 유물·변형 규칙을 합친 수정치 */
+  function mods(run, ruleId) {
+    const out = {};
+    const add = (m) => { for (const [k, v] of Object.entries(m || {})) out[k] = (out[k] || 0) + v; };
+    for (const id of run.relics) add((E().relics[id] || {}).mods);
+    if (ruleId && E().rules[ruleId]) add(E().rules[ruleId].mods);
+    return out;
+  }
+
+  /** 노드 고르기 → 전투면 { battle: opts 조각 }, 아니면 그 단계로 */
+  function choose(run, idx) {
+    if (run.phase !== 'map') return { ok: false, reason: '지금은 고를 수 없습니다' };
+    const node = run.nodes && run.nodes[idx];
+    if (!node) return { ok: false, reason: '없는 노드' };
+    run.node = Object.assign({ idx }, node);
+    if (node.kind === 'battle' || node.kind === 'elite' || node.kind === 'boss') { run.phase = 'battle'; return { ok: true, battle: true }; }
+    if (node.kind === 'event') run.phase = 'event';
+    else if (node.kind === 'shop') { run.phase = 'shop'; run.shopBought = []; run.shopStock = shopStock(run); }
+    else if (node.kind === 'rest') run.phase = 'rest';
+    return { ok: true };
+  }
+
+  /** 지금 노드의 판 설정: { mapId, expedition, hpMult } (게임 opts에 합쳐 씀) */
+  function battleSetup(run) {
+    const node = run.node;
+    const def = RG.data.maps.find((m) => m.id === node.mapId);
+    const L = def.waves.length;
+    let waves;
+    if (node.kind === 'boss') {
+      const k = Math.min(E().waves.boss, L);
+      waves = Array.from({ length: k }, (_, i) => L - k + i);
+    } else {
+      const k = Math.min(node.kind === 'elite' ? E().waves.elite : E().waves.battle, L);
+      waves = Array.from({ length: k }, (_, i) => Math.round((i * (L - 1)) / Math.max(1, k - 1)));
+    }
+    const m = mods(run, node.kind === 'boss' ? null : node.rule);
+    const hpScale = E().actScale[run.act - 1] * (1 + E().floorScale * (Math.min(run.floor, E().floors) - 1)) * (node.kind === 'elite' ? E().eliteScale : 1) * (1 + (m.hpScale || 0));
+    const meta = {};
+    for (const [k, v] of Object.entries(m)) if (!['hpScale', 'armorAdd', 'countdownMul', 'silverPct', 'winLife'].includes(k)) meta[k] = v;
+    return {
+      mapId: node.mapId,
+      hpMult: Math.round(hpScale * 10000) / 10000,
+      expedition: {
+        waves, lives: run.lives, goldMult: E().goldMult, meta, upgraded: run.up.slice(),
+        armorAdd: m.armorAdd || 0, countdownMul: m.countdownMul ? Math.max(0.25, 0.5 ** Math.round(m.countdownMul / 0.5)) : 1, // 절반 효과가 겹치면 ¼까지
+        act: run.act, floor: run.floor, kind: node.kind, rule: node.kind === 'boss' ? null : node.rule,
+      },
+    };
+  }
+
+  /** 판 결과 반영: { result: 'win'|'lose', lives } */
+  function applyBattle(run, res) {
+    if (run.phase !== 'battle') return { ok: false, reason: '판 중이 아닙니다' };
+    const node = run.node;
+    const m = mods(run);
+    run.battles += 1;
+    run.lives = Math.max(0, Math.min(E().maxLives, res.lives));
+    if (res.result !== 'win' || run.lives <= 0) { run.lives = 0; return finish(run, false); }
+    if (m.winLife) run.lives = Math.min(E().maxLives, run.lives + m.winLife);
+    const S = E().silver;
+    const base = (node.kind === 'boss' ? S.boss : node.kind === 'elite' ? S.elite : S.battle) + S.perAct * (run.act - 1);
+    const gain = Math.round(base * (1 + (m.silverPct || 0)));
+    run.silver += gain;
+    const r = rngOf(run, 'reward', run.act, run.floor);
+    if (node.kind === 'battle') {
+      run.offer = shuffled(r, run.owned.filter((t) => !run.deck.includes(t))).slice(0, 3);
+      run.offerKind = 'tower';
+    } else {
+      run.offer = shuffled(r, Object.keys(E().relics).filter((k) => !run.relics.includes(k) && E().relics[k].kind !== 'curse')).slice(0, 3);
+      run.offerKind = 'relic';
+    }
+    run.phase = 'reward';
+    return { ok: true, silver: gain };
+  }
+  /** 보상 고르기: id(탑·유물) 또는 null(은화로) */
+  function takeReward(run, id) {
+    if (run.phase !== 'reward') return { ok: false, reason: '보상 단계가 아닙니다' };
+    if (id == null) {
+      if (run.offerKind === 'tower') run.silver += E().silver.skip;
+    } else {
+      if (!run.offer.includes(id)) return { ok: false, reason: '없는 보상' };
+      if (run.offerKind === 'tower') { if (run.deck.length >= E().maxDeck) return { ok: false, reason: `덱은 ${E().maxDeck}종까지입니다` }; run.deck.push(id); } else run.relics.push(id);
+    }
+    run.offer = [];
+    return advance(run);
+  }
+
+  /** 다음 층으로 (보스를 깨면 다음 막, 마지막 막이면 원정 승리) */
+  function advance(run) {
+    run.history.push({ act: run.act, floor: run.floor, kind: run.node ? run.node.kind : null });
+    const wasBoss = run.node && run.node.kind === 'boss';
+    run.node = null;
+    run.floorsCleared += 1;
+    if (wasBoss) {
+      run.actsCleared += 1;
+      if (run.act >= E().acts) return finish(run, true);
+      run.act += 1;
+      run.floor = 1;
+    } else run.floor += 1;
+    run.phase = 'map';
+    run.nodes = floorNodes(run);
+    return { ok: true };
+  }
+
+  /** 사건 선택지 */
+  function eventChoose(run, optIdx) {
+    if (run.phase !== 'event') return { ok: false, reason: '사건이 아닙니다' };
+    const ev = E().events.find((x) => x.id === run.node.event);
+    const opt = ev && ev.options[optIdx];
+    if (!opt) return { ok: false, reason: '없는 선택지' };
+    if (opt.cost) {
+      if (opt.cost.silver && run.silver < opt.cost.silver) return { ok: false, reason: '은화가 모자랍니다' };
+      if (opt.cost.lives && run.lives <= opt.cost.lives) return { ok: false, reason: '불꽃이 모자랍니다' };
+      run.silver -= opt.cost.silver || 0;
+      run.lives -= opt.cost.lives || 0;
+    }
+    const r = rngOf(run, 'event', run.act, run.floor);
+    const fx = opt.effect || {};
+    const log = [];
+    if (fx.silver) { run.silver = Math.max(0, run.silver + fx.silver); log.push(`은화 ${fx.silver > 0 ? '+' : ''}${fx.silver}`); }
+    if (fx.lives) { run.lives = Math.max(1, Math.min(E().maxLives, run.lives + fx.lives)); log.push(`불꽃 ${fx.lives > 0 ? '+' : ''}${fx.lives}`); }
+    if (fx.gamble) { if (r() < 0.5) { run.silver += fx.gamble; log.push(`이겼다! 은화 +${fx.gamble}`); } else log.push('졌다…'); }
+    if (fx.upgrade) { const c = run.deck.filter((t) => !run.up.includes(t)); if (c.length) { const t = pick(r, c); run.up.push(t); log.push(`${RG.data.towers[t].name} 원정 강화`); } }
+    if (fx.addTower) { const c = run.owned.filter((t) => !run.deck.includes(t)); if (c.length && run.deck.length < E().maxDeck) { const t = pick(r, c); run.deck.push(t); log.push(`${RG.data.towers[t].name} 합류`); } }
+    if (fx.removeTower && run.deck.length > 2) { const t = pick(r, run.deck); run.deck = run.deck.filter((x) => x !== t); run.up = run.up.filter((x) => x !== t); log.push(`${RG.data.towers[t].name} 잃음`); }
+    if (fx.relic) {
+      const pool = Object.keys(E().relics).filter((k) => !run.relics.includes(k) && (fx.relic === 'gamble' || E().relics[k].kind !== 'curse'));
+      if (pool.length) { const id = pick(r, pool); run.relics.push(id); log.push(`유물: ${E().relics[id].name}`); }
+    }
+    const done = advance(run);
+    return Object.assign(done, { log });
+  }
+
+  /** 상점 물건 (노드마다 정해짐) */
+  function shopStock(run) {
+    const r = rngOf(run, 'shop', run.act, run.floor);
+    const towers = shuffled(r, run.owned.filter((t) => !run.deck.includes(t))).slice(0, 2);
+    const relic = shuffled(r, Object.keys(E().relics).filter((k) => !run.relics.includes(k) && E().relics[k].kind !== 'curse'))[0];
+    const items = towers.map((t) => ({ id: `t:${t}`, kind: 'tower', type: t, price: E().shop.tower }));
+    if (relic) items.push({ id: `r:${relic}`, kind: 'relic', relic, price: E().shop.relic });
+    items.push({ id: 'heal', kind: 'heal', price: E().shop.heal }, { id: 'upgrade', kind: 'upgrade', price: E().shop.upgrade });
+    return items;
+  }
+  /** 상점에서 사기. upgradeType: 원정 강화할 탑 */
+  function shopBuy(run, itemId, upgradeType) {
+    if (run.phase !== 'shop') return { ok: false, reason: '상점이 아닙니다' };
+    const it = (run.shopStock || []).find((x) => x.id === itemId);
+    if (!it) return { ok: false, reason: '없는 물건' };
+    if (run.shopBought.includes(itemId) && it.kind !== 'heal') return { ok: false, reason: '이미 샀습니다' };
+    if (run.silver < it.price) return { ok: false, reason: '은화가 모자랍니다' };
+    if (it.kind === 'tower') { if (run.deck.length >= E().maxDeck) return { ok: false, reason: `덱은 ${E().maxDeck}종까지입니다` }; run.deck.push(it.type); }
+    else if (it.kind === 'relic') run.relics.push(it.relic);
+    else if (it.kind === 'heal') { if (run.lives >= E().maxLives) return { ok: false, reason: '불꽃이 가득합니다' }; run.lives = Math.min(E().maxLives, run.lives + E().shop.healLives); }
+    else if (it.kind === 'upgrade') {
+      if (!upgradeType || !run.deck.includes(upgradeType) || run.up.includes(upgradeType)) return { ok: false, reason: '강화할 탑을 골라 주세요' };
+      run.up.push(upgradeType);
+    }
+    run.silver -= it.price;
+    run.shopBought.push(itemId);
+    return { ok: true };
+  }
+  const shopLeave = (run) => (run.phase === 'shop' ? advance(run) : { ok: false, reason: '상점이 아닙니다' });
+
+  /** 쉼터: 'heal' 또는 { upgrade: type } */
+  function rest(run, choice) {
+    if (run.phase !== 'rest') return { ok: false, reason: '쉼터가 아닙니다' };
+    if (choice === 'heal') run.lives = Math.min(E().maxLives, run.lives + E().rest.heal);
+    else if (choice && choice.upgrade) {
+      if (!run.deck.includes(choice.upgrade) || run.up.includes(choice.upgrade)) return { ok: false, reason: '강화할 수 없는 탑' };
+      run.up.push(choice.upgrade);
+    } else return { ok: false, reason: '쉬거나 강화를 고르세요' };
+    return advance(run);
+  }
+
+  /** 원정 끝: 보상 계산 (공명석, 장신구 등급들) */
+  function finish(run, win) {
+    run.phase = 'done';
+    run.result = win ? 'win' : 'lose';
+    run.rewards = rewardsOf(run);
+    return { ok: true, done: true, win };
+  }
+  function rewardsOf(run) {
+    const R = E().reward;
+    const crystals = run.floorsCleared * R.perFloor + (run.result === 'win' ? R.win : 0);
+    const gear = ['common', 'rare', 'epic'].slice(0, run.actsCleared);
+    return { crystals, gear };
+  }
+  /** 지금 몇 번째 층인가(전체): 1막 1층 = 1 */
+  const depth = (run) => (run.act - 1) * (E().floors + 1) + run.floor;
+
+  return { newRun, pickDeck, floorNodes, mods, choose, battleSetup, applyBattle, takeReward, advance, eventChoose, shopStock, shopBuy, shopLeave, rest, finish, rewardsOf, actMaps, depth, isBossFloor };
+})();
+
+</script>
   <script>/* js/core/sim.js */
 'use strict';
 
@@ -5247,15 +6157,18 @@ RG.sim = (() => {
     const rules = D().rules;
     const challenge = o.mode === 'challenge' ? (def.challenge || null) : null;
     const meta = (o.mode === 'challenge') ? {} : sumSkills(o.skills);
+    // 원정 판(docs/design/expedition.md): 고른 웨이브만, 유물·변형 규칙 수정치를 기술 나무 수정치에 더함
+    const X = o.expedition || null;
+    if (X && X.meta) for (const [k, v] of Object.entries(X.meta)) meta[k] = (meta[k] || 0) + v;
     const map = RG.grid.parseMap(def);
-    const waves = o.mode === 'endless' ? [] : RG.grid.parseWaves(def.waves);
+    const waves = o.mode === 'endless' ? [] : RG.grid.parseWaves(X && X.waves ? X.waves.map((i) => def.waves[i]).filter(Boolean) : def.waves);
     const rng = U().makeRng(o.seed >>> 0);
     const n = map.cols * map.rows;
 
     const st = {
       tick: 0, time: 0, mapId: def.id, mode: o.mode, map,
-      gold: Math.round(def.startGold * (1 + (meta.startGoldPct || 0))),
-      lives: challenge && challenge.type === 'lives' ? challenge.value : rules.lives,
+      gold: Math.round(def.startGold * (X && X.goldMult ? X.goldMult : 1) * (1 + (meta.startGoldPct || 0))),
+      lives: X && X.lives ? X.lives : challenge && challenge.type === 'lives' ? challenge.value : rules.lives,
       maxLives: rules.lives,
       result: null,
       wave: { index: 0, total: o.mode === 'endless' ? Infinity : waves.length, countdown: null, started: false, queue: [], bonusBase: 0 },
@@ -5263,7 +6176,7 @@ RG.sim = (() => {
       hero: null,
       events: [],
       stats: { damageByTower: {}, kills: 0, leaked: 0, goldEarned: 0, heroDamage: 0, resonanceSeen: {} },
-      task: def.task ? { def: def.task, done: false, best: 0 } : null,
+      task: def.task && !X ? { def: def.task, done: false, best: 0 } : null,
       warnings: [],                         // 데이터 경고(알 수 없는 적 등)
       alerts: [],                           // 보스 경고(1.5초 뒤 탑 멈춤) — 그리기용
       linksFrozenUntil: 0,
@@ -5271,10 +6184,16 @@ RG.sim = (() => {
       maxTicks: o.mode === 'endless' ? Infinity : 30 * 60 * 40, // 무한 모드는 시간 제한 없음
     };
 
-    const blocked = new Uint8Array(n);       // 탑이 있는 칸
+    const blocked = new Uint8Array(n);       // 탑이 있는 칸 (+ 6지역: 닫힌 별다리)
     const tileTowers = new Array(n).fill(null);
     const soldTile = new Float64Array(n);    // 판 칸 재건설 가능 시각
     let flow = map.baseDist;
+    // 별다리: phase 0 = A 무리 열림·b 닫힘, period초마다 번갈아 (docs/design/region6.md)
+    if (map.hasBridges) {
+      for (const i of RG.grid.closedBridges(map, 0)) blocked[i] = 1;
+      const per = (def.bridges && def.bridges.period) || 14;
+      st.bridge = { phase: 0, period: per, next: per };
+    }
     let nextId = 1;
     let statsDirty = true;
     const delayed = [];
@@ -5287,6 +6206,7 @@ RG.sim = (() => {
     /** 지을 때의 단계: 뽑기 최종 강화 탑은 Lv1 값 그대로 Lv2로 지어짐(도전의 최대 단계 제한은 지킴).
      *  o.finalLv2: 이 규칙이 생긴 뒤 시작한 판만 켬 — 그 전에 저장한 판을 이어 할 때 기록 재현이 어긋나지 않게 */
     function startLevel(type) {
+      if (X && X.upgraded && X.upgraded.includes(type)) return 2; // 원정 강화한 탑
       if (!o.finalLv2 || !(RG.gacha && RG.gacha.isFinal(ranks[type]))) return 1;
       if (challenge && challenge.type === 'maxLevel' && challenge.value < 2) return 1;
       return 2;
@@ -5580,8 +6500,10 @@ RG.sim = (() => {
       let affMult = aff === 'weak' ? 1.5 : aff === 'resist' ? 0.5 : 1;
       if (e.adapt && e.adapt.el === element) affMult *= 1 - Math.min(ed.traits.adaptive.max, e.adapt.stacks * ed.traits.adaptive.per);
       lastAttackSide = base * (1 + bonus) * (o2.crit || 1); // 받는 쪽 배율 전 (잿불 화상 등 파생 화상의 기준)
+      if (e.boss && ed.bossData && ed.bossData.trackEls) e.boss.els = Object.assign(e.boss.els || {}, { [element]: ((e.boss.els && e.boss.els[element]) || 0) + base }); // 그믐달 군주: 많이 맞은 원소 기록
       let final = base * (1 + bonus) * (1 + vuln) * (1 - armorEff) * affMult;
       if (o2.crit) final *= o2.crit;
+      if (o2.area && ed.traits.fluffy) final *= 1 - ed.traits.fluffy.pct; // 구름 양: 푹신(범위 피해 절반)
       if (final <= 0) return 0;
 
       let dealt = final;
@@ -5723,7 +6645,7 @@ RG.sim = (() => {
       if (st.wave.hpScale) hp *= st.wave.hpScale;
       const e = {
         id: nextId++, type, x, y, px: x, py: y, c, r, tc: c, tr: r,
-        hp, maxHp: hp, shield: 0, maxShield: 0, armor: ed.armor, flying, size: ed.size * (from && from.fragment ? 0.75 : 1),
+        hp, maxHp: hp, shield: 0, maxShield: 0, armor: X && X.armorAdd ? Math.min(0.9, ed.armor + X.armorAdd) : ed.armor, flying, size: ed.size * (from && from.fragment ? 0.75 : 1),
         stealth: !!ed.traits.stealth, revealed: !ed.traits.stealth,
         lane: Math.floor(rng() * 1000), dir: 1, prog: 0, trail: [],
         st: { slowPct: 0, slowUntil: 0, curse: null, veil: null, blindUntil: 0, stillUntil: 0, purifyUntil: 0, haltUntil: 0, shreds: {}, burns: [], bleeds: [] },
@@ -5751,7 +6673,7 @@ RG.sim = (() => {
 
     function updateProg(e) {
       const ti = e.tr * map.cols + e.tc;
-      const fd = flow[ti];
+      const fd = (e.cross ? e.cross.flow : flow)[ti];
       e.prog = (isFinite(fd) ? fd : 99) + dist(e.x, e.y, e.tc + 0.5, e.tr + 0.5);
     }
 
@@ -5796,7 +6718,9 @@ RG.sim = (() => {
         }
         e.c = e.tc; e.r = e.tr;
         if (e.c === map.lantern.c && e.r === map.lantern.r) { leak(e); return; }
-        let nx = RG.grid.nextStep(map, flow, blocked, e.c, e.r, e.lane);
+        // 닫히는 별다리 위에 있던 적은 그대로 건너감: 다리를 벗어날 때까지 닫히기 전 흐름장을 따름
+        if (e.cross && !RG.grid.isBridgeKind(map.kinds[e.r * map.cols + e.c])) e.cross = null;
+        let nx = e.cross ? RG.grid.nextStep(map, e.cross.flow, e.cross.blocked, e.c, e.r, e.lane) : RG.grid.nextStep(map, flow, blocked, e.c, e.r, e.lane);
         if (!nx) nx = escapeStep(e.c, e.r); // 갇힌 칸(밀려나 막힌 주머니 등): 이웃 중 길이 이어진 칸으로
         if (!nx) { leak(e); return; }
         e.tc = nx.c; e.tr = nx.r;
@@ -6829,6 +7753,14 @@ RG.sim = (() => {
         const nd = RG.grid.computeFlow(map, blocked);
         blocked[i] = 0;
         for (const s of map.spawns) if (!isFinite(nd[s.r * map.cols + s.c])) return fail('길을 완전히 막을 수 없습니다');
+        if (st.bridge) { // 별다리가 바뀐 뒤에도 길이 있어야 함
+          const alt = blocked.slice();
+          alt[i] = 1;
+          for (const j of RG.grid.closedBridges(map, st.bridge.phase)) alt[j] = 0;
+          for (const j of RG.grid.closedBridges(map, 1 - st.bridge.phase)) alt[j] = 1;
+          const ad = RG.grid.computeFlow(map, alt);
+          for (const s of map.spawns) if (!isFinite(ad[s.r * map.cols + s.c])) return fail('별다리가 바뀌면 길이 막혀서 지을 수 없습니다');
+        }
         for (const e of st.enemies) {
           if (e.dead || e.flying) continue;
           if (!isFinite(nd[e.r * map.cols + e.c]) || !isFinite(nd[e.tr * map.cols + e.tc])) return fail('적이 갇히게 되어 지을 수 없습니다');
@@ -6841,6 +7773,7 @@ RG.sim = (() => {
       flow = RG.grid.computeFlow(map, blocked);
       for (const e of st.enemies) {
         if (e.dead || e.flying) continue;
+        if (e.cross) { updateProg(e); continue; } // 별다리를 건너는 중
         // 지금 목표 칸이 여전히 좋은지 확인, 아니면 지금 칸에서 다시 고름
         const curD = flow[e.r * map.cols + e.c];
         const tgtD = flow[e.tr * map.cols + e.tc];
@@ -6860,6 +7793,25 @@ RG.sim = (() => {
           if (tile) { u.x = tile.c + 0.5; u.y = tile.r + 0.5; u.px = u.x; u.py = u.y; u.path = []; }
         }
       }
+    }
+
+    /** 별다리 바꾸기: 닫히는 다리 위(또는 그리로 가던) 적은 건너가게 하고, 흐름장을 다시 계산 */
+    function flipBridges() {
+      const B = st.bridge;
+      const closing = RG.grid.closedBridges(map, 1 - B.phase);
+      const opening = RG.grid.closedBridges(map, B.phase);
+      const closeSet = new Set(closing);
+      const old = { flow, blocked: blocked.slice() };
+      for (const e of st.enemies) {
+        if (e.dead || e.flying) continue;
+        if (closeSet.has(e.r * map.cols + e.c) || closeSet.has(e.tr * map.cols + e.tc)) e.cross = old;
+      }
+      for (const i of opening) blocked[i] = 0;
+      for (const i of closing) blocked[i] = 1;
+      B.phase = 1 - B.phase;
+      B.next += B.period;
+      refreshFlow();
+      ev('bridges', { phase: B.phase });
     }
 
     function build(cmd) {
@@ -7318,6 +8270,8 @@ RG.sim = (() => {
       const time = st.time;
 
       refreshHeroAuras();
+      if (st.bridge && time >= st.bridge.next) flipBridges();
+      if (st.veilEnd && time >= st.veilEnd) { st.veilEnd = 0; statsDirty = true; } // 그믐달 군주 '별 가리기'가 끝남
       for (let i = 0; i < st.enemies.length; i++) { const e = st.enemies[i]; e.px = e.x; e.py = e.y; }
       for (const u of st.units) { u.px = u.x; u.py = u.y; }
       for (const p of st.projectiles) { p.px = p.x; p.py = p.y; }
@@ -7334,7 +8288,7 @@ RG.sim = (() => {
         spawnEnemy(q.e, q.s, null, q.wave);
       }
       if (w.started && !w.queue.length && w.countdown === null && w.index < w.total) {
-        w.countdown = challenge && challenge.type === 'countdown' ? challenge.value : rules.countdown;
+        w.countdown = challenge && challenge.type === 'countdown' ? challenge.value : rules.countdown * (X && X.countdownMul ? X.countdownMul : 1);
       }
       if (w.countdown !== null) {
         w.countdown -= DT;
@@ -7553,6 +8507,20 @@ RG.sim = (() => {
       if (tr.burrow) {
         e.burrowT += DT;
         if (!e.burrowed && e.burrowT >= tr.burrow.every) { e.burrowed = true; e.burrowT = 0; releaseEnemy(e); ev('burrow', { enemyId: e.id, x: e.x, y: e.y }); } else if (e.burrowed && e.burrowT >= tr.burrow.dur) { e.burrowed = false; e.burrowT = 0; ev('unburrow', { enemyId: e.id, x: e.x, y: e.y }); }
+      }
+      // 위상 이동 (위상 망령): 일렁임(경고) 뒤 길을 따라 앞으로 순간이동 — 붙잡혀 있어도 빠져나감
+      if (tr.phase && canMove(e) && !e.burrowed) {
+        e.phaseT = (e.phaseT || 0) + DT;
+        e.phaseWarn = e.phaseT >= tr.phase.every - tr.phase.warn;
+        if (e.phaseT >= tr.phase.every) {
+          e.phaseT = 0;
+          e.phaseWarn = false;
+          const fx = e.x;
+          const fy = e.y;
+          e.cross = null;
+          advance(e, tr.phase.tiles);
+          ev('phase', { enemyId: e.id, x: e.x, y: e.y, fromX: fx, fromY: fy });
+        }
       }
       // 보스
       if (e.boss && RG.bosses) RG.bosses.update(game, e, api);
@@ -8128,6 +9096,7 @@ RG.sim = (() => {
     /** 보스 모듈에 넘기는 내부 기능 */
     const api = {
       ev, damage, hardCC, applySlow, advance, spawnEnemy, disableTower, releaseEnemy, hurtUnit, enemiesInRadius,
+      markStats: () => { statsDirty = true; },
       rng, get flow() { return flow; }, blocked, unitById,
       freezeLinks: (dur) => { st.linksFrozenUntil = Math.max(st.linksFrozenUntil, st.time + dur); },
     };
@@ -8697,6 +9666,47 @@ RG.progress = (() => {
     save();
     return out;
   }
+  /* ---------------- 원정 (docs/design/expedition.md) ---------------- */
+  const expOpen = () => !!mapRec(D().expedition.unlockAfter).cleared;
+  const expRun = () => get().expRun || null;
+  const expStats = () => Object.assign({ runs: 0, wins: 0, best: 0 }, get().expStats || {});
+  function expStart(seed, heroId) {
+    const run = RG.expedition.newRun(seed, heroId, ownedTowers());
+    get().expRun = run;
+    save();
+    return run;
+  }
+  /** 원정 판이 끝남: 불꽃·은화·보상 반영 + 영웅 인연 경험치 */
+  function expBattleEnd(st) {
+    const run = expRun();
+    if (!run || run.phase !== 'battle') return null;
+    const win = st.result === 'win';
+    const res = RG.expedition.applyBattle(run, { result: win ? 'win' : 'lose', lives: st.lives });
+    const bond = run.heroId && D().heroes[run.heroId] ? addBond(run.heroId, RG.growth.bondGain({ result: win ? 'win' : 'lose', mode: 'normal', newStars: 0 })) : null;
+    save();
+    return Object.assign({}, res, { bond });
+  }
+  /** 원정을 그만둠 (지금까지 오른 층만큼 보상) */
+  function expAbandon() {
+    const run = expRun();
+    if (!run || run.phase === 'done') return;
+    RG.expedition.finish(run, false);
+    save();
+  }
+  /** 끝난 원정의 보상 받기: 공명석 + 장신구, 기록 갱신, 원정 지움 */
+  function expClaim() {
+    const run = expRun();
+    if (!run || run.phase !== 'done') return null;
+    const rw = run.rewards || RG.expedition.rewardsOf(run);
+    gachaState().crystals += rw.crystals;
+    const gear = rw.gear.map((r, i) => grantGear(r, `exp:${run.seed}:${i}`));
+    const s0 = expStats();
+    get().expStats = { runs: s0.runs + 1, wins: s0.wins + (run.result === 'win' ? 1 : 0), best: Math.max(s0.best, run.floorsCleared) };
+    get().expRun = null;
+    save();
+    return { crystals: rw.crystals, gear, result: run.result, floors: run.floorsCleared };
+  }
+
   /** 판에 넘길 성장 복사본 (opts.heroGrowth) — 재능·장신구가 하나도 없으면 null */
   function heroGrowth(heroId) {
     if (!D().heroes[heroId]) return null;
@@ -8739,6 +9749,7 @@ RG.progress = (() => {
     gachaState, ownedTowers, ownsTower, towerRank, towerRanks, gachaPool, inPool, pullGacha, towersOpen, towerOpen, towerRegion, regionCleared, towerFinal,
     mapStars, starsTotal, starsSpent, starsFree, canLearn, learn, resetSkills, record, nextMapId, markSeen, seen, frontier, skillCost,
     heroRec, bondOf, addBond, takeTalent, resetTalents, talentsOf, ownedGear, equipGear, upgradeGear, grantGear, heroGrowth, rarityForRegion,
+    expOpen, expRun, expStats, expStart, expBattleEnd, expAbandon, expClaim,
   };
 })();
 
@@ -23090,6 +24101,589 @@ RG.art._h = (() => {
   // 땅을 미끄러지듯 흘러옴: 위아래보다 크게 일렁이고 늘었다 줄었다 함
   MOTION.the_silence = { gait: 'float', bob: 0.015, tilt: 1.5, sway: 0.03, squash: 0.03, deathFx: 'sparks', deathTime: 1.2 };
   /* ==== END the_silence ==== */
+
+  /* 다른 파일(enemies-r6.js — 6지역)이 같은 도구로 그리도록 공개 */
+  RG.art._en5 = {
+    H, OL, g, n, D, MOTION, mk, make, sh, dk, lt, lineC, rimC, SHADE, TH, RAD, pt, pol, mid, angOf, tr,
+    ik, seg, segN, frameOf, fist, boot, groundAnkle, leg, arm, bez, ribbon, streaks, swoosh, motes, fin, flat, spec, rimL, ao, inl, bloom,
+  };
+})();
+
+</script>
+  <script>/* js/art/enemies-r6.js */
+'use strict';
+
+/* =========================================================
+ * 적 그림 — 6지역 별울림 첨탑 (설계: docs/design/region6.md · 도구: enemies-r5.js의 RG.art._en5)
+ *   적마다 walk0~3 · aim · attack · die0~2 9장. 빛은 왼쪽 위, 바닥 그림자는 렌더러 몫.
+ *   대표 색: 밤하늘 남보라 + 연한 금빛 별, 구름 흰보라.
+ * ========================================================= */
+(() => {
+  const X = RG.art._en5;
+  const { H, OL, g, n, D, MOTION, mk, sh, SHADE, TH, pt, pol, mid, angOf, tr, ik, seg, segN, frameOf, boot, groundAnkle, bez, ribbon, streaks, motes, fin, spec, rimL, ao, inl, bloom } = X;
+  const STAR = '#ffe7a8';
+  const NIGHT = '#3a3478';
+  const starP = (x, y, r) => `M${n(x)} ${n(y - r)}L${n(x + r * 0.32)} ${n(y - r * 0.32)}L${n(x + r)} ${n(y)}L${n(x + r * 0.32)} ${n(y + r * 0.32)}L${n(x)} ${n(y + r)}L${n(x - r * 0.32)} ${n(y + r * 0.32)}L${n(x - r)} ${n(y)}L${n(x - r * 0.32)} ${n(y - r * 0.32)}Z`;
+  const stars = (c, pts, col = STAR) => pts.map(([x, y, r]) => c.P(starP(x, y, r), col, ' stroke-width="1"')).join('');
+  const dust = (c, pts, col = STAR, op = 0.9) => motes(c, pts, col, op);
+
+  /* =========================================================
+   * 별가루 나방 — 흰보라 털 몸통, 금빛 별무늬 날개, 깃털 더듬이. 날갯짓 4장.
+   * aim: 날개를 뒤로 모음 / attack: 앞으로 내리꽂으며 별가루를 뿌림 / 죽음: 날개가 접혀 떨어짐 → 별가루
+   * ========================================================= */
+  const MOTH = {
+    walk0: { y: 56, wing: -100, wk: 1 }, walk1: { y: 58, wing: -150, wk: 0.78 }, walk2: { y: 60, wing: 168, wk: 0.92 }, walk3: { y: 58, wing: -150, wk: 0.78 },
+    aim: { y: 54, wing: -128, wk: 0.95, lean: -10 }, attack: { y: 62, wing: -110, wk: 1, lean: 22, dust: 1 }, die0: { y: 58, wing: 150, wk: 0.9, lean: -24 },
+  };
+  function drawMoth(fr) {
+    const c = mk(2.4);
+    const body = '#e8e2f8';
+    const wingC = '#9a8ad8';
+    const P = MOTH[fr];
+    const wing = (root, a, k, far) => {
+      const L = 34 * k;
+      const d = `M0 0C${n(L * 0.3)} -12 ${n(L * 0.9)} -15 ${n(L)} -3C${n(L * 1.02)} 7 ${n(L * 0.7)} 14 ${n(L * 0.42)} 13C${n(L * 0.3)} 18 ${n(L * 0.1)} 13 0 5Z`;
+      return g(c.P(d, c.body(sh(wingC, far ? -0.25 : 0), 0.45, -0.4)) +
+        c.Pn(`M${n(L * 0.5)} -6C${n(L * 0.8)} -8 ${n(L * 0.95)} -3 ${n(L * 0.9)} 2C${n(L * 0.75)} 4 ${n(L * 0.55)} 2 ${n(L * 0.5)} -6Z`, '#5a4aa8', far ? 0.5 : 0.7) +
+        stars(c, [[L * 0.62, -2, 2.6 * k], [L * 0.3, 5, 1.8 * k]], far ? sh(STAR, -0.25) : STAR) +
+        inl(c, `M2 1Q${n(L * 0.4)} -4 ${n(L * 0.85)} -4M2 3Q${n(L * 0.3)} 6 ${n(L * 0.4)} 10`, wingC, 1), tr(root, a));
+    };
+    let s = '';
+    if (fr === 'die1' || fr === 'die2') {
+      if (fr === 'die1') {
+        s += g(wing([0, 0], 110, 0.8, true) + wing([0, 0], 70, 0.8, false) +
+          c.E(0, 0, 9, 6, c.body(body, 0.45, -0.4)) + c.E(9, -2, 4.6, 4.6, c.body(body, 0.4, -0.4)) + c.L('M11 -3l1 1M9 -4l1 1', OL, 1.4), tr([50, 74], 150));
+        s += dust(c, [[40, 60, 1.4], [58, 56, 1.2], [46, 50, 1], [62, 66, 1.3]]);
+      } else {
+        s += stars(c, [[44, 84, 3], [56, 82, 2.4], [50, 76, 2]]) + dust(c, [[38, 80, 1.2], [62, 86, 1], [48, 70, 1], [54, 64, 0.8], [42, 66, 0.8]], '#ffffff', 0.85);
+        s += bloom(c, 50, 82, 10, STAR, 0.35);
+      }
+      return fin(c, s);
+    }
+    const B = [48, P.y];
+    s += g(wing([4, -3], P.wing + 14, P.wk * 0.9, true), tr(B, P.lean || 0));
+    // 몸통(털 무늬 3마디) + 머리 + 깃털 더듬이
+    s += g(
+      c.P('M-13 3C-16 0 -15 -5 -10 -5C-7 -7 -1 -7 2 -5L3 5C-3 8 -9 7 -13 3Z', c.body(sh(body, -0.06), 0.4, -0.42)) +
+      inl(c, 'M-8 -5Q-9 0 -7 6M-3 -6Q-4 0 -2 7', body, 1.1) +
+      c.E(6, -1, 8, 7, c.body(body, 0.45, -0.38)) + c.Pn('M4 -7C8 -8 13 -5 14 0C10 -2 6 -2 3 -1Z', '#ffffff', 0.6) +
+      c.E(14, -3, 5.6, 5.2, c.body(body, 0.45, -0.38)) +
+      c.E(16.4, -4, 2, 2.2, '#2a2246', ' stroke="none"') + spec(15.8, -4.8, 0.7) +
+      c.L('M15 -8C16 -14 20 -18 25 -18M16 -8C19 -12 24 -13 28 -11', '#8a7ab8', 1.4) +
+      c.L('M18 -15l-1 -2M21 -17l0 -2M24 -18l1 -2M22 -12l1 -2M25 -12l2 -1', '#c8bce8', 1) +
+      c.L('M6 6l-2 4M10 5l1 4', '#8a7ab8', 1.4), tr(B, P.lean || 0));
+    s += g(wing([2, -2], P.wing, P.wk, false), tr(B, P.lean || 0));
+    if (P.dust || fr === 'walk0' || fr === 'walk2') s += dust(c, [[36, P.y + 10, 1.1], [30, P.y + 4, 0.9], [42, P.y + 16, 0.8]]);
+    if (fr === 'attack') s += streaks(c, ['M22 40L36 50', 'M18 52L32 58', 'M24 64L36 64'], STAR, 1.6, 0.7) + dust(c, [[66, 70, 1.4], [72, 64, 1.1], [60, 76, 1.2], [70, 76, 0.9]]);
+    if (fr === 'aim') s += bloom(c, 62, 46, 8, STAR, 0.35);
+    if (fr === 'die0') s += c.L('M60 40l6 -4M64 48l7 0', '#ffffff', 1.6, ' opacity=".8"');
+    return fin(c, s);
+  }
+  D.stardust_moth = (fr) => drawMoth(MOTH[fr] || fr === 'die1' || fr === 'die2' ? fr : 'walk0');
+  D.stardust_moth.frames = true;
+  MOTION.stardust_moth = { gait: 'fly', bob: 0.05, tilt: 4, hover: 0.55, deathFx: 'sparks', deathTime: 0.6 };
+
+  /* =========================================================
+   * 구름 양 — 둥실한 구름 털(흰보라) 속에 남보라 얼굴과 짧은 다리, 금빛 별 뿔.
+   * walk: 종종걸음 / aim: 고개를 숙이고 뒷발 차기 / attack: 박치기(털 뭉치 튐) / 죽음: 털이 흩어져 구름 조각
+   * ========================================================= */
+  const SHEEP = {
+    walk0: { y: 0, legs: [6, -4, -6, 4], head: 0 }, walk1: { y: -1.4, legs: [0, 0, 0, 0], head: 2 },
+    walk2: { y: 0, legs: [-6, 4, 6, -4], head: 0 }, walk3: { y: -1.4, legs: [0, 0, 0, 0], head: 2 },
+    aim: { y: 1, legs: [-4, -6, 2, 4], head: 18, lean: -4 }, attack: { y: 0, legs: [8, 6, -6, -8], head: -6, lean: 10, dx: 6 }, die0: { y: 0, legs: [2, -2, -2, 2], head: -14, lean: -10 },
+  };
+  function drawSheep(fr) {
+    const c = mk(2.6);
+    const wool = '#ece8fb';
+    const face = '#4a4288';
+    const P = SHEEP[fr];
+    const legX = [34, 44, 58, 68];
+    const legG = (i) => {
+      const x = legX[i] + (P.dx || 0) * 0.3;
+      const off = P.legs[i];
+      const far = i === 1 || i === 3;
+      return seg(c, [x, 68 + P.y], [x + off * 0.5, 84], 3.4, 3, c.body(sh(face, far ? -0.25 : 0), 0.35)) +
+        c.P(`M${n(x + off * 0.5 - 3.6)} 84L${n(x + off * 0.5 + 3.6)} 84L${n(x + off * 0.5 + 4)} 88.5L${n(x + off * 0.5 - 4)} 88.5Z`, sh('#2a2450', far ? -0.2 : 0), TH);
+    };
+    const woolBody = (cx, cy, k = 1, op) => c.cloud([[cx - 16 * k, cy + 2, 12 * k], [cx - 4 * k, cy - 8, 14 * k], [cx + 10 * k, cy - 6, 13 * k], [cx + 18 * k, cy + 4, 11 * k], [cx + 4 * k, cy + 8, 14 * k], [cx - 12 * k, cy + 10, 10 * k]], c.body(wool, 0.5, -0.32), op);
+    let s = '';
+    if (fr === 'die1' || fr === 'die2') {
+      if (fr === 'die1') {
+        s += woolBody(40, 62, 0.7) + woolBody(66, 56, 0.55) + c.cloud([[52, 76, 8], [30, 80, 6]], c.body(wool, 0.5, -0.3));
+        s += g(c.E(0, 0, 8, 7, c.body(face, 0.4)) + c.L('M2 -2l3 2M2 2l3 -2', '#ffffff', 1.4) + c.P(starP(-4, -9, 3.6), STAR, TH), tr([58, 80], 70));
+        s += dust(c, [[28, 52, 1.4], [74, 44, 1.2], [60, 40, 1]], '#ffffff');
+      } else {
+        s += c.cloud([[36, 84, 7], [50, 82, 9], [64, 85, 6]], c.body(wool, 0.5, -0.3), 0.85) + stars(c, [[52, 72, 3], [40, 76, 2]]);
+        s += dust(c, [[30, 70, 1.2], [70, 66, 1], [58, 60, 0.8]], '#ffffff', 0.8);
+      }
+      return fin(c, s, 1.02);
+    }
+    const lean = P.lean || 0;
+    const body = legG(1) + legG(3) + legG(0) + legG(2) +
+      woolBody(50 + (P.dx || 0), 58 + P.y) +
+      c.Pn(`M${n(58 + (P.dx || 0))} ${n(50 + P.y)}C${n(70 + (P.dx || 0))} ${n(52 + P.y)} ${n(72 + (P.dx || 0))} ${n(66 + P.y)} ${n(62 + (P.dx || 0))} ${n(72 + P.y)}C${n(66 + (P.dx || 0))} ${n(62 + P.y)} ${n(64 + (P.dx || 0))} ${n(56 + P.y)} ${n(58 + (P.dx || 0))} ${n(50 + P.y)}Z`, '#b8b0e0', 0.5) +
+      stars(c, [[40 + (P.dx || 0), 52 + P.y, 2], [52 + (P.dx || 0), 48 + P.y, 1.6]]);
+    const head = g(
+      c.P('M-4 -8C4 -12 13 -8 14 0C14 7 9 11 3 11C-3 11 -7 6 -7 0Z', c.body(face, 0.42, -0.4)) +
+      c.cloud([[-4, -9, 5], [3, -12, 5.4], [9, -10, 4.6]], c.body(wool, 0.5, -0.3)) +
+      c.P('M-2 -12C-6 -18 -2 -22 2 -20C0 -18 0 -15 1 -12Z', c.body(STAR, 0.4), TH) + c.P('M8 -12C10 -18 15 -19 16 -15C13 -15 11 -13 10 -11Z', c.body(STAR, 0.4), TH) +
+      (fr === 'aim' ? c.L('M4 -2l4 2M10 -2l-3 2', '#ffffff', 1.6) : c.E(5, -1, 1.8, 2.2, '#ffffff', ' stroke="none"') + c.E(10.6, -1.4, 1.5, 2, '#ffffff', ' stroke="none"') + c.E(5.4, -0.6, 1, 1.3, '#1a1438', ' stroke="none"') + c.E(10.9, -1, 0.9, 1.2, '#1a1438', ' stroke="none"')) +
+      c.L('M8 6Q10 7.4 12 6', '#ffffff', 1.1) + c.E(-3, 0, 2.6, 4, c.body(sh(face, -0.15), 0.3), TH), tr([72 + (P.dx || 0), 52 + P.y], P.head));
+    s += g(body + head, `rotate(${lean} 50 88)`);
+    if (fr === 'attack') s += c.cloud([[88, 50, 5], [92, 58, 4], [84, 60, 3.6]], c.body(wool, 0.5, -0.3), 0.9) + streaks(c, ['M22 50L32 52', 'M20 62L30 62'], '#ffffff', 1.6, 0.7);
+    if (fr === 'aim') s += motes(c, [[26, 86, 1.4], [20, 84, 1.1]], '#d8d0f0', 0.9);
+    if (fr === 'die0') s += c.cloud([[84, 36, 4], [88, 44, 3]], c.body(wool, 0.5, -0.3), 0.8);
+    return fin(c, s, 1.02);
+  }
+  D.cloud_sheep = (fr) => drawSheep(SHEEP[fr] || fr === 'die1' || fr === 'die2' ? fr : 'walk0');
+  D.cloud_sheep.frames = true;
+  MOTION.cloud_sheep = { gait: 'stomp', bob: 0.03, tilt: 2, squash: 0.04, deathFx: 'mist', deathTime: 0.8 };
+
+  /* =========================================================
+   * 성운 해파리 — 남보라·분홍·청록이 섞인 성운 갓, 속에 별 몇 개, 늘어진 빛 촉수.
+   * walk: 갓이 오므렸다 펴짐(4장) / aim: 촉수가 빛남 / attack: 촉수로 찌름(번개 별빛) / 죽음: 터지며 작은 해파리 셋의 빛
+   * ========================================================= */
+  const JELLY = {
+    walk0: { y: 46, sq: 1, t: 0 }, walk1: { y: 44, sq: 0.9, t: 1 }, walk2: { y: 42, sq: 0.82, t: 2 }, walk3: { y: 44, sq: 0.9, t: 1 },
+    aim: { y: 44, sq: 1.05, t: 0, glow: 1 }, attack: { y: 46, sq: 0.95, t: 3, glow: 2 }, die0: { y: 46, sq: 1.15, t: 0 },
+  };
+  function drawJelly(fr) {
+    const c = mk(2.4);
+    const P = JELLY[fr];
+    const nebula = c.rad([[0, '#ffd8f4'], [0.35, '#c88ae8'], [0.7, '#6a5ac8'], [1, '#3a3498']], 0.35, 0.3, 0.8);
+    const tent = (x0, wave, len, col) => {
+      const pts = bez([x0, P.y + 6], [x0 + wave, P.y + 6 + len * 0.5], [x0 - wave * 0.5, P.y + 6 + len], 8);
+      return ribbon(c, pts, 1.8, 0.6, col, TH);
+    };
+    let s = '';
+    if (fr === 'die1' || fr === 'die2') {
+      if (fr === 'die1') {
+        s += bloom(c, 50, 50, 22, '#c88ae8', 0.45) + c.P('M30 52C30 36 70 36 70 52L64 46L58 54L50 44L42 54L36 46Z', nebula);
+        for (const [x, y] of [[26, 34], [74, 32], [50, 22]]) s += c.E(x, y, 5, 3.6, nebula) + c.L(`M${x - 2} ${y + 3}l-1 4M${x + 2} ${y + 3}l1 4`, '#c8a8f0', 1.2);
+        s += stars(c, [[40, 60, 2.6], [60, 64, 2.2], [50, 70, 1.8]]);
+      } else {
+        s += stars(c, [[46, 82, 2.6], [56, 78, 2]]) + dust(c, [[40, 70, 1.2], [60, 66, 1], [50, 58, 0.9]], '#e8c8ff', 0.85) + bloom(c, 50, 78, 8, '#c88ae8', 0.3);
+      }
+      return fin(c, s);
+    }
+    const wv = [3, -2, -4, 5][P.t];
+    const tc = P.glow ? '#fff0ff' : '#c8a8f0';
+    s += tent(38, wv, 30, sh('#a888e0', -0.15)) + tent(46, -wv, 36, '#b898e8') + tent(54, wv, 34, '#b898e8') + tent(62, -wv * 0.8, 28, sh('#a888e0', -0.15));
+    s += c.L(`M42 ${P.y + 8}q${wv} 10 0 22M58 ${P.y + 8}q${-wv} 10 0 22`, tc, 1.2, ` opacity="${P.glow ? 1 : 0.7}"`);
+    if (P.glow) s += bloom(c, 50, P.y + 26, 14, '#ffd8f4', P.glow > 1 ? 0.6 : 0.4);
+    const w = 22 / P.sq;
+    const h = 20 * P.sq;
+    s += c.P(`M${50 - w} ${P.y + 6}C${50 - w} ${P.y - h} ${50 + w} ${P.y - h} ${50 + w} ${P.y + 6}L${50 + w * 0.6} ${P.y + 2}L${50 + w * 0.2} ${P.y + 8}L${50 - w * 0.2} ${P.y + 2}L${50 - w * 0.6} ${P.y + 8}Z`, nebula);
+    s += c.Pn(`M${50 - w * 0.7} ${P.y - h * 0.4}C${50 - w * 0.5} ${P.y - h * 0.8} ${50 - w * 0.1} ${P.y - h * 0.85} ${50 + w * 0.1} ${P.y - h * 0.8}`, 'none') + c.shine(50 - w * 0.45, P.y - h * 0.5, 4, 7, 0.5, -30);
+    s += stars(c, [[46, P.y - h * 0.3, 2.4], [56, P.y - h * 0.5, 1.8], [52, P.y - 1, 1.5]]);
+    s += c.E(44, P.y - 2, 1.8, 2.2, '#ffffff', ' stroke="none"') + c.E(52, P.y - 3, 1.6, 2, '#ffffff', ' stroke="none"') + c.E(44.4, P.y - 1.6, 0.9, 1.2, '#2a1a48', ' stroke="none"') + c.E(52.3, P.y - 2.6, 0.8, 1.1, '#2a1a48', ' stroke="none"');
+    if (fr === 'attack') s += c.L(`M60 ${P.y + 20}L70 ${P.y + 28}L66 ${P.y + 30}L78 ${P.y + 40}`, '#fff0ff', 2) + stars(c, [[80, P.y + 42, 3]]);
+    if (fr === 'die0') s += c.L('M26 30l-6 -4M74 30l6 -4', '#ffffff', 1.6, ' opacity=".8"');
+    return fin(c, s);
+  }
+  D.nebula_jelly = (fr) => drawJelly(JELLY[fr] || fr === 'die1' || fr === 'die2' ? fr : 'walk0');
+  D.nebula_jelly.frames = true;
+  MOTION.nebula_jelly = { gait: 'float', bob: 0.05, tilt: 0, sway: 0.02, squash: 0.06, hover: 0.45, deathFx: 'sparks', deathTime: 0.7 };
+
+  /* =========================================================
+   * 유성 골렘 — 검은 운석 바위 몸, 틈마다 주황 불빛, 등에 꼬리 불꽃. 머리는 작은 운석과 빛나는 눈 틈.
+   * walk: 쿵쿵 / aim: 불타는 주먹을 높이 / attack: 내리찍기(불꽃 고리) / 죽음: 금이 번져 빛남 → 터짐 → 잔해와 불씨
+   * ========================================================= */
+  const MGOLEM = {
+    walk0: { p: [48, 64], lean: 3, nf: [60, 0, 0], ff: [36, 0, 0], nh: [30, 74], fh: [72, 68] },
+    walk1: { p: [48, 62], lean: 0, nf: [50, 0, 0], ff: [48, 8, 6], nh: [33, 72], fh: [70, 70] },
+    walk2: { p: [48, 64], lean: -3, nf: [36, 0, 0], ff: [60, 0, 0], nh: [38, 74], fh: [66, 68] },
+    walk3: { p: [48, 62], lean: 0, nf: [50, 8, 6], ff: [48, 0, 0], nh: [34, 72], fh: [70, 70] },
+    aim: { p: [46, 64], lean: -10, nf: [34, 0, 0], ff: [62, 0, 0], nh: [26, 22], fh: [74, 58] },
+    attack: { p: [46, 66], lean: 16, nf: [30, 1, 12], ff: [60, 0, 0], nh: [74, 80], fh: [64, 72] },
+    die0: { p: [46, 64], lean: -12, nf: [38, 0, 0], ff: [58, 0, 0], nh: [28, 56], fh: [70, 72] },
+  };
+  function drawMGolem(fr) {
+    const c = mk(2.7);
+    const rock = '#4a4058';
+    const lava = '#ff8a3d';
+    const P = MGOLEM[fr];
+    const rockF = (amt = 0) => c.body(sh(rock, amt), 0.38, -0.4);
+    const crack = (d, w = 1.8) => `<path d="${d}" fill="none" stroke="${lava}" stroke-width="${w + 2.4}" opacity=".5" ${c.soft()}/>` + c.L(d, '#ffd28a', w);
+    const fistR = (p, far) => g(c.P('M-8 -7L5 -8L10 -2L9 7L-4 8L-9 2Z', rockF(far ? -0.2 : 0)) + crack('M-2 -6L0 0L-3 5', 1.2) + c.Pn('M-8 3L9 4L9 7L-4 8Z', SHADE, 0.3), tr(p));
+    const limbR = (a, b, r1, r2, far) => seg(c, a, b, r1, r2, rockF(far ? -0.22 : -0.05)) + crack(`M${pt(mid(a, b, 0.3))}L${pt(mid(a, b, 0.6))}`, 1);
+    const armR = (s0, hand, far) => {
+      const el = ik(s0, hand, 14, 14, fr === 'aim' && !far ? [-0.6, -1] : [-0.7, 0.7]);
+      return limbR(s0, el, 6, 5.4, far) + limbR(el, hand, 5.4, 5, far) + fistR(hand, far);
+    };
+    const legR = (hip, foot, far) => {
+      const ankle = [foot[0], groundAnkle(5) - foot[1]];
+      const kn = ik(hip, ankle, 11, 11, [1, -0.2]);
+      return limbR(hip, kn, 7, 6, far) + limbR(kn, ankle, 6, 5.6, far) + boot(c, ankle, 15, 5, foot[2] || 0, rockF(far ? -0.3 : -0.15));
+    };
+    const torso = (bright = 0) => c.P('M-20 -2C-24 -14 -20 -32 -6 -38C6 -42 20 -36 22 -22C24 -12 22 -4 18 0Z', rockF(0)) +
+      c.Pn('M8 -38C18 -34 24 -22 22 -10C21 -5 20 -2 18 0L8 -2C14 -14 14 -28 8 -38Z', SHADE, 0.28) +
+      crack('M-12 -30L-6 -22L-12 -14L-6 -6M8 -32L4 -22L10 -14', bright ? 2.6 : 1.8) +
+      `<circle cx="0" cy="-20" r="${bright ? 10 : 7}" fill="${lava}" opacity=".45" stroke="none" ${c.soft()}/>` + c.E(0, -20, 3.4, 3.4, '#ffe0a0', ' stroke="none"') +
+      rimL(c, 'M16 -30C20 -22 20 -12 18 -4', rock, 1.2) + spec(-12, -32, 1);
+    const headR = () => c.P('M-7 2C-9 -6 -4 -11 2 -11C8 -11 11 -6 10 1L9 4H-6Z', rockF(0.05)) + c.P('M0 -3H9V0H0Z', '#1a1020', TH) +
+      `<path d="M1 -1.5H9" stroke="${lava}" stroke-width="4" opacity=".7" ${c.soft()}/>` + c.L('M2 -1.5H8.6', '#ffe0a0', 1.6);
+    // 등의 불꽃(운석 꼬리): 어깨 뒤에서 위로 일렁이는 불길 세 갈래
+    const tail = (k = 1) => `<ellipse cx="-12" cy="-40" rx="${n(12 * k)}" ry="${n(10 * k)}" fill="${lava}" opacity=".45" stroke="none" ${c.soft()}/>` +
+      [[-16, -34, -26, -52, 0], [-8, -38, -12, -58, 1], [-20, -28, -34, -40, 2]].map(([x0, y0, x1, y1, i]) => {
+        const w = (i === 1 ? 6 : 4.6) * k;
+        return c.P(`M${x0 - w} ${y0}C${x0 - w} ${y0 - 8} ${x1 - 2} ${y1 + 6} ${x1} ${y1}C${x1 + 3} ${y1 + 8} ${x0 + w} ${y0 - 6} ${x0 + w} ${y0}Z`, c.body('#ffb03a', 0.45), ' stroke="none"') +
+          c.Pn(`M${x0 - w * 0.4} ${y0}C${x0 - w * 0.4} ${y0 - 6} ${x1} ${y1 + 9} ${x1 + 0.6} ${y1 + 5}C${x1 + 2} ${y1 + 10} ${x0 + w * 0.4} ${y0 - 4} ${x0 + w * 0.4} ${y0}Z`, '#fff0b0', 0.9);
+      }).join('');
+    let s = '';
+    if (fr === 'die1' || fr === 'die2') {
+      if (fr === 'die1') {
+        s += bloom(c, 50, 56, 30, lava, 0.55) + `<circle cx="50" cy="56" r="34" fill="none" stroke="#ffd28a" stroke-width="2.4" opacity=".7"/>`;
+        s += g(c.P('M-14 -10L0 -20L14 -8L10 8L-10 10Z', rockF(0)) + crack('M-6 -10L2 -2L-4 6', 2), tr([34, 52], -30)) + g(c.P('M-12 -8L6 -14L14 2L0 12L-12 6Z', rockF(-0.1)) + crack('M0 -8L4 2', 2), tr([68, 46], 24));
+        s += g(c.P('M-8 -6L8 -8L10 6L-6 8Z', rockF(-0.15)), tr([50, 76], 10)) + dust(c, [[26, 40, 1.8], [76, 30, 1.6], [60, 72, 1.4], [38, 74, 1.4]], '#ffb03a');
+      } else {
+        s += c.P('M24 88.5L28 80L38 78L42 88.5Z', rockF(-0.1)) + c.P('M40 88.5L46 76L58 74L62 88.5Z', rockF(0)) + c.P('M60 88.5L64 80L74 82L76 88.5Z', rockF(-0.15));
+        s += crack('M44 82L50 78L56 80', 1.4) + bloom(c, 50, 84, 12, lava, 0.35) + dust(c, [[40, 70, 1.2], [58, 66, 1], [50, 60, 0.9]], '#ffb03a', 0.85);
+      }
+      return fin(c, s, 1.04);
+    }
+    const B = frameOf(P.p[0], P.p[1], P.lean);
+    const nSh = B.p(-15, -28);
+    const fSh = B.p(14, -30);
+    s += g(tail(fr === 'attack' ? 1.3 : 1), B.t);
+    s += armR(fSh, P.fh, true);
+    s += legR(B.p(8, -3), P.ff, true) + legR(B.p(-8, -2), P.nf, false);
+    s += g(torso(fr === 'die0' || fr === 'aim' ? 1 : 0) + g(headR(), tr([4, -40])), B.t);
+    s += armR(nSh, P.nh, false);
+    if (fr === 'aim') s += bloom(c, P.nh[0], P.nh[1], 12, lava, 0.5);
+    if (fr === 'attack') {
+      const x = P.nh[0] + 4;
+      s = `<ellipse cx="${x}" cy="88" rx="22" ry="5" fill="none" stroke="${lava}" stroke-width="2.4" opacity=".75"/><ellipse cx="${x}" cy="88" rx="12" ry="3" fill="none" stroke="#ffe0a0" stroke-width="1.8"/>` + s;
+      s += dust(c, [[x - 14, 74, 1.6], [x + 12, 70, 1.4], [x + 4, 64, 1.2]], '#ffb03a');
+    }
+    if (fr === 'die0') s += crack('M38 40L44 48M58 36L62 44', 2);
+    return fin(c, s, 1.04);
+  }
+  D.meteor_golem = (fr) => drawMGolem(MGOLEM[fr] || fr === 'die1' || fr === 'die2' ? fr : 'walk0');
+  D.meteor_golem.frames = true;
+  MOTION.meteor_golem = { gait: 'stomp', bob: 0.02, tilt: 4, squash: 0.02, deathFx: 'shatter', deathTime: 1.0 };
+
+  /* =========================================================
+   * 사람형 조립기 — 골반 p · 기울기 lean · 발 nf/ff [x, 들림, 기울기] · 손 nh/fh · 머리 기울기 head
+   * o: { leg, arm(관절 굵기·색), torso(c,B,P) 몸 좌표 그림, head(c,P), back(c,B,P) 뒤(망토), robe(c,B,P) 다리 위 옷자락,
+   *      itemN(c,hand,P) 가까운 손 물건(손 아래), itemF, front(c,P) 맨 앞 효과 }
+   * 몸 좌표: 골반 (0,0), 위가 −. 어깨 (−6,−22)·(6,−23), 목 (2,−26)
+   * ========================================================= */
+  function figure(c, P, o) {
+    const B = frameOf(P.p[0], P.p[1], P.lean);
+    const nSh = B.p(-6, -22);
+    const fSh = B.p(6, -23);
+    let s = '';
+    if (o.back) s += o.back(c, B, P);
+    if (o.itemF) s += o.itemF(c, P.fh, P, true);
+    s += X.arm(c, fSh, P.fh, Object.assign({ pref: [-0.3, 1] }, o.arm, { upper: o.arm.farUpper || o.arm.upper, fore: o.arm.farFore || o.arm.fore })).svg;
+    if (o.handF) s += o.handF(c, P.fh, P);
+    if (!o.noLegs) {
+      s += X.leg(c, B.p(4, -1), P.ff, Object.assign({}, o.leg, { thigh: o.leg.farThigh || o.leg.thigh, shin: o.leg.farShin || o.leg.shin, boot: o.leg.farBoot || o.leg.boot })).svg;
+      s += X.leg(c, B.p(-4, 0), P.nf, o.leg).svg;
+    }
+    if (o.robe) s += o.robe(c, B, P);
+    s += g(o.torso(c, B, P) + g(o.head(c, P), tr([2, -30], P.head || 0)), B.t);
+    s += segN(c, [nSh[0] + 2, nSh[1] + 3], [nSh[0] + 5, nSh[1] + 14], 3, 2, SHADE, 0.16);
+    s += X.arm(c, nSh, P.nh, Object.assign({ pref: [-0.3, 1] }, o.arm)).svg;
+    if (o.itemN) s += o.itemN(c, P.nh, P, false);
+    if (o.handN) s += o.handN(c, P.nh, P);
+    if (o.front) s += o.front(c, P);
+    return s;
+  }
+  const hand = (c, p, col, r = 2.6) => c.E(n(p[0]), n(p[1]), r, r, c.body(col, 0.4), TH);
+  const WALK_FIG = {
+    walk0: { p: [48, 64], lean: 4, nf: [58, 0, -8], ff: [38, 0, 14], head: 0 },
+    walk1: { p: [48, 62.5], lean: 2, nf: [50, 0, 0], ff: [46, 7, 10], head: 0 },
+    walk2: { p: [48, 64], lean: 4, nf: [38, 0, 14], ff: [58, 0, -8], head: 0 },
+    walk3: { p: [48, 62.5], lean: 2, nf: [46, 7, 10], ff: [50, 0, 0], head: 0 },
+  };
+  const figPoses = (extra) => {
+    const out = {};
+    for (const k of ['walk0', 'walk1', 'walk2', 'walk3', 'aim', 'attack', 'die0']) out[k] = Object.assign({}, WALK_FIG[k] || WALK_FIG.walk1, extra[k] || {});
+    return out;
+  };
+
+  /* =========================================================
+   * 혜성 기사 — 은청색 판갑, 투구 뒤로 흐르는 혜성 꼬리 깃(금빛·흰빛), 별 끝 기마창.
+   * walk: 행진 / aim: 창을 겨드랑이에 끼고 몸을 낮춤 / attack: 돌진 찌르기(별빛 꼬리) / 죽음: 휘청 → 무릎 → 갑옷 더미와 꺼진 꼬리
+   * ========================================================= */
+  const KNIGHT = figPoses({
+    walk0: { nh: [56, 54], fh: [40, 58], lance: -14 }, walk1: { nh: [56, 53], fh: [42, 57], lance: -16 },
+    walk2: { nh: [56, 54], fh: [40, 58], lance: -14 }, walk3: { nh: [56, 53], fh: [42, 57], lance: -16 },
+    aim: { p: [46, 66], lean: -6, nf: [38, 0, 6], ff: [60, 0, 0], nh: [48, 52], fh: [40, 56], lance: 0, head: -4 },
+    attack: { p: [52, 64], lean: 18, nf: [68, 0, -10], ff: [36, 0, 18], nh: [66, 48], fh: [56, 52], lance: 0, head: 8 },
+    die0: { p: [46, 64], lean: -16, nf: [40, 0, 0], ff: [56, 0, 0], nh: [36, 52], fh: [62, 62], lance: -70, head: -20 },
+  });
+  function drawKnight(fr) {
+    const c = mk(2.5);
+    const steel = '#a8b4d8';
+    const gold = '#e8c070';
+    const P = KNIGHT[fr];
+    // 혜성 꼬리 깃: 투구 꼭대기에서 뒤로 낮게 흐름
+    const plume = (k = 1) => c.P(`M0 -9C-6 -12 -12 -10 ${n(-20 * k)} ${n(-8 - 2 * k)}C-14 -4 -8 -4 -2 -5Z`, c.lin([[0, '#ffffff'], [0.45, STAR], [1, '#ffb060']], 'h'), TH) +
+      c.Pn(`M-1 -8C-6 -10 -11 -9 ${n(-16 * k)} ${n(-8 - 1.6 * k)}C-11 -6 -6 -6 -1 -6Z`, '#ffffff', 0.8);
+    const lance = (hp, a) => g(seg(c, [-12, 0], [28, 0], 1.6, 1.3, c.body('#8a7ab0', 0.35)) + c.P('M28 -3L37 0L28 3Z', c.body('#e8eef8', 0.45), TH) +
+      c.P(starP(39, 0, 3.4), STAR, TH) + c.P('M6 -4.4L11 -4.4L13 0L11 4.4L6 4.4Z', c.body(gold, 0.4), TH), tr(hp, a));
+    let s = '';
+    if (fr === 'die1' || fr === 'die2') {
+      if (fr === 'die1') {
+        s += figure(c, Object.assign({}, KNIGHT.die0, { p: [46, 72], lean: -30, nf: [40, 0, 30], ff: [58, 0, 20], nh: [32, 70], fh: [62, 74], head: -30 }), knightO(c, steel, gold, plume, 0.6));
+        s += g(lance([0, 0], 0), tr([60, 86], -4));
+      } else {
+        s += c.P('M28 88.5L32 80L44 78L48 88.5Z', c.body(steel, 0.4)) + c.P('M46 88.5L50 78L62 76L66 88.5Z', c.body(sh(steel, -0.1), 0.4)) + g(c.P('M-8 4C-8 -4 -4 -8 2 -8C8 -8 10 -4 10 4Z', c.body(steel, 0.42)) + c.L('M0 -2H9', '#1a1438', 2), tr([72, 84], 20));
+        s += g(lance([0, 0], 0), tr([22, 87], 0)) + dust(c, [[40, 70, 1.2], [56, 66, 1], [48, 60, 0.8]]);
+      }
+      return fin(c, s);
+    }
+    const O = knightO(c, steel, gold, plume, fr === 'attack' ? 1.4 : 1);
+    O.itemN = (cc, hp) => lance(hp, P.lance);
+    s += figure(c, P, O);
+    if (fr === 'attack') s += streaks(c, ['M14 44L30 46', 'M10 54L28 54', 'M16 64L30 62'], STAR, 1.8, 0.7) + bloom(c, 90, 48, 8, STAR, 0.5);
+    if (fr === 'aim') s += bloom(c, 92, 52, 6, STAR, 0.4);
+    if (fr === 'die0') s += c.L('M66 30l6 -4M70 38l7 0', '#ffffff', 1.6, ' opacity=".8"');
+    return fin(c, s);
+  }
+  function knightO(c, steel, gold, plume, pk) {
+    const plate = c.body(steel, 0.45, -0.42);
+    return {
+      leg: { h: 5, l1: 12, l2: 12, r1: 4, r2: 3.4, r3: 3, thigh: plate, shin: plate, boot: c.body(sh(steel, -0.1), 0.4), farThigh: c.body(sh(steel, -0.2), 0.4), farShin: c.body(sh(steel, -0.2), 0.4), farBoot: c.body(sh(steel, -0.3), 0.4), len: 13, plate: true },
+      arm: { l1: 10, l2: 10, r1: 3.6, r2: 3, r3: 2.6, upper: plate, fore: plate, farUpper: c.body(sh(steel, -0.22), 0.4), farFore: c.body(sh(steel, -0.22), 0.4) },
+      torso: () => c.P('M-9 0C-11 -8 -10 -18 -6 -25L8 -26C11 -18 11 -8 9 0Z', plate) + c.Pn('M3 -26L8 -26C11 -18 11 -8 9 0L4 0C6 -10 6 -18 3 -26Z', SHADE, 0.22) +
+        c.L('M-7 -12H8M-8 -6H8', sh(steel, -0.4), 1.2) + c.P(starP(0, -18, 4), c.body(gold, 0.4), TH) + c.P('M-10 -2H10V3H-10Z', c.body(gold, 0.4), TH) + spec(-5, -22, 0.9),
+      head: () => g(plume(pk), 'translate(-1 -1)') + c.P('M-7 6C-8 -3 -4 -9 2 -9C8 -9 10 -4 10 3L10 7H-7Z', c.body(steel, 0.46, -0.4)) +
+        c.P('M1 -1H10V3H1Z', '#1a1438', TH) + `<path d="M2 1H9.6" stroke="${STAR}" stroke-width="4" opacity=".6" ${c.soft()}/>` + c.L('M2.4 1H9.4', '#fff8e0', 1.4) +
+        c.L('M-5 -4C-2 -7 2 -7.6 6 -6.6', '#ffffff', 1.2, ' opacity=".7"'),
+      handN: (cc, p) => hand(cc, p, steel), handF: (cc, p) => hand(cc, p, sh(steel, -0.2)),
+    };
+  }
+  D.comet_knight = (fr) => drawKnight(KNIGHT[fr] || fr === 'die1' || fr === 'die2' ? fr : 'walk0');
+  D.comet_knight.frames = true;
+  MOTION.comet_knight = { gait: 'march', bob: 0.02, tilt: 1.5, deathFx: 'sparks', deathTime: 0.9 };
+
+  /* =========================================================
+   * 그림자 별지기 — 남색 두건 망토(별 무늬), 그늘진 얼굴에 빛나는 두 눈, 놋쇠 망원경.
+   * walk: 옷자락이 흔들림 / aim: 망원경을 눈에 댐(끝이 빛남) / attack: 망원경에서 별빛 화살 / 죽음: 망토가 주저앉아 빈 옷과 망원경
+   * ========================================================= */
+  const GAZER = figPoses({
+    walk0: { nh: [56, 60], fh: [40, 60], scope: -30, hem: 2 }, walk1: { nh: [56, 59], fh: [42, 59], scope: -32, hem: 0 },
+    walk2: { nh: [56, 60], fh: [40, 60], scope: -30, hem: -2 }, walk3: { nh: [56, 59], fh: [42, 59], scope: -32, hem: 0 },
+    aim: { p: [47, 64], lean: -4, nh: [58, 36], fh: [54, 42], scope: -14, head: -6, glow: 1 },
+    attack: { p: [47, 64], lean: -2, nh: [60, 38], fh: [55, 43], scope: -10, head: -4, glow: 2 },
+    die0: { p: [46, 64], lean: -14, nh: [36, 56], fh: [60, 62], scope: 40, head: -18 },
+  });
+  function drawGazer(fr) {
+    const c = mk(2.4);
+    const robe = '#2e2a68';
+    const brass = '#e0b060';
+    const P = GAZER[fr];
+    const scope = (hp, a, glow) => g(c.P('M-4 -2.6H18V2.6H-4Z', c.body(brass, 0.4), TH) + c.P('M18 -3.6H24V3.6H18Z', c.body(brass, 0.45), TH) + c.L('M4 -2.6V2.6M11 -2.6V2.6', sh(brass, -0.4), 1) +
+      (glow ? bloom(c, 25, 0, glow > 1 ? 9 : 6, STAR, 0.7) + c.E(24.6, 0, 2.4, 3, '#fff8e0', ' stroke="none"') : ''), tr(hp, a));
+    const hood = () => c.P('M-9 6C-12 -4 -6 -12 2 -12C10 -12 13 -5 12 4L9 8C6 2 2 0 -2 1C-5 2 -7 4 -9 6Z', c.body(robe, 0.38, -0.4)) +
+      c.P('M-2 1C2 0 6 2 9 8L8 9C4 6 0 5 -3 6Z', '#141030', TH) + c.Pn('M-3 6C0 3 6 4 9 8L-3 9Z', '#0c0a20', 0.9) +
+      c.E(3, 5, 1.4, 1, STAR, ' stroke="none"') + c.E(7.4, 5.4, 1.2, 0.9, STAR, ' stroke="none"') + bloom(c, 5, 5, 4, STAR, 0.4) +
+      c.P(starP(-6, -6, 2), STAR, ' stroke-width="1"');
+    const robeSkirt = (cc, B, P2) => {
+      const h = P2.hem || 0;
+      const a = B.p(-10, -2);
+      const b = B.p(10, -2);
+      return cc.P(`M${pt(a)}L${pt(b)}C${n(b[0] + 4)} ${n(b[1] + 10)} ${n(64 + h)} 80 ${n(66 + h)} 86Q${n(50 + h)} 89 ${n(32 + h * 0.5)} 86C${n(34)} 78 ${n(a[0] - 4)} ${n(a[1] + 10)} ${pt(a)}Z`, cc.body(robe, 0.36, -0.42)) +
+        stars(cc, [[40 + h * 0.5, 80, 1.8], [56 + h, 76, 1.6]]) + inl(cc, `M${n(46 + h * 0.3)} ${n(B.p(0, 0)[1] + 2)}Q${n(48 + h * 0.6)} 78 ${n(48 + h)} 86`, robe, 1.1);
+    };
+    const O = {
+      leg: { h: 4.6, l1: 12, l2: 11, r1: 3.2, r2: 2.8, r3: 2.4, thigh: c.body('#1e1a44', 0.3), shin: c.body('#1e1a44', 0.3), boot: c.body('#3a2a20', 0.35), len: 12 },
+      arm: { l1: 10, l2: 10, r1: 3.4, r2: 3, r3: 2.6, upper: c.body(robe, 0.38), fore: c.body(robe, 0.38), farUpper: c.body(sh(robe, -0.2), 0.35), farFore: c.body(sh(robe, -0.2), 0.35) },
+      torso: () => c.P('M-10 0C-12 -8 -11 -18 -7 -25L8 -26C12 -18 12 -8 10 0Z', c.body(robe, 0.38, -0.42)) + stars(c, [[-3, -14, 2], [4, -8, 1.6]]) + c.L('M-8 -24C-2 -20 4 -20 9 -25', '#4a46a0', 1.4),
+      head: hood, robe: robeSkirt,
+      itemN: (cc, hp, P2) => scope(hp, P2.scope, P2.glow || 0),
+      handN: (cc, p) => hand(cc, p, '#c8b8a8', 2.4), handF: (cc, p) => hand(cc, p, '#a898a0', 2.4),
+    };
+    let s = '';
+    if (fr === 'die1' || fr === 'die2') {
+      if (fr === 'die1') {
+        s += c.P('M26 88.5C28 74 40 66 52 66C66 66 74 76 74 88.5Z', c.body(robe, 0.36, -0.4)) + g(hood(), tr([52, 66], 30, 0.9)) + stars(c, [[40, 80, 2], [60, 78, 1.6]]);
+        s += g(scope([0, 0], 0, 0), tr([66, 84], 10));
+      } else {
+        s += c.P('M24 88.5C28 82 40 78 52 79C64 78 74 82 76 88.5Z', c.body(robe, 0.36, -0.4)) + g(scope([0, 0], 0, 0), tr([30, 86], -6)) + dust(c, [[48, 70, 1.2], [56, 64, 1], [44, 60, 0.8]]);
+      }
+      return fin(c, s);
+    }
+    s += figure(c, P, O);
+    if (fr === 'attack') s += c.L('M84 30L96 26', STAR, 2.4) + c.P(starP(92, 27, 4), STAR, TH) + streaks(c, ['M80 32L90 30'], '#ffffff', 1.4, 0.8);
+    if (fr === 'die0') s += c.L('M66 30l6 -4M70 38l7 0', '#ffffff', 1.6, ' opacity=".8"');
+    return fin(c, s);
+  }
+  D.umbral_stargazer = (fr) => drawGazer(GAZER[fr] || fr === 'die1' || fr === 'die2' ? fr : 'walk0');
+  D.umbral_stargazer.frames = true;
+  MOTION.umbral_stargazer = { gait: 'shuffle', bob: 0.012, tilt: 0, sway: 0.01, deathFx: 'mist', deathTime: 0.8 };
+
+  /* =========================================================
+   * 일식 사제 — 짙은 자주 사제복과 금빛 테, 머리 뒤 일식 후광(검은 원 + 금빛 코로나), 일식 구슬 지팡이.
+   * walk: 천천히 / aim: 지팡이를 들어 기도 / attack(시전): 후광에서 빛 고리 / 죽음: 후광이 꺼지며 쓰러짐
+   * ========================================================= */
+  const PRIEST = figPoses({
+    walk0: { nh: [58, 62], fh: [40, 58], staff: -92, hem: 2 }, walk1: { nh: [58, 61], fh: [41, 57], staff: -91, hem: 0 },
+    walk2: { nh: [58, 62], fh: [40, 58], staff: -92, hem: -2 }, walk3: { nh: [58, 61], fh: [41, 57], staff: -91, hem: 0 },
+    aim: { p: [47, 64], lean: -4, nh: [62, 46], fh: [40, 44], staff: -96, head: -8, glow: 1, open: 1 },
+    attack: { p: [47, 64], lean: 2, nh: [66, 40], fh: [38, 42], staff: -100, head: -10, glow: 2, open: 1 },
+    die0: { p: [46, 64], lean: -14, nh: [36, 56], fh: [60, 62], staff: -150, head: -18 },
+  });
+  function drawPriest(fr) {
+    const c = mk(2.4);
+    const robe = '#5a2a6a';
+    const gold = '#e8c070';
+    const P = PRIEST[fr];
+    const eclipse = (r, glow) => bloom(c, 0, 0, r * 1.7, gold, glow ? 0.6 : 0.4) + c.E(0, 0, r * 1.25, r * 1.25, 'none', ` stroke="${gold}" stroke-width="2"`) +
+      c.E(0, 0, r, r, c.rad([[0, '#2a1e3a'], [1, '#0e0a18']], 0.4, 0.4, 0.6)) + c.Pn(`M${r * 0.3} ${-r}A${r} ${r} 0 0 1 ${r} ${-r * 0.2}`, 'none');
+    const staff = (hp, a, glow) => g(seg(c, [-12, 0], [26, 0], 1.4, 1.6, c.body('#7a5a3a', 0.35)) + g(eclipse(4.4, glow), 'translate(31 0)'), tr(hp, a));
+    const head = () => g(eclipse(9, (P.glow || 0) > 0), 'translate(-4 -2)') +
+      c.P('M-6 6C-7 -2 -3 -8 3 -8C9 -8 11 -3 10 4L9 8H-5Z', c.body('#d8b8a0', 0.42)) +
+      c.P('M-8 4C-9 -6 -3 -11 3 -11C10 -11 13 -5 12 2L9 -2C6 -6 0 -6 -4 -3Z', c.body(robe, 0.38), TH) +
+      (fr === 'attack' || fr === 'aim' ? c.L('M3 1.6l2 1M7 1.6l2 .6', '#2a1a2a', 1.3) : c.E(4, 2, 1, 1.3, '#2a1a2a', ' stroke="none"') + c.E(8, 2, 0.9, 1.2, '#2a1a2a', ' stroke="none"')) +
+      c.L('M4.6 6Q6.4 6.8 8 6', '#6a3a3a', 1);
+    const O = {
+      leg: { h: 4.6, l1: 12, l2: 11, r1: 3.2, r2: 2.8, r3: 2.4, thigh: c.body('#3a1e44', 0.3), shin: c.body('#3a1e44', 0.3), boot: c.body('#2a1a20', 0.35), len: 12 },
+      arm: { l1: 10, l2: 10, r1: 3.6, r2: 3.2, r3: 2.6, upper: c.body(robe, 0.38), fore: c.body(robe, 0.38), farUpper: c.body(sh(robe, -0.2), 0.35), farFore: c.body(sh(robe, -0.2), 0.35) },
+      torso: () => c.P('M-10 0C-12 -8 -11 -18 -7 -25L8 -26C12 -18 12 -8 10 0Z', c.body(robe, 0.38, -0.42)) + c.P('M-1 -26L2 -26L3 0L-2 0Z', c.body(gold, 0.4), TH) + c.E(0.6, -16, 2.6, 2.6, c.rad([[0, '#2a1e3a'], [1, '#0e0a18']]), ` stroke="${gold}" stroke-width="1.2"`),
+      head, robe: (cc, B, P2) => {
+        const h = P2.hem || 0;
+        const a = B.p(-10, -2);
+        const b = B.p(10, -2);
+        return cc.P(`M${pt(a)}L${pt(b)}C${n(b[0] + 3)} ${n(b[1] + 10)} ${n(63 + h)} 80 ${n(64 + h)} 87Q${n(48 + h)} 89.6 ${n(32 + h * 0.5)} 87C${n(34)} 78 ${n(a[0] - 3)} ${n(a[1] + 10)} ${pt(a)}Z`, cc.body(robe, 0.36, -0.42)) +
+          cc.L(`M${n(64 + h - 1)} 85Q${n(48 + h)} 87.6 ${n(33 + h * 0.5)} 85`, gold, 1.6) + inl(cc, `M${n(48 + h * 0.3)} ${n(B.p(0, 0)[1] + 2)}Q${n(48 + h * 0.6)} 78 ${n(48 + h)} 86`, robe, 1.1);
+      },
+      itemF: (cc, hp, P2) => staff(hp, P2.staff, P2.glow || 0),
+      handN: (cc, p) => hand(cc, p, '#d8b8a0', 2.4), handF: (cc, p) => hand(cc, p, '#b89a88', 2.4),
+    };
+    let s = '';
+    if (fr === 'die1' || fr === 'die2') {
+      if (fr === 'die1') {
+        s += c.P('M24 88.5C26 74 38 68 52 68C66 68 76 76 76 88.5Z', c.body(robe, 0.36, -0.4)) + c.L('M26 86Q50 90 74 86', gold, 1.6) + g(c.E(0, 0, 8, 8, '#1a1428'), tr([66, 70])) + g(staff([0, 0], 0, 0), tr([30, 86], -4));
+      } else {
+        s += c.P('M24 88.5C28 82 40 78 52 79C64 78 74 82 76 88.5Z', c.body(robe, 0.36, -0.4)) + c.L('M28 87Q50 90 72 87', gold, 1.4) + g(staff([0, 0], 0, 0), tr([28, 86], -2)) + dust(c, [[48, 70, 1.2], [56, 64, 1], [44, 60, 0.8]], gold);
+      }
+      return fin(c, s);
+    }
+    s += figure(c, P, O);
+    if (fr === 'attack') s += `<circle cx="50" cy="34" r="22" fill="none" stroke="${gold}" stroke-width="2" opacity=".7"/><circle cx="50" cy="34" r="30" fill="none" stroke="${gold}" stroke-width="1.4" opacity=".45"/>`;
+    if (fr === 'die0') s += c.L('M66 30l6 -4M70 38l7 0', '#ffffff', 1.6, ' opacity=".8"');
+    return fin(c, s);
+  }
+  D.eclipse_priest = (fr) => drawPriest(PRIEST[fr] || fr === 'die1' || fr === 'die2' ? fr : 'walk0');
+  D.eclipse_priest.frames = true;
+  MOTION.eclipse_priest = { gait: 'shuffle', bob: 0.012, tilt: 0, sway: 0.01, deathFx: 'ash', deathTime: 0.9 };
+
+  /* =========================================================
+   * 위상 망령 — 반투명 보랏빛 망령, 다리 대신 일렁이는 꼬리, 긴 손톱. 몸 둘레에 어긋난 잔상(위상).
+   * walk: 둥실 + 잔상 / aim: 손톱을 치켜듦 / attack: 할퀴기 / 죽음: 몸이 조각나 흩어짐
+   * ========================================================= */
+  const WRAITH = {
+    walk0: { y: 0, tail: 4, nh: [60, 56], fh: [40, 58], echo: 4 }, walk1: { y: -2, tail: -2, nh: [60, 54], fh: [40, 56], echo: -3 },
+    walk2: { y: -3, tail: -5, nh: [60, 55], fh: [40, 57], echo: 5 }, walk3: { y: -2, tail: -2, nh: [60, 54], fh: [40, 56], echo: -4 },
+    aim: { y: -2, tail: 2, nh: [54, 30], fh: [40, 34], echo: 0, lean: -8 }, attack: { y: 0, tail: 6, nh: [76, 58], fh: [64, 52], echo: 0, lean: 14 }, die0: { y: 0, tail: 0, nh: [40, 46], fh: [62, 62], echo: 8, lean: -14 },
+  };
+  function drawWraith(fr) {
+    const c = mk(2.3);
+    const P = WRAITH[fr];
+    const ghost = '#b8a8f0';
+    const bodyG = c.lin([[0, '#efe8ff'], [0.5, ghost], [1, '#5a4aa8']], 'v');
+    const bodyD = (dx, op) => {
+      const y = P.y;
+      return `<g transform="translate(${dx} 0)"${op != null ? ` opacity="${op}"` : ''}>` +
+        c.P(`M38 ${40 + y}C36 ${26 + y} 48 ${18 + y} 56 ${20 + y}C64 ${22 + y} 66 ${32 + y} 64 ${44 + y}C64 ${58 + y} ${60 + P.tail} ${70 + y} ${54 + P.tail} 84C${50 + P.tail * 0.5} 76 ${46} ${80 + y * 0.5} ${42 - P.tail * 0.3} 86C${42} 74 ${38} ${60 + y} 38 ${40 + y}Z`, bodyG) +
+        c.Pn(`M58 ${22 + y}C64 ${26 + y} 66 ${36 + y} 63 ${50 + y}L58 ${50 + y}C61 ${38 + y} 61 ${28 + y} 58 ${22 + y}Z`, '#ffffff', 0.4) +
+        c.P(`M48 ${29 + y}L55 ${32 + y}L53 ${35 + y}L48 ${33 + y}Z`, '#1a0e38', ' stroke="none"') + c.P(`M58 ${31 + y}L63 ${28 + y}L63 ${32 + y}L59 ${34 + y}Z`, '#1a0e38', ' stroke="none"') +
+        bloom(c, 52, 32 + y, 3, '#e8d8ff', 0.6) + c.E(52, 32.6 + y, 0.9, 0.9, '#f4ecff', ' stroke="none"') + c.E(61, 31 + y, 0.8, 0.8, '#f4ecff', ' stroke="none"') +
+        c.P(`M49 ${40 + y}L52 ${43 + y}L54 ${40.6 + y}L57 ${44 + y}L59 ${40.4 + y}L62 ${42.6 + y}L62 ${39 + y}C58 ${37 + y} 53 ${37 + y} 49 ${40 + y}Z`, '#1a0e38', ' stroke="none"') + '</g>';
+    };
+    const claw = (p, a, far) => g(seg(c, [0, 0], [8, 0], 2.4, 1.8, c.body(sh(ghost, far ? -0.2 : 0), 0.4)) + c.P('M8 -2L16 -5L9 0L16 2L9 2L14 6L8 2Z', c.body('#efe8ff', 0.45), TH), tr(p, a));
+    let s = '';
+    if (fr === 'die1' || fr === 'die2') {
+      if (fr === 'die1') {
+        for (const [x, y, a, k] of [[38, 44, -30, 0.7], [62, 38, 24, 0.6], [50, 60, 8, 0.8], [30, 64, -50, 0.5], [70, 62, 40, 0.5]]) s += g(c.P('M-8 -6L6 -8L10 4L-4 8Z', bodyG), tr([x, y], a, k));
+        s += bloom(c, 50, 50, 20, ghost, 0.4) + dust(c, [[40, 30, 1.4], [62, 26, 1.2], [56, 72, 1.2]], '#e8d8ff');
+      } else {
+        s += dust(c, [[40, 80, 1.4], [52, 76, 1.2], [60, 82, 1], [46, 68, 1], [56, 62, 0.8]], '#e8d8ff', 0.85) + bloom(c, 50, 78, 10, ghost, 0.3);
+      }
+      return fin(c, s);
+    }
+    const lean = P.lean || 0;
+    let body = '';
+    if (P.echo) body += bodyD(-P.echo * 2, 0.3) + bodyD(P.echo * 1.4, 0.2);
+    body += claw(P.fh, angOf([44, 40 + P.y], P.fh), true) + bodyD(0) + claw(P.nh, angOf([54, 40 + P.y], P.nh), false);
+    s += g(body, `rotate(${lean} 50 80)`);
+    if (fr === 'attack') s += c.Pn('M70 40Q90 52 76 72Q84 54 68 44Z', '#e8d8ff', 0.6) + streaks(c, ['M74 42L86 50', 'M72 52L84 60'], '#ffffff', 1.4, 0.7);
+    if (fr === 'aim') s += bloom(c, 54, 30, 8, '#e8d8ff', 0.4);
+    if (fr === 'walk0' || fr === 'walk2') s += c.L('M28 50l-4 0M30 60l-5 1', '#e8d8ff', 1.4, ' opacity=".6"');
+    return fin(c, s);
+  }
+  D.phase_wraith = (fr) => drawWraith(WRAITH[fr] || fr === 'die1' || fr === 'die2' ? fr : 'walk0');
+  D.phase_wraith.frames = true;
+  MOTION.phase_wraith = { gait: 'float', bob: 0.04, tilt: 0, sway: 0.03, squash: 0.03, deathFx: 'mist', deathTime: 0.8 };
+
+  /* =========================================================
+   * 그믐달 군주(보스) — 그믐달 모양 머리(어두운 달, 금빛 테)와 별 왕관, 밤하늘 망토(별), 검은 달 구슬 홀.
+   * walk: 위엄 있게 / aim: 홀을 높이 들어 별빛을 빨아들임 / attack: 홀을 내리쳐 어둠의 물결 / 죽음: 달에 금 → 무너짐 → 깨진 달과 흩어지는 별
+   * ========================================================= */
+  const MONARCH = figPoses({
+    walk0: { nh: [66, 62], fh: [40, 58], sc: -88, hem: 2 }, walk1: { nh: [66, 61], fh: [42, 57], sc: -87, hem: 0 },
+    walk2: { nh: [66, 62], fh: [40, 58], sc: -88, hem: -2 }, walk3: { nh: [66, 61], fh: [42, 57], sc: -87, hem: 0 },
+    aim: { p: [47, 64], lean: -6, nh: [64, 44], fh: [42, 48], sc: -64, head: -8, glow: 1 },
+    attack: { p: [50, 64], lean: 14, nh: [70, 58], fh: [44, 52], sc: 30, head: 8, glow: 2 },
+    die0: { p: [46, 64], lean: -16, nh: [36, 54], fh: [60, 62], sc: -150, head: -20 },
+  });
+  function drawMonarch(fr) {
+    const c = mk(2.2);
+    const robe = '#2a2058';
+    const gold = '#e8c070';
+    const P = MONARCH[fr];
+    const moonHead = (cr = 0) => c.P('M2 -14C-10 -14 -14 -4 -12 4C-10 12 -2 16 6 14C0 12 -4 6 -4 0C-4 -6 0 -12 2 -14Z', c.body('#4a4278', 0.42, -0.42)) +
+      c.L('M2 -14C-10 -14 -14 -4 -12 4C-10 12 -2 16 6 14', gold, 1.6) +
+      c.E(-6, -1, 1.6, 2, STAR, ' stroke="none"') + bloom(c, -6, -1, 3, STAR, 0.6) +
+      c.P('M-12 -12L-10 -20L-6 -14L-2 -22L2 -14L6 -18L5 -11Z', c.body(gold, 0.45), TH) + c.P(starP(-2, -24, 3), STAR, TH) +
+      (cr ? c.L('M-10 -6L-4 0L-9 6M-2 -10L2 -4', '#fff4d0', 1.6) : '');
+    const scepter = (hp, a, glow) => g(seg(c, [-10, 0], [28, 0], 1.6, 1.8, c.body(gold, 0.4)) + bloom(c, 34, 0, glow ? 12 : 7, '#8a6ae8', glow ? 0.7 : 0.4) +
+      c.E(34, 0, 6, 6, c.rad([[0, '#3a2a68'], [1, '#0e0a24']], 0.4, 0.4, 0.6), ` stroke="${gold}" stroke-width="1.6"`) + c.P('M34 -6A6 6 0 0 1 34 6A4 6 0 0 0 34 -6Z', STAR, ' stroke="none"'), tr(hp, a));
+    const cape = (cc, B, P2) => {
+      const h = P2.hem || 0;
+      const a = B.p(-7, -26);
+      const b = B.p(8, -26);
+      const d = `M${pt(b)}C${n(b[0] + 6)} ${n(b[1] + 16)} ${n(62 + h * 0.5)} 78 ${n(60 + h)} 88Q${n(36 - h)} 92 ${n(14 - h * 1.5)} 86C${n(22 - h)} 70 ${n(a[0] - 10)} ${n(a[1] + 16)} ${pt(a)}Z`;
+      return cc.P(d, cc.lin([[0, '#3a3080'], [1, '#141038']], 'v')) + stars(cc, [[26 - h, 76, 2.2], [34 - h, 62, 1.8], [44, 80, 1.6], [22 - h, 84, 1.4], [40 - h * 0.6, 50, 1.4]]) +
+        cc.L(`M${n(60 + h - 1)} 86Q${n(36 - h)} 90 ${n(16 - h * 1.5)} 84`, gold, 1.4);
+    };
+    const O = {
+      leg: { h: 4.6, l1: 12, l2: 11, r1: 3.6, r2: 3.2, r3: 2.8, thigh: c.body('#1e1844', 0.3), shin: c.body('#1e1844', 0.3), boot: c.body(gold, 0.4), len: 13 },
+      arm: { l1: 10, l2: 10, r1: 3.8, r2: 3.2, r3: 2.8, upper: c.body(robe, 0.38), fore: c.body(robe, 0.38), farUpper: c.body(sh(robe, -0.2), 0.35), farFore: c.body(sh(robe, -0.2), 0.35) },
+      back: cape,
+      torso: () => c.P('M-10 0C-12 -8 -11 -18 -7 -26L8 -27C12 -18 12 -8 10 0Z', c.body(robe, 0.38, -0.42)) + c.P('M-8 -24L9 -25L7 -20L-6 -19Z', c.body(gold, 0.4), TH) + c.P(starP(1, -12, 3.6), STAR, TH) + c.P('M-10 -2H10V3H-10Z', c.body(gold, 0.4), TH),
+      head: () => moonHead(fr === 'die0' ? 1 : 0),
+      itemN: (cc, hp, P2) => scepter(hp, P2.sc, P2.glow || 0),
+      handN: (cc, p) => hand(cc, p, '#6a5a98', 2.8), handF: (cc, p) => hand(cc, p, '#4a3e78', 2.8),
+    };
+    let s = '';
+    if (fr === 'die1' || fr === 'die2') {
+      if (fr === 'die1') {
+        s += cape(c, frameOf(46, 72, -20), { hem: 0 }) + c.P('M30 88.5C32 76 42 70 52 70C64 70 70 78 70 88.5Z', c.body(robe, 0.36, -0.4));
+        s += g(moonHead(1), tr([58, 66], 40, 1.1)) + g(scepter([0, 0], 0, 0), tr([26, 86], -6)) + stars(c, [[30, 40, 3], [70, 34, 2.6], [50, 26, 2.2]]);
+      } else {
+        s += c.P('M20 88.5C26 82 40 80 50 80C62 80 74 82 80 88.5Z', c.lin([[0, '#3a3080'], [1, '#141038']], 'v'));
+        s += g(c.P('M2 -14C-10 -14 -14 -4 -12 4L-4 2C-4 -4 0 -10 2 -14Z', c.body('#4a4278', 0.42)), tr([40, 82], 60)) + g(c.P('M-12 4C-10 12 -2 16 6 14C0 12 -4 6 -4 2Z', c.body('#4a4278', 0.42)), tr([62, 84], -30));
+        s += g(scepter([0, 0], 0, 0), tr([24, 86], -4)) + stars(c, [[46, 66, 2.4], [56, 60, 2], [40, 56, 1.6], [62, 48, 1.4]]) + dust(c, [[50, 40, 1.2], [36, 46, 1]]);
+      }
+      return fin(c, s, 1.02);
+    }
+    s += figure(c, P, O);
+    if (fr === 'aim') s += [[70, 18], [86, 28], [52, 12], [80, 8]].map(([x, y]) => c.L(`M${x} ${y}L${P.nh[0] + 30} ${P.nh[1] - 30}`, STAR, 1.2, ' opacity=".6"')).join('') + stars(c, [[70, 18, 2], [86, 28, 1.6], [52, 12, 1.6]]);
+    if (fr === 'attack') s += `<path d="M60 88Q76 76 96 84" fill="none" stroke="#8a6ae8" stroke-width="6" opacity=".55" ${c.soft()}/>` + c.L('M62 88Q78 78 94 84', '#c8b8ff', 2) + dust(c, [[84, 74, 1.4], [92, 80, 1.2]], '#c8b8ff');
+    if (fr === 'die0') s += c.L('M68 26l6 -4M72 34l7 0', '#ffffff', 1.6, ' opacity=".8"');
+    return fin(c, s, 1.02);
+  }
+  D.gloom_monarch = (fr) => drawMonarch(MONARCH[fr] || fr === 'die1' || fr === 'die2' ? fr : 'walk0');
+  D.gloom_monarch.frames = true;
+  MOTION.gloom_monarch = { gait: 'walk', bob: 0.02, tilt: 1.5, sway: 0.01, deathFx: 'sparks', deathTime: 1.3 };
+
+  RG.art._en6 = { STAR, NIGHT, starP, stars, dust };
 })();
 
 </script>
@@ -26358,7 +27952,7 @@ RG.art.enemy = (() => {
   const f = (v) => Math.round(v * 10) / 10;
 
   /* 칸 종류 (RG.grid.T와 같은 값) */
-  const K = { PATH: 1, OPEN: 2, BUILD: 3, WATER: 4, ROCK: 5, TREE: 6, LAVA: 7, PILLAR: 8, SPAWN: 9, AIR: 10, LANTERN: 11 };
+  const K = { PATH: 1, OPEN: 2, BUILD: 3, WATER: 4, ROCK: 5, TREE: 6, LAVA: 7, PILLAR: 8, SPAWN: 9, AIR: 10, LANTERN: 11, BRIDGE_A: 12, BRIDGE_B: 13, STAR: 14 };
 
   /* ---------------- 지역 색 ---------------- */
   const LAVA = { lava: '#ff8a2a', lavaL: '#ffe28c', lavaD: '#c4401b' };
@@ -26458,6 +28052,25 @@ RG.art.enemy = (() => {
       stoneTints: ['#d8c6ec', '#b4b6dc', '#dccfb6'], stud: '#f4d36e',
       patchW: '#5f5480', patchC: '#33304f', patchX: '#5a4a64',
       skyTop: '#4e4864', skyBot: '#b4a6c6',
+    },
+    6: { // 별울림 첨탑 — 밤하늘 위 구름 섬 · 연한 금빛 별
+      ground: '#cfc8ec', groundL: '#ebe7ff', groundD: '#aea5d6', tuft: '#958bc4', tuftL: '#ffffff',
+      forest: '#b9b0e0', forestD: '#9f95cc', rubble: '#a39bcb', litter: '#9087bd',
+      open: '#e2ddf8', openL: '#f5f3ff', openD: '#c0b9e4', openMark: '#6a60a0',
+      plot: '#a199c8', plotL: '#bdb5e0', plotD: '#776fa6',
+      slab: '#b6aee0', slabL: '#e0daff', slabD: '#8a82bc', slabSide: '#4c447c', slabLine: '#6a62a0', moss: '#ffe7a8', mossL: '#fff6d0',
+      road: '#efe0ae', roadL: '#fff4d2', roadD: '#d3bf88', roadEdge: '#7a6a3a', roadAO: '#4a4288',
+      shoreWet: '#8a82bc', shore: '#f4f2ff', foam: '#ffffff', waterL: '#3c3c90', water: '#26246c', waterD: '#1a1852', waterDeep: '#100e3a',
+      ...LAVA, crust: '#2a2444',
+      cliffTop: '#a69ed0', cliffTopL: '#d6d0f4', cliffTopD: '#7a72aa', cliffFace: '#68609a', cliffFaceD: '#443c72', cliffLine: '#2c2656',
+      stone: '#a098d0', stoneL: '#d2ccee', stoneD: '#645c94', accent: '#ffe7a8',
+      plaza: '#efe6c8', plazaD: '#a8986a', wood: '#8c7cb4', woodD: '#5a4c82',
+      leaf: '#9ad8ff', leafL: '#dcf4ff', leafD: '#5a98c8',
+      flowers: ['#fff6c8', '#ffe7a8', '#c8d8ff', '#ffffff'], mist: '#3a3468',
+      shadow: '#2a2460', shadowOp: 0.3,
+      stoneTints: ['#c8bce8', '#b8c8e8', '#e0d0e8'], stud: '#ffe7a8',
+      patchW: '#f8f6ff', patchC: '#b8b0e0', patchX: '#d6cef4',
+      skyTop: '#16163e', skyBot: '#5e50a0',
     },
   };
   /* 맵마다 다른 점 (설계서 docs/design/maps.md의 지형 메모) */
@@ -26851,6 +28464,16 @@ RG.art.enemy = (() => {
       const agave = [200, 228, 250, 270, 290, 312, 340].map((a, i) => blade(a, i % 2 ? 30 : 38, 6)).join('');
       out.push({ g: `<g transform="translate(0 -2)"><path d="${agave}" fill="${leafG}" ${SO(3)}/><path d="${[228, 270, 312].map((a) => { const r = (a * Math.PI) / 180; return `M0 0L${f(Math.cos(r) * 24)} ${f(Math.sin(r) * 24)}`; }).join('')}" ${strokeA(P.leafL, 2.4, 0.8)}/></g>`, top: 42, half: 38, bush: 1 });
       out.push({ g: coralSyms()[0].g, top: 52, half: 28, coral: 1 });
+    } else if (region === 6) {
+      // 별빛 수정 나무: 수정 기둥 묶음 꼭대기에 별, 둥근 구름 수관의 별꽃 나무, 구름 덤불
+      const cG = def('crys6', (id) => h.lg(id, [[0, '#e8f6ff'], [0.45, P.leaf], [1, P.leafD]], 'h'));
+      const crystal = (x, ht, w, lean) => `<path d="M${x - w} 0L${x - w * 0.8 + lean * 0.4} ${-ht * 0.8}L${x + lean} ${-ht}L${x + w * 0.8 + lean * 0.4} ${-ht * 0.8}L${x + w} 0Z" fill="${cG}" ${SO(3)}/><path d="M${x + lean} ${-ht}L${x + w * 0.8 + lean * 0.4} ${-ht * 0.8}L${x + w} 0H${x + w * 0.2}Z" fill="${P.leafD}" fill-opacity="0.45"/><path d="M${x - w * 0.5} -4L${x - w * 0.4 + lean * 0.3} ${-ht * 0.7}" ${strokeA('#ffffff', 2, 0.8)}/>`;
+      const starTop = (x, y, r) => `<path d="M${x} ${y - r}L${x + r * 0.3} ${y - r * 0.3}L${x + r} ${y}L${x + r * 0.3} ${y + r * 0.3}L${x} ${y + r}L${x - r * 0.3} ${y + r * 0.3}L${x - r} ${y}L${x - r * 0.3} ${y - r * 0.3}Z" fill="${P.accent}" ${SO(1.8)}/>`;
+      out.push({ g: crystal(-12, 46, 8, -4) + crystal(12, 40, 7, 5) + crystal(0, 66, 10, 0) + starTop(0, -72, 7), top: 80, half: 30 });
+      out.push({ g: crystal(-8, 38, 7, -3) + crystal(9, 54, 9, 3) + starTop(12, -60, 6), top: 66, half: 26 });
+      const canopy6 = `<path d="${circ(-14, -40, 16)}${circ(14, -42, 16)}${circ(0, -56, 18)}${circ(0, -36, 16)}" fill="#e6f2ff" ${SO(3.2)}/><path d="${circ(10, -36, 12)}${circ(16, -46, 9)}" fill="#b8d0f0" fill-opacity="0.7"/>`;
+      out.push({ g: `<path d="M-5 2L-3 -30H3L5 2Z" fill="${P.wood}" ${SO(3)}/>${canopy6}<path d="${[[-14, -46], [6, -60], [12, -38], [-4, -38]].map(([a, b]) => `M${a} ${b - 4}l1.4 3l3 1l-3 1l-1.4 3l-1.4 -3l-3 -1l3 -1Z`).join('')}" fill="${P.accent}"/>`, top: 76, half: 32 });
+      out.push({ g: `<path d="M-30 2C-34-10-22-22-8-22C0-32 20-30 24-16C32-12 32 0 26 2Z" fill="#f4f2ff" ${SO(3.2)}/><path d="M6 -25C18-25 24-18 24-12C30-8 31-1 26 1C18 2 10 1 6 -2Z" fill="#cfc8ec"/><path d="M-18-10C-12-16-4-16 2-12" ${strokeA('#ffffff', 3)}/>${starTop(-6, -26, 4.4)}`, top: 32, half: 34, bush: 1 });
     } else {
       // 잿빛 고목: 굵은 밑동 + 맨가지 + 금빛 잎 몇 장
       const wG = def('dwood', (id) => h.lg(id, [[0, h.shade(P.wood, 0.25)], [0.6, P.wood], [1, P.woodD]], 'h'));
@@ -26972,6 +28595,9 @@ RG.art.enemy = (() => {
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         let k = raw(c, r);
+        // 별다리는 바탕에서 구름 사이 밤하늘 틈(물처럼 그림, 다리는 렌더러가 열림·닫힘에 따라 위에 그림), 별빛 건설지는 건설지
+        if (k === K.BRIDGE_A || k === K.BRIDGE_B) k = K.WATER;
+        else if (k === K.STAR) k = K.BUILD;
         if (k === K.AIR) {
           const cnt = {};
           for (const [dc, dr] of N4) {
@@ -27645,6 +29271,11 @@ RG.art.enemy = (() => {
           bk2.add(strokeA('#ffffff', 3, 0.75), `M${f(x - 12)} ${f(y)}q6 -7 12 0q6 7 12 0`);
         } else if (region === 5 && v < 0.35) {
           bk2.add(fillA(P.accent, 0.8), `M${f(x)} ${f(y - 5)}l2 4l4 1l-4 1l-2 4l-2 -4l-4 -1l4 -1Z`);
+        } else if (region === 6) {
+          // 구름 틈 아래 밤하늘의 별
+          if (v < 0.55) bk2.add(fillA(P.accent, 0.9), `M${f(x)} ${f(y - 6)}l2 4.6l4.6 1.4l-4.6 1.4l-2 4.6l-2 -4.6l-4.6 -1.4l4.6 -1.4Z`);
+          bk2.add(fillA('#ffffff', 0.8), circ(c * 100 + 10 + rnd(c, r, 851) * 80, r * 100 + 10 + rnd(c, r, 852) * 80, 1.6));
+          bk2.add(fillA('#c8d8ff', 0.7), circ(c * 100 + 10 + rnd(c, r, 853) * 80, r * 100 + 10 + rnd(c, r, 854) * 80, 1.2));
         }
       }
       s += bk.out() + bk2.out();
@@ -27976,6 +29607,17 @@ RG.art.enemy = (() => {
     if ((map.airSpawns || []).length) {
       const aG = def('air', (id) => h.rg(id, [[0, '#ffffff', 0.32], [0.6, '#e6e0ff', 0.12], [1, '#e6e0ff', 0]], 0.5, 0.5, 0.5));
       for (const a of map.airSpawns) body.push(`<ellipse cx="${a.c * 100 + 50}" cy="${a.r * 100 + 56}" rx="44" ry="36" fill="${aG}"/>`);
+    }
+
+    /* ---- 14b. 6지역 별다리 자리: 옅은 금빛 점선 판자(어느 무리가 열릴지는 렌더러가 위에 그림) — 준비 화면 미리보기에서도 길이 이어져 보이게 ---- */
+    {
+      let bd = '';
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+        const k = raw(c, r);
+        if (k !== K.BRIDGE_A && k !== K.BRIDGE_B) continue;
+        bd += `M${c * 100 + 8} ${r * 100 + 16}h84v68h-84Z`;
+      }
+      if (bd) body.push(`<path d="${bd}" fill="#ffe7a8" fill-opacity="0.16" stroke="#ffe7a8" stroke-opacity="0.75" stroke-width="3" stroke-dasharray="10 8"/>`);
     }
 
     /* ---- 15. 가장자리 살짝 어둡게 ---- */
@@ -28836,6 +30478,43 @@ RG.art.enemy = (() => {
       s += `<path d="${mo}" fill="#ffe28c" fill-opacity="0.85"/>`;
       return s;
     },
+    /* 6 · 별울림 첨탑: 밤하늘, 구름 바다 위 첨탑과 별종, 번갈아 놓이는 별다리, 위로 번지는 그믐달 그림자 */
+    6(x) {
+      const { P, def, rnd, S } = x;
+      const sky = def('sky6', (i) => h.lg(i, [[0, '#0e0e30'], [0.55, '#2a2468'], [1, '#6a58a8']]));
+      const moonG = def('moon6', (i) => h.rg(i, [[0, '#fff8e0'], [0.5, '#ffe7a8', 0.6], [1, '#ffe7a8', 0]], 0.5, 0.5, 0.5));
+      const bellG = def('bell6', (i) => h.rg(i, [[0, '#fff4c8'], [0.5, '#e8c070'], [1, '#9a7030']], 0.35, 0.3, 0.8));
+      const glow = def('glow6', (i) => h.rg(i, [[0, '#fff4c0', 0.9], [0.4, '#ffe7a8', 0.45], [1, '#ffe7a8', 0]], 0.5, 0.5, 0.5));
+      let s = `<rect width="400" height="160" fill="${sky}"/>`;
+      // 별 + 별자리 선
+      let st = '';
+      for (let i = 0; i < 46; i++) st += circ(rnd(i, 11) * 400, rnd(i, 12) * 100, 0.6 + rnd(i, 13) * 1.3);
+      s += `<path d="${st}" fill="#ffffff" fill-opacity="0.85"/>`;
+      s += `<path d="M40 30L66 18L92 26L110 12M300 22L322 36L350 30" ${strokeA('#c8d8ff', 1, 0.5)}/>`;
+      s += `<path d="${[[66, 18], [92, 26], [110, 12], [40, 30], [322, 36], [350, 30], [300, 22]].map(([a, b]) => `M${a} ${b - 4}l1.4 3l3 1l-3 1l-1.4 3l-1.4 -3l-3 -1l3 -1Z`).join('')}" fill="#ffe7a8"/>`;
+      // 그믐달과 갉아먹는 그림자
+      s += `<circle cx="338" cy="44" r="40" fill="${moonG}"/><path d="M338 22A22 22 0 1 0 352 62A17 17 0 1 1 338 22Z" fill="#fff4d0" ${S(2)}/>`;
+      s += `<path d="M300 20C320 30 330 50 320 74C306 64 296 46 300 20Z" fill="#1a1238" fill-opacity="0.55"/>`;
+      // 먼 구름 바다
+      s += `<path d="M0 104C30 96 60 100 90 106C130 96 170 98 210 104C250 94 300 96 340 104C370 98 390 100 400 102V160H0Z" fill="#8a7ec0"/>`;
+      s += cloud(60, 98, 1.1, '#b6aee0', '#8a80c0', 1) + cloud(150, 104, 0.9, '#b6aee0', '#8a80c0', 1) + cloud(330, 100, 1.2, '#b6aee0', '#8a80c0', 1);
+      // 첨탑 (가운데) + 별종
+      s += `<circle cx="200" cy="40" r="34" fill="${glow}"/>`;
+      s += `<path d="M184 120L190 64L196 56H204L210 64L216 120Z" fill="#a69ed0" ${S()}/><path d="M204 56L210 64L216 120H206Z" fill="#6a6298" fill-opacity="0.7"/>`;
+      s += `<path d="M188 64H212M187 80H213M186 96H214" ${strokeA('#6a62a0', 2, 0.8)}/>`;
+      s += `<path d="M190 56L200 34L210 56Z" fill="#c8c0ec" ${S()}/>`;
+      s += `<path d="M200 30C192 30 190 38 190 44C190 48 187 50 186 51H214C213 50 210 48 210 44C210 38 208 30 200 30Z" fill="${bellG}" ${S(2.2)}/><circle cx="200" cy="53" r="2.4" fill="#e8c070" ${S(1.4)}/>`;
+      s += `<path d="M200 22V30" ${strokeA('#ffe7a8', 2)}/>`;
+      // 별다리 둘 (하나는 놓이고 하나는 반짝이며 사라짐)
+      s += `<path d="M40 126Q120 96 186 112" ${strokeA('#ffe7a8', 6, 0.9)}/><path d="M40 126Q120 96 186 112" ${strokeA('#fff8e0', 2)}/>`;
+      s += `<path d="M214 112Q290 96 370 124" ${strokeA('#ffe7a8', 4, 0.35)} stroke-dasharray="6 8"/>`;
+      // 앞 구름 섬과 별 덤불
+      s += `<path d="M-6 160C-6 138 20 128 44 130C60 120 90 124 100 136C120 134 134 146 132 160Z" fill="${P.ground}" ${S()}/><path d="M10 140C30 132 60 132 90 138" ${strokeA('#ffffff', 3, 0.8)}/>`;
+      s += `<path d="M262 160C258 140 280 128 304 132C320 118 360 120 372 136C392 134 410 146 408 160Z" fill="${P.ground}" ${S()}/><path d="M282 140C310 132 344 132 380 140" ${strokeA('#ffffff', 3, 0.8)}/>`;
+      s += `<path d="M150 160C156 146 176 140 200 142C224 140 244 146 250 160Z" fill="${P.groundL}" ${S()}/>`;
+      s += `<path d="${[[60, 132], [84, 128], [320, 128], [350, 126], [196, 140]].map(([a, b]) => `M${a} ${b - 6}l2 4.4l4.4 1.6l-4.4 1.6l-2 4.4l-2 -4.4l-4.4 -1.6l4.4 -1.6Z`).join('')}" fill="#ffe7a8" ${S(1.2)}/>`;
+      return s;
+    },
   };
 
   function regionBanner(regionId) {
@@ -29153,6 +30832,23 @@ RG.art.icon = (() => {
         + P('M48 5L54 4L55 10L49 11ZM48 53L54 54L53 60L47 59Z', K.stoneL, ' stroke-width="2.5"')
         + P('M3 25H40V14L61 32L40 50V39H3Z', grad('#ffc07a', '#e8502a'))
         + hl('M7 29H40V21', 3);
+    },
+
+    /* 6지역 특성: 푹신(구름 털이 폭발을 흡수) · 위상 이동(일렁이며 앞으로 순간이동) */
+    fluffy() {
+      const w = grad('#ffffff', '#c8c0ec');
+      return P('M10 46C4 46 4 36 11 35C9 26 19 21 25 26C28 16 42 16 44 26C51 22 59 29 55 36C61 39 58 48 52 48H12Z', w)
+        + hl('M14 33C16 28 21 27 24 29', 3)
+        + P('M30 40L33 32L36 40L44 41L37 45L39 53L33 48L27 53L29 45L22 41Z', grad('#ffd27a', '#e8762a'))
+        + O('M40 8L44 14M50 12L46 17M30 6V12', 3);
+    },
+    phase() {
+      const g1 = grad('#efe8ff', '#8a6ae8');
+      return P('M8 40C8 28 16 20 24 20C32 20 36 28 34 38C33 46 30 52 26 56C24 50 20 50 16 56C12 52 8 48 8 40Z', grad('#ffffff', '#b8a8f0'), ' opacity=".45"')
+        + P('M26 34C26 22 34 14 42 14C50 14 54 22 52 32C51 40 48 46 44 50C42 44 38 44 34 50C30 46 26 42 26 34Z', g1)
+        + C(38, 28, 2.6, OL) + C(46, 27, 2.4, OL)
+        + O('M8 14H18M4 22H14M10 30H16', 3)
+        + P('M54 40L62 46L54 52Z', grad('#ffe7a8', '#e8a83a'));
     },
 
     /* ===== 상태 이상 ===== */
@@ -30136,7 +31832,7 @@ RG.art.icon = (() => {
   const MH = 900;
   const BASE_NODES = [[180, 690], [440, 560], [700, 690], [960, 545], [1210, 660], [1430, 450], [1180, 250]];
   RG.art.REGION_NODES = {};
-  for (let r = 1; r <= 5; r++) {
+  for (let r = 1; r <= 6; r++) {
     // 지역마다 조금씩 다르게: 짝수 지역은 위아래를 뒤집고, 살짝 흔듦
     const R = prng(`nodes-${r}`);
     RG.art.REGION_NODES[r] = BASE_NODES.map(([x, y], i) => {
@@ -30151,6 +31847,7 @@ RG.art.icon = (() => {
     3: { g0: '#d98a52', g1: '#b8653a', g2: '#f0b277', road: '#f3d8a0', roadD: '#a8703c', edge: '#7a3a22', water: '#ff7a2a', waterL: '#ffd27a' },
     4: { g0: '#7fae8e', g1: '#5e8e78', g2: '#a8cfa0', road: '#ead7a4', roadD: '#9a8458', edge: '#355e5a', water: '#2a6aa8', waterL: '#8fd8f0' },
     5: { g0: '#7a6e9a', g1: '#5c5280', g2: '#a597c8', road: '#e8c66a', roadD: '#8a6a2a', edge: '#2e2648', water: '#3a2a6a', waterL: '#c9a6ff' },
+    6: { g0: '#2a2868', g1: '#1a1848', g2: '#4a44a0', road: '#fff0c0', roadD: '#c8a85a', edge: '#4a3a7a', water: '#100e38', waterL: '#c8d8ff' },
   };
 
   function nearRoad(samples, x, y, d) {
@@ -30216,7 +31913,7 @@ RG.art.icon = (() => {
   }
 
   RG.art.regionMap = function regionMap(r) {
-    r = Math.max(1, Math.min(5, Number(r) || 1));
+    r = Math.max(1, Math.min(6, Number(r) || 1));
     const B = bag();
     const R = prng(`region-map-${r}`);
     const P = PAL[r];
@@ -30294,6 +31991,27 @@ RG.art.icon = (() => {
       place(14, 90, (x, y) => { add(y, mesa(x, y, 100 + R() * 70, 40 + R() * 30, '#6a8a80', R)); return ''; }, [0, 0, 1300, 600]);
       place(40, 60, (x, y) => { add(y, treeTop(x, y, 13 + R() * 8, '#2f7a5a', R)); return ''; }, [0, 0, 1300, 750]);
       add(470, `<g>${fill(ell(1505, 470, 30, 10), '#1a1030', 0.3)}${fill('M1490 470L1494 380L1516 380L1520 470Z', '#f4efe4', 1, ol(2.4, '#5a4a4a'))}${fill('M1494 410h22v14h-22Z', '#c84a3a')}${fill('M1488 380h34l-6 -18h-22Z', '#3a3a5a', 1, ol(2, '#1a1030'))}<circle cx="1505" cy="372" r="8" fill="#fff3c4"/><path d="M1505 372L1640 330L1640 410Z" fill="#fff3c4" opacity="0.35"/></g>`);
+    } else if (r === 6) {
+      // 밤하늘 위 구름 섬: 별·별자리, 구름 덩어리, 별다리 활, 오른쪽 위 별종 첨탑과 그믐달
+      for (let i = 0; i < 160; i++) s += fill(circ(R() * MW, R() * MH, 0.8 + R() * 2.2), i % 4 ? '#ffffff' : '#ffe7a8', 0.5 + R() * 0.45);
+      for (let i = 0; i < 26; i++) s += fill(sparkle(R() * MW, R() * MH, 3 + R() * 5), '#ffe7a8', 0.85);
+      s += line(smooth([[120, 120], [260, 70], [380, 140], [520, 90]]), '#c8d8ff', 2, 0.45) + line(smooth([[1000, 820], [1120, 760], [1260, 800]]), '#c8d8ff', 2, 0.45);
+      const cloudIsland = (x, y, w, hh) => {
+        let g = fill(ell(x + w * 0.1, y + hh * 0.5, w * 0.55, hh * 0.35), '#0a0828', 0.35);
+        const pts = [];
+        for (let i = 0; i < 7; i++) pts.push([x - w * 0.5 + (w * i) / 6, y + (R() - 0.5) * hh * 0.3, hh * (0.45 + R() * 0.35)]);
+        g += pts.map(([cx, cy, rr]) => fill(circ(cx, cy, rr), '#d8d2f4', 1, ol(2.4, '#6a60a8'))).join('');
+        g += pts.map(([cx, cy, rr]) => fill(circ(cx - rr * 0.25, cy - rr * 0.3, rr * 0.55), '#ffffff', 0.75)).join('');
+        return g;
+      };
+      place(16, 110, (x, y) => { add(y, cloudIsland(x, y, 120 + R() * 120, 40 + R() * 30)); return ''; });
+      // 별다리 활 두 개 (하나는 놓이고 하나는 사라지는 중)
+      s += line(smooth([[300, 860], [520, 760], [740, 840]]), '#ffe7a8', 10, 0.85) + line(smooth([[300, 860], [520, 760], [740, 840]]), '#fff8e0', 3);
+      s += line(smooth([[900, 120], [1100, 60], [1300, 130]]), '#ffe7a8', 8, 0.4, ' stroke-dasharray="14 18"');
+      // 별종 첨탑 (무한 맵 옆)
+      const bx = nodes[6][0] + 170; const by = nodes[6][1] + 60;
+      add(by, `<g>${fill(ell(bx + 18, by + 8, 60, 14), '#0a0828', 0.4)}${fill(`M${bx - 26} ${by}L${bx - 14} ${by - 150}L${bx - 6} ${by - 166}H${bx + 6}L${bx + 14} ${by - 150}L${bx + 26} ${by}Z`, B.lgu(bx - 26, 0, bx + 26, 0, [[0, '#d6d0f4'], [0.5, '#a69ed0'], [1, '#5a5290']]), 1, ol(3, '#2c2656'))}${line(`M${bx - 20} ${by - 40}H${bx + 20}M${bx - 17} ${by - 90}H${bx + 17}`, '#6a62a0', 2.4)}<circle cx="${bx}" cy="${by - 190}" r="46" fill="#ffe7a8" opacity="0.25"/>${fill(`M${bx} ${by - 214}C${bx - 18} ${by - 214} ${bx - 22} ${by - 196} ${bx - 22} ${by - 184}C${bx - 22} ${by - 176} ${bx - 28} ${by - 172} ${bx - 30} ${by - 170}H${bx + 30}C${bx + 28} ${by - 172} ${bx + 22} ${by - 176} ${bx + 22} ${by - 184}C${bx + 22} ${by - 196} ${bx + 18} ${by - 214} ${bx} ${by - 214}Z`, B.lgu(bx - 22, 0, bx + 22, 0, [[0, '#fff4c8'], [0.5, '#e8c070'], [1, '#9a7030']]), 1, ol(3, '#4a3410'))}</g>`);
+      s += `<circle cx="1480" cy="110" r="70" fill="#ffe7a8" opacity="0.18"/>` + fill('M1480 70A40 40 0 1 0 1508 140A31 31 0 1 1 1480 70Z', '#fff4d0', 1, ol(2.4, '#8a7a4a'));
     } else {
       // 보랏빛 폐허: 깨진 담, 기둥, 금빛 균열, 가운데 깨진 대종
       // 금빛 균열 그물 + 보랏빛 안개
@@ -31268,6 +32986,25 @@ RG.audio = (() => {
       ],
     },
 
+    // 6지역 첨탑 — D장조(리디안 G#이 반짝임), 3/4, 84bpm. 첼레스타 선율 + 하프 분산화음 + 합창 패드 + 낮은 서브 + 별빛 종.
+    sky: {
+      bpm: 84, beats: 3, sub: 2, rev: 0.55, vol: 1.0,
+      sec: {
+        A: { ch: 'Dmaj7 E/D Bm7 Gmaj7 Dmaj7 E/D F#m7 A',
+          mel: 'f#5 - a5 - d6 - | e6 - - - c#6 b5 | a5 - - - f#5 - | g#5 - - - - - | f#5 - a5 - c#6 - | e6 - d6 - b5 - | c#6 - a5 - f#5 - | e5 - - - - -' },
+        B: { ch: 'Gmaj7 A/G F#m7 Bm7 Em7 F#m7 Gmaj7 Asus4',
+          mel: 'b5 - - - d6 - | c#6 - - - a5 - | a5 - c#6 - f#6 - | e6 - - - d6 - | b5 - - - e6 - | c#6 - - - a5 - | b5 - d6 - g#6 - | e6 - - - - -' },
+      },
+      form: 'AB',
+      parts: [
+        { t: 'mel', inst: 'celesta', v: 0.85 },
+        { t: 'arp', inst: 'harp', low: 57, pat: ['0.1.2.', '3.2.1.'], v: 0.3 },
+        { t: 'pad', inst: 'choir', low: 52, n: 4, v: 0.22 },
+        { t: 'bass', inst: 'sub', low: 38, pat: ['r.....'], v: 0.5 },
+        { t: 'drum', k: 'ting', pat: ['x.....', '...o..'], v: 0.4 },
+      ],
+    },
+
     // 보스 — B단조(프리지안 ♭II 섞음), 4/4, 150bpm. 8분음표 신스 베이스, 스타카토 현, 금관 선율, 킥·스네어·톰, 합창.
     boss: {
       bpm: 150, beats: 4, sub: 2, rev: 0.2, vol: 1.45,
@@ -31981,6 +33718,14 @@ RG.fx = (() => {
           break;
         case 'burrow': case 'unburrow':
           burst(e.x, e.y, '#c9a47a', 12, 1.6, 0.5, 0.07, 2);
+          break;
+        case 'phase':
+          // 위상 망령: 사라진 자리와 나타난 자리에 보랏빛 일렁임 + 잇는 잔상
+          burst(e.fromX, e.fromY - 0.4, '#c8b8ff', lite ? 4 : 12, 1.6, 0.5, 0.06, -0.6);
+          ring(e.x, e.y, 0.6, '#e8d8ff', 0.4, 0.08);
+          line(e.fromX, e.fromY - 0.4, e.x, e.y - 0.4, 'rgba(200,184,255,0.55)', 0.25, 0.08);
+          break;
+        case 'bridges':
           break;
         case 'cyclone':
           ring(e.x, e.y, e.radius, '#e7e4ff', 0.5, 0.12);
@@ -32923,6 +34668,100 @@ RG.render = (() => {
     ctx.restore();
   }
 
+  /* ---------------- 6지역: 별다리 · 별빛 건설지 ---------------- */
+  /**
+   * 별다리: 열린 무리는 금빛 별빛 판자, 닫힌 무리는 옅은 점선 윤곽.
+   * 닫히기 3초 전부터 열린 다리가 깜박이고 다리 가운데 위에 남은 초를 표시(읽을 수 있는 위협).
+   * 별빛 건설지(*)는 칸 가운데 작은 금빛 별이 은은하게 반짝임(탑이 있으면 탑 밑에 가려짐).
+   */
+  function drawBridges() {
+    const map = game.map;
+    if (map.hasStars === undefined) { let any = false; for (let i = 0; i < map.kinds.length; i++) if (map.kinds[i] === RG.grid.T.STAR) { any = true; break; } map.hasStars = any; }
+    if (!map.hasBridges && !map.hasStars) return;
+    const st = game.state;
+    const cols = map.cols;
+    if (map.hasStars) {
+      ctx.save();
+      for (let i = 0; i < map.kinds.length; i++) {
+        if (map.kinds[i] !== RG.grid.T.STAR) continue;
+        const c = i % cols;
+        const r = (i - c) / cols;
+        if (game.tileTower(c, r)) continue;
+        const cx = X(c + 0.5);
+        const cy = Y(r + 0.5);
+        const k = 0.6 + 0.4 * Math.sin(time * 2.4 + i * 1.7);
+        const R = T * 0.16 * (0.85 + 0.15 * k);
+        ctx.globalAlpha = 0.35 * k;
+        ctx.fillStyle = '#fff4c0';
+        ctx.beginPath(); ctx.arc(cx, cy, T * 0.36, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 0.95;
+        ctx.fillStyle = '#ffe7a8';
+        ctx.strokeStyle = '#6a5a2a';
+        ctx.lineWidth = Math.max(1, T * 0.03);
+        ctx.beginPath();
+        for (let j = 0; j < 8; j++) { const a = (j / 8) * Math.PI * 2 - Math.PI / 2; const rr = j % 2 ? R * 0.4 : R; ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); }
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
+      ctx.restore();
+    }
+    if (!map.hasBridges || !st.bridge) return;
+    const B = st.bridge;
+    const left = B.next - st.time;
+    const warn = left <= 3;
+    const groups = [[map.bridgeA, B.phase === 0], [map.bridgeB, B.phase === 1]];
+    ctx.save();
+    for (const [tiles, open] of groups) {
+      if (!tiles.length) continue;
+      const blink = open && warn ? 0.45 + 0.55 * Math.abs(Math.sin(time * (left < 1.2 ? 14 : 8))) : 1;
+      let sx = 0;
+      let sy = 0;
+      for (const i of tiles) {
+        const c = i % cols;
+        const r = (i - c) / cols;
+        sx += c; sy += r;
+        const x0 = X(c);
+        const y0 = Y(r);
+        if (open) {
+          ctx.globalAlpha = blink;
+          ctx.fillStyle = 'rgba(255,231,168,0.85)';
+          ctx.strokeStyle = '#7a6a3a';
+          ctx.lineWidth = Math.max(1, T * 0.04);
+          ctx.beginPath(); ctx.rect(x0 + T * 0.04, y0 + T * 0.12, T * 0.92, T * 0.76); ctx.fill(); ctx.stroke();
+          ctx.strokeStyle = 'rgba(122,106,58,0.6)';
+          ctx.beginPath();
+          for (let k = 1; k < 4; k++) { ctx.moveTo(x0 + T * 0.04 + (T * 0.92 * k) / 4, y0 + T * 0.14); ctx.lineTo(x0 + T * 0.04 + (T * 0.92 * k) / 4, y0 + T * 0.86); }
+          ctx.stroke();
+          ctx.fillStyle = '#ffffff';
+          ctx.globalAlpha = blink * (0.5 + 0.5 * Math.sin(time * 3 + i));
+          ctx.beginPath(); ctx.arc(x0 + T * (0.3 + 0.4 * ((i * 37) % 10) / 10), y0 + T * 0.5, Math.max(1, T * 0.05), 0, Math.PI * 2); ctx.fill();
+        } else {
+          ctx.globalAlpha = 0.4;
+          ctx.strokeStyle = '#ffe7a8';
+          ctx.lineWidth = Math.max(1, T * 0.03);
+          ctx.setLineDash([T * 0.08, T * 0.1]);
+          ctx.beginPath(); ctx.rect(x0 + T * 0.08, y0 + T * 0.16, T * 0.84, T * 0.68); ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+      // 남은 초 (열린 다리가 곧 닫힘 · 닫힌 다리가 곧 열림)
+      if (warn) {
+        const cx = X(sx / tiles.length + 0.5);
+        const cy = Y(sy / tiles.length + 0.5) - T * 0.55;
+        ctx.globalAlpha = 1;
+        ctx.font = `900 ${Math.max(11, Math.round(T * 0.36))}px system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#1a1238';
+        const txt = `${open ? '닫힘' : '열림'} ${Math.ceil(left)}`;
+        ctx.strokeText(txt, cx, cy);
+        ctx.fillStyle = open ? '#ffb0a0' : '#c8f0ff';
+        ctx.fillText(txt, cx, cy);
+      }
+    }
+    ctx.restore();
+  }
+
   /* ---------------- 장판·덫 ---------------- */
   const ZONE_FLAT = { fire: 'rgba(255,120,60,0.4)', lava: 'rgba(255,90,40,0.45)', void: 'rgba(110,31,102,0.5)', thorn: 'rgba(74,122,38,0.4)', blizzard: 'rgba(200,236,255,0.35)' };
   function drawZones() {
@@ -33396,6 +35235,21 @@ RG.render = (() => {
     } else if (t.dampened) {
       icon('dampen', cx + T * 0.32, baseY - T * 0.95, T * 0.3);
     }
+    if (t.veilUntil > game.state.time) {
+      // 그믐달 군주 '별 가리기': 사거리가 줄어든 탑 위에 어두운 초승달
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = '#1a1238';
+      ctx.strokeStyle = '#c8b8ff';
+      ctx.lineWidth = Math.max(1, T * 0.03);
+      const mx = cx + T * 0.3;
+      const my = baseY - T * 1.0;
+      const R = T * 0.16;
+      ctx.beginPath(); ctx.arc(mx, my, R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#ffe7a8';
+      ctx.beginPath(); ctx.arc(mx - R * 0.35, my, R * 0.7, Math.PI * 0.5, Math.PI * 1.5); ctx.arc(mx - R * 0.1, my, R * 0.5, Math.PI * 1.5, Math.PI * 0.5, true); ctx.fill();
+      ctx.restore();
+    }
     if (t.boostUntil > game.state.time && !t.building) {
       // 도한의 담금질(주황 불티 고리) · 무진의 되울림 종(보랏빛 고리) — 공격 속도가 오른 탑
       const temper = t.temperUntil > game.state.time;
@@ -33613,7 +35467,8 @@ RG.render = (() => {
     if (lifted) lift += T * 0.35 + Math.sin(time * 10) * T * 0.04;
     const groundY = cy;
     cy -= lift;
-    const alphaS = (e.stealth && !e.revealed) ? 0.35 + 0.1 * Math.sin(time * 6) : 1;
+    let alphaS = (e.stealth && !e.revealed) ? 0.35 + 0.1 * Math.sin(time * 6) : 1;
+    if (e.phaseWarn) { alphaS *= 0.45 + 0.4 * Math.abs(Math.sin(time * 22)); dx += Math.sin(time * 40) * T * 0.04; } // 위상 망령: 순간이동 직전 일렁임
     const hurt = st.time - e.lastHurt < 0.08;
     const flip = e.dir < 0;
     const big = ed.size >= 1.4 ? 288 : 168;
@@ -34174,6 +36029,7 @@ RG.render = (() => {
     ctx.save();
     ctx.translate(sx, sy);
     drawBackground(based);
+    drawBridges();
     drawPortals();
     drawZones();
     drawPathPreview();
@@ -34370,7 +36226,7 @@ RG.render = (() => {
     else box.appendChild(content);
     if (opts.buttons) {
       const row = el('div', { class: 'modal-buttons' });
-      for (const b of opts.buttons) {
+      for (const b of opts.buttons.filter(Boolean)) {
         row.appendChild(el('button', {
           class: `btn ${b.primary ? 'btn-primary' : ''} ${b.danger ? 'btn-danger' : ''}`,
           text: b.text,
@@ -34548,7 +36404,7 @@ RG.render = (() => {
         bannerOf(rd.region || 1),
         el('span', { class: 'tm-medal tm-medal-big' }, [UI.icon('play', 'tm-ico')]),
         el('span', { class: 'tm-text' }, [
-          el('span', { class: 'tm-kicker', text: `하던 판 · ${run.mapId} 웨이브 ${run.wave}` }),
+          el('span', { class: 'tm-kicker', text: `${run.opts && run.opts.mode === 'expedition' ? '원정 전투' : '하던 판'} · ${run.mapId} 웨이브 ${run.wave}` }),
           el('b', { class: 'tm-title', text: '이어하기' }),
           el('span', { class: 'tm-sub', text: rd.name || '' }),
         ]),
@@ -34569,6 +36425,17 @@ RG.render = (() => {
       ]),
       resumable ? null : el('span', { class: 'tm-go', text: has ? '출발 ›' : '시작 ›' }),
     ]));
+    // 원정 (3-6을 깨면 열림)
+    if (P().expOpen()) {
+      const xr = P().expRun();
+      mainCol.appendChild(el('button', { class: `btn btn-big tm-card tm-map-small tm-exp ${xr ? 'ready' : ''}`, onclick: go(() => UI.show('expedition', {})) }, [
+        el('span', { class: 'tm-medal' }, [UI.icon('crown', 'tm-ico')]),
+        el('span', { class: 'tm-text' }, [
+          el('b', { class: 'tm-title', text: xr ? '원정 이어 가기' : '원정' }),
+          el('span', { class: 'tm-sub', text: xr ? (xr.phase === 'done' ? '보상을 받으세요' : `${xr.act}막 ${xr.floor > D().expedition.floors ? '보스' : `${xr.floor}층`} · 불꽃 ${xr.lives} · 은화 ${xr.silver}`) : '3막 로그라이크 · 덱과 유물을 모아 하늘 끝까지' }),
+        ]),
+      ]));
+    }
     // 양옆 카드 4장
     const g = P().gachaState();
     const nPull = Math.floor(g.crystals / RG.gacha.COST.one);
@@ -34792,11 +36659,12 @@ RG.render = (() => {
       const head = el('header', { class: 'top-bar' }, [
         el('button', { class: 'icon-btn', title: worldView === 'regions' ? '타이틀' : '지역 고르기', 'aria-label': worldView === 'regions' ? '타이틀' : '지역 고르기', onclick: () => (worldView === 'regions' ? UI.show('title', {}) : UI.show('world', { view: 'regions' })) }, [UI.icon('back')]),
         el('h2', { text: '월드 지도' }),
-        el('div', { class: 'top-stars' }, [UI.icon('star'), el('b', { text: String(P().starsTotal()) }), el('small', { text: ' / 150' })]),
+        el('div', { class: 'top-stars' }, [UI.icon('star'), el('b', { text: String(P().starsTotal()) }), el('small', { text: ` / ${D().maps.length * 5}` })]),
         el('div', { class: 'top-actions' }, [
           el('button', { class: `btn small btn-gacha ${canPull() ? 'ready' : ''}`, onclick: () => UI.show('gacha', { back: { screen: 'world' } }) }, [UI.icon('crystal', 'tiny'), `뽑기 ${P().gachaState().crystals}`]),
           el('button', { class: 'btn small', onclick: () => UI.show('tree', {}) }, [UI.icon('tree', 'tiny'), `기술 나무${P().starsFree() > 0 ? ` (${P().starsFree()})` : ''}`]),
           el('button', { class: 'btn small', onclick: () => UI.show('heroes', {}) }, [UI.icon('hero', 'tiny'), '수호대']),
+          P().expOpen() ? el('button', { class: `btn small btn-exp ${P().expRun() ? 'ready' : ''}`, onclick: () => UI.show('expedition', {}) }, [UI.icon('map', 'tiny'), P().expRun() ? '원정 중' : '원정']) : null,
           el('button', { class: 'btn small', onclick: () => UI.show('codex', {}) }, [UI.icon('book', 'tiny'), '도감']),
           el('button', { class: 'icon-btn', title: '설정', onclick: openSettings }, [UI.icon('settings')]),
         ]),
@@ -35766,6 +37634,317 @@ RG.render = (() => {
 })();
 
 </script>
+  <script>/* js/ui/expedition.js */
+'use strict';
+
+/* =========================================================
+ * 원정 화면 — 설계: docs/design/expedition.md · 규칙: js/core/expedition.js · 저장: progress.exp*
+ * 한 화면에서 원정 단계(run.phase)에 따라 가운데 패널이 바뀜. 아래 줄은 늘 덱·유물·불꽃·은화.
+ * ========================================================= */
+(() => {
+  const { el } = RG.util;
+  const UI = RG.ui;
+  const D = () => RG.data;
+  const XD = () => RG.data.expedition;
+  const P = () => RG.progress;
+  const EX = () => RG.expedition;
+  const svg = (s, cls) => UI.svgImg(s, cls, '');
+  let deckPick = [];        // 시작 덱 고르는 중
+  let heroPick = null;
+  let lastLog = null;       // 방금 일어난 일 (사건 결과·보상)
+  let upgradeFor = null;    // 'shop' | 'rest' — 원정 강화할 탑 고르는 중
+
+  const refresh = (data = {}) => UI.show('expedition', data);
+  const relicName = (id) => (XD().relics[id] || {}).name || id;
+
+  function topBar() {
+    return el('header', { class: 'top-bar' }, [
+      el('button', { class: 'icon-btn', title: '월드 지도', 'aria-label': '월드 지도', onclick: () => UI.show('world', {}) }, [UI.icon('back')]),
+      el('h2', { text: '원정' }),
+    ]);
+  }
+
+  /** 아래 줄: 불꽃·은화·덱·유물 */
+  function statusBar(run) {
+    const deck = el('div', { class: 'ex-deck', 'aria-label': '원정 덱' }, run.deck.map((t) => el('span', { class: `ex-card rar-${RG.gacha.rarityOf(t)}`, title: `${D().towers[t].name}${run.up.includes(t) ? ' · 원정 강화(Lv2부터)' : ''}` }, [
+      UI.towerImg(t, run.up.includes(t) ? 2 : 1, null, 'mini'), run.up.includes(t) ? el('em', { class: 'ex-up', text: '★' }) : null])));
+    const relics = el('div', { class: 'ex-relics' }, run.relics.length ? run.relics.map((id) => {
+      const r = XD().relics[id];
+      const chip = el('span', { class: `ex-relic k-${r.kind}`, tabindex: '0' }, [r.name]);
+      UI.tooltipFor(chip, () => `<b>${r.name}</b><br>${r.desc}`);
+      return chip;
+    }) : [el('span', { class: 'dim', text: '유물 없음' })]);
+    return el('div', { class: 'ex-status' }, [
+      el('div', { class: 'ex-res' }, [
+        el('span', { class: 'ex-lives', title: '원정 불꽃' }, [UI.icon('lives', 'small'), el('b', { text: String(run.lives) }), el('small', { text: `/${XD().maxLives}` })]),
+        el('span', { class: 'ex-silver', title: '원정 은화' }, [UI.icon('gold', 'small'), el('b', { text: String(run.silver) }), el('small', { text: ' 은화' })]),
+      ]),
+      el('div', { class: 'ex-deckwrap' }, [el('span', { class: 'ex-lbl', text: `덱 ${run.deck.length}/${XD().maxDeck}` }), deck]),
+      el('div', { class: 'ex-relicwrap' }, [el('span', { class: 'ex-lbl', text: `유물 ${run.relics.length}` }), relics]),
+    ]);
+  }
+
+  /** 막·층 진행 줄 */
+  function progressLine(run) {
+    const acts = [];
+    for (let a = 1; a <= XD().acts; a++) {
+      const steps = [];
+      for (let f = 1; f <= XD().floors + 1; f++) {
+        const done = a < run.act || (a === run.act && f < run.floor);
+        const cur = a === run.act && f === run.floor;
+        steps.push(el('i', { class: `ex-step ${done ? 'done' : ''} ${cur ? 'cur' : ''} ${f > XD().floors ? 'boss' : ''}`, title: f > XD().floors ? `${a}막 보스` : `${a}막 ${f}층` }));
+      }
+      acts.push(el('div', { class: `ex-act ${a === run.act ? 'on' : ''}` }, [el('b', { text: `${a}막` }), el('div', { class: 'ex-steps' }, steps)]));
+    }
+    return el('div', { class: 'ex-progress' }, acts);
+  }
+
+  function nodeCard(run, node, i) {
+    const info = XD().nodeInfo[node.kind];
+    const def = node.mapId && D().maps.find((m) => m.id === node.mapId);
+    const rule = node.rule && XD().rules[node.rule];
+    return el('button', {
+      class: `ex-node k-${node.kind}`, 'data-focus': `node-${i}`,
+      onclick: () => {
+        const r = EX().choose(run, i);
+        if (!r.ok) { UI.toast(r.reason, 'warn'); return; }
+        UI.sfx('click');
+        P().save();
+        if (r.battle) startBattle(run); else refresh();
+      },
+    }, [
+      el('span', { class: 'ex-node-ico' }, [UI.icon(info.icon)]),
+      el('b', { text: info.name }),
+      def ? el('span', { class: 'ex-node-map', text: `${def.id} ${def.name}` }) : null,
+      rule && node.rule !== 'clear' ? el('span', { class: 'ex-node-rule', text: `${rule.name}: ${rule.desc}` }) : null,
+      el('small', { text: info.desc }),
+    ]);
+  }
+
+  /** 지금 노드의 판 시작 */
+  function startBattle(run) {
+    const set = EX().battleSetup(run);
+    const growth = P().heroGrowth(run.heroId);
+    const opts = Object.assign({
+      mode: 'expedition', heroId: run.heroId, skills: P().get().skills.slice(), seed: (Math.random() * 1e9) >>> 0,
+      towers: run.deck.slice(), towerRanks: P().towerRanks(), finalLv2: true, branches: P().branchesUnlocked(),
+    }, set);
+    if (growth) opts.heroGrowth = growth;
+    try { if (RG.audio) RG.audio.init(); } catch (e) { /* 무시 */ }
+    UI.show('game', { opts });
+  }
+
+  /* ---------------- 단계별 패널 ---------------- */
+  function introPanel() {
+    const heroes = P().heroesFor(P().frontier());
+    if (!heroPick || !heroes.includes(heroPick)) heroPick = heroes.includes(P().get().lastHero) ? P().get().lastHero : heroes[0];
+    const st = P().expStats();
+    const row = el('div', { class: 'hero-pick' }, heroes.map((h) => el('button', {
+      class: `hp-item ${heroPick === h ? 'on' : ''}`, onclick: () => { heroPick = h; UI.sfx('click'); refresh(); },
+    }, [UI.portrait(h, heroPick === h ? 'happy' : 'normal', 'hp-portrait'), el('span', { text: D().heroes[h].name })])));
+    return el('div', { class: 'ex-panel ex-intro' }, [
+      el('h3', { text: '구름 너머로 떠나는 원정' }),
+      el('p', { class: 'dim', text: `3막 × 5층 + 막 보스. 층마다 갈림길에서 하나를 고르고, 짧은 작전으로 싸우며 덱과 유물을 모읍니다. 불꽃 ${XD().startLives}개로 시작해 0이 되면 원정이 끝나요. 기술 나무·뽑기 강화·영웅 성장이 모두 켜집니다.` }),
+      el('div', { class: 'ex-sec' }, [el('span', { class: 'hx-kind', text: '함께 갈 영웅' }), row]),
+      el('div', { class: 'ex-stats dim', text: `원정 ${st.runs}회 · 승리 ${st.wins}회 · 최고 ${st.best}층` }),
+      el('button', {
+        class: 'btn btn-primary btn-big', 'data-focus': 'start',
+        onclick: () => { UI.sfx('click'); deckPick = []; P().expStart((Math.random() * 1e9) >>> 0, heroPick); refresh(); },
+      }, ['원정 출발 ▶']),
+    ]);
+  }
+
+  function deckPanel(run) {
+    const need = Math.min(XD().startDeck.pick, run.offer.length);
+    const cards = run.offer.map((t) => el('button', {
+      class: `ex-pick rar-${RG.gacha.rarityOf(t)} ${deckPick.includes(t) ? 'on' : ''}`, 'aria-pressed': deckPick.includes(t) ? 'true' : 'false', 'data-focus': `deck-${t}`,
+      onclick: () => {
+        if (deckPick.includes(t)) deckPick = deckPick.filter((x) => x !== t); else if (deckPick.length < need) deckPick.push(t);
+        UI.sfx('click'); refresh({ focus: `deck-${t}` });
+      },
+    }, [UI.towerImg(t, 1, null, ''), el('b', { text: D().towers[t].name }), el('small', { text: D().elements[D().towers[t].element].name })]));
+    return el('div', { class: 'ex-panel' }, [
+      el('h3', { text: `시작 덱: ${need}종을 고르세요 (${deckPick.length}/${need})` }),
+      el('div', { class: 'ex-picks' }, cards),
+      el('button', {
+        class: 'btn btn-primary', disabled: deckPick.length === need ? null : '',
+        onclick: () => { const r = EX().pickDeck(run, deckPick); if (!r.ok) { UI.toast(r.reason, 'warn'); return; } P().save(); UI.sfx('upgrade'); refresh(); },
+      }, ['이 덱으로 출발']),
+    ]);
+  }
+
+  function mapPanel(run) {
+    const boss = EX().isBossFloor(run);
+    return el('div', { class: 'ex-panel' }, [
+      el('h3', { text: boss ? `${run.act}막 보스` : `${run.act}막 ${run.floor}층 — 갈 길을 고르세요` }),
+      lastLog ? el('p', { class: 'ex-log', text: lastLog }) : null,
+      el('div', { class: 'ex-nodes' }, run.nodes.map((n, i) => nodeCard(run, n, i))),
+    ]);
+  }
+
+  function battlePanel(run) {
+    const save = RG.save.get(RG.save.KEYS.run, null);
+    const resumable = save && save.opts && save.opts.mode === 'expedition';
+    const node = run.node;
+    const def = D().maps.find((m) => m.id === node.mapId);
+    return el('div', { class: 'ex-panel' }, [
+      el('h3', { text: `${XD().nodeInfo[node.kind].name} — ${def.id} ${def.name}` }),
+      el('p', { class: 'dim', text: resumable ? '하던 전투가 저장되어 있습니다.' : '전투를 시작하세요.' }),
+      el('button', {
+        class: 'btn btn-primary btn-big', 'data-focus': 'battle',
+        onclick: () => (resumable ? UI.show('game', { resume: save }) : startBattle(run)),
+      }, [resumable ? '전투 이어 하기 ▶' : '전투 시작 ▶']),
+    ]);
+  }
+
+  function rewardPanel(run) {
+    const isTower = run.offerKind === 'tower';
+    const cards = run.offer.map((id) => el('button', {
+      class: `ex-pick ${isTower ? `rar-${RG.gacha.rarityOf(id)}` : `relic k-${XD().relics[id].kind}`}`, 'data-focus': `rw-${id}`,
+      onclick: () => {
+        const r = EX().takeReward(run, id);
+        if (!r.ok) { UI.toast(r.reason, 'warn'); return; }
+        lastLog = isTower ? `${D().towers[id].name}이(가) 덱에 들어왔습니다` : `유물 ${relicName(id)}을(를) 얻었습니다`;
+        UI.sfx('upgrade'); P().save(); refresh();
+      },
+    }, isTower ? [UI.towerImg(id, 1, null, ''), el('b', { text: D().towers[id].name }), el('small', { text: D().towers[id].desc })]
+      : [el('span', { class: 'ex-relic-ico' }, [UI.icon('star')]), el('b', { text: XD().relics[id].name }), el('small', { text: XD().relics[id].desc })]));
+    return el('div', { class: 'ex-panel' }, [
+      el('h3', { text: isTower ? '승리! 덱에 넣을 탑을 고르세요' : '승리! 유물 하나를 고르세요' }),
+      lastLog ? el('p', { class: 'ex-log', text: lastLog }) : null,
+      el('div', { class: 'ex-picks' }, cards),
+      isTower ? el('button', { class: 'btn', onclick: () => { EX().takeReward(run, null); lastLog = `은화 +${XD().silver.skip}`; P().save(); refresh(); } }, [`건너뛰고 은화 +${XD().silver.skip}`]) : null,
+    ]);
+  }
+
+  function eventPanel(run) {
+    const ev = XD().events.find((x) => x.id === run.node.event);
+    return el('div', { class: 'ex-panel ex-event' }, [
+      el('h3', { text: ev.title }),
+      el('p', { class: 'ex-story', text: ev.text }),
+      el('div', { class: 'ex-options' }, ev.options.map((o, i) => el('button', {
+        class: 'btn ex-option', 'data-focus': `opt-${i}`,
+        onclick: () => {
+          const r = EX().eventChoose(run, i);
+          if (!r.ok) { UI.toast(r.reason, 'warn'); return; }
+          lastLog = `${ev.title}: ${r.log && r.log.length ? r.log.join(' · ') : '아무 일도 없었다'}`;
+          UI.sfx('click'); P().save(); refresh();
+        },
+      }, [o.text]))),
+    ]);
+  }
+
+  function upgradePicker(run, onPick) {
+    const cand = run.deck.filter((t) => !run.up.includes(t));
+    return el('div', { class: 'ex-upgrade' }, [
+      el('p', { text: '원정 강화할 탑을 고르세요 (원정 동안 Lv2부터 지어짐)' }),
+      el('div', { class: 'ex-picks small' }, cand.map((t) => el('button', { class: `ex-pick rar-${RG.gacha.rarityOf(t)}`, onclick: () => onPick(t) }, [UI.towerImg(t, 2, null, ''), el('b', { text: D().towers[t].name })]))),
+      el('button', { class: 'btn small', onclick: () => { upgradeFor = null; refresh(); } }, ['취소']),
+    ]);
+  }
+
+  function shopPanel(run) {
+    const items = (run.shopStock || []).map((it) => {
+      const bought = run.shopBought.includes(it.id) && it.kind !== 'heal';
+      const label = it.kind === 'tower' ? D().towers[it.type].name : it.kind === 'relic' ? relicName(it.relic) : it.kind === 'heal' ? `불꽃 +${XD().shop.healLives}` : '원정 강화';
+      const desc = it.kind === 'tower' ? '덱에 넣기' : it.kind === 'relic' ? XD().relics[it.relic].desc : it.kind === 'heal' ? '원정 불꽃 회복' : '덱의 탑 하나를 Lv2부터';
+      return el('button', {
+        class: `ex-pick ex-shopitem ${bought ? 'sold' : ''}`, disabled: bought || run.silver < it.price ? '' : null,
+        onclick: () => {
+          if (it.kind === 'upgrade') { upgradeFor = 'shop'; refresh(); return; }
+          const r = EX().shopBuy(run, it.id);
+          if (!r.ok) { UI.toast(r.reason, 'warn'); return; }
+          UI.sfx('gold'); P().save(); refresh();
+        },
+      }, [it.kind === 'tower' ? UI.towerImg(it.type, 1, null, '') : el('span', { class: 'ex-relic-ico' }, [UI.icon(it.kind === 'relic' ? 'star' : it.kind === 'heal' ? 'lives' : 'upgrade')]),
+        el('b', { text: label }), el('small', { text: desc }), el('span', { class: 'ex-price' }, [UI.icon('gold', 'tiny'), bought ? '팔림' : String(it.price)])]);
+    });
+    return el('div', { class: 'ex-panel' }, [
+      el('h3', { text: '떠돌이 상점' }),
+      upgradeFor === 'shop' ? upgradePicker(run, (t) => { const r = EX().shopBuy(run, 'upgrade', t); upgradeFor = null; if (!r.ok) UI.toast(r.reason, 'warn'); else { UI.sfx('upgrade'); P().save(); } refresh(); }) : el('div', { class: 'ex-picks' }, items),
+      el('button', { class: 'btn btn-primary', onclick: () => { EX().shopLeave(run); lastLog = null; P().save(); refresh(); } }, ['상점을 떠난다 ▶']),
+    ]);
+  }
+
+  function restPanel(run) {
+    return el('div', { class: 'ex-panel' }, [
+      el('h3', { text: '쉼터 — 모닥불 곁에서' }),
+      upgradeFor === 'rest' ? upgradePicker(run, (t) => { const r = EX().rest(run, { upgrade: t }); upgradeFor = null; if (!r.ok) UI.toast(r.reason, 'warn'); else { lastLog = `${D().towers[t].name} 원정 강화`; UI.sfx('upgrade'); P().save(); } refresh(); })
+        : el('div', { class: 'ex-options' }, [
+          el('button', { class: 'btn ex-option', disabled: run.lives >= XD().maxLives ? '' : null, onclick: () => { EX().rest(run, 'heal'); lastLog = `불꽃 +${XD().rest.heal}`; UI.sfx('heroRevive'); P().save(); refresh(); } }, [`쉬어 간다 (불꽃 +${XD().rest.heal})`]),
+          el('button', { class: 'btn ex-option', disabled: run.deck.every((t) => run.up.includes(t)) ? '' : null, onclick: () => { upgradeFor = 'rest'; refresh(); } }, ['탑을 손본다 (원정 강화)']),
+        ]),
+    ]);
+  }
+
+  function donePanel(run) {
+    const rw = run.rewards || EX().rewardsOf(run);
+    const win = run.result === 'win';
+    return el('div', { class: `ex-panel ex-done ${win ? 'win' : 'lose'}` }, [
+      el('h3', { text: win ? '원정 승리! 하늘 끝까지 지켜 냈다' : '원정이 끝났습니다' }),
+      el('p', { text: `오른 층 ${run.floorsCleared} · 깬 막 ${run.actsCleared} · 전투 ${run.battles}` }),
+      el('div', { class: 'reward-box' }, [
+        el('div', { class: 'rw-total' }, [UI.icon('crystal', 'small'), el('b', { text: `+${rw.crystals}` }), el('span', { text: '공명석' })]),
+        rw.gear.length ? el('div', { class: 'rw-lines', text: `장신구 ${rw.gear.length}개 (${rw.gear.map((r) => D().growth.gearRarities[r].name).join('·')})` }) : null,
+      ]),
+      el('button', {
+        class: 'btn btn-primary btn-big', 'data-focus': 'claim',
+        onclick: () => {
+          const got = P().expClaim();
+          if (got) {
+            const names = got.gear.filter((g) => g.id).map((g) => D().growth.gear[g.id].name + (g.isNew ? '' : ` +${g.plus}`));
+            UI.toast(`공명석 +${got.crystals}${names.length ? ` · 장신구: ${names.join(', ')}` : ''}`, 'good', 3200);
+            UI.sfx('unlock');
+          }
+          lastLog = null;
+          refresh();
+        },
+      }, ['보상 받기']),
+    ]);
+  }
+
+  UI.register('expedition', {
+    enter(sec, data = {}) {
+      sec.innerHTML = '';
+      UI.music('worldmap');
+      const bar = topBar();
+      let run = P().expRun();
+      // 방금 끝난 원정 전투 결과
+      if (data.battle && data.battle.ex) {
+        const ex = data.battle.ex;
+        lastLog = data.battle.result === 'win' ? `승리! 남은 불꽃 ${data.battle.lives} · 은화 +${ex.silver || 0}${ex.bond && ex.bond.levelUp ? ` · ${D().heroes[ex.bond.heroId].name} 인연 Lv${ex.bond.after}!` : ''}` : '전투에서 졌습니다…';
+      }
+      if (run && run.phase !== 'done') {
+        bar.appendChild(el('button', {
+          class: 'btn small ex-quit', onclick: () => UI.confirmBox('원정을 그만둘까요? 지금까지 오른 층만큼 보상을 받습니다.', () => { P().expAbandon(); refresh(); }),
+        }, ['원정 그만두기']));
+      }
+      let panel;
+      if (!run) panel = introPanel();
+      else if (run.phase === 'deck') panel = deckPanel(run);
+      else if (run.phase === 'map') panel = mapPanel(run);
+      else if (run.phase === 'battle') panel = battlePanel(run);
+      else if (run.phase === 'reward') panel = rewardPanel(run);
+      else if (run.phase === 'event') panel = eventPanel(run);
+      else if (run.phase === 'shop') panel = shopPanel(run);
+      else if (run.phase === 'rest') panel = restPanel(run);
+      else panel = donePanel(run);
+      const body = el('div', { class: 'ex-body' }, [
+        run && run.phase !== 'deck' ? progressLine(run) : null,
+        run ? el('div', { class: 'ex-hero' }, [UI.portrait(run.heroId, run.lives > 6 ? 'happy' : 'worried', 'mini-portrait'), el('span', { text: D().heroes[run.heroId].name })]) : null,
+        panel,
+        run && run.phase !== 'deck' ? statusBar(run) : null,
+      ]);
+      sec.append(bar, body);
+      requestAnimationFrame(() => {
+        const f = data.focus ? sec.querySelector(`[data-focus="${data.focus}"]`) : sec.querySelector('.ex-panel button:not([disabled])');
+        if (f) f.focus({ preventScroll: true });
+      });
+    },
+  });
+})();
+
+</script>
   <script>/* js/ui/gacha.js */
 'use strict';
 
@@ -36044,7 +38223,10 @@ RG.render = (() => {
     const have = new Set(game.opts.towers || D().towerOrder);
     tipsQueue = (game.def.tips || []).filter((t) => !RG.progress.seen('tips', t) && TIPS[t] && (!TIP_TOWER[t] || have.has(TIP_TOWER[t])));
     if (!data.resume && opts.mode === 'normal') setTimeout(nextTip, 600);
-    if (!data.resume) banner(`${game.def.id} ${game.def.name}`, opts.mode === 'challenge' ? `도전: ${game.def.challenge.text}` : opts.mode === 'endless' ? '무한 모드' : '준비가 되면 웨이브를 호출하세요');
+    const XO = opts.expedition;
+    const xRule = XO && XO.rule && D().expedition.rules[XO.rule];
+    if (!data.resume) banner(`${game.def.id} ${game.def.name}`, opts.mode === 'challenge' ? `도전: ${game.def.challenge.text}` : opts.mode === 'endless' ? '무한 모드'
+      : XO ? `원정 ${XO.act}막 ${XO.kind === 'boss' ? '보스' : `${XO.floor}층`}${XO.kind === 'elite' ? ' · 정예' : ''}${xRule && XO.rule !== 'clear' ? ` · ${xRule.name}: ${xRule.desc}` : ''}` : '준비가 되면 웨이브를 호출하세요');
   }
 
   function leave() {
@@ -36172,7 +38354,7 @@ RG.render = (() => {
       // 결과 화면은 잠시 뒤 — 그 사이 다시 시작했으면 띄우지 않음
       const payload = finish();
       const which = game;
-      setTimeout(() => { if (game === which && UI.currentId() === 'game' && payload) UI.show('result', payload); }, st.result === 'win' ? 1400 : 900);
+      setTimeout(() => { if (game === which && UI.currentId() === 'game' && payload) UI.show(payload.mode === 'expedition' ? 'expedition' : 'result', payload.mode === 'expedition' ? { battle: payload } : payload); }, st.result === 'win' ? 1400 : 900);
     }
   }
 
@@ -36193,6 +38375,8 @@ RG.render = (() => {
         case 'soulStorm': UI.sfx('hex', { vol: 0.6, pitch: -8 }); break;
         case 'chrono': UI.sfx('bell', { vol: 0.5, pitch: 7 }); break;
         case 'temper': UI.sfx('upgrade', { vol: 0.5, pitch: -4 }); break;
+        case 'bridges': UI.sfx('bell', { vol: 0.35, pitch: 9 }); break;
+        case 'phase': UI.sfx('hex', { vol: 0.25, pitch: 6 }); break;
         case 'galeDive': UI.sfx('chain', { vol: 0.45, pitch: 5 }); break;
         case 'giantForm': UI.sfx('slam', { vol: 0.6, pitch: -6 }); break;
         case 'meteor': UI.sfx('explosion', { vol: 0.6, pitch: -3 }); break;
@@ -37443,8 +39627,10 @@ RG.render = (() => {
       buttons: [
         { text: '설정', onClick: () => RG.ui.openSettings && RG.ui.openSettings() },
         { text: '조작법', onClick: openControls },
-        { text: '다시 시작', onClick: () => UI.confirmBox('처음부터 다시 시작할까요?', () => { RG.save.remove(RG.save.KEYS.run); UI.show('game', { opts }); }) },
-        { text: '지도로', onClick: () => UI.confirmBox('지도로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('world', {})) },
+        opts.mode === 'expedition' ? null : { text: '다시 시작', onClick: () => UI.confirmBox('처음부터 다시 시작할까요?', () => { RG.save.remove(RG.save.KEYS.run); UI.show('game', { opts }); }) },
+        opts.mode === 'expedition'
+          ? { text: '원정 지도로', onClick: () => UI.confirmBox('원정 지도로 나갈까요? 이 전투는 이어하기로 저장됩니다(원정에서는 다시 시작할 수 없어요).', () => UI.show('expedition', {})) }
+          : { text: '지도로', onClick: () => UI.confirmBox('지도로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('world', {})) },
         { text: '계속하기', primary: true },
       ],
     });
@@ -37495,6 +39681,11 @@ RG.render = (() => {
   function finish() {
     if (!game || !game.state.result) return null;
     const st = game.state;
+    if (opts.mode === 'expedition') {
+      // 원정 판: 캠페인 기록 대신 원정 상태에 반영 (불꽃·은화·보상)
+      const ex = RG.progress.expBattleEnd(st);
+      return { mapId: game.def.id, mode: 'expedition', result: st.result, lives: st.lives, ex, opts };
+    }
     const rec = RG.progress.record(game.def.id, opts.mode, st);
     const stats = {
       damage: st.stats.damageByTower, kills: st.stats.kills, gold: st.stats.goldEarned, heroDamage: st.stats.heroDamage,
@@ -37535,6 +39726,10 @@ RG.render = (() => {
     silence: { title: '침묵', text: '침묵 수도사 근처의 탑은 공격·지원·공명을 모두 멈춥니다. 사거리 긴 탑으로 멀리서 잡거나, 병영으로 붙잡아 한곳에 묶어 두세요.' },
     adaptive: { title: '적응', text: '종 조각 골렘은 같은 원소에 계속 맞으면 그 원소에 강해집니다. 여러 원소의 탑을 섞어 두면 저항이 계속 초기화됩니다.' },
     dampen: { title: '공명 차단', text: '울림 포식자 주변의 탑은 공명이 끊깁니다. 공명 없이도 버틸 기본 화력을 갖추고, 먼저 잡으세요.' },
+    star: { title: '별빛 건설지', text: '금빛 별이 반짝이는 건설지에 지은 탑은 사거리가 15% 늘어납니다. 길목을 넓게 덮는 탑을 올려 보세요.' },
+    fluffy: { title: '푹신한 구름 양', text: '구름 양은 폭발·파동·장판 같은 범위 공격을 절반만 받습니다. 궁수탑·햇살 렌즈·빙창 쇠뇌처럼 한 대상을 노리는 탑이 좋아요.' },
+    bridges: { title: '별다리', text: '별다리는 일정 시간마다 번갈아 놓입니다. 닫히기 3초 전부터 깜박이고 남은 초가 보여요. 적은 열린 다리로만 다니니 두 길 모두 대비하세요. 다리 위에는 지을 수 없고, 다리가 바뀌어도 길이 막히지 않게만 지을 수 있습니다.' },
+    phase: { title: '위상 망령', text: '위상 망령은 4초마다 일렁이다가 길을 따라 2칸 앞으로 순간이동합니다. 병사가 붙잡아도 빠져나가니, 길 끝까지 화력을 이어 두세요.' },
     support: { title: '지원 탑', text: '성소는 직접 공격하지 않지만 이웃 탑의 사거리를 늘리고 숨은 적을 드러내며 병사를 치료합니다. 지원 탑은 공명할수록 효과가 커집니다.' },
   };
   function nextTip() {

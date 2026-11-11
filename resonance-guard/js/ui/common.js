@@ -64,7 +64,7 @@
     else box.appendChild(content);
     if (opts.buttons) {
       const row = el('div', { class: 'modal-buttons' });
-      for (const b of opts.buttons) {
+      for (const b of opts.buttons.filter(Boolean)) {
         row.appendChild(el('button', {
           class: `btn ${b.primary ? 'btn-primary' : ''} ${b.danger ? 'btn-danger' : ''}`,
           text: b.text,
