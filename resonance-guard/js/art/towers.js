@@ -1,7 +1,7 @@
 'use strict';
 
 /* =========================================================
- * 탑 그림 (SVG 문자열) — 18종 × (Lv1, Lv2, Lv3, Lv4 A, Lv4 B) + 울림등
+ * 탑 그림 (SVG 문자열) — 24종 × (Lv1, Lv2, Lv3, Lv4 A, Lv4 B) + 울림등 (2차 6종은 js/art/tower-<id>.js)
  * 규격: docs/ARCHITECTURE.md §5, 외형: docs/design/towers.md
  *
  * - viewBox 0 0 100 130, 바닥 중심(기준점) (50,112).
@@ -34,6 +34,8 @@
     stone_barracks: 'earth', quake_hammer: 'earth', crystal_mine: 'earth',
     sun_lens: 'light', sanctuary: 'light', radiance_spire: 'light',
     hex_spire: 'dark', void_orb: 'dark', shadow_snare: 'dark',
+    // 2차 6종 (2026-11-11) — 그림은 js/art/tower-<id>.js
+    flame_jet: 'fire', thorn_garden: 'earth', icicle_cloud: 'frost', thunder_cloud: 'storm', lighthouse: 'light', dread_bell: 'dark',
   };
 
   /* ---------------- 섬세한 명암 (docs/design/animation.md §7) ----------------
