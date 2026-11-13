@@ -2,7 +2,7 @@
 
 /*
  * 입력 방식별 한 판 + 이어하기 (QUALITY.md §5)
- *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|mouse|resume|world|gacha]
+ *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|mouse|resume|world|gacha|expedition]
  *
  * - keyboard: 숫자(탑 고르기)·방향키·Enter·U·Space·F만으로 1-1을 깬다 (마우스·터치 없음)
  * - touch:    휴대폰 가로(터치 에뮬레이션)에서 탑 목록 탭 → 칸 탭, 탑 끌어다 놓기만으로 1-1을 깬다
@@ -12,6 +12,8 @@
  *             잠긴 지역은 안 들어감, 방향키·Enter로도, 지역 지도에서 "지역 고르기"로 돌아옴
  * - gacha:    타이틀 → 탑 뽑기 → 1회 뽑기(카드 뒤집기) → 확인 → 공명석이 줄고 탑이 늘거나 강화됨,
  *             뽑은 탑이 출정 준비 "내 탑"과 전투 탑 목록에 나옴, 공명석이 모자라면 버튼이 꺼짐
+ * - expedition: 월드 지도 "원정" → 시작 덱 4종 → 1층 전투(6웨이브) → 보상 고르기 → 2층 전투 도중 새로고침 →
+ *             타이틀 "이어하기"로 같은 상태(재현 해시) → 이기면 보상 단계 → 그만두기·끝 보상(공명석·기록)
  *
  * 시험을 빨리 끝내려고 배속만 코드로 올립니다(입력은 전부 실제 키·터치 이벤트).
  */
@@ -424,6 +426,35 @@ async function expeditionRun(browser) {
   await page.click('#screen-expedition .ex-picks .ex-pick');
   await page.waitForTimeout(200);
   const after = await page.evaluate(() => { const r = RG.progress.expRun(); return { floor: r.floor, deck: r.deck.length, phase: r.phase }; });
+  // 2층 전투 도중 새로고침 → 타이틀 "이어하기" → 같은 상태(재현 해시) → 이기면 원정 보상 단계로
+  const bi = await page.evaluate(() => RG.progress.expRun().nodes.findIndex((n) => n.kind === 'battle' || n.kind === 'elite'));
+  await page.click(`[data-focus="node-${bi}"]`);
+  await page.waitForFunction(() => RG.ui.game.game && !document.querySelector('#screen-game').classList.contains('loading'));
+  await page.evaluate(() => RG.ui.closeAllModals());
+  await page.evaluate((targets) => {
+    const ui = RG.ui.game;
+    const t0 = ui.game.opts.towers[0];
+    for (const t of targets.slice(0, 3)) ui.doCmd({ type: 'build', tower: t0, c: t.c, r: t.r }, true);
+    ui.doCmd({ type: 'callWave' }, true);
+    ui.setSpeed(8);
+  }, await page.evaluate(targetsInPage));
+  await page.waitForFunction(() => RG.ui.game.game.state.wave.index >= 2, null, { timeout: 60000 });
+  const saved = await page.evaluate(() => { RG.ui.game.setSpeed(0); RG.ui.show('title', {}); return RG.save.get(RG.save.KEYS.run); });
+  await page.goto(URL);
+  await page.waitForSelector('#screen-title.active');
+  const resumeLabel = await page.$eval('.title-menu .btn-primary', (b) => b.textContent);
+  await page.click('.title-menu .btn-primary');
+  await page.waitForFunction(() => RG.ui.game.game && !document.querySelector('#screen-game').classList.contains('loading'));
+  const resumed = await page.evaluate((sv) => {
+    const g = RG.ui.game.game;
+    const ref = RG.sim.replay(sv.opts, sv.log, g.state.tick);
+    return { mode: g.opts.mode, floor: g.opts.expedition.floor, same: g.hash() === ref.hash(), towers: g.state.towers.length };
+  }, saved);
+  await page.evaluate(() => { const gm = RG.ui.game.game; gm.state.result = 'win'; gm.state.lives = 10; });
+  await page.waitForSelector('#screen-expedition.active', { timeout: 8000 });
+  const afterResume = await page.evaluate(() => { const r = RG.progress.expRun(); return { phase: r.phase, floor: r.floor, lives: r.lives, battles: r.battles }; });
+  await page.evaluate(() => { const r = RG.progress.expRun(); RG.expedition.takeReward(r, null); RG.progress.save(); RG.ui.show('expedition', {}); });
+  await page.waitForTimeout(150);
   // 그만두기 → 보상 받기
   await page.click('.ex-quit');
   await page.waitForTimeout(150);
@@ -435,8 +466,10 @@ async function expeditionRun(browser) {
   const end = await page.evaluate(() => ({ run: RG.progress.expRun(), crystals: RG.progress.gachaState().crystals, stats: RG.progress.expStats() }));
   await page.close();
   const ok = g.mode === 'expedition' && g.waves === 6 && g.deck === 4 && nodes.every((k) => k === 'battle') && afterBattle.phase === 'reward' && afterBattle.lives === 11 && afterBattle.silver > 0
-    && after.floor === 2 && after.deck === 5 && after.phase === 'map' && !end.run && end.crystals > c0 && end.stats.runs === 1;
-  return { name: '원정', ok, detail: `전투 ${g.waves}웨이브·덱 ${g.deck} → 보상(${afterBattle.offer}개, 불꽃 ${afterBattle.lives}, 은화 ${afterBattle.silver}) → ${after.floor}층·덱 ${after.deck} → 그만두기·보상 공명석 ${c0}→${end.crystals}, 원정 기록 ${end.stats.runs}회`, errors };
+    && after.floor === 2 && after.deck === 5 && after.phase === 'map' && !end.run && end.crystals > c0 && end.stats.runs === 1
+    && /이어하기/.test(resumeLabel) && resumed.mode === 'expedition' && resumed.floor === 2 && resumed.same && resumed.towers === 3
+    && afterResume.phase === 'reward' && afterResume.floor === 2 && afterResume.lives === 10 && afterResume.battles === 2;
+  return { name: '원정', ok, detail: `전투 ${g.waves}웨이브·덱 ${g.deck} → 보상(${afterBattle.offer}개, 불꽃 ${afterBattle.lives}, 은화 ${afterBattle.silver}) → ${after.floor}층·덱 ${after.deck} → 2층 전투 중 새로고침·이어하기(재현 ${resumed.same ? '같음' : '다름'}, 탑 ${resumed.towers}) → 보상 단계 → 그만두기·보상 공명석 ${c0}→${end.crystals}, 원정 기록 ${end.stats.runs}회`, errors };
 }
 
 (async () => {

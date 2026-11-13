@@ -30,6 +30,16 @@ test('원정 데이터: 유물 30종(갈래·설명·수정치), 사건 12종(�
   for (const list of XD.actBoss) for (const id of list) assert.ok(D.maps.find((m) => m.id === id && m.boss), id);
 });
 
+test('시작 덱 후보에는 공격 탑이 3종 이상 (가진 공격 탑이 그만큼 있으면)', () => {
+  const owned = ['forge', 'dynamo', 'crystal_mine', 'sanctuary', 'stone_barracks', 'ember_archer', 'frost_crystal', 'flame_mortar', 'sun_lens'];
+  for (let seed = 1; seed <= 40; seed++) {
+    const run = EX.newRun(seed, 'kara', owned);
+    assert.strictEqual(run.offer.length, XD.startDeck.offer);
+    assert.strictEqual(new Set(run.offer).size, run.offer.length);
+    assert.ok(run.offer.filter((t) => D.towers[t].role === 'attack').length >= 3, `시드 ${seed}`);
+  }
+});
+
 test('같은 시드 = 같은 원정: 시작 덱 후보·층 노드·보상', () => {
   const a = EX.newRun(42, 'kara', OWNED);
   const b = EX.newRun(42, 'kara', OWNED);
@@ -162,4 +172,53 @@ test('원정 판도 재현이 같음 (opts만으로)', () => {
     return g.hash();
   };
   assert.strictEqual(mk(), mk());
+});
+
+test('사건마다 대가 없는 선택지가 하나 이상 (은화·불꽃이 없어도 막히지 않음)', () => {
+  for (const e of XD.events) assert.ok(e.options.some((o) => !o.cost), e.id);
+});
+
+test('원정 끝까지 무작위로 골라도 막히지 않음 (40시드, 판 결과는 무작위) · 불변식', () => {
+  for (let seed = 1; seed <= 40; seed++) {
+    const rnd = RG.util.makeRng(seed * 977);
+    const ri = (n) => Math.floor(rnd() * n);
+    const owned = OWNED.slice(0, 3 + (seed % 6)); // 가진 탑이 적은 사람도
+    const run = EX.newRun(seed, 'kara', owned);
+    const need = Math.min(XD.startDeck.pick, run.offer.length);
+    assert.ok(EX.pickDeck(run, run.offer.slice(0, need)).ok);
+    let steps = 0;
+    while (run.phase !== 'done') {
+      assert.ok(++steps < 200, `시드 ${seed}: 끝나지 않음 (${run.phase})`);
+      const before = JSON.stringify(run);
+      let r;
+      if (run.phase === 'map') r = EX.choose(run, ri(run.nodes.length));
+      else if (run.phase === 'battle') {
+        assert.ok(EX.battleSetup(run).expedition.waves.length > 0);
+        const lose = rnd() < 0.04;
+        r = EX.applyBattle(run, { result: lose ? 'lose' : 'win', lives: lose ? 0 : Math.max(1, run.lives - ri(3)) });
+      } else if (run.phase === 'reward') r = EX.takeReward(run, run.offer.length && rnd() < 0.8 && (run.offerKind === 'relic' || run.deck.length < XD.maxDeck) ? run.offer[ri(run.offer.length)] : null);
+      else if (run.phase === 'event') {
+        const ev = XD.events.find((x) => x.id === run.node.event);
+        r = EX.eventChoose(run, ri(ev.options.length));
+        if (!r.ok) r = EX.eventChoose(run, ev.options.findIndex((o) => !o.cost));
+      } else if (run.phase === 'shop') {
+        for (const it of run.shopStock) if (rnd() < 0.5) EX.shopBuy(run, it.id, run.deck.find((t) => !run.up.includes(t)));
+        r = EX.shopLeave(run);
+      } else if (run.phase === 'rest') {
+        const t = run.deck.find((x) => !run.up.includes(x));
+        r = EX.rest(run, t && rnd() < 0.5 ? { upgrade: t } : 'heal');
+      }
+      assert.ok(r && r.ok, `시드 ${seed}: ${run.phase}에서 막힘 — ${r && r.reason}`);
+      assert.notStrictEqual(JSON.stringify(run), before, '상태가 바뀌어야 함');
+      // 불변식
+      assert.ok(run.lives >= 0 && run.lives <= XD.maxLives, '불꽃 범위');
+      assert.ok(run.silver >= 0, '은화');
+      assert.ok(run.deck.length >= 2 && run.deck.length <= XD.maxDeck && new Set(run.deck).size === run.deck.length, '덱');
+      assert.ok(run.up.every((t) => run.deck.includes(t)), '강화한 탑은 덱에');
+      assert.ok(new Set(run.relics).size === run.relics.length, '유물 중복 없음');
+      assert.ok(run.act >= 1 && run.act <= XD.acts && run.floor >= 1 && run.floor <= XD.floors + 1, '막·층');
+    }
+    assert.ok(run.result === 'win' || run.result === 'lose');
+    assert.deepStrictEqual(plain(run.rewards), plain(EX.rewardsOf(run)));
+  }
 });

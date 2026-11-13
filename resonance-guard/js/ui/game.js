@@ -1296,11 +1296,11 @@
   }
 
   function confirmBranch(t, n) {
-    UI.confirmBox(`${D().towers[t.type].name}을(를) "${n.spec.name}"(으)로 분기합니다.\n${n.spec.desc}\n\n한번 고르면 바꿀 수 없습니다. (${n.cost} 골드)`, () => doCmd({ type: 'branch', id: t.id, branch: n.branch }), { title: '분기 강화', yes: '분기' });
+    UI.confirmBox(`${RG.util.withJosa(D().towers[t.type].name, '을/를')} "${n.spec.name}"${RG.util.josa(n.spec.name, '으로', '로')} 분기합니다.\n${n.spec.desc}\n\n한번 고르면 바꿀 수 없습니다. (${n.cost} 골드)`, () => doCmd({ type: 'branch', id: t.id, branch: n.branch }), { title: '분기 강화', yes: '분기' });
   }
   function confirmSell(t, value) {
     if (!game.state.wave.started) { doCmd({ type: 'sell', id: t.id }); return; }
-    UI.confirmBox(`${D().towers[t.type].name}을(를) ${value} 골드에 팝니다.`, () => doCmd({ type: 'sell', id: t.id }), { title: '팔기', yes: '팔기', danger: true });
+    UI.confirmBox(`${RG.util.withJosa(D().towers[t.type].name, '을/를')} ${value} 골드에 팝니다.`, () => doCmd({ type: 'sell', id: t.id }), { title: '팔기', yes: '팔기', danger: true });
   }
 
   /* =====================================================

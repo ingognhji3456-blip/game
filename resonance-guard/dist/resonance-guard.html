@@ -1140,7 +1140,14 @@ button { font-family: var(--font); color: inherit; }
 .ex-step.boss { width: 16px; height: 16px; border-radius: 4px; transform: rotate(45deg); }
 .ex-step.done { background: var(--gold); border-color: #8a6a2a; }
 .ex-step.cur { background: #fff4c0; border-color: #fff; box-shadow: 0 0 8px #ffe7a8; }
+.ex-head { display: flex; align-items: center; justify-content: center; gap: 8px 14px; flex-wrap: wrap; }
 .ex-hero { display: flex; align-items: center; gap: 8px; justify-content: center; font-weight: 800; }
+@media (max-height: 520px) {
+  .ex-body { gap: 8px; padding-top: 6px; }
+  .ex-act { padding: 4px 8px; }
+  .ex-hero .mini-portrait { width: 30px; height: 30px; }
+  .ex-panel { padding: 10px 12px; gap: 8px; }
+}
 .ex-panel { display: flex; flex-direction: column; gap: 12px; align-items: center; text-align: center; padding: 18px; border-radius: 18px; background: linear-gradient(180deg, #221a32, #150f20); border: 1px solid #4a3b5e; box-shadow: 0 10px 24px #0007; }
 .ex-panel h3 { font-size: 1.15rem; color: #fff1c4; }
 .ex-panel .dim { max-width: 640px; }
@@ -1196,7 +1203,10 @@ button { font-family: var(--font); color: inherit; }
 .ex-intro .hero-pick { justify-content: center; }
 .ex-stats { font-size: 0.82rem; }
 @media (max-width: 600px) {
-  .ex-node { width: 100%; min-height: 0; }
+  /* 좁은 화면: 노드 카드를 가로로 (아이콘 왼쪽, 글 오른쪽) */
+  .ex-node { width: 100%; min-height: 0; display: grid; grid-template-columns: 48px 1fr; column-gap: 12px; row-gap: 3px; align-items: center; justify-items: start; text-align: left; padding: 10px 12px; }
+  .ex-node > .ex-node-ico { grid-row: 1 / span 4; align-self: center; }
+  .ex-node > :not(.ex-node-ico) { grid-column: 2; }
   .ex-pick { width: calc(50% - 6px); }
 }
 
@@ -3091,7 +3101,7 @@ RG.data.expedition = {
   floorScale: 0.03,
   eliteScale: 1.25,
   goldMult: 1.5,             // 짧은 작전이라 경제가 덜 쌓임 → 시작 골드를 더 줌
-  waveWindow: 0.75,          // 전투·정예는 맵 웨이브의 앞 75%에서 고르게 고름 (마지막 웨이브는 경제가 쌓인 판 기준이라)
+  waveWindow: 0.75,          // 전투·정예는 맵 웨이브의 앞 75% 안에서 이어진 웨이브 (1층은 처음부터, 5층은 창의 끝까지)
   boss: { goldMult: 2.5, hpScale: [0.7, 0.7, 0.5] }, // 막 보스(막마다): 마지막 5웨이브를 앞 웨이브 경제 없이, 작은 덱으로 치르므로
   waves: { battle: 6, elite: 7, boss: 5 },
   silver: { battle: 20, elite: 40, boss: 80, perAct: 5, skip: 25 },
@@ -5848,7 +5858,13 @@ RG.expedition = (() => {
       owned: owned.slice(), deck: [], up: [], relics: [], phase: 'deck', offer: [], node: null, nodes: null,
       history: [], shopBought: [], floorsCleared: 0, actsCleared: 0, result: null, battles: 0,
     };
-    run.offer = shuffled(rngOf(run, 'deck'), owned).slice(0, Math.min(E().startDeck.offer, owned.length));
+    // 시작 덱 후보: 가진 탑에서 무작위 6종, 공격 탑이 3종은 들어가게 (지원·경제 탑만으로 덱이 차지 않게)
+    const isAtk = (t) => RG.data.towers[t].role === 'attack';
+    const all = shuffled(rngOf(run, 'deck'), owned);
+    const n = Math.min(E().startDeck.offer, owned.length);
+    const atk = all.filter(isAtk).slice(0, Math.min(3, n));
+    run.offer = atk.concat(all.filter((t) => !atk.includes(t))).slice(0, n);
+    run.offer = all.filter((t) => run.offer.includes(t)); // 순서는 섞인 그대로
     return run;
   }
   function pickDeck(run, types) {
@@ -5931,9 +5947,11 @@ RG.expedition = (() => {
       const k = Math.min(E().waves.boss, L);
       waves = Array.from({ length: k }, (_, i) => L - k + i);
     } else {
+      // 이어진 k웨이브: 층이 오를수록 맵의 뒤쪽으로 (앞 waveWindow 안에서) — 웨이브 사이 경제 흐름은 맵 그대로
       const k = Math.min(node.kind === 'elite' ? E().waves.elite : E().waves.battle, L);
       const span = Math.max(k, Math.round(L * (E().waveWindow || 1)));
-      waves = Array.from({ length: k }, (_, i) => Math.round((i * (span - 1)) / Math.max(1, k - 1)));
+      const start = Math.round(((span - k) * (Math.min(run.floor, E().floors) - 1)) / Math.max(1, E().floors - 1));
+      waves = Array.from({ length: k }, (_, i) => start + i);
     }
     const m = mods(run, node.kind === 'boss' ? null : node.rule);
     const boss = node.kind === 'boss';
@@ -37827,7 +37845,7 @@ RG.render = (() => {
       onclick: () => {
         const r = EX().takeReward(run, id);
         if (!r.ok) { UI.toast(r.reason, 'warn'); return; }
-        lastLog = isTower ? `${D().towers[id].name}이(가) 덱에 들어왔습니다` : `유물 ${relicName(id)}을(를) 얻었습니다`;
+        lastLog = isTower ? `${RG.util.withJosa(D().towers[id].name, '이/가')} 덱에 들어왔습니다` : `유물 ${RG.util.withJosa(relicName(id), '을/를')} 얻었습니다`;
         UI.sfx('upgrade'); P().save(); refresh();
       },
     }, isTower ? [UI.towerImg(id, 1, null, ''), el('b', { text: D().towers[id].name }), el('small', { text: D().towers[id].desc })]
@@ -37953,8 +37971,10 @@ RG.render = (() => {
       else if (run.phase === 'rest') panel = restPanel(run);
       else panel = donePanel(run);
       const body = el('div', { class: 'ex-body' }, [
-        run && run.phase !== 'deck' ? progressLine(run) : null,
-        run ? el('div', { class: 'ex-hero' }, [UI.portrait(run.heroId, run.lives > 6 ? 'happy' : 'worried', 'mini-portrait'), el('span', { text: D().heroes[run.heroId].name })]) : null,
+        run ? el('div', { class: 'ex-head' }, [
+          run.phase !== 'deck' ? progressLine(run) : null,
+          el('div', { class: 'ex-hero' }, [UI.portrait(run.heroId, run.lives > 6 ? 'happy' : 'worried', 'mini-portrait'), el('span', { text: D().heroes[run.heroId].name })]),
+        ]) : null,
         panel,
         run && run.phase !== 'deck' ? statusBar(run) : null,
       ]);
@@ -39462,11 +39482,11 @@ RG.render = (() => {
   }
 
   function confirmBranch(t, n) {
-    UI.confirmBox(`${D().towers[t.type].name}을(를) "${n.spec.name}"(으)로 분기합니다.\n${n.spec.desc}\n\n한번 고르면 바꿀 수 없습니다. (${n.cost} 골드)`, () => doCmd({ type: 'branch', id: t.id, branch: n.branch }), { title: '분기 강화', yes: '분기' });
+    UI.confirmBox(`${RG.util.withJosa(D().towers[t.type].name, '을/를')} "${n.spec.name}"${RG.util.josa(n.spec.name, '으로', '로')} 분기합니다.\n${n.spec.desc}\n\n한번 고르면 바꿀 수 없습니다. (${n.cost} 골드)`, () => doCmd({ type: 'branch', id: t.id, branch: n.branch }), { title: '분기 강화', yes: '분기' });
   }
   function confirmSell(t, value) {
     if (!game.state.wave.started) { doCmd({ type: 'sell', id: t.id }); return; }
-    UI.confirmBox(`${D().towers[t.type].name}을(를) ${value} 골드에 팝니다.`, () => doCmd({ type: 'sell', id: t.id }), { title: '팔기', yes: '팔기', danger: true });
+    UI.confirmBox(`${RG.util.withJosa(D().towers[t.type].name, '을/를')} ${value} 골드에 팝니다.`, () => doCmd({ type: 'sell', id: t.id }), { title: '팔기', yes: '팔기', danger: true });
   }
 
   /* =====================================================

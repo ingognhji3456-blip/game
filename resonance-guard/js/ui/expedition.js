@@ -180,7 +180,7 @@
       onclick: () => {
         const r = EX().takeReward(run, id);
         if (!r.ok) { UI.toast(r.reason, 'warn'); return; }
-        lastLog = isTower ? `${D().towers[id].name}이(가) 덱에 들어왔습니다` : `유물 ${relicName(id)}을(를) 얻었습니다`;
+        lastLog = isTower ? `${RG.util.withJosa(D().towers[id].name, '이/가')} 덱에 들어왔습니다` : `유물 ${RG.util.withJosa(relicName(id), '을/를')} 얻었습니다`;
         UI.sfx('upgrade'); P().save(); refresh();
       },
     }, isTower ? [UI.towerImg(id, 1, null, ''), el('b', { text: D().towers[id].name }), el('small', { text: D().towers[id].desc })]
@@ -306,8 +306,10 @@
       else if (run.phase === 'rest') panel = restPanel(run);
       else panel = donePanel(run);
       const body = el('div', { class: 'ex-body' }, [
-        run && run.phase !== 'deck' ? progressLine(run) : null,
-        run ? el('div', { class: 'ex-hero' }, [UI.portrait(run.heroId, run.lives > 6 ? 'happy' : 'worried', 'mini-portrait'), el('span', { text: D().heroes[run.heroId].name })]) : null,
+        run ? el('div', { class: 'ex-head' }, [
+          run.phase !== 'deck' ? progressLine(run) : null,
+          el('div', { class: 'ex-hero' }, [UI.portrait(run.heroId, run.lives > 6 ? 'happy' : 'worried', 'mini-portrait'), el('span', { text: D().heroes[run.heroId].name })]),
+        ]) : null,
         panel,
         run && run.phase !== 'deck' ? statusBar(run) : null,
       ]);

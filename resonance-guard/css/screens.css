@@ -973,7 +973,14 @@
 .ex-step.boss { width: 16px; height: 16px; border-radius: 4px; transform: rotate(45deg); }
 .ex-step.done { background: var(--gold); border-color: #8a6a2a; }
 .ex-step.cur { background: #fff4c0; border-color: #fff; box-shadow: 0 0 8px #ffe7a8; }
+.ex-head { display: flex; align-items: center; justify-content: center; gap: 8px 14px; flex-wrap: wrap; }
 .ex-hero { display: flex; align-items: center; gap: 8px; justify-content: center; font-weight: 800; }
+@media (max-height: 520px) {
+  .ex-body { gap: 8px; padding-top: 6px; }
+  .ex-act { padding: 4px 8px; }
+  .ex-hero .mini-portrait { width: 30px; height: 30px; }
+  .ex-panel { padding: 10px 12px; gap: 8px; }
+}
 .ex-panel { display: flex; flex-direction: column; gap: 12px; align-items: center; text-align: center; padding: 18px; border-radius: 18px; background: linear-gradient(180deg, #221a32, #150f20); border: 1px solid #4a3b5e; box-shadow: 0 10px 24px #0007; }
 .ex-panel h3 { font-size: 1.15rem; color: #fff1c4; }
 .ex-panel .dim { max-width: 640px; }
@@ -1029,6 +1036,9 @@
 .ex-intro .hero-pick { justify-content: center; }
 .ex-stats { font-size: 0.82rem; }
 @media (max-width: 600px) {
-  .ex-node { width: 100%; min-height: 0; }
+  /* 좁은 화면: 노드 카드를 가로로 (아이콘 왼쪽, 글 오른쪽) */
+  .ex-node { width: 100%; min-height: 0; display: grid; grid-template-columns: 48px 1fr; column-gap: 12px; row-gap: 3px; align-items: center; justify-items: start; text-align: left; padding: 10px 12px; }
+  .ex-node > .ex-node-ico { grid-row: 1 / span 4; align-self: center; }
+  .ex-node > :not(.ex-node-ico) { grid-column: 2; }
   .ex-pick { width: calc(50% - 6px); }
 }

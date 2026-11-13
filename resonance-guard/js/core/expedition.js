@@ -24,7 +24,13 @@ RG.expedition = (() => {
       owned: owned.slice(), deck: [], up: [], relics: [], phase: 'deck', offer: [], node: null, nodes: null,
       history: [], shopBought: [], floorsCleared: 0, actsCleared: 0, result: null, battles: 0,
     };
-    run.offer = shuffled(rngOf(run, 'deck'), owned).slice(0, Math.min(E().startDeck.offer, owned.length));
+    // 시작 덱 후보: 가진 탑에서 무작위 6종, 공격 탑이 3종은 들어가게 (지원·경제 탑만으로 덱이 차지 않게)
+    const isAtk = (t) => RG.data.towers[t].role === 'attack';
+    const all = shuffled(rngOf(run, 'deck'), owned);
+    const n = Math.min(E().startDeck.offer, owned.length);
+    const atk = all.filter(isAtk).slice(0, Math.min(3, n));
+    run.offer = atk.concat(all.filter((t) => !atk.includes(t))).slice(0, n);
+    run.offer = all.filter((t) => run.offer.includes(t)); // 순서는 섞인 그대로
     return run;
   }
   function pickDeck(run, types) {
@@ -107,9 +113,11 @@ RG.expedition = (() => {
       const k = Math.min(E().waves.boss, L);
       waves = Array.from({ length: k }, (_, i) => L - k + i);
     } else {
+      // 이어진 k웨이브: 층이 오를수록 맵의 뒤쪽으로 (앞 waveWindow 안에서) — 웨이브 사이 경제 흐름은 맵 그대로
       const k = Math.min(node.kind === 'elite' ? E().waves.elite : E().waves.battle, L);
       const span = Math.max(k, Math.round(L * (E().waveWindow || 1)));
-      waves = Array.from({ length: k }, (_, i) => Math.round((i * (span - 1)) / Math.max(1, k - 1)));
+      const start = Math.round(((span - k) * (Math.min(run.floor, E().floors) - 1)) / Math.max(1, E().floors - 1));
+      waves = Array.from({ length: k }, (_, i) => start + i);
     }
     const m = mods(run, node.kind === 'boss' ? null : node.rule);
     const boss = node.kind === 'boss';
