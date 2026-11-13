@@ -191,6 +191,9 @@ function makeEnv(RG) {
     const allowOpen = g.def.type !== 'fixed';
     const maze = options.noMaze ? [] : mazePlan(g);
     let mazeI = 0;
+    // 도전 "Lv○까지": 그 단계를 넘는 강화·분기는 고려하지 않음 (실패하는 명령만 되풀이하며 다른 행동을 막던 것)
+    const ch = g.opts.mode === 'challenge' ? g.def.challenge : null;
+    const maxLv = ch && ch.type === 'maxLevel' ? ch.value : 4;
     return () => {
       t += 1;
       const st = g.state;
@@ -266,7 +269,7 @@ function makeEnv(RG) {
       const up = UP * (g.def.boss && st.wave.index >= st.wave.total - 5 ? 2 : 1);
       for (const tw of st.towers) {
         const td = D.towers[tw.type];
-        if (tw.level >= 4) continue;
+        if (tw.level >= 4 || tw.level >= maxLv) continue;
         if (tw.level < 3) {
           const cost = g.upgradeCost(tw);
           const v = td.role === 'economy' ? (st.wave.total - st.wave.index) * 1.0 : (towerValue(g, tw.type, tw.level + 1, null, tw.c, tw.r, route, air, W) - towerValue(g, tw.type, tw.level, null, tw.c, tw.r, route, air, W) * 0.3) * 1.15;
