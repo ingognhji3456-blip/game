@@ -45,7 +45,7 @@
     for (const t of D().towerOrder) {
       const td = D().towers[t];
       const open = towerUnlocked(t);
-      const card = el('button', { class: `codex-card el-${td.element} ${open ? '' : 'locked'}`, onclick: () => open && towerDetail(t) }, [
+      const card = el('button', { class: `codex-card el-${td.element} ${open ? '' : 'locked'}`, tabindex: open ? null : '-1', 'aria-disabled': open ? null : 'true', onclick: () => open && towerDetail(t) }, [
         open ? UI.towerImg(t, 3, null, 'cc-img') : el('span', { class: 'cc-q', text: '?' }),
         el('b', { text: open ? td.name : '???' }),
         el('span', { class: 'dim small', text: open ? `${D().elements[td.element].name}${P().towerFinal(t) ? ' · ★최종 강화(Lv2부터 지음)' : P().towerRank(t) > 0 ? ` · 강화 +${P().towerRank(t)}` : ''}` : P().towerOpen(t) ? '뽑기에서 얻을 수 있음' : `${(D().regions[P().towerRegion(t) - 2] || {}).name || ''} 클리어 후 뽑기에` }),
@@ -77,7 +77,7 @@
     for (const e of D().enemyOrder) {
       const ed = D().enemies[e];
       const seen = P().seen('enemies', e);
-      grid.appendChild(el('button', { class: `codex-card ${seen ? '' : 'locked'} ${ed.boss ? 'boss' : ''}`, onclick: () => seen && enemyDetail(e) }, [
+      grid.appendChild(el('button', { class: `codex-card ${seen ? '' : 'locked'} ${ed.boss ? 'boss' : ''}`, tabindex: seen ? null : '-1', 'aria-disabled': seen ? null : 'true', onclick: () => seen && enemyDetail(e) }, [
         seen ? UI.enemyImg(e, 'cc-img') : el('span', { class: 'cc-q', text: '?' }),
         el('b', { text: seen ? ed.name : '???' }),
         el('span', { class: 'dim small', text: `${D().regions[ed.region - 1].name}${ed.boss ? ' · 보스' : ''}` }),
@@ -195,7 +195,15 @@
         // 다시 그린 뒤 키보드 위치를 되돌림 (매번 맨 위부터 다시 탭하지 않게)
         if (data.focus === 'pick' && on) on.focus({ preventScroll: true });
         else if (data.focus === 'lead') { const f = sec.querySelector('.hx-lead, .hx-lead-badge'); if (f) f.focus({ preventScroll: true }); }
-        else if (data.focus) { const f = sec.querySelector(`[data-focus="${data.focus}"]`); if (f) f.focus({ preventScroll: true }); }
+        else if (data.focus) {
+          // 누르던 버튼이 이제 꺼졌으면(초기화 뒤·최대 강화·공명석 부족) 가까운 것으로: 같은 장신구 항목 → 찍을 수 있는 재능 → 성장 탭
+          let f = sec.querySelector(`[data-focus="${data.focus}"]`);
+          if (!f || f.disabled) {
+            const id = /^up-(.+)$/.exec(data.focus);
+            f = (id && sec.querySelector(`[data-focus="g-${id[1]}"]`)) || sec.querySelector('.gr-node.can') || sec.querySelector('[data-focus="tab-grow"]');
+          }
+          if (f) f.focus({ preventScroll: true });
+        }
         if (data.scroll != null) { const inf = sec.querySelector('.hx-info'); if (inf) inf.scrollTop = data.scroll; }
       });
     },

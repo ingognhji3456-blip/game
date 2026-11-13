@@ -329,7 +329,9 @@
 .codex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
 .codex-card { appearance: none; border: 2px solid var(--line); background: linear-gradient(#2b2239, #1f1829); border-radius: 12px; padding: 8px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; color: var(--text); text-align: center; }
 .codex-card:hover { border-color: var(--gold); }
-.codex-card.locked { opacity: 0.45; cursor: default; }
+/* 잠긴 카드: 그림만 흐리게 — 글(얻는 방법)은 읽을 수 있게 (명암비 4.5:1 이상) */
+.codex-card.locked { cursor: default; }
+.codex-card.locked .cc-q, .codex-card.locked img, .codex-card.locked b { opacity: 0.45; }
 .codex-card.boss { border-color: #a65a6a; }
 .cc-img { width: 64px; height: 72px; object-fit: contain; }
 .cc-q { width: 64px; height: 72px; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: var(--dim); }
@@ -426,7 +428,7 @@
 .hx-tags { grid-area: tags; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
 .hx-chip, .hx-tags .el-badge { box-sizing: border-box; height: 26px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
 .hx-chip { background: #ffffff14; border: 1px solid #ffffff26; color: #efe4ff; }
-.hx-tags .el-badge { align-self: center; padding-left: 5px; background: color-mix(in srgb, var(--ec) 24%, #0008); border: 1px solid color-mix(in srgb, var(--ec) 60%, transparent); }
+.hx-tags .el-badge { align-self: center; padding-left: 5px; background: color-mix(in srgb, var(--ec) 14%, #000a); /* 어둠 원소 글자도 4.5:1 이상 */ border: 1px solid color-mix(in srgb, var(--ec) 60%, transparent); }
 .hx-act { grid-area: act; display: flex; justify-content: flex-end; }
 .hx-lead { display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 20px; border-radius: 999px; font-weight: 900; font-size: 1rem; color: #3a1e06; background: linear-gradient(180deg, #fff0bc 0%, #f6cf78 40%, #d98f32 100%); border: 2px solid #fff2c4; box-shadow: 0 0 0 2px #6a3a10, 0 4px 0 #5a2e0c, 0 0 18px #ffbf5a66; white-space: nowrap; }
 .hx-lead:hover { filter: brightness(1.07); }
@@ -965,3 +967,12 @@
 /* 출정 준비: 인연 레벨 배지 */
 .hp-item { position: relative; }
 .hp-bond { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: linear-gradient(180deg, #ffd0e0, #ff9ab8); color: #4a1428; font-style: normal; font-size: 0.7rem; font-weight: 900; display: grid; place-items: center; box-shadow: 0 0 0 2px #1a1028; }
+
+/* ---------- 효과 줄이기 (설정 reduceFx, 기기 "동작 줄이기"면 기본으로 켜짐) ----------
+   움직임·깜박임 애니메이션을 사실상 없앰. JS 타이머로 보였다 사라지는 알림(웨이브 배너·보스 등장)은 고정으로 보였다 사라짐 */
+:root.reduce-fx *, :root.reduce-fx *::before, :root.reduce-fx *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+:root.reduce-fx .banner.show { animation: none !important; opacity: 1; transform: translate(-50%, -50%); }
+:root.reduce-fx .boss-intro.show { animation: none !important; opacity: 1; }
+:root.reduce-fx .boss-intro.show .bi-art { animation: none !important; }
+:root.reduce-fx .stat-lives.flash { animation: none !important; background: #ff4a4a55; }
+:root.reduce-fx .gc-flash.go:not(.soft) { animation: none !important; opacity: 0; }

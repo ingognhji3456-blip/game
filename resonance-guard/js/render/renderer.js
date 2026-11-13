@@ -41,7 +41,8 @@ RG.render = (() => {
   let perfN = 0;
   let perfSlow = 0;
   let perfLast = 0; // 적이 아주 많으면 적의 드리운 그림자 대신 발밑 그늘만 (성능)
-  const overlay = { hover: null, selectedTower: null, ghost: null, selectedEnemy: null, heroSelected: false, skill: null, rally: null, showPaths: true };
+  const hurtAt = new Map(); // 적 id → 마지막으로 맞은 번쩍임을 보인 시각(실제 시간)
+  const overlay = { hover: null, keyCursor: false, selectedTower: null, ghost: null, selectedEnemy: null, heroSelected: false, skill: null, rally: null, showPaths: true };
   const REGION_BASE = { 1: '#5d7a3c', 2: '#c9d8e6', 3: '#b9774a', 4: '#3f7f86', 5: '#5d5672' };
 
   const X = (x) => ox + x * T;
@@ -430,6 +431,8 @@ RG.render = (() => {
   let barOn = false; // 모으는 중인가 (frame에서 켜고 flushBars에서 끔)
   const barPool = [];
   let barN = 0;
+  // 우리 편(병사·벽) 체력은 파랑 — 적(초록)과 같은 칸에 겹쳐도, 색약이어도 구별되게
+  const ALLY_BAR = '#5aa8ff';
   function bar(cx, top, w, ratio, color, shieldRatio, elite) {
     if (barOn) {
       let b = barPool[barN];
@@ -708,7 +711,8 @@ RG.render = (() => {
     ctx.save();
     for (const [tiles, open] of groups) {
       if (!tiles.length) continue;
-      const blink = open && warn ? 0.45 + 0.55 * Math.abs(Math.sin(time * (left < 1.2 ? 14 : 8))) : 1;
+      // 닫히기 직전 깜박임: 초당 2.5번 이하(광과민 기준), 효과 줄이기면 깜박이지 않음 — 남은 초 글자가 알려 줌
+      const blink = open && warn && !RG.fx.settings.reduce ? 0.45 + 0.55 * Math.abs(Math.sin(time * 8)) : 1;
       let sx = 0;
       let sy = 0;
       for (const i of tiles) {
@@ -1069,6 +1073,23 @@ RG.render = (() => {
     return cv;
   }
 
+  /** 키보드 커서: 탑·적 위에, 어떤 바탕에서도 보이게 검은 테 + 밝은 모서리 꺾쇠 */
+  function drawKeyCursor(c, r) {
+    const x = X(c); const y = Y(r); const L = T * 0.3;
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (const [w, col] of [[Math.max(3, T * 0.11), 'rgba(0,0,0,0.75)'], [Math.max(2, T * 0.055), '#fff2c4']]) {
+      ctx.lineWidth = w;
+      ctx.strokeStyle = col;
+      ctx.beginPath();
+      for (const [cx, cy, dx, dy] of [[x, y, 1, 1], [x + T, y, -1, 1], [x, y + T, 1, -1], [x + T, y + T, -1, -1]]) {
+        ctx.moveTo(cx + dx * 2, cy + dy * (2 + L)); ctx.lineTo(cx + dx * 2, cy + dy * 2); ctx.lineTo(cx + dx * (2 + L), cy + dy * 2);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   function drawOverlayUnder() {
     const st = game.state;
     // 마우스가 올라간 칸
@@ -1122,8 +1143,17 @@ RG.render = (() => {
       ctx.strokeStyle = gh.ok ? 'rgba(170,255,185,0.9)' : 'rgba(255,120,120,0.9)';
       ctx.lineWidth = Math.max(1.5, T * 0.045);
       ctx.strokeRect(X(gh.c) + 1.5, Y(gh.r) + 1.5, T - 3, T - 3);
+      if (!gh.ok) {
+        // 색만으로 알리지 않게(색약): 못 짓는 칸은 굵은 ✕ (검은 테 + 밝은 선)
+        const x0 = X(gh.c) + T * 0.24; const y0 = Y(gh.r) + T * 0.24; const x1 = X(gh.c) + T * 0.76; const y1 = Y(gh.r) + T * 0.76;
+        ctx.lineCap = 'round';
+        for (const [w, col] of [[Math.max(4, T * 0.13), 'rgba(20,6,10,0.8)'], [Math.max(2, T * 0.07), '#ffd0c8']]) {
+          ctx.lineWidth = w; ctx.strokeStyle = col;
+          ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.moveTo(x1, y0); ctx.lineTo(x0, y1); ctx.stroke();
+        }
+      }
       ctx.restore();
-      if (spec.range) rangeCircle(x, y, spec.range * (1 + ((game.meta && game.meta.rangePct) || 0)), gh.ok ? 'rgba(200,255,210,A)' : 'rgba(255,140,140,A)');
+      if (spec.range) rangeCircle(x, y, spec.range * (1 + ((game.meta && game.meta.rangePct) || 0)), gh.ok ? 'rgba(200,255,210,A)' : 'rgba(255,140,140,A)', !gh.ok);
       if (spec.rallyRange) rangeCircle(x, y, spec.rallyRange, 'rgba(180,230,140,A)', true);
       if (spec.detect) rangeCircle(x, y, spec.detect, 'rgba(255,230,140,A)', true);
       for (const l of gh.links || []) {
@@ -1171,8 +1201,9 @@ RG.render = (() => {
     if (td.kind === 'beam') return t.beamState && t.beamState.length ? 'fire' : 'idle';
     if (td.kind === 'sweep') { const ph = (time * 1.1 + t.id * 0.37) % 2; return t.anim > 0 ? (ph < 1 ? 'fire' : 'aim') : ph < 1.4 ? 'idle' : 'aim'; } // 등대: 렌즈가 돌며 번쩍
     if (td.kind === 'orbit') return t.anim > 0 ? 'fire' : ((time * 0.9 + t.id * 0.37) % 2 < 1.3 ? 'idle' : 'aim'); // 불사조 둥지: 불사조가 적을 스치면 불꽃이 솟음
-    if (t.anim > 0.11) return 'fire';
     const iv = (t.calc && t.calc.interval) || 1;
+    // 효과 줄이기: 아주 빨리 쏘는 탑(실제로 0.34초보다 자주)은 발사 그림(총구 불꽃)을 건너뜀
+    if (t.anim > 0.11) return RG.fx.settings.reduce && iv / Math.max(1, (RG.fx.getSpeed ? RG.fx.getSpeed() : 1)) < 0.34 ? 'aim' : 'fire';
     if (t.cd > 0 && t.cd <= Math.max(0.22, iv * 0.4)) return 'aim';
     return 'idle';
   }
@@ -1464,8 +1495,11 @@ RG.render = (() => {
     const groundY = cy;
     cy -= lift;
     let alphaS = (e.stealth && !e.revealed) ? 0.35 + 0.1 * Math.sin(time * 6) : 1;
-    if (e.phaseWarn) { alphaS *= 0.45 + 0.4 * Math.abs(Math.sin(time * 22)); dx += Math.sin(time * 40) * T * 0.04; } // 위상 망령: 순간이동 직전 일렁임
-    const hurt = st.time - e.lastHurt < 0.08;
+    // 위상 망령: 순간이동 직전 일렁임 — 초당 2.5번 이하로, 효과 줄이기면 흐릿하게만 (발밑 점선 원은 아래에서)
+    if (e.phaseWarn) { if (RG.fx.settings.reduce) alphaS *= 0.6; else { alphaS *= 0.45 + 0.4 * Math.abs(Math.sin(time * 8)); dx += Math.sin(time * 16) * T * 0.04; } }
+    // 맞은 번쩍임: 한 적이 여러 탑에 맞아도 1초에 3번 정도까지(실제 시간), 효과 줄이기면 없음 — 체력 막대가 대신 알려 줌
+    let hurt = !RG.fx.settings.reduce && st.time - e.lastHurt < 0.08;
+    if (hurt) { if (hurtAt.size > 400) hurtAt.clear(); const at = hurtAt.get(e.id); if (at != null && time - at < 0.34 && time - at > 0.08) hurt = false; else if (at == null || time - at >= 0.34) hurtAt.set(e.id, time); }
     const flip = e.dir < 0;
     const big = ed.size >= 1.4 ? 288 : 168;
     const k0 = ekey(e.type, frame);
@@ -1497,6 +1531,7 @@ RG.render = (() => {
       ctx.restore();
     }
     if (motion) ctx.restore();
+    if (e.phaseWarn && RG.fx.settings.reduce) { ctx.save(); ctx.setLineDash([4, 3]); ctx.strokeStyle = '#c8b8ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(cx, groundY, size * 0.4, size * 0.14, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
     // 상태 표시
     const top = cy - size * 0.92;
     if (frozen) {
@@ -1623,7 +1658,7 @@ RG.render = (() => {
       const uk = poseSprite(RG.art.sprites.unitKey(look, pose), RG.art.sprites.unitKey(look, 'idle'), () => RG.art.unit(look, pose), 128, 128);
       if (!manyEnemies) castShadow(uk, cx, cy, size, size, 0.5, 0.9, flip, 0.3, bob);
       sprite(uk, cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
-      if (u.hp < u.maxHp) bar(cx, cy - size * 1.0, Math.max(14, T * 0.5), u.hp / u.maxHp, '#b8e986', 0, false);
+      if (u.hp < u.maxHp) bar(cx, cy - size * 1.0, Math.max(14, T * 0.5), u.hp / u.maxHp, ALLY_BAR, 0, false);
       return;
     }
     if (u.kind === 'snowman') {
@@ -1632,7 +1667,7 @@ RG.render = (() => {
       const walking = (Math.abs(u.x - u.px) + Math.abs(u.y - u.py)) > 0.001;
       const pose = u.attackAnim > 0.1 ? 'attack' : u.engaged && u.cd <= 0.3 ? 'aim' : walking ? (Math.floor(time * 6 + u.id) % 2 ? 'walk1' : 'walk0') : 'idle';
       const uk = poseSprite(RG.art.sprites.unitKey('snowman', pose), RG.art.sprites.unitKey('snowman', 'idle'), () => RG.art.unit('snowman', pose), 128, 128);
-      const fade = u.until - st.time < 2 ? 0.55 + 0.45 * Math.abs(Math.sin(time * 8)) : 1;
+      const fade = u.until - st.time < 2 ? (RG.fx.settings.reduce ? 0.6 : 0.55 + 0.45 * Math.abs(Math.sin(time * 8))) : 1;
       if (!manyEnemies) castShadow(uk, cx, cy, size, size, 0.5, 0.9, flip, 0.3, 0);
       sprite(uk, cx, cy, size, size, 0.5, 0.9, flip, fade);
       if (u.hp < u.maxHp) bar(cx, cy - size * 0.95, Math.max(14, T * 0.5), u.hp / u.maxHp, '#bfefff', 0, false);
@@ -1641,7 +1676,7 @@ RG.render = (() => {
     if (u.kind === 'wall') {
       const size = T * 1.0;
       sprite(RG.art.sprites.unitKey('rock_wall', 'idle'), cx, cy + T * 0.1, size, size, 0.5, 0.9, false, 1);
-      bar(cx, cy - size * 0.8, Math.max(20, T * 0.7), u.hp / u.maxHp, '#b8e986', 0, false);
+      bar(cx, cy - size * 0.8, Math.max(20, T * 0.7), u.hp / u.maxHp, ALLY_BAR, 0, false);
       return;
     }
     if (u.kind === 'drone') {
@@ -1789,7 +1824,7 @@ RG.render = (() => {
         if (!t) continue;
         const k = Math.max(0, (a.at - st.time) / RG.data.rules.bossWarn);
         ctx.save();
-        ctx.globalAlpha = 0.5 + 0.5 * Math.abs(Math.sin(time * 10));
+        ctx.globalAlpha = RG.fx.settings.reduce ? 0.9 : 0.5 + 0.5 * Math.abs(Math.sin(time * 8)); // 빨간 경고: 초당 2.5번 이하, 줄이기면 고정
         ctx.strokeStyle = '#ff5a5a';
         ctx.lineWidth = Math.max(2, T * 0.06);
         ctx.beginPath(); ctx.arc(X(t.x), Y(t.y), T * (0.45 + 0.2 * k), 0, Math.PI * 2); ctx.stroke();
@@ -1835,11 +1870,11 @@ RG.render = (() => {
   function updateAmbient(dt) {
     const m = game.map;
     const region = m.def.region || 1;
-    const key = `${m.id}`;
+    const reduce = RG.fx.settings.reduce || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const key = `${m.id}|${reduce}`;
     if (ambientFor !== key) {
       ambientFor = key;
       ambSeed = 7 + m.cols * 31 + m.rows;
-      const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
       const n = Math.round(m.cols * m.rows * (AMB[region] || AMB[1]).n * (reduce ? 0.4 : 1));
       ambient = [];
       for (let i = 0; i < n; i++) { const p = {}; spawnAmbient(p, region, m, true); p.life = arand() * p.max; ambient.push(p); }
@@ -2144,6 +2179,7 @@ RG.render = (() => {
     }
     drawProjectiles(alpha);
     RG.fx.draw(ctx, X, Y, T);
+    if (overlay.keyCursor && overlay.hover) drawKeyCursor(overlay.hover.c, overlay.hover.r);
     updateAmbient(dt);
     if (!manyEnemies) drawAmbient(); // 적이 아주 많을 땐 분위기 입자는 쉼
     drawAlerts();

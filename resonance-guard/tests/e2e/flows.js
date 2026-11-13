@@ -2,7 +2,7 @@
 
 /*
  * 입력 방식별 한 판 + 이어하기 (QUALITY.md §5)
- *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|mouse|resume|world|gacha|tutorial]
+ *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|mouse|resume|world|gacha|tutorial|a11y]
  *
  * - keyboard: 숫자(탑 고르기)·방향키·Enter·U·Space·F만으로 1-1을 깬다 (마우스·터치 없음)
  * - touch:    휴대폰 가로(터치 에뮬레이션)에서 탑 목록 탭 → 칸 탭, 탑 끌어다 놓기만으로 1-1을 깬다
@@ -460,9 +460,117 @@ async function tutorialRun(browser) {
   return { name: '첫 판 안내', ok, detail: `단계 ${steps.join('→')}, 손가락(카드 ${pointsCard}·호출 ${pointsCall}·강화 ${pointsUp}), 끝난 뒤 병영 팁 ${done.tip}, 다시 안 나옴 ${!again}, 설정으로 되살림 ${back}, 건너뛰기 ${!skipped.active}`, errors };
 }
 
+/* ---------------- 키보드 접근성: 창 안 Tab 순환·Esc·초점 되돌림, 위험 확인은 취소에 초점, 뽑기 두 번 안 됨, 6지역 방향키, 전투 키보드 흐름 ---------------- */
+async function a11yRun(browser) {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await page.goto(URL);
+  await page.evaluate(() => {
+    const P = RG.progress; P.reset();
+    const st = { result: 'win', lives: 12, task: { done: true }, wave: { index: 20 } };
+    for (const m of RG.data.maps) { if (m.region >= 6) break; P.record(m.id, 'normal', st); }
+    for (const k of Object.keys(RG.data.story)) P.markSeen('story', k);
+    for (const m of RG.data.maps) for (const t of m.tips || []) P.markSeen('tips', t);
+    P.markSeen('tips', 'tutorial');
+    P.gachaState().crystals = 1000; P.save();
+    RG.ui.show('title', {});
+  });
+  await page.waitForTimeout(300);
+  const r = {};
+  // 1) 첫 초점: 키보드를 쓰면 화면의 주 버튼
+  await page.keyboard.press('Tab'); await page.keyboard.press('Shift+Tab');
+  await page.evaluate(() => RG.ui.show('title', {}));
+  await page.waitForTimeout(150);
+  r.autofocus = await page.evaluate(() => document.activeElement && document.activeElement.hasAttribute('data-autofocus'));
+  // 2) 설정 창: Tab이 창 안에서만, Esc로 닫으면 설정 버튼으로 초점이 돌아옴
+  await page.focus('.tc-btn[title="설정"]');
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(150);
+  let inside = true;
+  for (let i = 0; i < 14; i++) { await page.keyboard.press('Tab'); inside = inside && await page.evaluate(() => !!document.activeElement.closest('.modal')); }
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(100);
+  r.trap = inside;
+  r.escBack = await page.evaluate(() => !RG.ui.modalOpen() && document.activeElement && document.activeElement.matches('.tc-btn[title="설정"]'));
+  // 3) 처음부터 다시(위험): 초점은 취소
+  await page.focus('.tf-reset');
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(100);
+  r.dangerSafe = await page.evaluate(() => !document.activeElement.classList.contains('btn-danger') && !!document.activeElement.closest('.modal'));
+  await page.keyboard.press('Enter'); // 취소
+  r.notReset = await page.evaluate(() => RG.progress.starsTotal() > 0);
+  // 4) 뽑기: Enter 두 번 → 한 번만, Esc → 모두 열기 → Esc → 확인
+  await page.evaluate(() => RG.ui.show('gacha', {}));
+  await page.waitForTimeout(300);
+  const c0 = await page.evaluate(() => RG.progress.gachaState().crystals);
+  await page.focus('.gc-pull:not(.gc-ten)');
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(80);
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(200);
+  const c1 = await page.evaluate(() => ({ c: RG.progress.gachaState().crystals, n: document.querySelectorAll('.gc-reveal').length }));
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  r.gachaOnce = c0 - c1.c === 100 && c1.n === 1;
+  r.gachaClosed = await page.evaluate(() => !document.querySelector('.gc-reveal'));
+  // 5) 지역 고르기: 방향키로 6지역까지
+  await page.evaluate(() => { const st = { result: 'win', lives: 12, task: { done: true }, wave: { index: 20 } }; for (const m of RG.data.maps.filter((x) => x.region === 5)) RG.progress.record(m.id, 'normal', st); RG.ui.show('world', { view: 'regions' }); });
+  await page.waitForTimeout(400);
+  await page.focus('.rg-panel');
+  for (let i = 0; i < 7; i++) { await page.keyboard.press('ArrowRight'); await page.waitForTimeout(60); }
+  r.region6 = await page.evaluate(() => (document.activeElement.textContent || '').includes('별울림'));
+  // 6) 전투: Tab으로 탑 카드 → Enter → 초점이 전장으로 → 방향키·Enter로 지음 → 탑 창의 강화 버튼에 초점을 둔 채 골드가 바뀌어도 초점 유지
+  await page.evaluate(() => RG.ui.show('game', { opts: { mapId: '1-2', heroId: 'kara', seed: 3, mode: 'normal', towers: ['ember_archer', 'frost_crystal', 'stone_barracks'], branches: true } }));
+  await page.waitForFunction(() => RG.ui.game.game && !document.querySelector('#screen-game').classList.contains('loading'));
+  await page.evaluate(() => RG.ui.closeAllModals());
+  await page.focus('.tower-card[data-type="ember_archer"]');
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(100);
+  r.mapFocus = await page.evaluate(() => document.activeElement.classList.contains('game-canvas') && !!RG.ui.game.placing);
+  const n0 = await page.evaluate(() => RG.ui.game.game.state.towers.length);
+  for (const k of ['ArrowRight', 'ArrowDown']) { await page.keyboard.press(k); await page.waitForTimeout(40); }
+  let built = false;
+  for (let i = 0; i < 16 && !built; i++) {
+    await page.keyboard.press('Enter'); await page.waitForTimeout(60);
+    built = await page.evaluate((n0) => RG.ui.game.game.state.towers.length > n0, n0);
+    if (!built) { await page.keyboard.press(i % 2 ? 'ArrowRight' : 'ArrowDown'); await page.waitForTimeout(40); }
+  }
+  r.built = built;
+  r.cursor = await page.evaluate(() => RG.render.overlay.keyCursor === true);
+  await page.evaluate(() => { const t = RG.ui.game.game.state.towers[0]; RG.ui.game.game.state.gold += 300; RG.ui.game.doCmd && 0; window.__t = t.id; });
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => { const t = RG.ui.game.game.state.towers[0]; const p = RG.render.worldToScreen(t.c + 0.5, t.r + 0.5); const cv = document.querySelector('.game-canvas'); const b = cv.getBoundingClientRect(); const o = { clientX: b.left + p.x, clientY: b.top + p.y, bubbles: true, pointerType: 'mouse' }; cv.dispatchEvent(new PointerEvent('pointerdown', o)); cv.dispatchEvent(new PointerEvent('pointerup', o)); });
+  await page.waitForTimeout(200);
+  await page.focus('.info-panel .btn-up');
+  await page.evaluate(() => { RG.ui.game.game.state.gold += 55; });
+  await page.waitForTimeout(400);
+  r.panelFocus = await page.evaluate(() => document.activeElement && document.activeElement.matches('.info-panel .btn-up'));
+  // 7) 효과 줄이기: 설정을 켜면 번쩍임(번개·빛기둥)은 1초에 3번까지, 흔들림 없음, 화면에 reduce-fx
+  r.reduceFx = await page.evaluate(() => {
+    RG.ui.setSettings({ reduceFx: true });
+    RG.fx.clear();
+    const ev = [];
+    for (let i = 0; i < 10; i++) ev.push({ type: 'strike', x: 3 + i * 0.3, y: 3, element: 'storm' }, { type: 'smite', x: 4, y: 4, radius: 0.6 });
+    RG.fx.onEvents(ev);
+    const c = RG.fx.counts();
+    const shake = RG.fx.shakeOffset(40);
+    const ok = c.bolts + c.pillars <= 3 && shake[0] === 0 && document.documentElement.classList.contains('reduce-fx');
+    RG.ui.setSettings({ reduceFx: false });
+    RG.fx.clear();
+    RG.fx.onEvents(ev);
+    const c2 = RG.fx.counts();
+    return ok && c2.bolts + c2.pillars > 3;
+  });
+  await page.close();
+  const ok = Object.values(r).every(Boolean);
+  return { name: '키보드 접근성', ok, detail: Object.entries(r).map(([k, v]) => `${k} ${v ? '✓' : '✗'}`).join(' · '), errors };
+}
+
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
-  const runs = { keyboard: keyboardRun, touch: touchRun, mouse: mouseRun, resume: resumeRun, world: worldRun, gacha: gachaRun, tutorial: tutorialRun };
+  const runs = { keyboard: keyboardRun, touch: touchRun, mouse: mouseRun, resume: resumeRun, world: worldRun, gacha: gachaRun, tutorial: tutorialRun, a11y: a11yRun };
   let fail = 0;
   for (const [k, fn] of Object.entries(runs)) {
     if (only && only !== k) continue;

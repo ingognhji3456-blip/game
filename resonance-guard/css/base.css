@@ -45,6 +45,8 @@ kbd { font: 700 0.7rem var(--font); padding: 0 4px; border-radius: 4px; backgrou
 
 /* 버튼 */
 button { font-family: var(--font); color: inherit; }
+/* 키보드 초점: 어떤 바탕에서도 보이는 굵은 테 (부품마다 따로 정한 모양이 있으면 그쪽이 이김 — :where는 우선순위 0) */
+:where(button, [tabindex], a, input, select, summary):focus-visible { outline: 3px solid #fff2c4; outline-offset: 2px; }
 .btn {
   appearance: none; border: 2px solid var(--line); background: linear-gradient(#3a2e4f, #2a2139); color: var(--text);
   font-weight: 700; font-size: 0.95rem; padding: 0.55em 1em; border-radius: 10px; cursor: pointer; min-height: 40px;

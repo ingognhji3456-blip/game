@@ -18,7 +18,18 @@ RG.fx = (() => {
   const breaths = [];    // 어둠 불길 (흑룡의 둥지)
   let curGame = null;    // 표식이 적을 따라가도록
   let shake = 0;
-  const settings = { numbers: true, shake: true };
+  // reduce: 설정 "효과 줄이기" — 흔들림 끔, 번쩍이는 효과(번개·빛기둥)는 1초에 3번까지, 깜박임 대신 고정 표시
+  const settings = { numbers: true, shake: true, reduce: false };
+  /** 번쩍임 한도: 효과 줄이기 중에는 큰 번쩍임(번개·빛기둥)을 1초에 3번까지 (광과민 기준 — 초당 3회 이하) */
+  const flashLog = [];
+  function allowFlash() {
+    if (!settings.reduce) return true;
+    const now = performance.now();
+    while (flashLog.length && now - flashLog[0] > 1000) flashLog.shift();
+    if (flashLog.length >= 3) return false;
+    flashLog.push(now);
+    return true;
+  }
   const MAX_PARTS = 900;
   const MAX_TEXTS = 60;
 
@@ -60,6 +71,7 @@ RG.fx = (() => {
   }
   function bolt(points, color, life = 0.16, width = 0.06, jag = 0.16) {
     if (lite && bolts.length >= (lite2 ? 5 : LITE_BOLTS)) return;
+    if (!allowFlash()) return;
     // 지그재그 미리 계산
     const pts = [];
     for (let i = 0; i < points.length - 1; i++) {
@@ -110,7 +122,7 @@ RG.fx = (() => {
           break;
         }
         case 'smite':
-          pillars.push({ x: e.x, y: e.y, life: 0.45, max: 0.45, w: Math.max(0.45, e.radius) });
+          if (allowFlash()) pillars.push({ x: e.x, y: e.y, life: 0.45, max: 0.45, w: Math.max(0.45, e.radius) });
           ring(e.x, e.y, Math.max(0.6, e.radius + 0.2), '#fff3b0', 0.4, 0.12);
           burst(e.x, e.y - 0.3, '#fff6c8', lite ? 8 : 22, 2.6, 0.5, 0.07, -0.6);
           addShake(0.12);
@@ -376,7 +388,7 @@ RG.fx = (() => {
   const pOrder = [];
   let pFrame = 0;
   const fontCache = new Map();
-  function addShake(v) { if (settings.shake) shake = Math.min(1, shake + v); }
+  function addShake(v) { if (settings.shake && !settings.reduce) shake = Math.min(1, shake + v); }
 
   function update(dt) {
     for (let i = parts.length - 1; i >= 0; i--) {
@@ -390,7 +402,7 @@ RG.fx = (() => {
     }
     for (let k = 0; k < TIMED.length; k++) {
       const list = TIMED[k];
-      for (let i = list.length - 1; i >= 0; i--) { list[i].life -= dt; if (list[i].life <= 0) list.splice(i, 1); }
+      for (let i = list.length - 1; i >= 0; i--) { const o = list[i]; o.life -= dt; o.age = (o.age || 0) + dt; if (o.life <= 0) list.splice(i, 1); }
     }
     for (const t of texts) t.y -= dt * (t.big ? 0.9 : 1.2);
     for (let i = drops.length - 1; i >= 0; i--) { drops[i].t += dt; if (drops[i].t >= drops[i].delay) drops.splice(i, 1); }
@@ -409,7 +421,8 @@ RG.fx = (() => {
     for (const a of areas) {
       const k = 1 - a.life / a.max;
       ctx.save();
-      ctx.globalAlpha = 0.25 + 0.35 * Math.abs(Math.sin(k * Math.PI * 4));
+      // 깜박임은 실제 시간으로 초당 2번(경고 길이·배속과 상관없이), 효과 줄이기면 고정 — 차오르는 원이 남은 시간을 보여 줌
+      ctx.globalAlpha = settings.reduce ? 0.55 : 0.25 + 0.35 * Math.abs(Math.sin((a.age || 0) * Math.PI * 2));
       ctx.strokeStyle = a.color;
       ctx.fillStyle = a.color;
       ctx.lineWidth = 2;
@@ -610,5 +623,7 @@ RG.fx = (() => {
 
   function clear() { parts.length = 0; rings.length = 0; bolts.length = 0; texts.length = 0; areas.length = 0; drops.length = 0; meteors.length = 0; marks.length = 0; pillars.length = 0; wisps.length = 0; breaths.length = 0; shake = 0; curGame = null; }
 
-  return { onEvents, update, draw, drawUnder, drawTexts, shakeOffset, clear, settings, burst, ring, text, colorOf, lightOf, setLite, setSpeed };
+  return { onEvents, update, draw, drawUnder, drawTexts, shakeOffset, clear, settings, burst, ring, text, colorOf, lightOf, setLite, setSpeed, getSpeed: () => gameSpeed,
+    /** 시험용: 지금 떠 있는 번개·빛기둥 수 */
+    counts: () => ({ bolts: bolts.length, pillars: pillars.length }) };
 })();

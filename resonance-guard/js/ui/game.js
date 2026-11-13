@@ -64,7 +64,7 @@
     RG.render.attach(canvas, game);
     // 탑 목록이 접히거나 글자 크기가 바뀌어 전장 크기가 달라져도 맵이 잘리지 않게
     if (window.ResizeObserver) { stageObs = new ResizeObserver(() => { RG.render.resize(); placeLabel(); }); stageObs.observe(R.stage); }
-    Object.assign(RG.render.overlay, { hover: null, selectedTower: null, ghost: null, selectedEnemy: null, heroSelected: false, skill: null, rally: null });
+    Object.assign(RG.render.overlay, { hover: null, keyCursor: false, selectedTower: null, ghost: null, selectedEnemy: null, heroSelected: false, skill: null, rally: null });
     root.classList.add('loading');
     RG.art.sprites.prepareForGame(game).then(() => { root.classList.remove('loading'); });
     const region = D().regions.find((r) => r.id === game.def.region);
@@ -121,7 +121,7 @@
     left.append(R.lives, R.gold, R.wave, R.next, R.call, el('div', { class: 'rail-row' }, [R.speed, R.pause]), R.task);
 
     const stage = el('div', { class: 'stage' });
-    canvas = el('canvas', { class: 'game-canvas', 'aria-label': '전장' });
+    canvas = el('canvas', { class: 'game-canvas', 'aria-label': '전장 — 방향키로 칸 고르기, Enter로 놓기', tabindex: '-1' });
     R.stage = stage;
     R.boss = el('div', { class: 'boss-bar hidden' }, [el('span', { class: 'boss-name' }), el('div', { class: 'boss-hp' }, [el('i')])]);
     R.banner = el('div', { class: 'banner' });
@@ -423,7 +423,12 @@
     if (pick) refreshGhost();
   }
 
+  let livesFlashAt = -1e9;
   function flashLives() {
+    // 새는 적이 몰려도 0.6초에 한 번까지 (빨간 번쩍임이 초당 3번을 넘지 않게)
+    const now = performance.now();
+    if (now - livesFlashAt < 600) return;
+    livesFlashAt = now;
     R.lives.classList.remove('flash');
     void R.lives.offsetWidth;
     R.lives.classList.add('flash');
@@ -494,6 +499,7 @@
       const inside = c >= 0 && r >= 0 && c < game.map.cols && r < game.map.rows;
       RG.render.overlay.hover = inside ? { c, r } : null;
       keyCursor = null;
+      RG.render.overlay.keyCursor = false;
       if (mode === 'skill') RG.render.overlay.skillPos = p;
       if (pick) {
         // 놓기 모드: 미리보기가 칸에 붙어 따라옴 (손가락으로 끌면 손가락 위쪽 칸)
@@ -694,6 +700,9 @@
         'aria-pressed': 'false',
       }, [
         key ? el('kbd', { text: key }) : null,
+        // 원소는 색만이 아니라 모양(아이콘)으로도, 전설·신화는 글자로도 (색약)
+        el('span', { class: 'tc-el', title: D().elements[td.element].name }, [UI.icon(td.element, 'tiny')]),
+        RG.gacha.TIER[RG.gacha.rarityOf(type)] >= RG.gacha.TIER.legendary ? el('em', { class: `tc-rar r-${RG.gacha.rarityOf(type)}`, text: RG.gacha.rarityOf(type) === 'mythic' ? '신화' : '전설' }) : null,
         (game.ranks && game.ranks[type]) ? el('em', { class: `tc-rank ${RG.gacha.isFinal(game.ranks[type]) ? 'fin' : ''}`, text: RG.gacha.isFinal(game.ranks[type]) ? '★' : `+${game.ranks[type]}` }) : null,
         UI.towerImg(type, lv0, null, 'tc-img'),
         lv0 > 1 ? el('em', { class: 'tc-lv', text: `Lv${lv0}` }) : null,
@@ -706,7 +715,11 @@
       card.addEventListener('pointerup', onCardUp);
       card.addEventListener('pointercancel', onCardCancel);
       // 키보드(Tab → Enter)나 코드로 누른 경우만 여기서 — 손가락·마우스는 pointerup에서 처리함
-      card.addEventListener('click', () => { if (performance.now() - cardPointerAt > 600) togglePick(type); });
+      card.addEventListener('click', (e) => {
+        if (performance.now() - cardPointerAt > 600) togglePick(type);
+        // 키보드로 고르면(Enter·Space) 초점을 전장으로 — 이어서 방향키로 칸을 고르고 Enter로 놓음
+        if (e.detail === 0 && pick && canvas) canvas.focus({ preventScroll: true });
+      });
       card.addEventListener('contextmenu', (e) => { e.preventDefault(); if (pick) { cancelAll(); UI.sfx('click', { vol: 0.4 }); } });
       UI.tooltipFor(card, () => dockTip(type));
       R.dockList.appendChild(card);
@@ -1184,6 +1197,16 @@
     const sig = JSON.stringify([t.level, t.branch, t.effects, t.disabled, t.dampened, t.building, Math.floor(game.state.gold / 5), t.targetMode, Math.floor(info.damageDealt / 50), mode]);
     if (!force && R.info.dataset.sig === sig) return;
     R.info.dataset.sig = sig;
+    // 창은 골드·피해가 바뀔 때마다 다시 그려짐 — 키보드 초점이 창 안에 있었으면 같은 버튼으로 돌려줌
+    const fa = document.activeElement;
+    if (fa && fa !== R.info && R.info.contains(fa)) {
+      const key = { cls: fa.className, txt: (fa.textContent || '').trim().slice(0, 16) };
+      queueMicrotask(() => {
+        const cand = [...R.info.querySelectorAll('button')];
+        const f = cand.find((b) => b.className === key.cls && (b.textContent || '').trim().slice(0, 16) === key.txt) || cand.find((b) => b.className === key.cls && !b.disabled);
+        if (f) f.focus({ preventScroll: true });
+      });
+    }
     const td = info.def;
     const calc = t.calc;
     R.info.innerHTML = '';
@@ -1405,8 +1428,9 @@
       return;
     }
     if (UI.modalOpen()) return;
-    // 탑 목록 카드에 키보드 초점이 있으면 Enter·Space는 그 카드 누르기
-    if ((k === 'Enter' || k === ' ') && e.target && e.target.closest && e.target.closest('.tower-dock')) return;
+    // 키보드 초점이 버튼에 있으면 Enter·Space는 그 버튼 누르기 (마우스로 눌러 남은 초점은 제외 — 그땐 Space가 웨이브 호출)
+    if ((k === 'Enter' || k === ' ') && e.target && e.target.closest && e.target.closest('button, [role="button"], a, select')
+      && (e.target.closest('.tower-dock') || e.target.matches(':focus-visible'))) return;
     if (k === ' ' || k === 'Spacebar') { doCmd({ type: 'callWave' }); e.preventDefault(); return; }
     if (k === 'p' || k === 'P') { togglePause(); return; }
     if (k === 'f' || k === 'F') { cycleSpeed(); return; }
@@ -1428,6 +1452,7 @@
       const cur = keyCursor || (pick && pick.c != null ? { c: pick.c, r: pick.r } : hv ? { c: hv.c, r: hv.r } : { c: Math.floor(m.cols / 2), r: Math.floor(m.rows / 2) });
       keyCursor = { c: Math.max(0, Math.min(m.cols - 1, cur.c + arrows[k][0])), r: Math.max(0, Math.min(m.rows - 1, cur.r + arrows[k][1])) };
       RG.render.overlay.hover = { c: keyCursor.c, r: keyCursor.r };
+      RG.render.overlay.keyCursor = true; // 키보드 커서는 눈에 잘 띄게(렌더러 위쪽 층에 굵은 모서리)
       if (mode === 'skill') RG.render.overlay.skillPos = { x: keyCursor.c + 0.5, y: keyCursor.r + 0.5 };
       if (pick) setGhost(keyCursor.c, keyCursor.r);
       e.preventDefault();
@@ -1594,6 +1619,7 @@
     UI.modal(el('p', { class: 'modal-text', text: typeof tip.text === 'function' ? tip.text() : tip.text }), {
       title: `💡 ${tip.title}`,
       className: 'tip-modal',
+      onClose: () => setTimeout(nextTip, 200), // Esc·바깥 누르기로 닫아도 남은 팁은 이어서
       buttons: [{ text: tipsQueue.length ? '다음' : '알겠어요', primary: true, onClick: () => { if (id === 'build') dockAttention(); setTimeout(nextTip, 200); } }],
     });
   }

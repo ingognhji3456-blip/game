@@ -23,7 +23,20 @@
     hideTooltip();
     if (next.enter) next.enter(sec, data || {});
     document.body.dataset.screen = id;
+    // 키보드로 쓰는 중이면 첫 초점: data.focus(같은 화면을 다시 그릴 때 누르던 것) → [data-autofocus] → 첫 버튼
+    if (kbUser) requestAnimationFrame(() => {
+      if (current !== next || modals.length) return;
+      const a = document.activeElement;
+      if (a && a !== document.body && sec.contains(a)) return; // 화면이 스스로 초점을 줌
+      const f = (data && data.focus && sec.querySelector(`[data-focus="${data.focus}"]`)) || sec.querySelector('[data-autofocus]') || sec.querySelector('button:not([disabled]), [tabindex="0"]');
+      if (f) f.focus({ preventScroll: true });
+    });
   }
+  /* 입력 방식: 키보드(Tab·방향키·Enter)를 쓰면 켜지고, 마우스·터치를 쓰면 꺼짐 — 초점을 자동으로 줄지 정할 때 */
+  let kbUser = false;
+  document.addEventListener('keydown', (e) => { if (/^(Tab|Arrow|Enter| |Escape)/.test(e.key)) kbUser = true; }, true);
+  document.addEventListener('pointerdown', () => { kbUser = false; }, true);
+  const keyboardUser = () => kbUser;
   const currentId = () => (current ? current.id : null);
 
   /* ---------------- 소리 ---------------- */
@@ -31,7 +44,29 @@
   function music(track) { try { if (RG.audio) RG.audio.music(track); } catch (e) { /* 무시 */ } }
 
   /* ---------------- 설정 ---------------- */
-  const DEFAULT_SETTINGS = { master: 0.8, sfx: 0.8, music: 0.5, muted: false, speed: 1, shake: true, numbers: true, bigText: false, paths: true };
+  // reduceFx(효과 줄이기)는 기기의 "동작 줄이기" 설정을 따라 기본값을 정함
+  const prefersReduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const DEFAULT_SETTINGS = { master: 0.8, sfx: 0.8, music: 0.5, muted: false, speed: 1, shake: true, numbers: true, bigText: false, paths: true, reduceFx: prefersReduced, cvd: false };
+  /* 색약 친화 색 (설정 cvd): 원소 6색과 좋음·주의·나쁨 색을 적록·청황 색약에서도 서로 구별되는 값으로 (가장 가까운 짝의 색차 ΔE 16 이상).
+     원소 아이콘·글자가 함께 있으므로 색은 보조 — 이미 구운 탑·적 그림의 색은 그대로 */
+  const CVD = {
+    fire: ['#ff5410', '#822502', '#feac8c'], frost: ['#70daff', '#3186a1', '#ebf9fe'], storm: ['#a970ff', '#542d95', '#d0b2f3'],
+    earth: ['#30a874', '#055637', '#a1d0b6'], light: ['#fbe048', '#a18e17', '#fff6dd'], dark: ['#e783b3', '#873e62', '#f6c7dc'],
+  };
+  const CVD_UI = { '--good': '#93eafd', '--warn': '#ffeb12', '--bad': '#e0677f' };
+  let elemOrig = null;
+  function applyPalette(on) {
+    const E = RG.data.elements;
+    if (!elemOrig) { elemOrig = {}; for (const [k, v] of Object.entries(E)) elemOrig[k] = [v.color, v.dark, v.light]; }
+    const root = document.documentElement.style;
+    for (const k of Object.keys(elemOrig)) {
+      const [c, d, l] = on && CVD[k] ? CVD[k] : elemOrig[k];
+      Object.assign(E[k], { color: c, dark: d, light: l });
+      root.setProperty(`--${k}`, c);
+    }
+    for (const [v, c] of Object.entries(CVD_UI)) { if (on) root.setProperty(v, c); else root.removeProperty(v); }
+    document.documentElement.classList.toggle('cvd', !!on);
+  }
   let settings = null;
   function getSettings() {
     if (!settings) settings = Object.assign({}, DEFAULT_SETTINGS, RG.save.get(RG.save.KEYS.settings, {}));
@@ -49,6 +84,9 @@
     } catch (e) { /* 무시 */ }
     RG.fx.settings.shake = s.shake;
     RG.fx.settings.numbers = s.numbers;
+    RG.fx.settings.reduce = !!s.reduceFx;
+    applyPalette(!!s.cvd);
+    document.documentElement.classList.toggle('reduce-fx', !!s.reduceFx);
     RG.render.overlay.showPaths = s.paths;
     document.documentElement.classList.toggle('big-text', !!s.bigText);
   }
@@ -75,19 +113,44 @@
     }
     back.appendChild(box);
     if (opts.dismiss !== false) back.addEventListener('pointerdown', (e) => { if (e.target === back) { close(); if (opts.onClose) opts.onClose(); } });
+    const opener = document.activeElement;
     root.appendChild(back);
-    // 키보드: 마지막(확인) 버튼에 초점 → Enter로 확정, Esc로 닫기
-    const btns = box.querySelectorAll('.modal-buttons .btn');
-    if (btns.length) btns[btns.length - 1].focus({ preventScroll: true });
-    const handle = { el: box, close, onClose: opts.onClose };
+    // 키보드: 마지막(확인) 버튼에 초점 → Enter로 확정, Esc로 닫기. 되돌릴 수 없는 확인(위험 버튼)이면 취소 쪽에 초점
+    const btns = [...box.querySelectorAll('.modal-buttons .btn')];
+    const danger = opts.buttons && opts.buttons.filter(Boolean).some((b) => b.danger);
+    const first = danger ? btns.find((b) => !b.classList.contains('btn-danger')) : btns[btns.length - 1];
+    if (first) first.focus({ preventScroll: true });
+    else { box.tabIndex = -1; box.focus({ preventScroll: true }); }
+    const handle = { el: box, close, onClose: opts.onClose, dismiss: opts.dismiss !== false };
     modals.push(handle);
     function close() {
       back.remove();
       const i = modals.indexOf(handle);
       if (i >= 0) modals.splice(i, 1);
+      // 연 곳으로 초점을 돌려줌 (아직 화면에 있고 다른 창이 없을 때)
+      if (!modals.length && opener && opener !== document.body && document.contains(opener) && !opener.disabled) opener.focus({ preventScroll: true });
     }
     return handle;
   }
+  /* 창이 떠 있을 때: Tab은 창 안에서만 돌고, Esc는 맨 위 창을 닫음 (화면들의 키 처리보다 먼저 — 이 파일이 먼저 등록됨) */
+  document.addEventListener('keydown', (e) => {
+    const m = modals[modals.length - 1];
+    if (!m) return;
+    if (e.key === 'Escape') {
+      if (m.dismiss) closeTopModal();
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return;
+    }
+    if (e.key === 'Tab') {
+      const items = [...m.el.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])')].filter((x) => x.offsetParent !== null);
+      if (!items.length) { e.preventDefault(); return; }
+      const i = items.indexOf(document.activeElement);
+      const next = e.shiftKey ? (i <= 0 ? items.length - 1 : i - 1) : (i < 0 || i >= items.length - 1 ? 0 : i + 1);
+      items[next].focus();
+      e.preventDefault();
+    }
+  });
   function closeAllModals() { while (modals.length) modals[modals.length - 1].close(); }
   const modalOpen = () => modals.length > 0;
   function closeTopModal() {
@@ -106,7 +169,9 @@
   /* ---------------- 토스트 ---------------- */
   function toast(text, kind = 'info', ms = 1800) {
     const root = document.getElementById('toast-root');
-    const t = el('div', { class: `toast toast-${kind}`, text });
+    // 종류를 색(왼쪽 띠)만이 아니라 기호로도 (색약)
+    const glyph = kind === 'warn' ? '⚠ ' : kind === 'good' ? '✓ ' : '';
+    const t = el('div', { class: `toast toast-${kind}`, text: glyph && !String(text).startsWith(glyph.trim()) ? glyph + text : text, role: 'status' });
     root.appendChild(t);
     while (root.children.length > 3) root.firstChild.remove();
     setTimeout(() => t.classList.add('out'), ms);
@@ -118,6 +183,9 @@
   function tooltipFor(node, getHtml) {
     node.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') showTooltip(node, typeof getHtml === 'function' ? getHtml() : getHtml); });
     node.addEventListener('pointerleave', hideTooltip);
+    // 키보드 초점에도 (마우스로 눌러 생긴 초점은 제외)
+    node.addEventListener('focus', () => { if (node.matches(':focus-visible')) showTooltip(node, typeof getHtml === 'function' ? getHtml() : getHtml); });
+    node.addEventListener('blur', hideTooltip);
   }
   function showTooltip(node, html) {
     const tip = document.getElementById('tooltip');
@@ -161,7 +229,7 @@
   }
 
   Object.assign(RG.ui, {
-    register, show, currentId, sfx, music, getSettings, setSettings, applySettings, modal, closeAllModals, modalOpen, closeTopModal,
+    register, show, currentId, keyboardUser, sfx, music, getSettings, setSettings, applySettings, modal, closeAllModals, modalOpen, closeTopModal,
     confirmBox, toast, tooltipFor, showTooltip, hideTooltip, svgImg, icon, towerImg, enemyImg, portrait, stars, elementBadge, screens,
   });
 })();

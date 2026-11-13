@@ -62,6 +62,7 @@
       /* ---------- 제단 ---------- */
       const C = G().COST;
       const doPull = (kind) => {
+        if (sec.querySelector('.gc-reveal')) return; // 결과 창이 떠 있는 동안 (Enter를 한 번 더 눌러도) 또 뽑지 않음
         const res = P().pullGacha(kind);
         if (!res.ok) { UI.toast(res.reason, 'warn'); UI.sfx('error'); return; }
         UI.sfx('click');
@@ -161,21 +162,35 @@
     });
     cards.forEach((c) => row.appendChild(c));
     const skip = el('button', { class: 'btn gc-skip', onclick: () => cards.forEach((c, i) => flip(c, results[i])) }, ['모두 열기']);
-    const ok = el('button', { class: 'btn btn-primary gc-ok hidden', onclick: () => { clearTimers(); ov.remove(); done(); } }, ['확인']);
+    const ok = el('button', { class: 'btn btn-primary gc-ok hidden', onclick: () => { clearTimers(); restore(); ov.remove(); done(); } }, ['확인']);
     const summary = el('div', { class: 'gc-summary' });
     ov.append(flash, el('div', { class: 'gc-rtitle', text: results.length > 1 ? `${results.length}회 뽑기` : '뽑기' }), row, summary, el('div', { class: 'gc-rbtns' }, [skip, ok]));
     sec.appendChild(ov);
+    // 결과 창 뒤의 화면은 초점·누르기를 받지 않음, 초점은 "모두 열기"로. Esc: 처음엔 모두 열기, 다 열렸으면 확인
+    const behind = [...sec.children].filter((x) => x !== ov);
+    behind.forEach((x) => { x.inert = true; });
+    const restore = () => behind.forEach((x) => { x.inert = false; });
+    skip.focus({ preventScroll: true });
+    ov.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault(); e.stopPropagation();
+      if (opened < cards.length) skip.click(); else ok.click();
+    });
     let opened = 0;
+    let lastFlash = -1e9;
     function flip(card, r) {
       if (card.classList.contains('open')) return;
       card.classList.add('open');
       opened++;
       const tier = G().TIER[r.rarity];
       UI.sfx(tier >= G().TIER.legendary ? 'win' : r.isFinal || tier === G().TIER.epic ? 'unlock' : r.isNew ? 'star' : r.rarity === 'rare' ? 'upgrade' : 'build', { vol: tier >= G().TIER.legendary ? 0.7 : 0.6 });
-      if (tier >= G().TIER.epic || r.isFinal) { flash.className = `gc-flash fl-${r.rarity}`; void flash.offsetWidth; flash.classList.add('go'); }
+      // 화면 번쩍임: 0.4초에 한 번까지(광과민 기준 초당 3회 이하), 효과 줄이기면 카드마다 대신 마지막에 한 번만(가장 높은 등급)
+      const now = performance.now();
+      if ((tier >= G().TIER.epic || r.isFinal) && !UI.getSettings().reduceFx && now - lastFlash >= 400) { lastFlash = now; flash.className = `gc-flash fl-${r.rarity}`; void flash.offsetWidth; flash.classList.add('go'); }
       if (opened === cards.length) finish();
     }
     function finish() {
+      if (UI.getSettings().reduceFx && G().TIER[best] >= G().TIER.epic) { flash.className = `gc-flash soft fl-${best}`; void flash.offsetWidth; flash.classList.add('go'); }
       skip.classList.add('hidden');
       ok.classList.remove('hidden');
       const nNew = results.filter((r) => r.isNew).length;

@@ -53,6 +53,8 @@ kbd { font: 700 0.7rem var(--font); padding: 0 4px; border-radius: 4px; backgrou
 
 /* 버튼 */
 button { font-family: var(--font); color: inherit; }
+/* 키보드 초점: 어떤 바탕에서도 보이는 굵은 테 (부품마다 따로 정한 모양이 있으면 그쪽이 이김 — :where는 우선순위 0) */
+:where(button, [tabindex], a, input, select, summary):focus-visible { outline: 3px solid #fff2c4; outline-offset: 2px; }
 .btn {
   appearance: none; border: 2px solid var(--line); background: linear-gradient(#3a2e4f, #2a2139); color: var(--text);
   font-weight: 700; font-size: 0.95rem; padding: 0.55em 1em; border-radius: 10px; cursor: pointer; min-height: 40px;
@@ -496,7 +498,9 @@ button { font-family: var(--font); color: inherit; }
 .codex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
 .codex-card { appearance: none; border: 2px solid var(--line); background: linear-gradient(#2b2239, #1f1829); border-radius: 12px; padding: 8px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; color: var(--text); text-align: center; }
 .codex-card:hover { border-color: var(--gold); }
-.codex-card.locked { opacity: 0.45; cursor: default; }
+/* 잠긴 카드: 그림만 흐리게 — 글(얻는 방법)은 읽을 수 있게 (명암비 4.5:1 이상) */
+.codex-card.locked { cursor: default; }
+.codex-card.locked .cc-q, .codex-card.locked img, .codex-card.locked b { opacity: 0.45; }
 .codex-card.boss { border-color: #a65a6a; }
 .cc-img { width: 64px; height: 72px; object-fit: contain; }
 .cc-q { width: 64px; height: 72px; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: var(--dim); }
@@ -593,7 +597,7 @@ button { font-family: var(--font); color: inherit; }
 .hx-tags { grid-area: tags; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
 .hx-chip, .hx-tags .el-badge { box-sizing: border-box; height: 26px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
 .hx-chip { background: #ffffff14; border: 1px solid #ffffff26; color: #efe4ff; }
-.hx-tags .el-badge { align-self: center; padding-left: 5px; background: color-mix(in srgb, var(--ec) 24%, #0008); border: 1px solid color-mix(in srgb, var(--ec) 60%, transparent); }
+.hx-tags .el-badge { align-self: center; padding-left: 5px; background: color-mix(in srgb, var(--ec) 14%, #000a); /* 어둠 원소 글자도 4.5:1 이상 */ border: 1px solid color-mix(in srgb, var(--ec) 60%, transparent); }
 .hx-act { grid-area: act; display: flex; justify-content: flex-end; }
 .hx-lead { display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 20px; border-radius: 999px; font-weight: 900; font-size: 1rem; color: #3a1e06; background: linear-gradient(180deg, #fff0bc 0%, #f6cf78 40%, #d98f32 100%); border: 2px solid #fff2c4; box-shadow: 0 0 0 2px #6a3a10, 0 4px 0 #5a2e0c, 0 0 18px #ffbf5a66; white-space: nowrap; }
 .hx-lead:hover { filter: brightness(1.07); }
@@ -1133,6 +1137,15 @@ button { font-family: var(--font); color: inherit; }
 .hp-item { position: relative; }
 .hp-bond { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: linear-gradient(180deg, #ffd0e0, #ff9ab8); color: #4a1428; font-style: normal; font-size: 0.7rem; font-weight: 900; display: grid; place-items: center; box-shadow: 0 0 0 2px #1a1028; }
 
+/* ---------- 효과 줄이기 (설정 reduceFx, 기기 "동작 줄이기"면 기본으로 켜짐) ----------
+   움직임·깜박임 애니메이션을 사실상 없앰. JS 타이머로 보였다 사라지는 알림(웨이브 배너·보스 등장)은 고정으로 보였다 사라짐 */
+:root.reduce-fx *, :root.reduce-fx *::before, :root.reduce-fx *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+:root.reduce-fx .banner.show { animation: none !important; opacity: 1; transform: translate(-50%, -50%); }
+:root.reduce-fx .boss-intro.show { animation: none !important; opacity: 1; }
+:root.reduce-fx .boss-intro.show .bi-art { animation: none !important; }
+:root.reduce-fx .stat-lives.flash { animation: none !important; background: #ff4a4a55; }
+:root.reduce-fx .gc-flash.go:not(.soft) { animation: none !important; opacity: 0; }
+
 </style>
   <style>/* css/game.css */
 /* =========================================================
@@ -1258,6 +1271,10 @@ button { font-family: var(--font); color: inherit; }
 .tower-card .tc-cost .icon { width: 13px; height: 13px; }
 .tower-card kbd { position: absolute; top: 3px; left: 4px; font-size: 0.62rem; line-height: 1.25; padding: 0 4px; background: #0008; color: var(--dim); border: 1px solid #ffffff1a; }
 .tower-card .tc-ban { position: absolute; top: 3px; right: 4px; }
+.tower-card .tc-el { position: absolute; left: 3px; top: 20px; width: 15px; height: 15px; border-radius: 50%; background: #0009; display: grid; place-items: center; pointer-events: none; }
+.tower-card .tc-el .icon { width: 12px; height: 12px; }
+.tower-card .tc-rar { position: absolute; left: 50%; top: 3px; transform: translateX(-50%); font-style: normal; font-size: 0.56rem; font-weight: 900; line-height: 1.3; padding: 0 4px; border-radius: 6px; color: #2a1408; background: #ffb38a; pointer-events: none; white-space: nowrap; }
+.tower-card .tc-rar.r-mythic { background: linear-gradient(90deg, #ffb0ec, #b0e6ff); }
 .tower-card:hover { border-color: var(--gold); transform: translateY(-2px); }
 .tower-card:focus-visible { outline: 2px solid var(--gold2); outline-offset: 2px; }
 .tower-card.picked { border-color: var(--gold2); border-bottom-color: var(--el); transform: translateY(-3px); background: radial-gradient(circle at 50% 34%, color-mix(in srgb, var(--el) 40%, transparent), transparent 66%), linear-gradient(#4a3a24, #2a1f14); box-shadow: 0 0 0 1px #ffdf9a66, 0 0 14px #ffd76a77, 0 3px 0 #0008; }
@@ -1350,6 +1367,9 @@ body.rg-dragging, body.rg-dragging * { cursor: grabbing !important; }
   .tower-card .tc-cost { font-size: 0.7rem; }
   .tower-card .tc-cost .icon { width: 11px; height: 11px; }
   .tower-card kbd { top: 1px; left: 2px; font-size: 0.55rem; padding: 0 2px; }
+  .tower-card .tc-el { top: 13px; left: 1px; width: 12px; height: 12px; }
+  .tower-card .tc-el .icon { width: 10px; height: 10px; }
+  .tower-card .tc-rar { font-size: 0.5rem; top: 1px; }
   .tower-card:hover, .tower-card.picked { transform: none; }
   /* 영웅 카드는 가로로 작게 (탑 목록 자리) */
   .hero-card { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; padding: 4px; }
@@ -32934,7 +32954,18 @@ RG.fx = (() => {
   const breaths = [];    // 어둠 불길 (흑룡의 둥지)
   let curGame = null;    // 표식이 적을 따라가도록
   let shake = 0;
-  const settings = { numbers: true, shake: true };
+  // reduce: 설정 "효과 줄이기" — 흔들림 끔, 번쩍이는 효과(번개·빛기둥)는 1초에 3번까지, 깜박임 대신 고정 표시
+  const settings = { numbers: true, shake: true, reduce: false };
+  /** 번쩍임 한도: 효과 줄이기 중에는 큰 번쩍임(번개·빛기둥)을 1초에 3번까지 (광과민 기준 — 초당 3회 이하) */
+  const flashLog = [];
+  function allowFlash() {
+    if (!settings.reduce) return true;
+    const now = performance.now();
+    while (flashLog.length && now - flashLog[0] > 1000) flashLog.shift();
+    if (flashLog.length >= 3) return false;
+    flashLog.push(now);
+    return true;
+  }
   const MAX_PARTS = 900;
   const MAX_TEXTS = 60;
 
@@ -32976,6 +33007,7 @@ RG.fx = (() => {
   }
   function bolt(points, color, life = 0.16, width = 0.06, jag = 0.16) {
     if (lite && bolts.length >= (lite2 ? 5 : LITE_BOLTS)) return;
+    if (!allowFlash()) return;
     // 지그재그 미리 계산
     const pts = [];
     for (let i = 0; i < points.length - 1; i++) {
@@ -33026,7 +33058,7 @@ RG.fx = (() => {
           break;
         }
         case 'smite':
-          pillars.push({ x: e.x, y: e.y, life: 0.45, max: 0.45, w: Math.max(0.45, e.radius) });
+          if (allowFlash()) pillars.push({ x: e.x, y: e.y, life: 0.45, max: 0.45, w: Math.max(0.45, e.radius) });
           ring(e.x, e.y, Math.max(0.6, e.radius + 0.2), '#fff3b0', 0.4, 0.12);
           burst(e.x, e.y - 0.3, '#fff6c8', lite ? 8 : 22, 2.6, 0.5, 0.07, -0.6);
           addShake(0.12);
@@ -33292,7 +33324,7 @@ RG.fx = (() => {
   const pOrder = [];
   let pFrame = 0;
   const fontCache = new Map();
-  function addShake(v) { if (settings.shake) shake = Math.min(1, shake + v); }
+  function addShake(v) { if (settings.shake && !settings.reduce) shake = Math.min(1, shake + v); }
 
   function update(dt) {
     for (let i = parts.length - 1; i >= 0; i--) {
@@ -33306,7 +33338,7 @@ RG.fx = (() => {
     }
     for (let k = 0; k < TIMED.length; k++) {
       const list = TIMED[k];
-      for (let i = list.length - 1; i >= 0; i--) { list[i].life -= dt; if (list[i].life <= 0) list.splice(i, 1); }
+      for (let i = list.length - 1; i >= 0; i--) { const o = list[i]; o.life -= dt; o.age = (o.age || 0) + dt; if (o.life <= 0) list.splice(i, 1); }
     }
     for (const t of texts) t.y -= dt * (t.big ? 0.9 : 1.2);
     for (let i = drops.length - 1; i >= 0; i--) { drops[i].t += dt; if (drops[i].t >= drops[i].delay) drops.splice(i, 1); }
@@ -33325,7 +33357,8 @@ RG.fx = (() => {
     for (const a of areas) {
       const k = 1 - a.life / a.max;
       ctx.save();
-      ctx.globalAlpha = 0.25 + 0.35 * Math.abs(Math.sin(k * Math.PI * 4));
+      // 깜박임은 실제 시간으로 초당 2번(경고 길이·배속과 상관없이), 효과 줄이기면 고정 — 차오르는 원이 남은 시간을 보여 줌
+      ctx.globalAlpha = settings.reduce ? 0.55 : 0.25 + 0.35 * Math.abs(Math.sin((a.age || 0) * Math.PI * 2));
       ctx.strokeStyle = a.color;
       ctx.fillStyle = a.color;
       ctx.lineWidth = 2;
@@ -33526,7 +33559,9 @@ RG.fx = (() => {
 
   function clear() { parts.length = 0; rings.length = 0; bolts.length = 0; texts.length = 0; areas.length = 0; drops.length = 0; meteors.length = 0; marks.length = 0; pillars.length = 0; wisps.length = 0; breaths.length = 0; shake = 0; curGame = null; }
 
-  return { onEvents, update, draw, drawUnder, drawTexts, shakeOffset, clear, settings, burst, ring, text, colorOf, lightOf, setLite, setSpeed };
+  return { onEvents, update, draw, drawUnder, drawTexts, shakeOffset, clear, settings, burst, ring, text, colorOf, lightOf, setLite, setSpeed, getSpeed: () => gameSpeed,
+    /** 시험용: 지금 떠 있는 번개·빛기둥 수 */
+    counts: () => ({ bolts: bolts.length, pillars: pillars.length }) };
 })();
 
 </script>
@@ -33574,7 +33609,8 @@ RG.render = (() => {
   let perfN = 0;
   let perfSlow = 0;
   let perfLast = 0; // 적이 아주 많으면 적의 드리운 그림자 대신 발밑 그늘만 (성능)
-  const overlay = { hover: null, selectedTower: null, ghost: null, selectedEnemy: null, heroSelected: false, skill: null, rally: null, showPaths: true };
+  const hurtAt = new Map(); // 적 id → 마지막으로 맞은 번쩍임을 보인 시각(실제 시간)
+  const overlay = { hover: null, keyCursor: false, selectedTower: null, ghost: null, selectedEnemy: null, heroSelected: false, skill: null, rally: null, showPaths: true };
   const REGION_BASE = { 1: '#5d7a3c', 2: '#c9d8e6', 3: '#b9774a', 4: '#3f7f86', 5: '#5d5672' };
 
   const X = (x) => ox + x * T;
@@ -33963,6 +33999,8 @@ RG.render = (() => {
   let barOn = false; // 모으는 중인가 (frame에서 켜고 flushBars에서 끔)
   const barPool = [];
   let barN = 0;
+  // 우리 편(병사·벽) 체력은 파랑 — 적(초록)과 같은 칸에 겹쳐도, 색약이어도 구별되게
+  const ALLY_BAR = '#5aa8ff';
   function bar(cx, top, w, ratio, color, shieldRatio, elite) {
     if (barOn) {
       let b = barPool[barN];
@@ -34241,7 +34279,8 @@ RG.render = (() => {
     ctx.save();
     for (const [tiles, open] of groups) {
       if (!tiles.length) continue;
-      const blink = open && warn ? 0.45 + 0.55 * Math.abs(Math.sin(time * (left < 1.2 ? 14 : 8))) : 1;
+      // 닫히기 직전 깜박임: 초당 2.5번 이하(광과민 기준), 효과 줄이기면 깜박이지 않음 — 남은 초 글자가 알려 줌
+      const blink = open && warn && !RG.fx.settings.reduce ? 0.45 + 0.55 * Math.abs(Math.sin(time * 8)) : 1;
       let sx = 0;
       let sy = 0;
       for (const i of tiles) {
@@ -34602,6 +34641,23 @@ RG.render = (() => {
     return cv;
   }
 
+  /** 키보드 커서: 탑·적 위에, 어떤 바탕에서도 보이게 검은 테 + 밝은 모서리 꺾쇠 */
+  function drawKeyCursor(c, r) {
+    const x = X(c); const y = Y(r); const L = T * 0.3;
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (const [w, col] of [[Math.max(3, T * 0.11), 'rgba(0,0,0,0.75)'], [Math.max(2, T * 0.055), '#fff2c4']]) {
+      ctx.lineWidth = w;
+      ctx.strokeStyle = col;
+      ctx.beginPath();
+      for (const [cx, cy, dx, dy] of [[x, y, 1, 1], [x + T, y, -1, 1], [x, y + T, 1, -1], [x + T, y + T, -1, -1]]) {
+        ctx.moveTo(cx + dx * 2, cy + dy * (2 + L)); ctx.lineTo(cx + dx * 2, cy + dy * 2); ctx.lineTo(cx + dx * (2 + L), cy + dy * 2);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   function drawOverlayUnder() {
     const st = game.state;
     // 마우스가 올라간 칸
@@ -34655,8 +34711,17 @@ RG.render = (() => {
       ctx.strokeStyle = gh.ok ? 'rgba(170,255,185,0.9)' : 'rgba(255,120,120,0.9)';
       ctx.lineWidth = Math.max(1.5, T * 0.045);
       ctx.strokeRect(X(gh.c) + 1.5, Y(gh.r) + 1.5, T - 3, T - 3);
+      if (!gh.ok) {
+        // 색만으로 알리지 않게(색약): 못 짓는 칸은 굵은 ✕ (검은 테 + 밝은 선)
+        const x0 = X(gh.c) + T * 0.24; const y0 = Y(gh.r) + T * 0.24; const x1 = X(gh.c) + T * 0.76; const y1 = Y(gh.r) + T * 0.76;
+        ctx.lineCap = 'round';
+        for (const [w, col] of [[Math.max(4, T * 0.13), 'rgba(20,6,10,0.8)'], [Math.max(2, T * 0.07), '#ffd0c8']]) {
+          ctx.lineWidth = w; ctx.strokeStyle = col;
+          ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.moveTo(x1, y0); ctx.lineTo(x0, y1); ctx.stroke();
+        }
+      }
       ctx.restore();
-      if (spec.range) rangeCircle(x, y, spec.range * (1 + ((game.meta && game.meta.rangePct) || 0)), gh.ok ? 'rgba(200,255,210,A)' : 'rgba(255,140,140,A)');
+      if (spec.range) rangeCircle(x, y, spec.range * (1 + ((game.meta && game.meta.rangePct) || 0)), gh.ok ? 'rgba(200,255,210,A)' : 'rgba(255,140,140,A)', !gh.ok);
       if (spec.rallyRange) rangeCircle(x, y, spec.rallyRange, 'rgba(180,230,140,A)', true);
       if (spec.detect) rangeCircle(x, y, spec.detect, 'rgba(255,230,140,A)', true);
       for (const l of gh.links || []) {
@@ -34704,8 +34769,9 @@ RG.render = (() => {
     if (td.kind === 'beam') return t.beamState && t.beamState.length ? 'fire' : 'idle';
     if (td.kind === 'sweep') { const ph = (time * 1.1 + t.id * 0.37) % 2; return t.anim > 0 ? (ph < 1 ? 'fire' : 'aim') : ph < 1.4 ? 'idle' : 'aim'; } // 등대: 렌즈가 돌며 번쩍
     if (td.kind === 'orbit') return t.anim > 0 ? 'fire' : ((time * 0.9 + t.id * 0.37) % 2 < 1.3 ? 'idle' : 'aim'); // 불사조 둥지: 불사조가 적을 스치면 불꽃이 솟음
-    if (t.anim > 0.11) return 'fire';
     const iv = (t.calc && t.calc.interval) || 1;
+    // 효과 줄이기: 아주 빨리 쏘는 탑(실제로 0.34초보다 자주)은 발사 그림(총구 불꽃)을 건너뜀
+    if (t.anim > 0.11) return RG.fx.settings.reduce && iv / Math.max(1, (RG.fx.getSpeed ? RG.fx.getSpeed() : 1)) < 0.34 ? 'aim' : 'fire';
     if (t.cd > 0 && t.cd <= Math.max(0.22, iv * 0.4)) return 'aim';
     return 'idle';
   }
@@ -34997,8 +35063,11 @@ RG.render = (() => {
     const groundY = cy;
     cy -= lift;
     let alphaS = (e.stealth && !e.revealed) ? 0.35 + 0.1 * Math.sin(time * 6) : 1;
-    if (e.phaseWarn) { alphaS *= 0.45 + 0.4 * Math.abs(Math.sin(time * 22)); dx += Math.sin(time * 40) * T * 0.04; } // 위상 망령: 순간이동 직전 일렁임
-    const hurt = st.time - e.lastHurt < 0.08;
+    // 위상 망령: 순간이동 직전 일렁임 — 초당 2.5번 이하로, 효과 줄이기면 흐릿하게만 (발밑 점선 원은 아래에서)
+    if (e.phaseWarn) { if (RG.fx.settings.reduce) alphaS *= 0.6; else { alphaS *= 0.45 + 0.4 * Math.abs(Math.sin(time * 8)); dx += Math.sin(time * 16) * T * 0.04; } }
+    // 맞은 번쩍임: 한 적이 여러 탑에 맞아도 1초에 3번 정도까지(실제 시간), 효과 줄이기면 없음 — 체력 막대가 대신 알려 줌
+    let hurt = !RG.fx.settings.reduce && st.time - e.lastHurt < 0.08;
+    if (hurt) { if (hurtAt.size > 400) hurtAt.clear(); const at = hurtAt.get(e.id); if (at != null && time - at < 0.34 && time - at > 0.08) hurt = false; else if (at == null || time - at >= 0.34) hurtAt.set(e.id, time); }
     const flip = e.dir < 0;
     const big = ed.size >= 1.4 ? 288 : 168;
     const k0 = ekey(e.type, frame);
@@ -35030,6 +35099,7 @@ RG.render = (() => {
       ctx.restore();
     }
     if (motion) ctx.restore();
+    if (e.phaseWarn && RG.fx.settings.reduce) { ctx.save(); ctx.setLineDash([4, 3]); ctx.strokeStyle = '#c8b8ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(cx, groundY, size * 0.4, size * 0.14, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
     // 상태 표시
     const top = cy - size * 0.92;
     if (frozen) {
@@ -35156,7 +35226,7 @@ RG.render = (() => {
       const uk = poseSprite(RG.art.sprites.unitKey(look, pose), RG.art.sprites.unitKey(look, 'idle'), () => RG.art.unit(look, pose), 128, 128);
       if (!manyEnemies) castShadow(uk, cx, cy, size, size, 0.5, 0.9, flip, 0.3, bob);
       sprite(uk, cx, cy - bob, size, size, 0.5, 0.9, flip, 1);
-      if (u.hp < u.maxHp) bar(cx, cy - size * 1.0, Math.max(14, T * 0.5), u.hp / u.maxHp, '#b8e986', 0, false);
+      if (u.hp < u.maxHp) bar(cx, cy - size * 1.0, Math.max(14, T * 0.5), u.hp / u.maxHp, ALLY_BAR, 0, false);
       return;
     }
     if (u.kind === 'snowman') {
@@ -35165,7 +35235,7 @@ RG.render = (() => {
       const walking = (Math.abs(u.x - u.px) + Math.abs(u.y - u.py)) > 0.001;
       const pose = u.attackAnim > 0.1 ? 'attack' : u.engaged && u.cd <= 0.3 ? 'aim' : walking ? (Math.floor(time * 6 + u.id) % 2 ? 'walk1' : 'walk0') : 'idle';
       const uk = poseSprite(RG.art.sprites.unitKey('snowman', pose), RG.art.sprites.unitKey('snowman', 'idle'), () => RG.art.unit('snowman', pose), 128, 128);
-      const fade = u.until - st.time < 2 ? 0.55 + 0.45 * Math.abs(Math.sin(time * 8)) : 1;
+      const fade = u.until - st.time < 2 ? (RG.fx.settings.reduce ? 0.6 : 0.55 + 0.45 * Math.abs(Math.sin(time * 8))) : 1;
       if (!manyEnemies) castShadow(uk, cx, cy, size, size, 0.5, 0.9, flip, 0.3, 0);
       sprite(uk, cx, cy, size, size, 0.5, 0.9, flip, fade);
       if (u.hp < u.maxHp) bar(cx, cy - size * 0.95, Math.max(14, T * 0.5), u.hp / u.maxHp, '#bfefff', 0, false);
@@ -35174,7 +35244,7 @@ RG.render = (() => {
     if (u.kind === 'wall') {
       const size = T * 1.0;
       sprite(RG.art.sprites.unitKey('rock_wall', 'idle'), cx, cy + T * 0.1, size, size, 0.5, 0.9, false, 1);
-      bar(cx, cy - size * 0.8, Math.max(20, T * 0.7), u.hp / u.maxHp, '#b8e986', 0, false);
+      bar(cx, cy - size * 0.8, Math.max(20, T * 0.7), u.hp / u.maxHp, ALLY_BAR, 0, false);
       return;
     }
     if (u.kind === 'drone') {
@@ -35322,7 +35392,7 @@ RG.render = (() => {
         if (!t) continue;
         const k = Math.max(0, (a.at - st.time) / RG.data.rules.bossWarn);
         ctx.save();
-        ctx.globalAlpha = 0.5 + 0.5 * Math.abs(Math.sin(time * 10));
+        ctx.globalAlpha = RG.fx.settings.reduce ? 0.9 : 0.5 + 0.5 * Math.abs(Math.sin(time * 8)); // 빨간 경고: 초당 2.5번 이하, 줄이기면 고정
         ctx.strokeStyle = '#ff5a5a';
         ctx.lineWidth = Math.max(2, T * 0.06);
         ctx.beginPath(); ctx.arc(X(t.x), Y(t.y), T * (0.45 + 0.2 * k), 0, Math.PI * 2); ctx.stroke();
@@ -35368,11 +35438,11 @@ RG.render = (() => {
   function updateAmbient(dt) {
     const m = game.map;
     const region = m.def.region || 1;
-    const key = `${m.id}`;
+    const reduce = RG.fx.settings.reduce || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const key = `${m.id}|${reduce}`;
     if (ambientFor !== key) {
       ambientFor = key;
       ambSeed = 7 + m.cols * 31 + m.rows;
-      const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
       const n = Math.round(m.cols * m.rows * (AMB[region] || AMB[1]).n * (reduce ? 0.4 : 1));
       ambient = [];
       for (let i = 0; i < n; i++) { const p = {}; spawnAmbient(p, region, m, true); p.life = arand() * p.max; ambient.push(p); }
@@ -35677,6 +35747,7 @@ RG.render = (() => {
     }
     drawProjectiles(alpha);
     RG.fx.draw(ctx, X, Y, T);
+    if (overlay.keyCursor && overlay.hover) drawKeyCursor(overlay.hover.c, overlay.hover.r);
     updateAmbient(dt);
     if (!manyEnemies) drawAmbient(); // 적이 아주 많을 땐 분위기 입자는 쉼
     drawAlerts();
@@ -35714,7 +35785,20 @@ RG.render = (() => {
     hideTooltip();
     if (next.enter) next.enter(sec, data || {});
     document.body.dataset.screen = id;
+    // 키보드로 쓰는 중이면 첫 초점: data.focus(같은 화면을 다시 그릴 때 누르던 것) → [data-autofocus] → 첫 버튼
+    if (kbUser) requestAnimationFrame(() => {
+      if (current !== next || modals.length) return;
+      const a = document.activeElement;
+      if (a && a !== document.body && sec.contains(a)) return; // 화면이 스스로 초점을 줌
+      const f = (data && data.focus && sec.querySelector(`[data-focus="${data.focus}"]`)) || sec.querySelector('[data-autofocus]') || sec.querySelector('button:not([disabled]), [tabindex="0"]');
+      if (f) f.focus({ preventScroll: true });
+    });
   }
+  /* 입력 방식: 키보드(Tab·방향키·Enter)를 쓰면 켜지고, 마우스·터치를 쓰면 꺼짐 — 초점을 자동으로 줄지 정할 때 */
+  let kbUser = false;
+  document.addEventListener('keydown', (e) => { if (/^(Tab|Arrow|Enter| |Escape)/.test(e.key)) kbUser = true; }, true);
+  document.addEventListener('pointerdown', () => { kbUser = false; }, true);
+  const keyboardUser = () => kbUser;
   const currentId = () => (current ? current.id : null);
 
   /* ---------------- 소리 ---------------- */
@@ -35722,7 +35806,29 @@ RG.render = (() => {
   function music(track) { try { if (RG.audio) RG.audio.music(track); } catch (e) { /* 무시 */ } }
 
   /* ---------------- 설정 ---------------- */
-  const DEFAULT_SETTINGS = { master: 0.8, sfx: 0.8, music: 0.5, muted: false, speed: 1, shake: true, numbers: true, bigText: false, paths: true };
+  // reduceFx(효과 줄이기)는 기기의 "동작 줄이기" 설정을 따라 기본값을 정함
+  const prefersReduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const DEFAULT_SETTINGS = { master: 0.8, sfx: 0.8, music: 0.5, muted: false, speed: 1, shake: true, numbers: true, bigText: false, paths: true, reduceFx: prefersReduced, cvd: false };
+  /* 색약 친화 색 (설정 cvd): 원소 6색과 좋음·주의·나쁨 색을 적록·청황 색약에서도 서로 구별되는 값으로 (가장 가까운 짝의 색차 ΔE 16 이상).
+     원소 아이콘·글자가 함께 있으므로 색은 보조 — 이미 구운 탑·적 그림의 색은 그대로 */
+  const CVD = {
+    fire: ['#ff5410', '#822502', '#feac8c'], frost: ['#70daff', '#3186a1', '#ebf9fe'], storm: ['#a970ff', '#542d95', '#d0b2f3'],
+    earth: ['#30a874', '#055637', '#a1d0b6'], light: ['#fbe048', '#a18e17', '#fff6dd'], dark: ['#e783b3', '#873e62', '#f6c7dc'],
+  };
+  const CVD_UI = { '--good': '#93eafd', '--warn': '#ffeb12', '--bad': '#e0677f' };
+  let elemOrig = null;
+  function applyPalette(on) {
+    const E = RG.data.elements;
+    if (!elemOrig) { elemOrig = {}; for (const [k, v] of Object.entries(E)) elemOrig[k] = [v.color, v.dark, v.light]; }
+    const root = document.documentElement.style;
+    for (const k of Object.keys(elemOrig)) {
+      const [c, d, l] = on && CVD[k] ? CVD[k] : elemOrig[k];
+      Object.assign(E[k], { color: c, dark: d, light: l });
+      root.setProperty(`--${k}`, c);
+    }
+    for (const [v, c] of Object.entries(CVD_UI)) { if (on) root.setProperty(v, c); else root.removeProperty(v); }
+    document.documentElement.classList.toggle('cvd', !!on);
+  }
   let settings = null;
   function getSettings() {
     if (!settings) settings = Object.assign({}, DEFAULT_SETTINGS, RG.save.get(RG.save.KEYS.settings, {}));
@@ -35740,6 +35846,9 @@ RG.render = (() => {
     } catch (e) { /* 무시 */ }
     RG.fx.settings.shake = s.shake;
     RG.fx.settings.numbers = s.numbers;
+    RG.fx.settings.reduce = !!s.reduceFx;
+    applyPalette(!!s.cvd);
+    document.documentElement.classList.toggle('reduce-fx', !!s.reduceFx);
     RG.render.overlay.showPaths = s.paths;
     document.documentElement.classList.toggle('big-text', !!s.bigText);
   }
@@ -35766,19 +35875,44 @@ RG.render = (() => {
     }
     back.appendChild(box);
     if (opts.dismiss !== false) back.addEventListener('pointerdown', (e) => { if (e.target === back) { close(); if (opts.onClose) opts.onClose(); } });
+    const opener = document.activeElement;
     root.appendChild(back);
-    // 키보드: 마지막(확인) 버튼에 초점 → Enter로 확정, Esc로 닫기
-    const btns = box.querySelectorAll('.modal-buttons .btn');
-    if (btns.length) btns[btns.length - 1].focus({ preventScroll: true });
-    const handle = { el: box, close, onClose: opts.onClose };
+    // 키보드: 마지막(확인) 버튼에 초점 → Enter로 확정, Esc로 닫기. 되돌릴 수 없는 확인(위험 버튼)이면 취소 쪽에 초점
+    const btns = [...box.querySelectorAll('.modal-buttons .btn')];
+    const danger = opts.buttons && opts.buttons.filter(Boolean).some((b) => b.danger);
+    const first = danger ? btns.find((b) => !b.classList.contains('btn-danger')) : btns[btns.length - 1];
+    if (first) first.focus({ preventScroll: true });
+    else { box.tabIndex = -1; box.focus({ preventScroll: true }); }
+    const handle = { el: box, close, onClose: opts.onClose, dismiss: opts.dismiss !== false };
     modals.push(handle);
     function close() {
       back.remove();
       const i = modals.indexOf(handle);
       if (i >= 0) modals.splice(i, 1);
+      // 연 곳으로 초점을 돌려줌 (아직 화면에 있고 다른 창이 없을 때)
+      if (!modals.length && opener && opener !== document.body && document.contains(opener) && !opener.disabled) opener.focus({ preventScroll: true });
     }
     return handle;
   }
+  /* 창이 떠 있을 때: Tab은 창 안에서만 돌고, Esc는 맨 위 창을 닫음 (화면들의 키 처리보다 먼저 — 이 파일이 먼저 등록됨) */
+  document.addEventListener('keydown', (e) => {
+    const m = modals[modals.length - 1];
+    if (!m) return;
+    if (e.key === 'Escape') {
+      if (m.dismiss) closeTopModal();
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return;
+    }
+    if (e.key === 'Tab') {
+      const items = [...m.el.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])')].filter((x) => x.offsetParent !== null);
+      if (!items.length) { e.preventDefault(); return; }
+      const i = items.indexOf(document.activeElement);
+      const next = e.shiftKey ? (i <= 0 ? items.length - 1 : i - 1) : (i < 0 || i >= items.length - 1 ? 0 : i + 1);
+      items[next].focus();
+      e.preventDefault();
+    }
+  });
   function closeAllModals() { while (modals.length) modals[modals.length - 1].close(); }
   const modalOpen = () => modals.length > 0;
   function closeTopModal() {
@@ -35797,7 +35931,9 @@ RG.render = (() => {
   /* ---------------- 토스트 ---------------- */
   function toast(text, kind = 'info', ms = 1800) {
     const root = document.getElementById('toast-root');
-    const t = el('div', { class: `toast toast-${kind}`, text });
+    // 종류를 색(왼쪽 띠)만이 아니라 기호로도 (색약)
+    const glyph = kind === 'warn' ? '⚠ ' : kind === 'good' ? '✓ ' : '';
+    const t = el('div', { class: `toast toast-${kind}`, text: glyph && !String(text).startsWith(glyph.trim()) ? glyph + text : text, role: 'status' });
     root.appendChild(t);
     while (root.children.length > 3) root.firstChild.remove();
     setTimeout(() => t.classList.add('out'), ms);
@@ -35809,6 +35945,9 @@ RG.render = (() => {
   function tooltipFor(node, getHtml) {
     node.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') showTooltip(node, typeof getHtml === 'function' ? getHtml() : getHtml); });
     node.addEventListener('pointerleave', hideTooltip);
+    // 키보드 초점에도 (마우스로 눌러 생긴 초점은 제외)
+    node.addEventListener('focus', () => { if (node.matches(':focus-visible')) showTooltip(node, typeof getHtml === 'function' ? getHtml() : getHtml); });
+    node.addEventListener('blur', hideTooltip);
   }
   function showTooltip(node, html) {
     const tip = document.getElementById('tooltip');
@@ -35852,7 +35991,7 @@ RG.render = (() => {
   }
 
   Object.assign(RG.ui, {
-    register, show, currentId, sfx, music, getSettings, setSettings, applySettings, modal, closeAllModals, modalOpen, closeTopModal,
+    register, show, currentId, keyboardUser, sfx, music, getSettings, setSettings, applySettings, modal, closeAllModals, modalOpen, closeTopModal,
     confirmBox, toast, tooltipFor, showTooltip, hideTooltip, svgImg, icon, towerImg, enemyImg, portrait, stars, elementBadge, screens,
   });
 })();
@@ -35929,7 +36068,7 @@ RG.render = (() => {
     const bannerOf = (region) => (RG.art.regionBanner ? UI.svgImg(RG.art.regionBanner(region), 'tm-banner', '') : null);
     if (resumable) {
       const rd = maps.concat(D().endless).find((m) => m.id === run.mapId);
-      mainCol.appendChild(el('button', { class: 'btn btn-primary btn-big tm-card tm-hero', onclick: go(() => UI.show('game', { resume: run })) }, [
+      mainCol.appendChild(el('button', { class: 'btn btn-primary btn-big tm-card tm-hero', 'data-autofocus': '', onclick: go(() => UI.show('game', { resume: run })) }, [
         bannerOf(rd.region || 1),
         el('span', { class: 'tm-medal tm-medal-big' }, [UI.icon('play', 'tm-ico')]),
         el('span', { class: 'tm-text' }, [
@@ -35940,7 +36079,7 @@ RG.render = (() => {
         el('span', { class: 'tm-go', text: '이어서 ›' }),
       ]));
     }
-    mainCol.appendChild(el('button', { class: `btn btn-big tm-card ${resumable ? 'tm-map-small' : 'btn-primary tm-hero'}`, onclick: go(() => UI.show('world', has ? { view: 'regions' } : {})) }, [
+    mainCol.appendChild(el('button', { class: `btn btn-big tm-card ${resumable ? 'tm-map-small' : 'btn-primary tm-hero'}`, 'data-autofocus': resumable ? null : '', onclick: go(() => UI.show('world', has ? { view: 'regions' } : {})) }, [
       resumable ? null : bannerOf(nextDef.region),
       el('span', { class: `tm-medal ${resumable ? '' : 'tm-medal-big'}` }, [UI.icon('map', 'tm-ico')]),
       el('span', { class: 'tm-text' }, [
@@ -36053,7 +36192,7 @@ RG.render = (() => {
     };
     body.append(
       slider('master', '전체 음량'), slider('sfx', '효과음'), slider('music', '음악'),
-      toggle('muted', '소리 끄기'), toggle('shake', '화면 흔들림'), toggle('numbers', '피해 숫자'), toggle('paths', '준비 중 길 미리보기'), toggle('bigText', '큰 글씨'),
+      toggle('muted', '소리 끄기'), toggle('shake', '화면 흔들림'), toggle('reduceFx', '효과 줄이기 (번쩍임·깜박임·흔들림)'), toggle('cvd', '색약 친화 색'), toggle('numbers', '피해 숫자'), toggle('paths', '준비 중 길 미리보기'), toggle('bigText', '큰 글씨'),
       el('div', { class: 'set-row' }, [el('span', { text: '첫 판 안내' }), el('button', { class: 'btn small', type: 'button', onclick: () => { RG.ui.tutorial.reset(); UI.toast('1-1을 시작하면 단계별 안내가 다시 나와요', 'info', 2600); } }, ['튜토리얼 다시 보기'])]),
     );
     UI.modal(body, { title: '설정', buttons: [{ text: '닫기', primary: true }] });
@@ -36153,7 +36292,7 @@ RG.render = (() => {
       pn.addEventListener('pointerdown', () => { pn._wasOn = regionPick === reg.id; });
       pn.addEventListener('click', () => { const was = pn._wasOn != null ? pn._wasOn : regionPick === reg.id; pn._wasOn = null; if (was) enter(reg.id); else pick(reg.id); });
       pn.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { pick(Math.min(5, reg.id + 1), true); e.preventDefault(); }
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { pick(Math.min(D().regions.length, reg.id + 1), true); e.preventDefault(); }
         else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { pick(Math.max(1, reg.id - 1), true); e.preventDefault(); }
         else if (e.key === 'Enter' || e.key === ' ') { if (regionPick === reg.id) enter(reg.id); else pick(reg.id); e.preventDefault(); }
       });
@@ -36340,6 +36479,7 @@ RG.render = (() => {
           heroRow.appendChild(el('button', {
             class: `hp-item ${hero === h ? 'on' : ''} ${unlocked && !banned ? '' : 'locked'}`,
             title: unlocked ? `${hd.name} — ${hd.title}` : '아직 만나지 못한 영웅',
+            tabindex: unlocked && !banned ? null : '-1', 'aria-disabled': unlocked && !banned ? null : 'true', // 고를 수 없는 칸은 Tab 순서에서 뺌
             onclick: () => { if (!unlocked || banned) return; UI.sfx('click'); UI.show('brief', { mapId: def.id, mode, hero: h }); },
           }, [unlocked ? UI.portrait(h, hero === h ? 'happy' : 'normal', 'hp-portrait') : el('span', { class: 'hp-q', text: '?' }), el('span', { text: unlocked ? hd.name : '???' }),
             unlocked && P().bondOf(h).level > 1 ? el('i', { class: 'hp-bond', title: `인연 Lv${P().bondOf(h).level}`, text: P().bondOf(h).level }) : null]));
@@ -36589,6 +36729,7 @@ RG.render = (() => {
       function onKey(e) {
         if (UI.currentId() !== 'story') return;
         if (e.key === 'Escape') done();
+        else if ((e.key === ' ' || e.key === 'Enter') && e.target && e.target.closest && e.target.closest('.story-skip')) return; // 건너뛰기 버튼은 그대로 눌림
         else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); advance(); }
       }
       sec.onclick = () => advance();
@@ -36648,7 +36789,7 @@ RG.render = (() => {
     for (const t of D().towerOrder) {
       const td = D().towers[t];
       const open = towerUnlocked(t);
-      const card = el('button', { class: `codex-card el-${td.element} ${open ? '' : 'locked'}`, onclick: () => open && towerDetail(t) }, [
+      const card = el('button', { class: `codex-card el-${td.element} ${open ? '' : 'locked'}`, tabindex: open ? null : '-1', 'aria-disabled': open ? null : 'true', onclick: () => open && towerDetail(t) }, [
         open ? UI.towerImg(t, 3, null, 'cc-img') : el('span', { class: 'cc-q', text: '?' }),
         el('b', { text: open ? td.name : '???' }),
         el('span', { class: 'dim small', text: open ? `${D().elements[td.element].name}${P().towerFinal(t) ? ' · ★최종 강화(Lv2부터 지음)' : P().towerRank(t) > 0 ? ` · 강화 +${P().towerRank(t)}` : ''}` : P().towerOpen(t) ? '뽑기에서 얻을 수 있음' : `${(D().regions[P().towerRegion(t) - 2] || {}).name || ''} 클리어 후 뽑기에` }),
@@ -36680,7 +36821,7 @@ RG.render = (() => {
     for (const e of D().enemyOrder) {
       const ed = D().enemies[e];
       const seen = P().seen('enemies', e);
-      grid.appendChild(el('button', { class: `codex-card ${seen ? '' : 'locked'} ${ed.boss ? 'boss' : ''}`, onclick: () => seen && enemyDetail(e) }, [
+      grid.appendChild(el('button', { class: `codex-card ${seen ? '' : 'locked'} ${ed.boss ? 'boss' : ''}`, tabindex: seen ? null : '-1', 'aria-disabled': seen ? null : 'true', onclick: () => seen && enemyDetail(e) }, [
         seen ? UI.enemyImg(e, 'cc-img') : el('span', { class: 'cc-q', text: '?' }),
         el('b', { text: seen ? ed.name : '???' }),
         el('span', { class: 'dim small', text: `${D().regions[ed.region - 1].name}${ed.boss ? ' · 보스' : ''}` }),
@@ -36798,7 +36939,15 @@ RG.render = (() => {
         // 다시 그린 뒤 키보드 위치를 되돌림 (매번 맨 위부터 다시 탭하지 않게)
         if (data.focus === 'pick' && on) on.focus({ preventScroll: true });
         else if (data.focus === 'lead') { const f = sec.querySelector('.hx-lead, .hx-lead-badge'); if (f) f.focus({ preventScroll: true }); }
-        else if (data.focus) { const f = sec.querySelector(`[data-focus="${data.focus}"]`); if (f) f.focus({ preventScroll: true }); }
+        else if (data.focus) {
+          // 누르던 버튼이 이제 꺼졌으면(초기화 뒤·최대 강화·공명석 부족) 가까운 것으로: 같은 장신구 항목 → 찍을 수 있는 재능 → 성장 탭
+          let f = sec.querySelector(`[data-focus="${data.focus}"]`);
+          if (!f || f.disabled) {
+            const id = /^up-(.+)$/.exec(data.focus);
+            f = (id && sec.querySelector(`[data-focus="g-${id[1]}"]`)) || sec.querySelector('.gr-node.can') || sec.querySelector('[data-focus="tab-grow"]');
+          }
+          if (f) f.focus({ preventScroll: true });
+        }
         if (data.scroll != null) { const inf = sec.querySelector('.hx-info'); if (inf) inf.scrollTop = data.scroll; }
       });
     },
@@ -37218,6 +37367,7 @@ RG.render = (() => {
       /* ---------- 제단 ---------- */
       const C = G().COST;
       const doPull = (kind) => {
+        if (sec.querySelector('.gc-reveal')) return; // 결과 창이 떠 있는 동안 (Enter를 한 번 더 눌러도) 또 뽑지 않음
         const res = P().pullGacha(kind);
         if (!res.ok) { UI.toast(res.reason, 'warn'); UI.sfx('error'); return; }
         UI.sfx('click');
@@ -37317,21 +37467,35 @@ RG.render = (() => {
     });
     cards.forEach((c) => row.appendChild(c));
     const skip = el('button', { class: 'btn gc-skip', onclick: () => cards.forEach((c, i) => flip(c, results[i])) }, ['모두 열기']);
-    const ok = el('button', { class: 'btn btn-primary gc-ok hidden', onclick: () => { clearTimers(); ov.remove(); done(); } }, ['확인']);
+    const ok = el('button', { class: 'btn btn-primary gc-ok hidden', onclick: () => { clearTimers(); restore(); ov.remove(); done(); } }, ['확인']);
     const summary = el('div', { class: 'gc-summary' });
     ov.append(flash, el('div', { class: 'gc-rtitle', text: results.length > 1 ? `${results.length}회 뽑기` : '뽑기' }), row, summary, el('div', { class: 'gc-rbtns' }, [skip, ok]));
     sec.appendChild(ov);
+    // 결과 창 뒤의 화면은 초점·누르기를 받지 않음, 초점은 "모두 열기"로. Esc: 처음엔 모두 열기, 다 열렸으면 확인
+    const behind = [...sec.children].filter((x) => x !== ov);
+    behind.forEach((x) => { x.inert = true; });
+    const restore = () => behind.forEach((x) => { x.inert = false; });
+    skip.focus({ preventScroll: true });
+    ov.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault(); e.stopPropagation();
+      if (opened < cards.length) skip.click(); else ok.click();
+    });
     let opened = 0;
+    let lastFlash = -1e9;
     function flip(card, r) {
       if (card.classList.contains('open')) return;
       card.classList.add('open');
       opened++;
       const tier = G().TIER[r.rarity];
       UI.sfx(tier >= G().TIER.legendary ? 'win' : r.isFinal || tier === G().TIER.epic ? 'unlock' : r.isNew ? 'star' : r.rarity === 'rare' ? 'upgrade' : 'build', { vol: tier >= G().TIER.legendary ? 0.7 : 0.6 });
-      if (tier >= G().TIER.epic || r.isFinal) { flash.className = `gc-flash fl-${r.rarity}`; void flash.offsetWidth; flash.classList.add('go'); }
+      // 화면 번쩍임: 0.4초에 한 번까지(광과민 기준 초당 3회 이하), 효과 줄이기면 카드마다 대신 마지막에 한 번만(가장 높은 등급)
+      const now = performance.now();
+      if ((tier >= G().TIER.epic || r.isFinal) && !UI.getSettings().reduceFx && now - lastFlash >= 400) { lastFlash = now; flash.className = `gc-flash fl-${r.rarity}`; void flash.offsetWidth; flash.classList.add('go'); }
       if (opened === cards.length) finish();
     }
     function finish() {
+      if (UI.getSettings().reduceFx && G().TIER[best] >= G().TIER.epic) { flash.className = `gc-flash soft fl-${best}`; void flash.offsetWidth; flash.classList.add('go'); }
       skip.classList.add('hidden');
       ok.classList.remove('hidden');
       const nNew = results.filter((r) => r.isNew).length;
@@ -37415,7 +37579,7 @@ RG.render = (() => {
     RG.render.attach(canvas, game);
     // 탑 목록이 접히거나 글자 크기가 바뀌어 전장 크기가 달라져도 맵이 잘리지 않게
     if (window.ResizeObserver) { stageObs = new ResizeObserver(() => { RG.render.resize(); placeLabel(); }); stageObs.observe(R.stage); }
-    Object.assign(RG.render.overlay, { hover: null, selectedTower: null, ghost: null, selectedEnemy: null, heroSelected: false, skill: null, rally: null });
+    Object.assign(RG.render.overlay, { hover: null, keyCursor: false, selectedTower: null, ghost: null, selectedEnemy: null, heroSelected: false, skill: null, rally: null });
     root.classList.add('loading');
     RG.art.sprites.prepareForGame(game).then(() => { root.classList.remove('loading'); });
     const region = D().regions.find((r) => r.id === game.def.region);
@@ -37472,7 +37636,7 @@ RG.render = (() => {
     left.append(R.lives, R.gold, R.wave, R.next, R.call, el('div', { class: 'rail-row' }, [R.speed, R.pause]), R.task);
 
     const stage = el('div', { class: 'stage' });
-    canvas = el('canvas', { class: 'game-canvas', 'aria-label': '전장' });
+    canvas = el('canvas', { class: 'game-canvas', 'aria-label': '전장 — 방향키로 칸 고르기, Enter로 놓기', tabindex: '-1' });
     R.stage = stage;
     R.boss = el('div', { class: 'boss-bar hidden' }, [el('span', { class: 'boss-name' }), el('div', { class: 'boss-hp' }, [el('i')])]);
     R.banner = el('div', { class: 'banner' });
@@ -37774,7 +37938,12 @@ RG.render = (() => {
     if (pick) refreshGhost();
   }
 
+  let livesFlashAt = -1e9;
   function flashLives() {
+    // 새는 적이 몰려도 0.6초에 한 번까지 (빨간 번쩍임이 초당 3번을 넘지 않게)
+    const now = performance.now();
+    if (now - livesFlashAt < 600) return;
+    livesFlashAt = now;
     R.lives.classList.remove('flash');
     void R.lives.offsetWidth;
     R.lives.classList.add('flash');
@@ -37845,6 +38014,7 @@ RG.render = (() => {
       const inside = c >= 0 && r >= 0 && c < game.map.cols && r < game.map.rows;
       RG.render.overlay.hover = inside ? { c, r } : null;
       keyCursor = null;
+      RG.render.overlay.keyCursor = false;
       if (mode === 'skill') RG.render.overlay.skillPos = p;
       if (pick) {
         // 놓기 모드: 미리보기가 칸에 붙어 따라옴 (손가락으로 끌면 손가락 위쪽 칸)
@@ -38045,6 +38215,9 @@ RG.render = (() => {
         'aria-pressed': 'false',
       }, [
         key ? el('kbd', { text: key }) : null,
+        // 원소는 색만이 아니라 모양(아이콘)으로도, 전설·신화는 글자로도 (색약)
+        el('span', { class: 'tc-el', title: D().elements[td.element].name }, [UI.icon(td.element, 'tiny')]),
+        RG.gacha.TIER[RG.gacha.rarityOf(type)] >= RG.gacha.TIER.legendary ? el('em', { class: `tc-rar r-${RG.gacha.rarityOf(type)}`, text: RG.gacha.rarityOf(type) === 'mythic' ? '신화' : '전설' }) : null,
         (game.ranks && game.ranks[type]) ? el('em', { class: `tc-rank ${RG.gacha.isFinal(game.ranks[type]) ? 'fin' : ''}`, text: RG.gacha.isFinal(game.ranks[type]) ? '★' : `+${game.ranks[type]}` }) : null,
         UI.towerImg(type, lv0, null, 'tc-img'),
         lv0 > 1 ? el('em', { class: 'tc-lv', text: `Lv${lv0}` }) : null,
@@ -38057,7 +38230,11 @@ RG.render = (() => {
       card.addEventListener('pointerup', onCardUp);
       card.addEventListener('pointercancel', onCardCancel);
       // 키보드(Tab → Enter)나 코드로 누른 경우만 여기서 — 손가락·마우스는 pointerup에서 처리함
-      card.addEventListener('click', () => { if (performance.now() - cardPointerAt > 600) togglePick(type); });
+      card.addEventListener('click', (e) => {
+        if (performance.now() - cardPointerAt > 600) togglePick(type);
+        // 키보드로 고르면(Enter·Space) 초점을 전장으로 — 이어서 방향키로 칸을 고르고 Enter로 놓음
+        if (e.detail === 0 && pick && canvas) canvas.focus({ preventScroll: true });
+      });
       card.addEventListener('contextmenu', (e) => { e.preventDefault(); if (pick) { cancelAll(); UI.sfx('click', { vol: 0.4 }); } });
       UI.tooltipFor(card, () => dockTip(type));
       R.dockList.appendChild(card);
@@ -38535,6 +38712,16 @@ RG.render = (() => {
     const sig = JSON.stringify([t.level, t.branch, t.effects, t.disabled, t.dampened, t.building, Math.floor(game.state.gold / 5), t.targetMode, Math.floor(info.damageDealt / 50), mode]);
     if (!force && R.info.dataset.sig === sig) return;
     R.info.dataset.sig = sig;
+    // 창은 골드·피해가 바뀔 때마다 다시 그려짐 — 키보드 초점이 창 안에 있었으면 같은 버튼으로 돌려줌
+    const fa = document.activeElement;
+    if (fa && fa !== R.info && R.info.contains(fa)) {
+      const key = { cls: fa.className, txt: (fa.textContent || '').trim().slice(0, 16) };
+      queueMicrotask(() => {
+        const cand = [...R.info.querySelectorAll('button')];
+        const f = cand.find((b) => b.className === key.cls && (b.textContent || '').trim().slice(0, 16) === key.txt) || cand.find((b) => b.className === key.cls && !b.disabled);
+        if (f) f.focus({ preventScroll: true });
+      });
+    }
     const td = info.def;
     const calc = t.calc;
     R.info.innerHTML = '';
@@ -38756,8 +38943,9 @@ RG.render = (() => {
       return;
     }
     if (UI.modalOpen()) return;
-    // 탑 목록 카드에 키보드 초점이 있으면 Enter·Space는 그 카드 누르기
-    if ((k === 'Enter' || k === ' ') && e.target && e.target.closest && e.target.closest('.tower-dock')) return;
+    // 키보드 초점이 버튼에 있으면 Enter·Space는 그 버튼 누르기 (마우스로 눌러 남은 초점은 제외 — 그땐 Space가 웨이브 호출)
+    if ((k === 'Enter' || k === ' ') && e.target && e.target.closest && e.target.closest('button, [role="button"], a, select')
+      && (e.target.closest('.tower-dock') || e.target.matches(':focus-visible'))) return;
     if (k === ' ' || k === 'Spacebar') { doCmd({ type: 'callWave' }); e.preventDefault(); return; }
     if (k === 'p' || k === 'P') { togglePause(); return; }
     if (k === 'f' || k === 'F') { cycleSpeed(); return; }
@@ -38779,6 +38967,7 @@ RG.render = (() => {
       const cur = keyCursor || (pick && pick.c != null ? { c: pick.c, r: pick.r } : hv ? { c: hv.c, r: hv.r } : { c: Math.floor(m.cols / 2), r: Math.floor(m.rows / 2) });
       keyCursor = { c: Math.max(0, Math.min(m.cols - 1, cur.c + arrows[k][0])), r: Math.max(0, Math.min(m.rows - 1, cur.r + arrows[k][1])) };
       RG.render.overlay.hover = { c: keyCursor.c, r: keyCursor.r };
+      RG.render.overlay.keyCursor = true; // 키보드 커서는 눈에 잘 띄게(렌더러 위쪽 층에 굵은 모서리)
       if (mode === 'skill') RG.render.overlay.skillPos = { x: keyCursor.c + 0.5, y: keyCursor.r + 0.5 };
       if (pick) setGhost(keyCursor.c, keyCursor.r);
       e.preventDefault();
@@ -38945,6 +39134,7 @@ RG.render = (() => {
     UI.modal(el('p', { class: 'modal-text', text: typeof tip.text === 'function' ? tip.text() : tip.text }), {
       title: `💡 ${tip.title}`,
       className: 'tip-modal',
+      onClose: () => setTimeout(nextTip, 200), // Esc·바깥 누르기로 닫아도 남은 팁은 이어서
       buttons: [{ text: tipsQueue.length ? '다음' : '알겠어요', primary: true, onClick: () => { if (id === 'build') dockAttention(); setTimeout(nextTip, 200); } }],
     });
   }

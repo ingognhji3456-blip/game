@@ -72,6 +72,7 @@
       function onKey(e) {
         if (UI.currentId() !== 'story') return;
         if (e.key === 'Escape') done();
+        else if ((e.key === ' ' || e.key === 'Enter') && e.target && e.target.closest && e.target.closest('.story-skip')) return; // 건너뛰기 버튼은 그대로 눌림
         else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); advance(); }
       }
       sec.onclick = () => advance();

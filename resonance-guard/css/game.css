@@ -121,6 +121,10 @@
 .tower-card .tc-cost .icon { width: 13px; height: 13px; }
 .tower-card kbd { position: absolute; top: 3px; left: 4px; font-size: 0.62rem; line-height: 1.25; padding: 0 4px; background: #0008; color: var(--dim); border: 1px solid #ffffff1a; }
 .tower-card .tc-ban { position: absolute; top: 3px; right: 4px; }
+.tower-card .tc-el { position: absolute; left: 3px; top: 20px; width: 15px; height: 15px; border-radius: 50%; background: #0009; display: grid; place-items: center; pointer-events: none; }
+.tower-card .tc-el .icon { width: 12px; height: 12px; }
+.tower-card .tc-rar { position: absolute; left: 50%; top: 3px; transform: translateX(-50%); font-style: normal; font-size: 0.56rem; font-weight: 900; line-height: 1.3; padding: 0 4px; border-radius: 6px; color: #2a1408; background: #ffb38a; pointer-events: none; white-space: nowrap; }
+.tower-card .tc-rar.r-mythic { background: linear-gradient(90deg, #ffb0ec, #b0e6ff); }
 .tower-card:hover { border-color: var(--gold); transform: translateY(-2px); }
 .tower-card:focus-visible { outline: 2px solid var(--gold2); outline-offset: 2px; }
 .tower-card.picked { border-color: var(--gold2); border-bottom-color: var(--el); transform: translateY(-3px); background: radial-gradient(circle at 50% 34%, color-mix(in srgb, var(--el) 40%, transparent), transparent 66%), linear-gradient(#4a3a24, #2a1f14); box-shadow: 0 0 0 1px #ffdf9a66, 0 0 14px #ffd76a77, 0 3px 0 #0008; }
@@ -213,6 +217,9 @@ body.rg-dragging, body.rg-dragging * { cursor: grabbing !important; }
   .tower-card .tc-cost { font-size: 0.7rem; }
   .tower-card .tc-cost .icon { width: 11px; height: 11px; }
   .tower-card kbd { top: 1px; left: 2px; font-size: 0.55rem; padding: 0 2px; }
+  .tower-card .tc-el { top: 13px; left: 1px; width: 12px; height: 12px; }
+  .tower-card .tc-el .icon { width: 10px; height: 10px; }
+  .tower-card .tc-rar { font-size: 0.5rem; top: 1px; }
   .tower-card:hover, .tower-card.picked { transform: none; }
   /* 영웅 카드는 가로로 작게 (탑 목록 자리) */
   .hero-card { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; padding: 4px; }

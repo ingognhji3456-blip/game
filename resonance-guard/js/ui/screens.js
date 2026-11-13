@@ -68,7 +68,7 @@
     const bannerOf = (region) => (RG.art.regionBanner ? UI.svgImg(RG.art.regionBanner(region), 'tm-banner', '') : null);
     if (resumable) {
       const rd = maps.concat(D().endless).find((m) => m.id === run.mapId);
-      mainCol.appendChild(el('button', { class: 'btn btn-primary btn-big tm-card tm-hero', onclick: go(() => UI.show('game', { resume: run })) }, [
+      mainCol.appendChild(el('button', { class: 'btn btn-primary btn-big tm-card tm-hero', 'data-autofocus': '', onclick: go(() => UI.show('game', { resume: run })) }, [
         bannerOf(rd.region || 1),
         el('span', { class: 'tm-medal tm-medal-big' }, [UI.icon('play', 'tm-ico')]),
         el('span', { class: 'tm-text' }, [
@@ -79,7 +79,7 @@
         el('span', { class: 'tm-go', text: '이어서 ›' }),
       ]));
     }
-    mainCol.appendChild(el('button', { class: `btn btn-big tm-card ${resumable ? 'tm-map-small' : 'btn-primary tm-hero'}`, onclick: go(() => UI.show('world', has ? { view: 'regions' } : {})) }, [
+    mainCol.appendChild(el('button', { class: `btn btn-big tm-card ${resumable ? 'tm-map-small' : 'btn-primary tm-hero'}`, 'data-autofocus': resumable ? null : '', onclick: go(() => UI.show('world', has ? { view: 'regions' } : {})) }, [
       resumable ? null : bannerOf(nextDef.region),
       el('span', { class: `tm-medal ${resumable ? '' : 'tm-medal-big'}` }, [UI.icon('map', 'tm-ico')]),
       el('span', { class: 'tm-text' }, [
@@ -192,7 +192,7 @@
     };
     body.append(
       slider('master', '전체 음량'), slider('sfx', '효과음'), slider('music', '음악'),
-      toggle('muted', '소리 끄기'), toggle('shake', '화면 흔들림'), toggle('numbers', '피해 숫자'), toggle('paths', '준비 중 길 미리보기'), toggle('bigText', '큰 글씨'),
+      toggle('muted', '소리 끄기'), toggle('shake', '화면 흔들림'), toggle('reduceFx', '효과 줄이기 (번쩍임·깜박임·흔들림)'), toggle('cvd', '색약 친화 색'), toggle('numbers', '피해 숫자'), toggle('paths', '준비 중 길 미리보기'), toggle('bigText', '큰 글씨'),
       el('div', { class: 'set-row' }, [el('span', { text: '첫 판 안내' }), el('button', { class: 'btn small', type: 'button', onclick: () => { RG.ui.tutorial.reset(); UI.toast('1-1을 시작하면 단계별 안내가 다시 나와요', 'info', 2600); } }, ['튜토리얼 다시 보기'])]),
     );
     UI.modal(body, { title: '설정', buttons: [{ text: '닫기', primary: true }] });
@@ -292,7 +292,7 @@
       pn.addEventListener('pointerdown', () => { pn._wasOn = regionPick === reg.id; });
       pn.addEventListener('click', () => { const was = pn._wasOn != null ? pn._wasOn : regionPick === reg.id; pn._wasOn = null; if (was) enter(reg.id); else pick(reg.id); });
       pn.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { pick(Math.min(5, reg.id + 1), true); e.preventDefault(); }
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { pick(Math.min(D().regions.length, reg.id + 1), true); e.preventDefault(); }
         else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { pick(Math.max(1, reg.id - 1), true); e.preventDefault(); }
         else if (e.key === 'Enter' || e.key === ' ') { if (regionPick === reg.id) enter(reg.id); else pick(reg.id); e.preventDefault(); }
       });
@@ -479,6 +479,7 @@
           heroRow.appendChild(el('button', {
             class: `hp-item ${hero === h ? 'on' : ''} ${unlocked && !banned ? '' : 'locked'}`,
             title: unlocked ? `${hd.name} — ${hd.title}` : '아직 만나지 못한 영웅',
+            tabindex: unlocked && !banned ? null : '-1', 'aria-disabled': unlocked && !banned ? null : 'true', // 고를 수 없는 칸은 Tab 순서에서 뺌
             onclick: () => { if (!unlocked || banned) return; UI.sfx('click'); UI.show('brief', { mapId: def.id, mode, hero: h }); },
           }, [unlocked ? UI.portrait(h, hero === h ? 'happy' : 'normal', 'hp-portrait') : el('span', { class: 'hp-q', text: '?' }), el('span', { text: unlocked ? hd.name : '???' }),
             unlocked && P().bondOf(h).level > 1 ? el('i', { class: 'hp-bond', title: `인연 Lv${P().bondOf(h).level}`, text: P().bondOf(h).level }) : null]));
