@@ -79,12 +79,18 @@
     // 특정 탑을 설명하는 팁은 그 탑을 가지고 있을 때만 (탑은 뽑기로 얻으므로) — 안 보인 팁은 '본 것'으로 치지 않아 나중에 다시 나옴
     const have = new Set(game.opts.towers || D().towerOrder);
     tipsQueue = (game.def.tips || []).filter((t) => !RG.progress.seen('tips', t) && TIPS[t] && (!TIP_TOWER[t] || have.has(TIP_TOWER[t])));
-    if (!data.resume && opts.mode === 'normal') setTimeout(nextTip, 600);
+    // 첫 판(1-1)은 단계별 안내(js/ui/tutorial.js)가 탑 짓기·웨이브 호출 팁을 대신함 — 끝나면 남은 팁
+    if (RG.ui.tutorial && RG.ui.tutorial.shouldRun(game, opts, data)) {
+      tipsQueue = tipsQueue.filter((t) => t !== 'build' && t !== 'callWave');
+      const which = game;
+      setTimeout(() => { if (game === which && UI.currentId() === 'game') RG.ui.tutorial.start(root, () => setTimeout(nextTip, 400)); }, 700);
+    } else if (!data.resume && opts.mode === 'normal') setTimeout(nextTip, 600);
     if (!data.resume) banner(`${game.def.id} ${game.def.name}`, opts.mode === 'challenge' ? `도전: ${game.def.challenge.text}` : opts.mode === 'endless' ? '무한 모드' : '준비가 되면 웨이브를 호출하세요');
   }
 
   function leave() {
     cancelAnimationFrame(raf);
+    if (RG.ui.tutorial) RG.ui.tutorial.stop();
     window.removeEventListener('resize', onResize);
     document.removeEventListener('keydown', onKey);
     document.removeEventListener('pointerdown', onOutsideDown, true);
@@ -197,6 +203,7 @@
     if (running && st.beams.length) { beamT -= dt; if (beamT <= 0) { UI.sfx('beam', { vol: 0.3 }); beamT = 0.2; } }
     if (RG.fx.setSpeed) RG.fx.setSpeed(running ? speed : 0); // 고드름 낙하 등 판 시간에 맞춰야 하는 효과용
     RG.render.frame(running ? acc / DT() : 1, running ? dt : dt * 0.25);
+    if (RG.ui.tutorial && RG.ui.tutorial.active) RG.ui.tutorial.tick(running ? dt : 0);
     hudT -= dt;
     if (hudT <= 0) { updateHud(false); hudT = 0.1; }
     saveT += dt;
@@ -1596,6 +1603,8 @@
     get game() { return game; },
     /** 놓기 모드 상태 (시험용): { type, c, r, ok } 또는 null */
     get placing() { return pick ? { type: pick.type, c: pick.c, r: pick.r, ok: !!(pick.res && pick.res.ok) } : null; },
+    /** 고른 것 { kind:'tower'|'enemy', id } 또는 null (안내용) */
+    get selected() { return sel; },
     doCmd, banner, setSpeed: (n) => { speed = Math.max(1, Math.min(8, n)); },
   };
 })();

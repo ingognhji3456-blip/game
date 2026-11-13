@@ -193,6 +193,7 @@
     body.append(
       slider('master', '전체 음량'), slider('sfx', '효과음'), slider('music', '음악'),
       toggle('muted', '소리 끄기'), toggle('shake', '화면 흔들림'), toggle('numbers', '피해 숫자'), toggle('paths', '준비 중 길 미리보기'), toggle('bigText', '큰 글씨'),
+      el('div', { class: 'set-row' }, [el('span', { text: '첫 판 안내' }), el('button', { class: 'btn small', type: 'button', onclick: () => { RG.ui.tutorial.reset(); UI.toast('1-1을 시작하면 단계별 안내가 다시 나와요', 'info', 2600); } }, ['튜토리얼 다시 보기'])]),
     );
     UI.modal(body, { title: '설정', buttons: [{ text: '닫기', primary: true }] });
   }

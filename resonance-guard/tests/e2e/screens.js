@@ -81,6 +81,11 @@ async function run() {
     await page.evaluate(() => RG.ui.show('story', { id: 'prologue', then: () => RG.ui.show('world', {}) }));
     await page.waitForTimeout(900);
     await shot(page, dir, '04-story');
+    // 첫 판 단계별 안내 (처음 기록이라 1-1에서 나옴)
+    await page.evaluate(() => RG.ui.show('game', { opts: { mapId: '1-1', heroId: 'kara', seed: 3, mode: 'normal', towers: RG.progress.towersFor('1-1'), branches: false } }));
+    await page.waitForFunction(() => RG.ui.tutorial.active, null, { timeout: 6000 }).catch(() => issues.push(`${sizeName}/tutorial: 첫 판 안내가 나오지 않음`));
+    await page.waitForTimeout(400);
+    await shot(page, dir, '04a-tutorial'); await checkLayout(page, `${sizeName}/tutorial`, issues);
     // 전투: 1-2, 탑 몇 개 짓고 진행
     await page.evaluate(() => {
       RG.progress.markSeen('tips', 'resonance'); RG.progress.markSeen('tips', 'flying');

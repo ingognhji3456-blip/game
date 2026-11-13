@@ -2,7 +2,7 @@
 
 /*
  * 입력 방식별 한 판 + 이어하기 (QUALITY.md §5)
- *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|mouse|resume|world|gacha]
+ *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|mouse|resume|world|gacha|tutorial]
  *
  * - keyboard: 숫자(탑 고르기)·방향키·Enter·U·Space·F만으로 1-1을 깬다 (마우스·터치 없음)
  * - touch:    휴대폰 가로(터치 에뮬레이션)에서 탑 목록 탭 → 칸 탭, 탑 끌어다 놓기만으로 1-1을 깬다
@@ -12,6 +12,8 @@
  *             잠긴 지역은 안 들어감, 방향키·Enter로도, 지역 지도에서 "지역 고르기"로 돌아옴
  * - gacha:    타이틀 → 탑 뽑기 → 1회 뽑기(카드 뒤집기) → 확인 → 공명석이 줄고 탑이 늘거나 강화됨,
  *             뽑은 탑이 출정 준비 "내 탑"과 전투 탑 목록에 나옴, 공명석이 모자라면 버튼이 꺼짐
+ * - tutorial: 처음 1-1 → 단계별 안내(탑 고르기→놓기→웨이브 호출→강화→공명→끝)를 실제 클릭으로 따라감, 손가락이 그 버튼을
+ *             가리키는지, 끝나면 병영 팁, 다시 들어가면 안 나옴, 설정 "튜토리얼 다시 보기"로 되살아남, 건너뛰기
  *
  * 시험을 빨리 끝내려고 배속만 코드로 올립니다(입력은 전부 실제 키·터치 이벤트).
  */
@@ -197,10 +199,10 @@ async function touchRun(browser) {
       const t = built[upgrades % built.length];
       await tapTile(t.c, t.r);
       const up = await page.$('.up-box .btn-up:not([disabled])');
-      if (up) { await up.tap(); upgrades++; }
+      if (up) { try { await up.tap({ timeout: 2000 }); upgrades++; } catch (e) { /* 정보 창은 0.1초마다 다시 그려짐 — 다음 차례에 */ } }
       await closePanel();
     }
-    if (s.countdown !== null) { const b = await page.$('.btn-call:not([disabled])'); if (b) await b.tap(); }
+    if (s.countdown !== null) { const b = await page.$('.btn-call:not([disabled])'); if (b) { try { await b.tap({ timeout: 2000 }); } catch (e) { /* 다시 그려짐 */ } } }
     await page.waitForTimeout(400);
   }
   await page.waitForSelector('#screen-result.active', { timeout: 20000 });
@@ -388,9 +390,79 @@ async function gachaRun(browser) {
   return { name: '탑 뽑기', ok, detail: `뽑은 탑 "${pulled.join(', ')}"(${gotType}${g1.owned[gotType] > 0 ? ` 강화 +${g1.owned[gotType]}` : ' 새 탑'}), 공명석 ${g0.crystals}→${g1.crystals}, 모자라면 버튼 꺼짐 ${disabled}, 출정 준비 내 탑 ${briefCount}개, 전투 탑 목록 ${dock.length}개`, errors };
 }
 
+/* ---------------- 첫 판 단계별 안내: 탑 고르기 → 놓기 → 웨이브 호출 → 강화 → 공명 → 끝, 건너뛰기·다시 보기 ---------------- */
+async function tutorialRun(browser) {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await page.goto(URL);
+  await page.evaluate(() => { RG.progress.reset(); RG.progress.markSeen('story', 'prologue'); });
+  await openGame(page, '1-1');
+  await page.waitForFunction(() => RG.ui.tutorial.active, null, { timeout: 5000 });
+  const step = () => page.evaluate(() => RG.ui.tutorial.step);
+  const steps = [await step()];
+  const handOn = async (sel) => page.evaluate((sel) => {
+    const h = document.querySelector('.tut-hand').getBoundingClientRect();
+    const t = document.querySelector(sel).getBoundingClientRect();
+    const x = h.left + 16; const y = h.top;
+    return x >= t.left - 8 && x <= t.right + 8 && y >= t.top - 8 && y <= t.bottom + 30;
+  }, sel);
+  const pointsCard = await handOn('.tower-card[data-type="ember_archer"]');
+  await page.click('.tower-card[data-type="ember_archer"]');
+  await page.waitForTimeout(200);
+  steps.push(await step());
+  const ring = await page.evaluate(() => { const r = document.querySelector('.tut-ring').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, shown: getComputedStyle(document.querySelector('.tut-ring')).display !== 'none' }; });
+  await page.mouse.click(ring.x, ring.y);
+  await page.waitForTimeout(400);
+  steps.push(await step());
+  const pointsCall = await handOn('.btn-call');
+  await page.click('.btn-call');
+  await page.waitForTimeout(400);
+  steps.push(await step());
+  await page.evaluate(() => { RG.ui.game.game.state.gold += 200; });
+  await page.waitForTimeout(300);
+  const t0 = await page.evaluate(() => { const t = RG.ui.game.game.state.towers[0]; const p = RG.render.worldToScreen(t.c + 0.5, t.r + 0.5); const r = document.querySelector('.game-canvas').getBoundingClientRect(); return { x: r.left + p.x, y: r.top + p.y }; });
+  await page.mouse.click(t0.x, t0.y);
+  await page.waitForTimeout(300);
+  const pointsUp = await handOn('.info-panel .btn-up');
+  await page.click('.info-panel .btn-up');
+  await page.waitForTimeout(400);
+  steps.push(await step());
+  await page.evaluate(() => { RG.ui.game.game.state.gold += 200; });
+  await page.keyboard.press('Escape');
+  await page.click('.tower-card[data-type="ember_archer"]');
+  await page.waitForTimeout(200);
+  const ring2 = await page.evaluate(() => { const r = document.querySelector('.tut-ring').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  await page.mouse.click(ring2.x, ring2.y);
+  await page.waitForFunction(() => RG.ui.tutorial.step === 'end' || !RG.ui.tutorial.active, null, { timeout: 5000 });
+  steps.push(await step());
+  await page.waitForFunction(() => !RG.ui.tutorial.active, null, { timeout: 9000 });
+  await page.waitForFunction(() => RG.ui.modalOpen(), null, { timeout: 3000 }).catch(() => {}); // 끝나고 0.4초 뒤 남은 팁(병영)
+  const done = await page.evaluate(() => ({ seen: RG.progress.seen('tips', 'tutorial'), links: RG.ui.game.game.state.towers.reduce((a, t) => a + t.links.length, 0) / 2, level: Math.max(...RG.ui.game.game.state.towers.map((t) => t.level)), tip: RG.ui.modalOpen() }));
+  // 다시 들어가면 안 나옴 → 설정의 "튜토리얼 다시 보기" → 다시 나옴 → 건너뛰기
+  await page.evaluate(() => RG.ui.closeAllModals());
+  await openGame(page, '1-1');
+  const again = await page.evaluate(() => RG.ui.tutorial.active);
+  await page.evaluate(() => { RG.ui.closeAllModals(); RG.ui.openSettings(); });
+  await page.click('.settings button:has-text("튜토리얼 다시 보기")');
+  await page.evaluate(() => RG.ui.closeAllModals());
+  await openGame(page, '1-1');
+  await page.waitForFunction(() => RG.ui.tutorial.active, null, { timeout: 5000 }).catch(() => {});
+  const back = await page.evaluate(() => RG.ui.tutorial.active);
+  await page.click('.tut-skip');
+  await page.waitForTimeout(200);
+  const skipped = await page.evaluate(() => ({ active: RG.ui.tutorial.active, seen: RG.progress.seen('tips', 'tutorial') }));
+  await page.close();
+  const want = ['pick', 'place', 'wave', 'upgrade', 'resonance', 'end'];
+  const ok = want.every((w, i) => steps[i] === w) && pointsCard && ring.shown && pointsCall && pointsUp && done.seen && done.links >= 1 && done.level >= 2 && done.tip
+    && !again && back && !skipped.active && skipped.seen;
+  return { name: '첫 판 안내', ok, detail: `단계 ${steps.join('→')}, 손가락(카드 ${pointsCard}·호출 ${pointsCall}·강화 ${pointsUp}), 끝난 뒤 병영 팁 ${done.tip}, 다시 안 나옴 ${!again}, 설정으로 되살림 ${back}, 건너뛰기 ${!skipped.active}`, errors };
+}
+
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
-  const runs = { keyboard: keyboardRun, touch: touchRun, mouse: mouseRun, resume: resumeRun, world: worldRun, gacha: gachaRun };
+  const runs = { keyboard: keyboardRun, touch: touchRun, mouse: mouseRun, resume: resumeRun, world: worldRun, gacha: gachaRun, tutorial: tutorialRun };
   let fail = 0;
   for (const [k, fn] of Object.entries(runs)) {
     if (only && only !== k) continue;
