@@ -41,6 +41,7 @@ RG.render = (() => {
   let perfN = 0;
   let perfSlow = 0;
   let perfLast = 0; // 적이 아주 많으면 적의 드리운 그림자 대신 발밑 그늘만 (성능)
+  const reducedMQ = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null; // 한 번만 만들고 .matches만 읽음(매 프레임 만들면 쓰레기가 쌓임)
   const hurtAt = new Map(); // 적 id → 마지막으로 맞은 번쩍임을 보인 시각(실제 시간)
   const overlay = { hover: null, keyCursor: false, selectedTower: null, ghost: null, selectedEnemy: null, heroSelected: false, skill: null, rally: null, showPaths: true };
   const REGION_BASE = { 1: '#5d7a3c', 2: '#c9d8e6', 3: '#b9774a', 4: '#3f7f86', 5: '#5d5672' };
@@ -302,7 +303,8 @@ RG.render = (() => {
     if (sh && !plain) shadowAt(cx - w * ax + sh[0], cy - h * ay + sh[1], sh[2], sh[3], sh[4]); // 구운 그림을 못 쓰면 그늘만 따로
     const img = plain ? (sh ? fittedSh(s, w, h, flip, sh) : fitted(s, w, h, flip)) : fitted(s, w, h, false);
     const a0 = ctx.globalAlpha;
-    if (alpha != null && alpha !== 1) ctx.globalAlpha = a0 * alpha;
+    const setA = alpha != null && alpha !== 1; // 투명도를 바꿀 때만 쓰고 되돌림 (그림마다 두 번씩 쓰던 것 — 적 300이면 프레임마다 600번)
+    if (setA) ctx.globalAlpha = a0 * alpha;
     if (img !== s.canvas && plain) {
       // 줄여 둔 그림(반전본 포함): 정수 화소 위치에 원래 크기 그대로 찍음 — 늘이기·반 화소·뒤집기 없이 가장 빠른 길
       const x0 = (Math.round((cx - w * ax) * dpr) + img._ox) / dpr;
@@ -326,7 +328,7 @@ RG.render = (() => {
     } else {
       ctx.drawImage(img, cx - w * ax, cy - h * ay, w, h);
     }
-    ctx.globalAlpha = a0;
+    if (setA) ctx.globalAlpha = a0;
     return true;
   }
   /*
@@ -1498,7 +1500,7 @@ RG.render = (() => {
     // 위상 망령: 순간이동 직전 일렁임 — 초당 2.5번 이하로, 효과 줄이기면 흐릿하게만 (발밑 점선 원은 아래에서)
     if (e.phaseWarn) { if (RG.fx.settings.reduce) alphaS *= 0.6; else { alphaS *= 0.45 + 0.4 * Math.abs(Math.sin(time * 8)); dx += Math.sin(time * 16) * T * 0.04; } }
     // 맞은 번쩍임: 한 적이 여러 탑에 맞아도 1초에 3번 정도까지(실제 시간), 효과 줄이기면 없음 — 체력 막대가 대신 알려 줌
-    let hurt = !RG.fx.settings.reduce && st.time - e.lastHurt < 0.08;
+    let hurt = !manyEnemies && !RG.fx.settings.reduce && st.time - e.lastHurt < 0.08; // 적이 아주 많으면 어차피 안 그림 — 셈도 건너뜀
     if (hurt) { if (hurtAt.size > 400) hurtAt.clear(); const at = hurtAt.get(e.id); if (at != null && time - at < 0.34 && time - at > 0.08) hurt = false; else if (at == null || time - at >= 0.34) hurtAt.set(e.id, time); }
     const flip = e.dir < 0;
     const big = ed.size >= 1.4 ? 288 : 168;
@@ -1870,7 +1872,7 @@ RG.render = (() => {
   function updateAmbient(dt) {
     const m = game.map;
     const region = m.def.region || 1;
-    const reduce = RG.fx.settings.reduce || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const reduce = RG.fx.settings.reduce || !!(reducedMQ && reducedMQ.matches);
     const key = `${m.id}|${reduce}`;
     if (ambientFor !== key) {
       ambientFor = key;
@@ -1960,7 +1962,9 @@ RG.render = (() => {
   const lowFx = () => slowFx && manyEnemies;
   let perfRaised = false; // 이 판에서 화질을 다시 높인 적이 있는가
   let perfNoRaise = false; // 높였다가 다시 느려짐 → 이 판에서는 더 높이지 않음
+  let perfLock = false; // 시험용: 화질 자동 조절을 멈춤 (RG.render.lockQuality)
   function watchSpeed() {
+    if (perfLock) return;
     const now = performance.now();
     const gap = perfLast ? (now - perfLast) / 1000 : 0;
     perfLast = now;
@@ -2132,7 +2136,8 @@ RG.render = (() => {
     let cn = 0;
     for (let i = 0; i < corpses.length; i++) { const c = corpses[i]; c.t += dt; if (c.t < c.dur) corpses[cn++] = c; }
     corpses.length = cn;
-    for (let i = 0; i < corpses.length; i++) dlAdd(corpses[i].y - 0.001, 4, corpses[i]);
+    // 느린 기기에서 적이 아주 많으면 쓰러지는 모습은 최근 20개만 (나머지는 조용히 사라짐)
+    for (let i = lowFx() ? Math.max(0, corpses.length - 20) : 0; i < corpses.length; i++) dlAdd(corpses[i].y - 0.001, 4, corpses[i]);
     for (const R of st.rollers) if (st.time >= R.startAt && !R.done) dlAdd(lerp(R.py, R.y, alpha) + 0.05, 5, R);
     dlOrder.length = dlN;
     for (let i = 0; i < dlN; i++) dlOrder[i] = dlPool[i];
@@ -2187,5 +2192,9 @@ RG.render = (() => {
     ctx.restore();
   }
 
-  return { attach, detach, resize, frame, onEvents, muzzleOf, setShadows: (on) => { shadowsOn = !!on; }, setQuality: (cap) => { dprCap = Math.max(1, Math.min(2, cap)); resize(); }, get quality() { return dprCap; }, screenToWorld, worldToScreen, overlay, tileSize, get T() { return T; } };
+  return { attach, detach, resize, frame, onEvents, muzzleOf, setShadows: (on) => { shadowsOn = !!on; }, setQuality: (cap) => { dprCap = Math.max(1, Math.min(2, cap)); resize(); },
+    /** 시험용: 화질을 고정(q)하고 자동 조절을 멈춤, slow=true면 꾸밈 줄이기도 켬. null이면 자동으로 되돌림 */
+    /** 느린 기기라 꾸밈을 줄이는 중인가 (판 화면이 CSS 애니메이션도 멈춤) */
+    get slow() { return slowFx; },
+    lockQuality: (q, slow) => { perfLock = q != null; if (q != null) { dprCap = Math.max(1, Math.min(2, q)); slowFx = !!slow; resize(); } }, get quality() { return dprCap; }, screenToWorld, worldToScreen, overlay, tileSize, get T() { return T; } };
 })();

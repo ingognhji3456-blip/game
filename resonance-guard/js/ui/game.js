@@ -342,6 +342,9 @@
   function updateHud(force) {
     if (!game) return;
     const st = game.state;
+    // 느린 기기(렌더러가 꾸밈을 줄이는 중)면 판 화면의 CSS 애니메이션도 멈춤 — 버튼 맥박 등이 매 프레임 다시 칠해짐
+    const slow = !!(RG.render.slow);
+    if (slow !== root.classList.contains('slow-fx')) root.classList.toggle('slow-fx', slow);
     setT(R.lives.children[1], String(st.lives));
     setT(R.lives.children[2], `/${st.maxLives}`);
     setC(R.lives, 'danger', st.lives <= 3);

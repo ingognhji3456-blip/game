@@ -297,3 +297,8 @@ body.rg-dragging, body.rg-dragging * { cursor: grabbing !important; }
 /* 글자 크기 "아주 크게": 전투 화면의 글자(레일·탑 목록)는 "크게"까지만 — 지도와 탑 목록이 비좁아지지 않게. 전장 위 숫자는 따로 키움 */
 :root[data-text="xl"] #screen-game { font-size: calc(15px * 1.2); }
 .tower-card .tc-cost, .btn-up .cost, .stat b, .stat small { white-space: nowrap; }
+
+/* 느린 기기(자동): 판 화면의 꾸밈 애니메이션·전환을 멈춤. 배너·보스 카드는 고정으로 보였다 사라짐 */
+#screen-game.slow-fx *, #screen-game.slow-fx *::before, #screen-game.slow-fx *::after { animation: none !important; transition: none !important; }
+#screen-game.slow-fx .banner.show { opacity: 1; transform: translate(-50%, -50%); }
+#screen-game.slow-fx .boss-intro.show { opacity: 1; }
