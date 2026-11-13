@@ -55,7 +55,8 @@
         el('button', { class: 'icon-btn', title: '돌아가기', 'aria-label': '돌아가기', onclick: goBack }, [UI.icon('back')]),
         el('h2', { text: '탑 뽑기' }),
         el('div', { class: 'gc-wallet' }, [
-          el('span', { class: 'gc-coin', title: '공명석 — 맵을 클리어하고 별을 얻으면 모입니다' }, [UI.icon('crystal'), el('b', { text: g.crystals.toLocaleString() })]),
+          el('span', { class: 'gc-coin', title: '공명석 — 맵을 클리어하고 별을 얻거나, 공명석 웨이브에서 모읍니다' }, [UI.icon('crystal'), el('b', { text: g.crystals.toLocaleString() })]),
+          RG.ui.crystalButton ? RG.ui.crystalButton('btn small gc-earn', 'gacha') : null,
         ]),
       ]);
 

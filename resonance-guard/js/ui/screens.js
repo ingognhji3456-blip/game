@@ -65,18 +65,19 @@
     const starsNow = P().starsTotal();
     // 가운데: 모험 카드 (이어할 판이 있으면 그 카드가 금빛, 지도 카드는 그 아래 보조)
     const mainCol = el('div', { class: 'tm-main' });
-    const resumable = run && maps.concat(D().endless, D().raidMaps || []).some((m) => m.id === run.mapId);
+    const resumable = run && maps.concat(D().endless, D().raidMaps || [], D().crystalMaps || []).some((m) => m.id === run.mapId);
     const bannerOf = (region) => (RG.art.regionBanner ? UI.svgImg(RG.art.regionBanner(region), 'tm-banner', '') : null);
     if (resumable) {
-      const rd = maps.concat(D().endless, D().raidMaps || []).find((m) => m.id === run.mapId);
+      const rd = maps.concat(D().endless, D().raidMaps || [], D().crystalMaps || []).find((m) => m.id === run.mapId);
       const raidRun = run.opts && run.opts.raid;
+      const crystalRun = run.opts && run.opts.crystal;
       mainCol.appendChild(el('button', { class: 'btn btn-primary btn-big tm-card tm-hero', 'data-autofocus': '', onclick: go(() => UI.show('game', { resume: run })) }, [
         bannerOf(rd.region || 1),
         el('span', { class: 'tm-medal tm-medal-big' }, [UI.icon('play', 'tm-ico')]),
         el('span', { class: 'tm-text' }, [
-          el('span', { class: 'tm-kicker', text: raidRun ? `하던 레이드 · 웨이브 ${run.wave}` : `하던 판 · ${run.mapId} 웨이브 ${run.wave}` }),
+          el('span', { class: 'tm-kicker', text: crystalRun ? `하던 공명석 웨이브 · 웨이브 ${run.wave}` : raidRun ? `하던 레이드 · 웨이브 ${run.wave}` : `하던 판 · ${run.mapId} 웨이브 ${run.wave}` }),
           el('b', { class: 'tm-title', text: '이어하기' }),
-          el('span', { class: 'tm-sub', text: raidRun ? `${D().towers[raidRun.tower].name} · ${D().raid.difficulty[raidRun.d - 1].name}` : rd.name || '' }),
+          el('span', { class: 'tm-sub', text: crystalRun ? `${D().crystal.difficulty[crystalRun.d - 1].name} · ${rd.name}` : raidRun ? `${D().towers[raidRun.tower].name} · ${D().raid.difficulty[raidRun.d - 1].name}` : rd.name || '' }),
         ]),
         el('span', { class: 'tm-go', text: '이어서 ›' }),
       ]));
@@ -116,10 +117,13 @@
       tile('tm-tree', '#7ad46a', UI.icon('tree', 'tm-ico'), '기술 나무', free > 0 ? `쓸 수 있는 별 ★${free}` : `모은 별 ★${starsNow}`, free > 0 ? `★${free}` : '', go(() => UI.show('tree', {}))),
       tile('tm-codex', '#f2b24a', UI.icon('book', 'tm-ico'), '도감', `만난 적 ${enemiesSeen}/${enemiesAll}`, '', go(() => UI.show('codex', {}))),
     ];
-    if (P().raidOpen()) {
-      // 이어할 판이 있으면(세로 칸이 모자람) 작은 지도 카드 옆에 나란히
-      if (resumable) { const small = mainCol.querySelector('.tm-map-small'); const row = el('div', { class: 'tm-row' }); small.replaceWith(row); row.append(small, raidButton('btn tm-raid tm-raid-side')); }
-      else mainCol.appendChild(raidButton('btn tm-raid'));
+    // 공명석 웨이브·조각 레이드 단추 (열린 것만): 이어할 판이 있으면(세로 칸이 모자람) 작은 지도 카드 옆에 나란히, 아니면 모험 카드 아래 한 줄
+    const modes = [];
+    if (RG.ui.crystalButton && P().crystalOpen()) modes.push((cls) => RG.ui.crystalButton(`${cls} tm-crystal`, 'title'));
+    if (P().raidOpen()) modes.push((cls) => raidButton(cls));
+    if (modes.length) {
+      if (resumable) { const small = mainCol.querySelector('.tm-map-small'); const row = el('div', { class: 'tm-row' }); small.replaceWith(row); row.append(small, ...modes.map((f) => f('btn tm-raid tm-raid-side'))); }
+      else mainCol.appendChild(el('div', { class: 'tm-modes' }, modes.map((f) => f('btn tm-raid'))));
     }
     menu.append(tiles[0], tiles[1], mainCol, tiles[2], tiles[3]);
     return menu;
@@ -333,10 +337,10 @@
     const open = P().raidOpen();
     const ready = open && P().ownedTowers().some((t) => { const c = RG.raid.shardCost(P().shardLvOf(t)); return c != null && P().shardsOf(t) >= c; });
     return el('button', {
-      class: `${cls} btn-raid ${open ? '' : 'locked'} ${ready ? 'ready' : ''}`, title: open ? '조각 레이드 — 탑 하나로 막아 그 탑의 조각을 모읍니다' : `${D().raid.unlockAfter}을(를) 지켜 내면 열립니다`,
+      class: `${cls} btn-raid ${open ? '' : 'locked'} ${ready ? 'ready' : ''}`, title: open ? '조각 레이드 — 탑 하나로 막아 그 탑의 조각을 모읍니다' : `${D().raid.unlockAfter} 맵을 지켜 내면 열립니다`,
       'aria-label': '조각 레이드',
       onclick: () => {
-        if (!open) { UI.toast(`조각 레이드는 ${D().raid.unlockAfter}을(를) 지켜 내면 열립니다`, 'warn'); return; }
+        if (!open) { UI.toast(`조각 레이드는 ${D().raid.unlockAfter} 맵을 지켜 내면 열립니다`, 'warn'); return; }
         const from = UI.currentId() === 'title' ? 'title' : 'world';
         UI.show('raid', { back: from, backData: from === 'world' ? { view: worldView, region: worldView === 'stages' ? worldRegion : undefined, keepPick: true } : {} });
       },
@@ -459,6 +463,7 @@
           el('button', { class: 'btn small', onclick: () => UI.show('tree', {}) }, [UI.icon('tree', 'tiny'), `기술 나무${P().starsFree() > 0 ? ` (${P().starsFree()})` : ''}`]),
           el('button', { class: 'btn small', onclick: () => UI.show('heroes', {}) }, [UI.icon('hero', 'tiny'), '수호대']),
           el('button', { class: 'btn small', onclick: () => UI.show('codex', {}) }, [UI.icon('book', 'tiny'), '도감']),
+          RG.ui.crystalButton ? RG.ui.crystalButton('btn small', 'world') : null,
           raidButton('btn small'),
           el('button', { class: 'icon-btn', title: '설정', onclick: openSettings }, [UI.icon('settings')]),
         ]),
@@ -719,6 +724,7 @@
       UI.music(win ? 'victory' : 'defeat');
       UI.sfx(win ? 'win' : 'lose');
       if (data.raid && RG.ui.raidResult) { RG.ui.raidResult(sec, data); return; } // 조각 레이드 (js/ui/raid.js)
+      if (data.crystal && RG.ui.crystalResult) { RG.ui.crystalResult(sec, data); return; } // 공명석 웨이브 (js/ui/crystal.js)
       const def = D().maps.find((m) => m.id === data.mapId) || D().endless.find((m) => m.id === data.mapId);
       const box = el('div', { class: `result-box ${win ? 'win' : 'lose'}` });
       const hero = data.opts.heroId;

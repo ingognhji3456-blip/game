@@ -95,7 +95,7 @@
       ]);
       if (!P().raidOpen()) {
         const def = D().maps.find((m) => m.id === RD().unlockAfter);
-        sec.append(head, el('div', { class: 'rd-locked' }, [UI.icon('lock', 'big-ico'), el('p', { text: `${def.id} ${def.name}을(를) 지켜 내면 열립니다.` })]));
+        sec.append(head, el('div', { class: 'rd-locked' }, [UI.icon('lock', 'big-ico'), el('p', { text: `${def.id} ${wj(def.name, '을/를')} 지켜 내면 열립니다.` })]));
         return;
       }
       const owned = P().ownedTowers();

@@ -89,7 +89,8 @@
       const which = game;
       setTimeout(() => { if (game === which && UI.currentId() === 'game') RG.ui.tutorial.start(root, () => setTimeout(nextTip, 400)); }, 700);
     } else if (!data.resume && opts.mode === 'normal') setTimeout(nextTip, 600);
-    if (!data.resume && opts.raid) banner(`조각 레이드 · ${D().towers[opts.raid.tower].name}`, `${D().raid.difficulty[opts.raid.d - 1].name} · ${D().towers[opts.raid.tower].name}만 지을 수 있습니다`);
+    if (!data.resume && opts.crystal) banner(`공명석 웨이브 · ${D().crystal.difficulty[opts.crystal.d - 1].name}`, `끝까지 막으면 공명석 ${D().crystal.difficulty[opts.crystal.d - 1].reward.toLocaleString()} — 가진 탑을 모두 쓸 수 있습니다`);
+    else if (!data.resume && opts.raid) banner(`조각 레이드 · ${D().towers[opts.raid.tower].name}`, `${D().raid.difficulty[opts.raid.d - 1].name} · ${D().towers[opts.raid.tower].name}만 지을 수 있습니다`);
     else if (!data.resume) banner(`${game.def.id} ${game.def.name}`, opts.mode === 'challenge' ? `도전: ${game.def.challenge.text}` : opts.mode === 'endless' ? '무한 모드' : '준비가 되면 웨이브를 호출하세요');
   }
 
@@ -391,6 +392,14 @@
       const tk = st.task;
       setC(R.task, 'done', tk.done);
       setH(R.task, `<span class="task-head">공명 과제${tk.done ? ' ✓' : ''}</span><span>${esc(tk.def.text)}</span>${!tk.done && tk.need ? `<span class="dim">최고 ${Math.floor(tk.best)}/${tk.need}</span>` : ''}`);
+    } else if (game.opts.crystal) {
+      // 공명석 웨이브: 지금까지 막아 낸 웨이브와 받을 공명석
+      const cd = game.opts.crystal.d;
+      const done = st.result === 'win' ? st.wave.total : RG.raid.wavesCleared(st);
+      const now = RG.crystal.reward(cd, { win: st.result === 'win', cleared: done, total: st.wave.total });
+      const full = D().crystal.difficulty[cd - 1].reward;
+      setC(R.task, 'done', st.result === 'win');
+      setH(R.task, `<span class="task-head">공명석 웨이브</span><span>막아 낸 웨이브 ${done}/${st.wave.total}</span><span>지금 끝나면 <b class="good">+${now}</b> · 끝까지 <b class="gold">+${full}</b></span>`);
     } else if (game.challenge) {
       setH(R.task, `<span class="task-head">도전</span><span>${esc(game.challenge.text)}</span>`);
     } else setH(R.task, '');
@@ -1546,7 +1555,7 @@
     if (!game) return;
     UI.sfx('click');
     const body = el('div', { class: 'pause-body' }, [
-      el('p', { class: 'dim', text: `${opts.raid ? `조각 레이드 · ${D().towers[opts.raid.tower].name} · ${D().raid.difficulty[opts.raid.d - 1].name}` : `${game.def.id} ${game.def.name}`} · 웨이브 ${game.state.wave.index}/${isFinite(game.state.wave.total) ? game.state.wave.total : '∞'}` }),
+      el('p', { class: 'dim', text: `${opts.crystal ? `공명석 웨이브 · ${D().crystal.difficulty[opts.crystal.d - 1].name}` : opts.raid ? `조각 레이드 · ${D().towers[opts.raid.tower].name} · ${D().raid.difficulty[opts.raid.d - 1].name}` : `${game.def.id} ${game.def.name}`} · 웨이브 ${game.state.wave.index}/${isFinite(game.state.wave.total) ? game.state.wave.total : '∞'}` }),
     ]);
     UI.modal(body, {
       title: '일시정지',
@@ -1554,7 +1563,8 @@
         { text: '설정', onClick: () => RG.ui.openSettings && RG.ui.openSettings() },
         { text: '조작법', onClick: openControls },
         { text: '다시 시작', onClick: () => UI.confirmBox('처음부터 다시 시작할까요?', () => { RG.save.remove(RG.save.KEYS.run); UI.show('game', { opts }); }) },
-        opts.raid ? { text: '레이드로', onClick: () => UI.confirmBox('레이드 화면으로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('raid', { tower: opts.raid.tower, d: opts.raid.d })) }
+        opts.crystal ? { text: '공명석 웨이브로', onClick: () => UI.confirmBox('공명석 웨이브 화면으로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('crystal', { keep: true, d: opts.crystal.d })) }
+          : opts.raid ? { text: '레이드로', onClick: () => UI.confirmBox('레이드 화면으로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('raid', { tower: opts.raid.tower, d: opts.raid.d })) }
           : { text: '지도로', onClick: () => UI.confirmBox('지도로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('world', {})) },
         { text: '계속하기', primary: true },
       ],
@@ -1607,12 +1617,13 @@
     if (!game || !game.state.result) return null;
     const st = game.state;
     // 조각 레이드: 맵 기록·별·공명석이 아니라 그 탑의 조각 (js/core/progress.js recordRaid)
-    const rec = opts.raid ? RG.progress.recordRaid(opts.raid.tower, opts.raid.d, st) : RG.progress.record(game.def.id, opts.mode, st);
+    // 공명석 웨이브: 공명석 (js/core/progress.js recordCrystal)
+    const rec = opts.crystal ? RG.progress.recordCrystal(opts.crystal.d, st) : opts.raid ? RG.progress.recordRaid(opts.raid.tower, opts.raid.d, st) : RG.progress.record(game.def.id, opts.mode, st);
     const stats = {
       damage: st.stats.damageByTower, kills: st.stats.kills, gold: st.stats.goldEarned, heroDamage: st.stats.heroDamage,
       towers: st.towers.map((t) => ({ id: t.id, type: t.type, level: t.level, branch: t.branch })), time: st.time,
     };
-    return { mapId: game.def.id, mode: opts.mode, result: st.result, lives: st.lives, maxLives: st.maxLives, task: st.task, rec, stats, opts, waves: st.wave.index, totalWaves: st.wave.total, timeout: st.timeout, raid: opts.raid ? { tower: opts.raid.tower, d: opts.raid.d } : null };
+    return { mapId: game.def.id, mode: opts.mode, result: st.result, lives: st.lives, maxLives: st.maxLives, task: st.task, rec, stats, opts, waves: st.wave.index, totalWaves: st.wave.total, timeout: st.timeout, raid: opts.raid ? { tower: opts.raid.tower, d: opts.raid.d } : null, crystal: opts.crystal ? { d: opts.crystal.d } : null };
   }
 
   /* =====================================================

@@ -249,6 +249,26 @@ async function run() {
     });
     await page.waitForTimeout(400);
     await shot(page, dir, '20d-awaken-battle'); await checkLayout(page, `${sizeName}/awaken-battle`, issues);
+    // 공명석 웨이브: 화면, 판(왼쪽 아래 공명석), 결과
+    await page.evaluate(() => { RG.progress.get().crystalRun = { 1: 1 }; RG.progress.save(); RG.ui.show('crystal', { d: 2 }); });
+    await page.waitForTimeout(500);
+    await shot(page, dir, '21-crystal'); await checkLayout(page, `${sizeName}/crystal`, issues);
+    await page.evaluate(() => RG.ui.show('game', { opts: RG.ui.crystalOpts(1, 'kara') }));
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => {
+      const ui = RG.ui.game; const g = ui.game; RG.ui.closeAllModals(); g.state.gold = 3000; let k = 0;
+      for (let r = 0; r < g.map.rows && k < 7; r++) for (let c = 0; c < g.map.cols && k < 7; c++) if (g.map.kinds[r * g.map.cols + c] === RG.grid.T.BUILD && ui.doCmd({ type: 'build', tower: ['ember_archer', 'frost_crystal', 'stone_barracks'][k % 3], c, r }, true).ok) k++;
+      ui.doCmd({ type: 'callWave' }, true); ui.setSpeed(2);
+    });
+    await page.waitForTimeout(3000);
+    await page.evaluate(() => RG.ui.game.setSpeed(1));
+    await shot(page, dir, '21a-crystal-battle'); await checkLayout(page, `${sizeName}/crystal-battle`, issues);
+    await page.evaluate(() => {
+      const rec = RG.progress.recordCrystal(1, { result: 'win', wave: { index: 8, total: 8, queue: [] }, enemies: [], hero: { heroId: 'kara' } });
+      RG.ui.show('result', { crystal: { d: 1 }, mapId: 'C1', mode: 'normal', result: 'win', rec, opts: { heroId: 'kara', mode: 'normal' }, waves: 8, totalWaves: 8, stats: { damage: {}, kills: 90, gold: 900, heroDamage: 600, towers: [], time: 240 } });
+    });
+    await page.waitForTimeout(1800);
+    await shot(page, dir, '21b-crystal-result'); await checkLayout(page, `${sizeName}/crystal-result`, issues);
     await ctx.close();
   }
   await browser.close();

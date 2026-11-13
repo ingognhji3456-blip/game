@@ -1117,3 +1117,47 @@
 .rd-awaken { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; border-radius: 8px; border: 1px dashed #ffd27a66; background: #2a1f0f55; font-size: 0.8rem; color: #d8ccb8; }
 .rd-awaken b { color: #ffe08a; }
 .rd-awaken.on { border-style: solid; border-color: #ffd27a; background: linear-gradient(135deg, #3a2a10aa, #24163eaa); box-shadow: 0 0 10px #ffd27a44; color: #fff3dc; }
+
+/* ---------- 공명석 웨이브 (js/ui/crystal.js) ---------- */
+#screen-crystal { display: none; flex-direction: column; background: radial-gradient(ellipse at 30% 30%, #3e2a6a 0%, #1f1838 45%, #0e0b1a 100%); }
+#screen-crystal.active { display: flex; }
+#screen-crystal .top-bar { background: linear-gradient(180deg, #2c1f44, #1a1229); border-bottom: 1px solid #c8a6ff33; }
+#screen-crystal .top-bar h2 { display: inline-flex; align-items: center; gap: 6px; }
+.cr-body { flex: 1; min-height: 0; overflow: auto; padding: 12px calc(14px + var(--safe-r)) calc(12px + var(--safe-b)) calc(14px + var(--safe-l)); display: flex; flex-direction: column; gap: 8px; max-width: 980px; width: 100%; margin: 0 auto; box-sizing: border-box; }
+.cr-intro { margin: 0; color: #d8cce8; font-size: 0.88rem; }
+.cr-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.cr-card { appearance: none; position: relative; display: flex; flex-direction: column; align-items: stretch; gap: 3px; padding: 6px 6px 8px; border-radius: 14px; border: 2px solid #ffffff22; background: linear-gradient(180deg, #2c2244cc, #17122acc); color: var(--text); cursor: pointer; font: inherit; text-align: center; }
+.cr-card:hover { border-color: #c8a6ff88; }
+.cr-card.on { border-color: var(--gold); box-shadow: 0 0 14px #ffd27a55; background: linear-gradient(180deg, #3e3424, #1f1a14); }
+.cr-card.locked { opacity: 0.55; cursor: default; }
+.cr-map { display: block; border-radius: 10px; overflow: hidden; aspect-ratio: 16 / 9; background: #0006; }
+.cr-map-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cr-name { font-size: 1.02rem; color: var(--gold2); }
+.cr-sub { font-size: 0.74rem; color: #cfc4e0; }
+.cr-reward { display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 1.05rem; color: #e8d4ff; }
+.cr-reward b { font-size: 1.2rem; }
+.cr-lock { display: inline-flex; align-items: center; justify-content: center; gap: 3px; line-height: 1.2; }
+.cr-result .rw-total b { font-size: 1.8rem; }
+.btn-crystal { display: inline-flex; align-items: center; gap: 4px; }
+.btn-crystal.locked { opacity: 0.6; }
+.gc-earn { margin-left: 6px; }
+.tm-modes { display: flex; gap: 8px; }
+.tm-modes > .btn { flex: 1 1 0; min-width: 0; }
+.tm-crystal { background: linear-gradient(180deg, #4a2e7a, #26173e) !important; border-color: #c8a6ff !important; }
+#screen-crystal .brief-actions { background: linear-gradient(transparent, #17122a 35%); }
+@media (max-width: 640px) and (min-height: 461px) {
+  .cr-cards { grid-template-columns: 1fr; }
+  .cr-card { display: grid; grid-template-columns: 96px 1fr auto; grid-template-rows: auto auto auto; text-align: left; column-gap: 8px; align-items: center; }
+  .cr-card .cr-map { grid-row: span 3; }
+  .cr-card .cr-reward { grid-column: 3; grid-row: 1 / span 2; }
+  .cr-card small { grid-column: 2 / span 2; }
+}
+@media (max-height: 460px) {
+  .cr-card { padding: 4px 4px 6px; }
+  .cr-map { aspect-ratio: 16 / 7; }
+  .cr-intro { display: none; }
+}
+@media (max-height: 460px), (max-width: 760px) {
+  .top-actions .btn-crystal .rb-label { display: none; }
+  .top-actions .btn-crystal { min-width: 40px; justify-content: center; }
+}

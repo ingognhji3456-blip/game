@@ -8,7 +8,7 @@ RG.progress = (() => {
   const D = () => RG.data;
 
   function blank() {
-    return { v: 1, maps: {}, skills: [], seen: { enemies: [], story: [], tips: [] }, endless: {}, lastMap: '1-1', lastHero: 'kara', gacha: blankGacha(), heroes: {}, gear: {}, shards: {}, shardLv: {}, raid: {} };
+    return { v: 1, maps: {}, skills: [], seen: { enemies: [], story: [], tips: [] }, endless: {}, lastMap: '1-1', lastHero: 'kara', gacha: blankGacha(), heroes: {}, gear: {}, shards: {}, shardLv: {}, raid: {}, crystalRun: {} };
   }
   /** 뽑기 상태: 가진 탑과 강화 단계, 공명석, 천장 */
   function blankGacha() {
@@ -44,6 +44,7 @@ RG.progress = (() => {
     p.shards = cleanMap(p.shards, (x) => nat(x));
     p.shardLv = cleanMap(p.shardLv, (x) => nat(x, R ? R.shard.max : 5));
     p.raid = cleanMap(p.raid, (x) => nat(x, R ? R.difficulty.length : 5));
+    p.crystalRun = cleanMap(p.crystalRun, (x) => nat(x)); // 공명석 웨이브: 난이도 → 깬 횟수
     if (typeof p.lastMap !== 'string') p.lastMap = '1-1';
     if (typeof p.lastHero !== 'string') p.lastHero = 'kara';
     if (p.gacha != null) {
@@ -377,6 +378,32 @@ RG.progress = (() => {
     save();
     return { shards: n, total: p.shards[type], firstClear, win, bond, cleared };
   }
+  /* ---------------- 공명석 웨이브 (docs/design/crystal.md) ---------------- */
+  const crystalClears = (d) => get().crystalRun[d] || 0;
+  /** 그 난이도를 할 수 있나: 캠페인 맵(needMap)을 깼고, 앞 난이도를 한 번은 깸 — 아니면 까닭 */
+  function crystalLock(d) {
+    const df = D().crystal.difficulty[d - 1];
+    if (!df) return '없는 난이도입니다';
+    if (!mapRec(df.needMap).cleared) { const m = D().maps.find((x) => x.id === df.needMap); return `${m.id} ${RG.util.withJosa(m.name, '을/를')} 지켜 내면 열립니다`; }
+    if (d > 1 && !crystalClears(d - 1)) return `${D().crystal.difficulty[d - 2].name} 난이도를 먼저 깨야 합니다`;
+    return null;
+  }
+  const crystalOpen = () => crystalLock(1) == null;
+  /** 공명석 웨이브 판 결과: 공명석·깬 횟수·영웅 인연 경험치 */
+  function recordCrystal(d, st) {
+    const win = st.result === 'win';
+    const cleared = win ? st.wave.total : RG.raid.wavesCleared(st);
+    const n = RG.crystal.reward(d, { win, cleared, total: st.wave.total });
+    const p = get();
+    const firstClear = win && !crystalClears(d);
+    gachaState().crystals += n;
+    if (win) p.crystalRun[d] = crystalClears(d) + 1;
+    const heroId = st.hero && st.hero.heroId;
+    const bond = heroId && D().heroes[heroId] ? addBond(heroId, RG.growth.bondGain({ result: st.result, mode: 'normal', newStars: 0 })) : null;
+    save();
+    return { crystals: n, total: gachaState().crystals, win, cleared, waves: st.wave.total, firstClear, bond };
+  }
+
   /** 조각 강화 한 단계 */
   function upgradeShard(type) {
     const lv = shardLvOf(type);
@@ -433,5 +460,6 @@ RG.progress = (() => {
     mapStars, starsTotal, starsSpent, starsFree, canLearn, learn, resetSkills, record, nextMapId, markSeen, seen, frontier, skillCost,
     heroRec, bondOf, addBond, takeTalent, resetTalents, talentsOf, ownedGear, equipGear, upgradeGear, grantGear, heroGrowth, rarityForRegion,
     raidOpen, shardsOf, shardLvOf, shardLevels, raidBest, raidMaxDiff, recordRaid, upgradeShard,
+    crystalOpen, crystalLock, crystalClears, recordCrystal,
   };
 })();

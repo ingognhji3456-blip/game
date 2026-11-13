@@ -8,9 +8,9 @@ const vm = require('vm');
 const ROOT = path.resolve(__dirname, '..');
 const FILES = [
   'js/util.js',
-  'js/data/elements.js', 'js/data/towers.js', 'js/data/enemies.js', 'js/data/heroes.js', 'js/data/growth.js', 'js/data/maps.js', 'js/data/raid.js', 'js/data/awaken.js',
+  'js/data/elements.js', 'js/data/towers.js', 'js/data/enemies.js', 'js/data/heroes.js', 'js/data/growth.js', 'js/data/maps.js', 'js/data/raid.js', 'js/data/awaken.js', 'js/data/crystal.js',
   'js/data/meta.js', 'js/data/story.js',
-  'js/core/grid.js', 'js/core/stats.js', 'js/core/bosses.js', 'js/core/growth.js', 'js/core/raid.js', 'js/core/awaken.js', 'js/core/sim.js', 'js/core/gacha.js', 'js/core/progress.js', 'js/core/save.js', 'js/core/transfer.js',
+  'js/core/grid.js', 'js/core/stats.js', 'js/core/bosses.js', 'js/core/growth.js', 'js/core/raid.js', 'js/core/awaken.js', 'js/core/crystal.js', 'js/core/sim.js', 'js/core/gacha.js', 'js/core/progress.js', 'js/core/save.js', 'js/core/transfer.js',
 ];
 
 /** 그림 스크립트 (index.html과 같은 순서) */

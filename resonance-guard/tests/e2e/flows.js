@@ -2,7 +2,7 @@
 
 /*
  * 입력 방식별 한 판 + 이어하기 (QUALITY.md §5)
- *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|mouse|resume|world|gacha|tutorial|a11y|transfer|raid|awaken|press]
+ *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|mouse|resume|world|gacha|tutorial|a11y|transfer|raid|awaken|press|crystal]
  *
  * - keyboard: 숫자(탑 고르기)·방향키·Enter·U·Space·F만으로 1-1을 깬다 (마우스·터치 없음)
  * - touch:    휴대폰 가로(터치 에뮬레이션)에서 탑 목록 탭 → 칸 탭, 탑 끌어다 놓기만으로 1-1을 깬다
@@ -860,9 +860,58 @@ async function pressRun(browser) {
   return { name: '싸우는 중 강화 단추', ok: ok === 2 && !errors.length, detail: `누르고 있다 떼기 2번 중 ${ok}번 강화`, errors };
 }
 
+/* ---------------- 공명석 웨이브: 뽑기 화면 → 공명석 웨이브 → 쉬움 판(가진 탑 모두) → 이기면 +500 → 탑 뽑기로 ---------------- */
+async function crystalRun(browser) {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  const r = {};
+  await page.goto(URL);
+  await page.waitForSelector('#screen-title.active');
+  r.lockedBefore = await page.evaluate(() => !RG.progress.crystalOpen() && !document.querySelector('.tm-crystal'));
+  await page.evaluate(() => {
+    const P = RG.progress;
+    for (const id of ['1-1', '1-2', '1-3']) P.record(id, 'normal', { result: 'win', lives: 12, task: { done: true }, wave: { index: 8 } });
+    for (const id of Object.keys(RG.data.story)) P.markSeen('story', id);
+    for (const m of RG.data.maps) for (const t of m.tips || []) P.markSeen('tips', t);
+    P.gachaState().crystals = 40; P.save();
+    RG.ui.show('gacha', {});
+  });
+  await page.click('#screen-gacha .btn-crystal');
+  await page.waitForSelector('#screen-crystal.active .cr-card');
+  r.cards = await page.evaluate(() => document.querySelectorAll('.cr-card').length === 3 && document.querySelectorAll('.cr-card.locked').length === 2 && /500/.test(document.querySelector('.cr-card.on').textContent));
+  await page.click('#screen-crystal .brief-actions .btn-primary');
+  await page.waitForFunction(() => RG.ui.game.game && !document.querySelector('#screen-game').classList.contains('loading'));
+  const g0 = await page.evaluate(() => ({ map: RG.ui.game.game.def.id, dock: document.querySelectorAll('.tower-card').length, owned: RG.progress.ownedTowers().length, hud: document.querySelector('.task-box').textContent, banner: document.querySelector('#screen-game').textContent.includes('공명석 웨이브') }));
+  r.allTowers = g0.dock === g0.owned && g0.map === 'C1';
+  r.hud = /공명석 웨이브/.test(g0.hud) && /\+500/.test(g0.hud) && g0.banner;
+  const spots = await page.evaluate(targetsInPage);
+  await page.evaluate((sp) => {
+    const ui = RG.ui.game; const g = ui.game; RG.ui.closeAllModals(); g.state.gold += 4000;
+    let k = 0;
+    for (const t of sp) { if (k >= 9) break; if (ui.doCmd({ type: 'build', tower: ['ember_archer', 'frost_crystal', 'stone_barracks'][k % 3], c: t.c, r: t.r }, true).ok) k++; }
+    for (const t of g.state.towers) for (let i = 0; i < 2; i++) g.cmd({ type: 'upgrade', id: t.id });
+    g.cmd({ type: 'callWave' });
+    for (let i = 0; i < 30 * 60 * 20 && !g.state.result; i++) g.step(); // 다음 웨이브는 저절로 (일찍 부르면 겹쳐 몰려옴)
+  }, spots);
+  await page.waitForSelector('#screen-result.active .cr-result', { timeout: 15000 });
+  const res = await page.evaluate(() => ({ text: document.querySelector('#screen-result').textContent, crystals: RG.progress.gachaState().crystals, clears: RG.progress.crystalClears(1), maps: Object.keys(RG.progress.get().maps).filter((k) => k.startsWith('C')).length }));
+  r.got500 = res.crystals === 540 && res.clears === 1 && res.text.includes('+500');
+  if (!r.got500) console.log('crystal result', JSON.stringify({ crystals: res.crystals, clears: res.clears, text: res.text.slice(0, 120) }));
+  r.noMapRecord = res.maps === 0;
+  await page.click('#screen-result .result-buttons .btn-gacha');
+  await page.waitForSelector('#screen-gacha.active .gc-pull');
+  r.toGacha = await page.evaluate(() => !document.querySelector('.gc-pull:not(.gc-ten)').disabled);
+  await ctx.close();
+  const ok = Object.values(r).every(Boolean) && !errors.length;
+  return { name: '공명석 웨이브', ok, detail: Object.entries(r).map(([k, v]) => `${k} ${v ? '✓' : '✗'}`).join(' · '), errors };
+}
+
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
-  const runs = { keyboard: keyboardRun, touch: touchRun, mouse: mouseRun, resume: resumeRun, world: worldRun, gacha: gachaRun, tutorial: tutorialRun, a11y: a11yRun, transfer: transferRun, raid: raidRun, awaken: awakenRun, press: pressRun };
+  const runs = { keyboard: keyboardRun, touch: touchRun, mouse: mouseRun, resume: resumeRun, world: worldRun, gacha: gachaRun, tutorial: tutorialRun, a11y: a11yRun, transfer: transferRun, raid: raidRun, awaken: awakenRun, press: pressRun, crystal: crystalRun };
   let fail = 0;
   for (const [k, fn] of Object.entries(runs)) {
     if (only && only !== k) continue;

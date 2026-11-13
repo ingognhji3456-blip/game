@@ -55,7 +55,7 @@ RG.sim = (() => {
   }
 
   function findMapDef(id) {
-    return D().maps.find((m) => m.id === id) || (D().endless || []).find((m) => m.id === id) || (D().raidMaps || []).find((m) => m.id === id);
+    return D().maps.find((m) => m.id === id) || (D().endless || []).find((m) => m.id === id) || (D().raidMaps || []).find((m) => m.id === id) || (D().crystalMaps || []).find((m) => m.id === id);
   }
 
   /* =====================================================
@@ -71,7 +71,7 @@ RG.sim = (() => {
     const meta = (o.mode === 'challenge') ? {} : sumSkills(o.skills);
     const map = RG.grid.parseMap(def);
     // 조각 레이드(o.raid, docs/design/raid.md): 탑 하나로 막는 판 — 웨이브·시작 골드는 레이드 규칙(js/core/raid.js)이 정해 넘김
-    const RA = o.raid || null;
+    const RA = o.raid || o.crystal || null; // 공명석 웨이브(o.crystal)도 웨이브·시작 골드는 같은 길로 (탑 제한·영웅 강화는 레이드만)
     const waves = o.mode === 'endless' ? [] : RG.grid.parseWaves(RA ? RA.waves : def.waves);
     const rng = U().makeRng(o.seed >>> 0);
     const n = map.cols * map.rows;
@@ -1662,7 +1662,7 @@ RG.sim = (() => {
     function towerAllowed(type) {
       const td = D().towers[type];
       if (!td) return '알 수 없는 탑입니다';
-      if (unlocked && !unlocked.has(type)) return RA ? `조각 레이드에서는 ${D().towers[RA.tower].name}만 지을 수 있습니다` : '아직 해금되지 않은 탑입니다';
+      if (unlocked && !unlocked.has(type)) return RA && RA.tower ? `조각 레이드에서는 ${D().towers[RA.tower].name}만 지을 수 있습니다` : '아직 해금되지 않은 탑입니다';
       const ch = challenge;
       if (ch) {
         if (ch.type === 'allowElements' && !ch.value.includes(td.element)) return `이 도전에서는 ${ch.text}`;

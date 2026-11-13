@@ -1291,6 +1291,50 @@ button { font-family: var(--font); color: inherit; font-size: inherit; } /* 브�
 .rd-awaken b { color: #ffe08a; }
 .rd-awaken.on { border-style: solid; border-color: #ffd27a; background: linear-gradient(135deg, #3a2a10aa, #24163eaa); box-shadow: 0 0 10px #ffd27a44; color: #fff3dc; }
 
+/* ---------- 공명석 웨이브 (js/ui/crystal.js) ---------- */
+#screen-crystal { display: none; flex-direction: column; background: radial-gradient(ellipse at 30% 30%, #3e2a6a 0%, #1f1838 45%, #0e0b1a 100%); }
+#screen-crystal.active { display: flex; }
+#screen-crystal .top-bar { background: linear-gradient(180deg, #2c1f44, #1a1229); border-bottom: 1px solid #c8a6ff33; }
+#screen-crystal .top-bar h2 { display: inline-flex; align-items: center; gap: 6px; }
+.cr-body { flex: 1; min-height: 0; overflow: auto; padding: 12px calc(14px + var(--safe-r)) calc(12px + var(--safe-b)) calc(14px + var(--safe-l)); display: flex; flex-direction: column; gap: 8px; max-width: 980px; width: 100%; margin: 0 auto; box-sizing: border-box; }
+.cr-intro { margin: 0; color: #d8cce8; font-size: 0.88rem; }
+.cr-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.cr-card { appearance: none; position: relative; display: flex; flex-direction: column; align-items: stretch; gap: 3px; padding: 6px 6px 8px; border-radius: 14px; border: 2px solid #ffffff22; background: linear-gradient(180deg, #2c2244cc, #17122acc); color: var(--text); cursor: pointer; font: inherit; text-align: center; }
+.cr-card:hover { border-color: #c8a6ff88; }
+.cr-card.on { border-color: var(--gold); box-shadow: 0 0 14px #ffd27a55; background: linear-gradient(180deg, #3e3424, #1f1a14); }
+.cr-card.locked { opacity: 0.55; cursor: default; }
+.cr-map { display: block; border-radius: 10px; overflow: hidden; aspect-ratio: 16 / 9; background: #0006; }
+.cr-map-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cr-name { font-size: 1.02rem; color: var(--gold2); }
+.cr-sub { font-size: 0.74rem; color: #cfc4e0; }
+.cr-reward { display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 1.05rem; color: #e8d4ff; }
+.cr-reward b { font-size: 1.2rem; }
+.cr-lock { display: inline-flex; align-items: center; justify-content: center; gap: 3px; line-height: 1.2; }
+.cr-result .rw-total b { font-size: 1.8rem; }
+.btn-crystal { display: inline-flex; align-items: center; gap: 4px; }
+.btn-crystal.locked { opacity: 0.6; }
+.gc-earn { margin-left: 6px; }
+.tm-modes { display: flex; gap: 8px; }
+.tm-modes > .btn { flex: 1 1 0; min-width: 0; }
+.tm-crystal { background: linear-gradient(180deg, #4a2e7a, #26173e) !important; border-color: #c8a6ff !important; }
+#screen-crystal .brief-actions { background: linear-gradient(transparent, #17122a 35%); }
+@media (max-width: 640px) and (min-height: 461px) {
+  .cr-cards { grid-template-columns: 1fr; }
+  .cr-card { display: grid; grid-template-columns: 96px 1fr auto; grid-template-rows: auto auto auto; text-align: left; column-gap: 8px; align-items: center; }
+  .cr-card .cr-map { grid-row: span 3; }
+  .cr-card .cr-reward { grid-column: 3; grid-row: 1 / span 2; }
+  .cr-card small { grid-column: 2 / span 2; }
+}
+@media (max-height: 460px) {
+  .cr-card { padding: 4px 4px 6px; }
+  .cr-map { aspect-ratio: 16 / 7; }
+  .cr-intro { display: none; }
+}
+@media (max-height: 460px), (max-width: 760px) {
+  .top-actions .btn-crystal .rb-label { display: none; }
+  .top-actions .btn-crystal { min-width: 40px; justify-content: center; }
+}
+
 </style>
   <style>/* css/game.css */
 /* =========================================================
@@ -1624,6 +1668,7 @@ img.awakened { filter: drop-shadow(0 0 4px #ffd27a) drop-shadow(0 0 8px #ffb04a8
     <section class="screen" id="screen-tree"></section>
     <section class="screen" id="screen-gacha"></section>
     <section class="screen" id="screen-raid"></section>
+    <section class="screen" id="screen-crystal"></section>
   </div>
   <div id="modal-root"></div>
   <div id="tooltip" class="tooltip" role="tooltip"></div>
@@ -4895,6 +4940,81 @@ RG.data.awaken = {
 };
 
 </script>
+  <script>/* js/data/crystal.js */
+'use strict';
+
+/* =========================================================
+ * 공명석 웨이브 — 설계: docs/design/crystal.md · 규칙: js/core/crystal.js
+ * 뽑기 재화(공명석)를 모으는 전용 웨이브. 가진 탑을 모두 쓰고(영웅도), 끝까지 막으면 난이도 보상을 다 받음 —
+ * 가장 쉬운 난이도도 500개. 지면 막아 낸 웨이브만큼 일부. 맵 기록·별에는 들어가지 않음. 몇 번이든 다시 할 수 있음.
+ * ========================================================= */
+RG.data.crystal = {
+  unlockAfter: '1-3',                  // 이 맵을 깨면 열림
+  loseShare: 0.5,                      // 지면: 보상 × 0.5 × (막아 낸 웨이브 / 전체), 10 단위
+  /** 난이도: 맵, 웨이브 수, 적 체력 배율, 나오는 적(지역 무리), 보상, 여는 조건(그 캠페인 맵을 깨야)
+   *  체력 배율: 그 시점에 가졌을 법한 탑(쉬움 = 기본 탑 3종, 보통 = 원소마다 1종, 어려움 = 원소마다 2종) + 카라로
+   *  그리디 봇이 4판 모두 이기는 최대 배율 ÷ 1.25 (기술 나무·뽑기 강화 없이) */
+  difficulty: [
+    { name: '쉬움', map: 'C1', waves: 8, hp: 0.72, regions: [1], reward: 500, needMap: '1-3' },
+    { name: '보통', map: 'C2', waves: 10, hp: 0.6, regions: [1, 2, 3], reward: 800, needMap: '2-6' },
+    { name: '어려움', map: 'C3', waves: 12, hp: 0.24, regions: [3, 4, 5], reward: 1200, needMap: '4-6' },
+  ],
+  startGold: [320, 480, 650],
+};
+
+/** 공명석 웨이브 맵 (캠페인 목록·별에 들어가지 않음). region은 그림 팔레트·음악 */
+RG.data.crystalMaps = [
+  {
+    id: 'C1', region: 2, name: '공명석 동굴', type: 'fixed', crystal: true,
+    grid: [
+      '##############T~',
+      'S............##T',
+      '############.##T',
+      '##T#########.#TT',
+      'TT#..........##~',
+      'T##.###########T',
+      'T##.############',
+      '~T#............L',
+      'TT##############',
+    ],
+    startGold: 320,
+    waves: ['mist_rat*1'],
+  },
+  {
+    id: 'C2', region: 4, name: '수정 해안', type: 'fixed', crystal: true,
+    grid: [
+      'T^########^^#^##',
+      '^##......#######',
+      '###.####.###...L',
+      '###.####.#^#.###',
+      'S...##^#.###.##^',
+      '#####^##.###.#^T',
+      '#^##^^##.###.##^',
+      '^T^^^T^#.....##^',
+      'T^^^T^^#######^^',
+    ],
+    startGold: 480,
+    waves: ['mist_rat*1'],
+  },
+  {
+    id: 'C3', region: 6, name: '별수정 첨탑', type: 'fixed', crystal: true,
+    grid: [
+      'T#####^#####T^^^',
+      '##....##....##^#',
+      '##.##.##.##.####',
+      '^#.##.##.##.#..L',
+      '##.##.##.##.#.##',
+      '##.##.##.##.#.##',
+      '##.##.##.##.#.#^',
+      'S..##....##...##',
+      '####T#####^####^',
+    ],
+    startGold: 650,
+    waves: ['mist_rat*1'],
+  },
+];
+
+</script>
   <script>/* js/data/meta.js */
 'use strict';
 
@@ -6317,6 +6437,72 @@ RG.awaken = (() => {
 })();
 
 </script>
+  <script>/* js/core/crystal.js */
+'use strict';
+
+/* =========================================================
+ * 공명석 웨이브 규칙 (순수 함수) — 데이터: js/data/crystal.js · 설계: docs/design/crystal.md
+ * - 웨이브는 난이도에서만 정해짐(같은 난이도면 늘 같은 웨이브 — 판 재현·이어하기).
+ * - 판 설정은 sim에 o.crystal로 넘김(웨이브 문자열·시작 골드). 탑은 가진 것 모두.
+ * ========================================================= */
+RG.crystal = (() => {
+  const C = () => RG.data.crystal;
+  const D = () => RG.data;
+  const hash = (s) => { let h = 11; for (const ch of s) h = (h * 33 + ch.charCodeAt(0)) >>> 0; return h; };
+
+  /** 난이도의 적 무리: 지역 무리를 합치고 숨는 적은 뺌 (숨은 적을 찾는 탑이 없어도 깰 수 있게) */
+  function pool(d) {
+    const out = [];
+    for (const r of C().difficulty[d - 1].regions) for (const e of D().regionPools[r] || []) {
+      const ed = D().enemies[e];
+      if (ed && !ed.boss && !(ed.traits && ed.traits.stealth) && !out.includes(e)) out.push(e);
+    }
+    return out;
+  }
+
+  /** 웨이브 문자열들 (sim이 grid.parseWaves로 읽는 형식) */
+  function waves(d) {
+    const diff = C().difficulty[d - 1];
+    const P = pool(d);
+    const normals = P.filter((e) => !D().enemies[e].elite);
+    const elites = P.filter((e) => D().enemies[e].elite);
+    const N = diff.waves;
+    const out = [];
+    for (let i = 0; i < N; i++) {
+      const last = i === N - 1;
+      const groups = [];
+      const nGroups = last ? 3 : 1 + Math.min(2, Math.floor(i / 3));
+      for (let g = 0; g < nGroups; g++) {
+        const useElite = elites.length && (last ? g === 0 : (i + g) % 4 === 3);
+        const list = useElite ? elites : normals.length ? normals : P;
+        const e = list[(hash(`${d}:${i}:${g}`)) % list.length];
+        const n = useElite ? Math.max(1, Math.round(1 + i * 0.25 + (last ? 1 : 0))) : Math.round(5 + i * 0.9 + (last ? 3 : 0));
+        const gap = useElite ? 1.8 : 0.8;
+        groups.push(`${e}*${n}/${gap}${g ? `@${g * 3}` : ''}`);
+      }
+      out.push(groups.join(' ; '));
+    }
+    return out;
+  }
+
+  /** 판 설정 조각 (게임 opts에 합침): { mapId, hpMult, crystal } */
+  function setup(d) {
+    const diff = C().difficulty[d - 1];
+    return { mapId: diff.map, hpMult: diff.hp, crystal: { d, waves: waves(d), startGold: C().startGold[d - 1] } };
+  }
+
+  /** 받는 공명석: 끝까지 막으면 난이도 보상 전부, 지면 보상 × loseShare × 막아 낸 비율 (10 단위) */
+  function reward(d, { win, cleared, total }) {
+    const R = C().difficulty[d - 1].reward;
+    if (win) return R;
+    const frac = total > 0 ? Math.max(0, Math.min(1, cleared / total)) : 0;
+    return Math.floor((R * C().loseShare * frac) / 10) * 10;
+  }
+
+  return { pool, waves, setup, reward };
+})();
+
+</script>
   <script>/* js/core/sim.js */
 'use strict';
 
@@ -6375,7 +6561,7 @@ RG.sim = (() => {
   }
 
   function findMapDef(id) {
-    return D().maps.find((m) => m.id === id) || (D().endless || []).find((m) => m.id === id) || (D().raidMaps || []).find((m) => m.id === id);
+    return D().maps.find((m) => m.id === id) || (D().endless || []).find((m) => m.id === id) || (D().raidMaps || []).find((m) => m.id === id) || (D().crystalMaps || []).find((m) => m.id === id);
   }
 
   /* =====================================================
@@ -6391,7 +6577,7 @@ RG.sim = (() => {
     const meta = (o.mode === 'challenge') ? {} : sumSkills(o.skills);
     const map = RG.grid.parseMap(def);
     // 조각 레이드(o.raid, docs/design/raid.md): 탑 하나로 막는 판 — 웨이브·시작 골드는 레이드 규칙(js/core/raid.js)이 정해 넘김
-    const RA = o.raid || null;
+    const RA = o.raid || o.crystal || null; // 공명석 웨이브(o.crystal)도 웨이브·시작 골드는 같은 길로 (탑 제한·영웅 강화는 레이드만)
     const waves = o.mode === 'endless' ? [] : RG.grid.parseWaves(RA ? RA.waves : def.waves);
     const rng = U().makeRng(o.seed >>> 0);
     const n = map.cols * map.rows;
@@ -7982,7 +8168,7 @@ RG.sim = (() => {
     function towerAllowed(type) {
       const td = D().towers[type];
       if (!td) return '알 수 없는 탑입니다';
-      if (unlocked && !unlocked.has(type)) return RA ? `조각 레이드에서는 ${D().towers[RA.tower].name}만 지을 수 있습니다` : '아직 해금되지 않은 탑입니다';
+      if (unlocked && !unlocked.has(type)) return RA && RA.tower ? `조각 레이드에서는 ${D().towers[RA.tower].name}만 지을 수 있습니다` : '아직 해금되지 않은 탑입니다';
       const ch = challenge;
       if (ch) {
         if (ch.type === 'allowElements' && !ch.value.includes(td.element)) return `이 도전에서는 ${ch.text}`;
@@ -9705,7 +9891,7 @@ RG.progress = (() => {
   const D = () => RG.data;
 
   function blank() {
-    return { v: 1, maps: {}, skills: [], seen: { enemies: [], story: [], tips: [] }, endless: {}, lastMap: '1-1', lastHero: 'kara', gacha: blankGacha(), heroes: {}, gear: {}, shards: {}, shardLv: {}, raid: {} };
+    return { v: 1, maps: {}, skills: [], seen: { enemies: [], story: [], tips: [] }, endless: {}, lastMap: '1-1', lastHero: 'kara', gacha: blankGacha(), heroes: {}, gear: {}, shards: {}, shardLv: {}, raid: {}, crystalRun: {} };
   }
   /** 뽑기 상태: 가진 탑과 강화 단계, 공명석, 천장 */
   function blankGacha() {
@@ -9741,6 +9927,7 @@ RG.progress = (() => {
     p.shards = cleanMap(p.shards, (x) => nat(x));
     p.shardLv = cleanMap(p.shardLv, (x) => nat(x, R ? R.shard.max : 5));
     p.raid = cleanMap(p.raid, (x) => nat(x, R ? R.difficulty.length : 5));
+    p.crystalRun = cleanMap(p.crystalRun, (x) => nat(x)); // 공명석 웨이브: 난이도 → 깬 횟수
     if (typeof p.lastMap !== 'string') p.lastMap = '1-1';
     if (typeof p.lastHero !== 'string') p.lastHero = 'kara';
     if (p.gacha != null) {
@@ -10074,6 +10261,32 @@ RG.progress = (() => {
     save();
     return { shards: n, total: p.shards[type], firstClear, win, bond, cleared };
   }
+  /* ---------------- 공명석 웨이브 (docs/design/crystal.md) ---------------- */
+  const crystalClears = (d) => get().crystalRun[d] || 0;
+  /** 그 난이도를 할 수 있나: 캠페인 맵(needMap)을 깼고, 앞 난이도를 한 번은 깸 — 아니면 까닭 */
+  function crystalLock(d) {
+    const df = D().crystal.difficulty[d - 1];
+    if (!df) return '없는 난이도입니다';
+    if (!mapRec(df.needMap).cleared) { const m = D().maps.find((x) => x.id === df.needMap); return `${m.id} ${RG.util.withJosa(m.name, '을/를')} 지켜 내면 열립니다`; }
+    if (d > 1 && !crystalClears(d - 1)) return `${D().crystal.difficulty[d - 2].name} 난이도를 먼저 깨야 합니다`;
+    return null;
+  }
+  const crystalOpen = () => crystalLock(1) == null;
+  /** 공명석 웨이브 판 결과: 공명석·깬 횟수·영웅 인연 경험치 */
+  function recordCrystal(d, st) {
+    const win = st.result === 'win';
+    const cleared = win ? st.wave.total : RG.raid.wavesCleared(st);
+    const n = RG.crystal.reward(d, { win, cleared, total: st.wave.total });
+    const p = get();
+    const firstClear = win && !crystalClears(d);
+    gachaState().crystals += n;
+    if (win) p.crystalRun[d] = crystalClears(d) + 1;
+    const heroId = st.hero && st.hero.heroId;
+    const bond = heroId && D().heroes[heroId] ? addBond(heroId, RG.growth.bondGain({ result: st.result, mode: 'normal', newStars: 0 })) : null;
+    save();
+    return { crystals: n, total: gachaState().crystals, win, cleared, waves: st.wave.total, firstClear, bond };
+  }
+
   /** 조각 강화 한 단계 */
   function upgradeShard(type) {
     const lv = shardLvOf(type);
@@ -10130,6 +10343,7 @@ RG.progress = (() => {
     mapStars, starsTotal, starsSpent, starsFree, canLearn, learn, resetSkills, record, nextMapId, markSeen, seen, frontier, skillCost,
     heroRec, bondOf, addBond, takeTalent, resetTalents, talentsOf, ownedGear, equipGear, upgradeGear, grantGear, heroGrowth, rarityForRegion,
     raidOpen, shardsOf, shardLvOf, shardLevels, raidBest, raidMaxDiff, recordRaid, upgradeShard,
+    crystalOpen, crystalLock, crystalClears, recordCrystal,
   };
 })();
 
@@ -37105,18 +37319,19 @@ RG.render = (() => {
     const starsNow = P().starsTotal();
     // 가운데: 모험 카드 (이어할 판이 있으면 그 카드가 금빛, 지도 카드는 그 아래 보조)
     const mainCol = el('div', { class: 'tm-main' });
-    const resumable = run && maps.concat(D().endless, D().raidMaps || []).some((m) => m.id === run.mapId);
+    const resumable = run && maps.concat(D().endless, D().raidMaps || [], D().crystalMaps || []).some((m) => m.id === run.mapId);
     const bannerOf = (region) => (RG.art.regionBanner ? UI.svgImg(RG.art.regionBanner(region), 'tm-banner', '') : null);
     if (resumable) {
-      const rd = maps.concat(D().endless, D().raidMaps || []).find((m) => m.id === run.mapId);
+      const rd = maps.concat(D().endless, D().raidMaps || [], D().crystalMaps || []).find((m) => m.id === run.mapId);
       const raidRun = run.opts && run.opts.raid;
+      const crystalRun = run.opts && run.opts.crystal;
       mainCol.appendChild(el('button', { class: 'btn btn-primary btn-big tm-card tm-hero', 'data-autofocus': '', onclick: go(() => UI.show('game', { resume: run })) }, [
         bannerOf(rd.region || 1),
         el('span', { class: 'tm-medal tm-medal-big' }, [UI.icon('play', 'tm-ico')]),
         el('span', { class: 'tm-text' }, [
-          el('span', { class: 'tm-kicker', text: raidRun ? `하던 레이드 · 웨이브 ${run.wave}` : `하던 판 · ${run.mapId} 웨이브 ${run.wave}` }),
+          el('span', { class: 'tm-kicker', text: crystalRun ? `하던 공명석 웨이브 · 웨이브 ${run.wave}` : raidRun ? `하던 레이드 · 웨이브 ${run.wave}` : `하던 판 · ${run.mapId} 웨이브 ${run.wave}` }),
           el('b', { class: 'tm-title', text: '이어하기' }),
-          el('span', { class: 'tm-sub', text: raidRun ? `${D().towers[raidRun.tower].name} · ${D().raid.difficulty[raidRun.d - 1].name}` : rd.name || '' }),
+          el('span', { class: 'tm-sub', text: crystalRun ? `${D().crystal.difficulty[crystalRun.d - 1].name} · ${rd.name}` : raidRun ? `${D().towers[raidRun.tower].name} · ${D().raid.difficulty[raidRun.d - 1].name}` : rd.name || '' }),
         ]),
         el('span', { class: 'tm-go', text: '이어서 ›' }),
       ]));
@@ -37156,10 +37371,13 @@ RG.render = (() => {
       tile('tm-tree', '#7ad46a', UI.icon('tree', 'tm-ico'), '기술 나무', free > 0 ? `쓸 수 있는 별 ★${free}` : `모은 별 ★${starsNow}`, free > 0 ? `★${free}` : '', go(() => UI.show('tree', {}))),
       tile('tm-codex', '#f2b24a', UI.icon('book', 'tm-ico'), '도감', `만난 적 ${enemiesSeen}/${enemiesAll}`, '', go(() => UI.show('codex', {}))),
     ];
-    if (P().raidOpen()) {
-      // 이어할 판이 있으면(세로 칸이 모자람) 작은 지도 카드 옆에 나란히
-      if (resumable) { const small = mainCol.querySelector('.tm-map-small'); const row = el('div', { class: 'tm-row' }); small.replaceWith(row); row.append(small, raidButton('btn tm-raid tm-raid-side')); }
-      else mainCol.appendChild(raidButton('btn tm-raid'));
+    // 공명석 웨이브·조각 레이드 단추 (열린 것만): 이어할 판이 있으면(세로 칸이 모자람) 작은 지도 카드 옆에 나란히, 아니면 모험 카드 아래 한 줄
+    const modes = [];
+    if (RG.ui.crystalButton && P().crystalOpen()) modes.push((cls) => RG.ui.crystalButton(`${cls} tm-crystal`, 'title'));
+    if (P().raidOpen()) modes.push((cls) => raidButton(cls));
+    if (modes.length) {
+      if (resumable) { const small = mainCol.querySelector('.tm-map-small'); const row = el('div', { class: 'tm-row' }); small.replaceWith(row); row.append(small, ...modes.map((f) => f('btn tm-raid tm-raid-side'))); }
+      else mainCol.appendChild(el('div', { class: 'tm-modes' }, modes.map((f) => f('btn tm-raid'))));
     }
     menu.append(tiles[0], tiles[1], mainCol, tiles[2], tiles[3]);
     return menu;
@@ -37373,10 +37591,10 @@ RG.render = (() => {
     const open = P().raidOpen();
     const ready = open && P().ownedTowers().some((t) => { const c = RG.raid.shardCost(P().shardLvOf(t)); return c != null && P().shardsOf(t) >= c; });
     return el('button', {
-      class: `${cls} btn-raid ${open ? '' : 'locked'} ${ready ? 'ready' : ''}`, title: open ? '조각 레이드 — 탑 하나로 막아 그 탑의 조각을 모읍니다' : `${D().raid.unlockAfter}을(를) 지켜 내면 열립니다`,
+      class: `${cls} btn-raid ${open ? '' : 'locked'} ${ready ? 'ready' : ''}`, title: open ? '조각 레이드 — 탑 하나로 막아 그 탑의 조각을 모읍니다' : `${D().raid.unlockAfter} 맵을 지켜 내면 열립니다`,
       'aria-label': '조각 레이드',
       onclick: () => {
-        if (!open) { UI.toast(`조각 레이드는 ${D().raid.unlockAfter}을(를) 지켜 내면 열립니다`, 'warn'); return; }
+        if (!open) { UI.toast(`조각 레이드는 ${D().raid.unlockAfter} 맵을 지켜 내면 열립니다`, 'warn'); return; }
         const from = UI.currentId() === 'title' ? 'title' : 'world';
         UI.show('raid', { back: from, backData: from === 'world' ? { view: worldView, region: worldView === 'stages' ? worldRegion : undefined, keepPick: true } : {} });
       },
@@ -37499,6 +37717,7 @@ RG.render = (() => {
           el('button', { class: 'btn small', onclick: () => UI.show('tree', {}) }, [UI.icon('tree', 'tiny'), `기술 나무${P().starsFree() > 0 ? ` (${P().starsFree()})` : ''}`]),
           el('button', { class: 'btn small', onclick: () => UI.show('heroes', {}) }, [UI.icon('hero', 'tiny'), '수호대']),
           el('button', { class: 'btn small', onclick: () => UI.show('codex', {}) }, [UI.icon('book', 'tiny'), '도감']),
+          RG.ui.crystalButton ? RG.ui.crystalButton('btn small', 'world') : null,
           raidButton('btn small'),
           el('button', { class: 'icon-btn', title: '설정', onclick: openSettings }, [UI.icon('settings')]),
         ]),
@@ -37759,6 +37978,7 @@ RG.render = (() => {
       UI.music(win ? 'victory' : 'defeat');
       UI.sfx(win ? 'win' : 'lose');
       if (data.raid && RG.ui.raidResult) { RG.ui.raidResult(sec, data); return; } // 조각 레이드 (js/ui/raid.js)
+      if (data.crystal && RG.ui.crystalResult) { RG.ui.crystalResult(sec, data); return; } // 공명석 웨이브 (js/ui/crystal.js)
       const def = D().maps.find((m) => m.id === data.mapId) || D().endless.find((m) => m.id === data.mapId);
       const box = el('div', { class: `result-box ${win ? 'win' : 'lose'}` });
       const hero = data.opts.heroId;
@@ -38561,7 +38781,8 @@ RG.render = (() => {
         el('button', { class: 'icon-btn', title: '돌아가기', 'aria-label': '돌아가기', onclick: goBack }, [UI.icon('back')]),
         el('h2', { text: '탑 뽑기' }),
         el('div', { class: 'gc-wallet' }, [
-          el('span', { class: 'gc-coin', title: '공명석 — 맵을 클리어하고 별을 얻으면 모입니다' }, [UI.icon('crystal'), el('b', { text: g.crystals.toLocaleString() })]),
+          el('span', { class: 'gc-coin', title: '공명석 — 맵을 클리어하고 별을 얻거나, 공명석 웨이브에서 모읍니다' }, [UI.icon('crystal'), el('b', { text: g.crystals.toLocaleString() })]),
+          RG.ui.crystalButton ? RG.ui.crystalButton('btn small gc-earn', 'gacha') : null,
         ]),
       ]);
 
@@ -38811,7 +39032,7 @@ RG.render = (() => {
       ]);
       if (!P().raidOpen()) {
         const def = D().maps.find((m) => m.id === RD().unlockAfter);
-        sec.append(head, el('div', { class: 'rd-locked' }, [UI.icon('lock', 'big-ico'), el('p', { text: `${def.id} ${def.name}을(를) 지켜 내면 열립니다.` })]));
+        sec.append(head, el('div', { class: 'rd-locked' }, [UI.icon('lock', 'big-ico'), el('p', { text: `${def.id} ${wj(def.name, '을/를')} 지켜 내면 열립니다.` })]));
         return;
       }
       const owned = P().ownedTowers();
@@ -39021,6 +39242,193 @@ RG.render = (() => {
 })();
 
 </script>
+  <script>/* js/ui/crystal.js */
+'use strict';
+
+/* =========================================================
+ * 공명석 웨이브 화면 — 설계: docs/design/crystal.md · 규칙: js/core/crystal.js · 데이터: js/data/crystal.js
+ * 난이도 3단계(쉬움 500 · 보통 800 · 어려움 1200 공명석), 영웅 고르기, 시작. 가진 탑을 모두 씀.
+ * 결과 화면(RG.ui.crystalResult)도 여기서: 받은 공명석, 뽑기 몇 번, 다시·뽑기·공명석 웨이브로
+ * ========================================================= */
+(() => {
+  const { el, escapeHtml: esc } = RG.util;
+  const UI = RG.ui;
+  const D = () => RG.data;
+  const P = () => RG.progress;
+  const CD = () => RG.data.crystal;
+
+  let pickD = 1;
+  let pickHero = null;
+  let backTo = null;
+  let backData = null;
+
+  /** 시작 opts (캠페인과 같은 성장: 기술 나무·뽑기 강화·조각 강화·영웅 성장, 가진 탑 모두) */
+  function crystalOpts(d, heroId) {
+    const opts = Object.assign({
+      mode: 'normal', heroId, skills: P().get().skills.slice(), seed: (Math.random() * 1e9) >>> 0,
+      towers: P().ownedTowers(), towerRanks: P().towerRanks(), finalLv2: true, shardStart: true, branches: P().branchesUnlocked(),
+    }, RG.crystal.setup(d));
+    const sl = P().shardLevels();
+    if (sl) opts.shardLv = sl;
+    const growth = heroId ? P().heroGrowth(heroId) : null;
+    if (growth) opts.heroGrowth = growth;
+    return opts;
+  }
+  RG.ui.crystalOpts = crystalOpts;
+
+  function start(d, heroId) {
+    try { if (RG.audio) RG.audio.init(); } catch (e) { /* 무시 */ }
+    UI.sfx('click');
+    if (heroId) { P().get().lastHero = heroId; P().save(); }
+    pickD = d; pickHero = heroId;
+    UI.show('game', { opts: crystalOpts(d, heroId) });
+  }
+
+  /** 들어가는 단추 (타이틀·월드 지도·뽑기 화면) — 열리기 전엔 잠김 안내 */
+  function crystalButton(cls, from) {
+    const open = P().crystalOpen();
+    return el('button', {
+      class: `${cls} btn-crystal ${open ? '' : 'locked'}`, 'aria-label': '공명석 웨이브',
+      title: open ? '공명석 웨이브 — 웨이브를 막아 뽑기 재화(공명석)를 모읍니다' : P().crystalLock(1),
+      onclick: () => {
+        if (!open) { UI.toast(`공명석 웨이브는 ${P().crystalLock(1)}`, 'warn'); return; }
+        UI.show('crystal', { back: from || UI.currentId() || 'world' });
+      },
+    }, [UI.icon(open ? 'crystal' : 'lock', 'tiny'), el('span', { class: 'rb-label', text: '공명석 웨이브' })]);
+  }
+  RG.ui.crystalButton = crystalButton;
+
+  UI.register('crystal', {
+    enter(sec, data = {}) {
+      UI.music('worldmap');
+      sec.innerHTML = '';
+      if (data.back) { backTo = data.back; backData = data.backData || {}; }
+      const back = () => { const b = backTo || 'world'; const bd = backData || {}; backTo = null; backData = null; UI.show(b, bd); };
+      const g = P().gachaState();
+      const head = el('header', { class: 'top-bar' }, [
+        el('button', { class: 'icon-btn', title: '돌아가기', 'aria-label': '돌아가기', onclick: back }, [UI.icon('back')]),
+        el('h2', {}, [UI.icon('crystal', 'tiny'), ' 공명석 웨이브']),
+        el('div', { class: 'gc-wallet' }, [el('span', { class: 'gc-coin', title: '가진 공명석' }, [UI.icon('crystal'), el('b', { text: g.crystals.toLocaleString() })])]),
+      ]);
+      if (!P().crystalOpen()) {
+        sec.append(head, el('div', { class: 'rd-locked' }, [UI.icon('lock', 'big-ico'), el('p', { text: P().crystalLock(1) })]));
+        return;
+      }
+      // 이어할 공명석 웨이브 판이 있으면 그 난이도를 골라 둠
+      const run = RG.save.get(RG.save.KEYS.run, null);
+      const savedC = run && run.opts && run.opts.crystal;
+      if (data.d) pickD = data.d;
+      else if (!data.keep && savedC) pickD = savedC.d;
+      if (P().crystalLock(pickD)) pickD = 1;
+      const heroes = P().heroesFor(P().frontier());
+      if (data.hero && heroes.includes(data.hero)) pickHero = data.hero;
+      if (!pickHero || !heroes.includes(pickHero)) pickHero = heroes.includes(P().get().lastHero) ? P().get().lastHero : heroes[0];
+      const d = pickD;
+      const rerender = (patch, focus) => {
+        const body = sec.querySelector('.cr-body');
+        const keep = body ? body.scrollTop : 0;
+        UI.show('crystal', Object.assign({ keep: true, d: pickD, hero: pickHero, focus }, patch));
+        const b2 = sec.querySelector('.cr-body');
+        if (b2) b2.scrollTop = keep;
+      };
+
+      // 난이도 카드
+      const cards = el('div', { class: 'cr-cards', role: 'radiogroup', 'aria-label': '난이도' });
+      CD().difficulty.forEach((df, i) => {
+        const n = i + 1;
+        const lock = P().crystalLock(n);
+        const map = D().crystalMaps.find((m) => m.id === df.map);
+        const pm = RG.grid.parseMap(map);
+        const clears = P().crystalClears(n);
+        cards.appendChild(el('button', {
+          class: `cr-card ${n === d ? 'on' : ''} ${lock ? 'locked' : ''}`, role: 'radio', 'aria-checked': n === d ? 'true' : 'false',
+          'aria-disabled': lock ? 'true' : null, 'data-focus': `d-${n}`, title: lock || `${df.name} · ${map.name}`,
+          onclick: () => { if (lock) { UI.toast(lock, 'warn'); return; } UI.sfx('click'); rerender({ d: n }, `d-${n}`); },
+        }, [
+          el('span', { class: 'cr-map' }, [UI.svgImg(RG.art.mapBackground ? RG.art.mapBackground(pm) : RG.art.icon('map'), 'cr-map-img', '')]),
+          el('b', { class: 'cr-name', text: df.name }),
+          el('span', { class: 'cr-sub', text: `${map.name} · 웨이브 ${df.waves}` }),
+          el('span', { class: 'cr-reward' }, [UI.icon('crystal', 'tiny'), el('b', { text: `${df.reward.toLocaleString()}` })]),
+          lock ? el('small', { class: 'dim cr-lock' }, [UI.icon('lock', 'tiny'), ` ${lock}`]) : el('small', { class: clears ? 'good' : 'dim', text: clears ? `${clears}번 깸` : '아직 안 깸' }),
+        ]));
+      });
+      const df = CD().difficulty[d - 1];
+
+      // 영웅
+      const heroRow = el('div', { class: 'hero-pick' });
+      for (const h of heroes) {
+        const hd = D().heroes[h];
+        heroRow.appendChild(el('button', {
+          class: `hp-item ${pickHero === h ? 'on' : ''}`, title: `${hd.name} — ${hd.title}`, 'data-focus': `h-${h}`,
+          onclick: () => { UI.sfx('click'); rerender({ hero: h }, `h-${h}`); },
+        }, [UI.portrait(h, pickHero === h ? 'happy' : 'normal', 'hp-portrait'), el('span', { text: hd.name })]));
+      }
+      // 적
+      const enemyRow = el('div', { class: 'chip-row' });
+      for (const e of RG.crystal.pool(d)) {
+        const used = RG.crystal.waves(d).some((w) => w.includes(`${e}*`));
+        if (!used) continue;
+        const chip = el('span', { class: 'e-chip' }, [UI.enemyImg(e, 'mini')]);
+        UI.tooltipFor(chip, () => `<b>${esc(D().enemies[e].name)}</b><br>${esc(D().enemies[e].desc)}`);
+        enemyRow.appendChild(chip);
+      }
+      const owned = P().ownedTowers().length;
+      const resume = run && run.opts && run.opts.crystal && run.opts.crystal.d === d;
+      const body = el('div', { class: 'cr-body' }, [
+        el('p', { class: 'cr-intro', text: '웨이브를 막아 뽑기 재화(공명석)를 모읍니다. 가진 탑을 모두 쓸 수 있고, 끝까지 막으면 보상을 전부 받아요. 지더라도 막아 낸 웨이브만큼 받고, 몇 번이든 다시 할 수 있습니다.' }),
+        cards,
+        el('p', { class: 'rd-mapline' }, [UI.icon('crystal', 'tiny'), ` 끝까지 막으면 공명석 ${df.reward.toLocaleString()} (뽑기 ${Math.floor(df.reward / RG.gacha.COST.one)}번) · 지면 막아 낸 만큼 최대 ${Math.floor((df.reward * CD().loseShare) / 10) * 10} · 내 탑 ${owned}종 · 시작 골드 ${CD().startGold[d - 1]}`]),
+        el('div', { class: 'sec-title', text: '나오는 적' }), enemyRow,
+        el('div', { class: 'sec-title', text: '영웅' }), heroRow,
+        el('div', { class: 'brief-actions' }, [
+          resume ? el('button', { class: 'btn', 'data-autofocus': '', onclick: () => UI.show('game', { resume: run }) }, [`이어하기 (웨이브 ${run.wave})`]) : null,
+          el('button', { class: 'btn btn-primary btn-big', 'data-autofocus': resume ? null : '', onclick: () => (resume ? UI.confirmBox('하던 공명석 웨이브 판을 지우고 새로 시작할까요?', () => start(d, pickHero)) : start(d, pickHero)) }, [resume ? '새로 시작' : '출발!']),
+        ]),
+      ]);
+      sec.append(head, body);
+    },
+  });
+
+  /* =====================================================
+   * 결과 (result 화면이 data.crystal이면 여기로)
+   * ===================================================== */
+  RG.ui.crystalResult = function crystalResult(sec, data) {
+    const win = data.result === 'win';
+    const d = data.crystal.d;
+    const df = CD().difficulty[d - 1];
+    const rr = data.rec;
+    const box = el('div', { class: `result-box ${win ? 'win' : 'lose'}` });
+    const hero = data.opts.heroId;
+    if (hero) box.appendChild(UI.portrait(hero, win ? 'happy' : 'worried', 'result-portrait'));
+    box.appendChild(el('h2', { text: win ? '공명석을 지켜 냈다!' : data.timeout ? '시간이 너무 오래 걸렸다…' : '등불이 꺼졌다…' }));
+    box.appendChild(el('p', { class: 'dim', text: `공명석 웨이브 · ${df.name} (${rr.cleared}/${rr.waves}웨이브 막아 냄)` }));
+    const pulls = Math.floor(rr.total / RG.gacha.COST.one);
+    box.appendChild(el('div', { class: 'reward-box cr-result' }, [
+      el('div', { class: 'rw-total' }, [UI.icon('crystal', 'small'), el('b', { text: `+${rr.crystals.toLocaleString()}` }), el('span', { text: '공명석' })]),
+      el('div', { class: 'rw-lines dim', text: win ? `끝까지 막아 낸 보상 ${df.reward.toLocaleString()}` : rr.crystals ? `막아 낸 ${rr.cleared}웨이브만큼` : '웨이브를 하나도 끝까지 막지 못했습니다' }),
+      el('p', { class: pulls ? 'good' : 'dim', text: `가진 공명석 ${rr.total.toLocaleString()} · 뽑기 ${pulls}번 가능` }),
+      win && rr.firstClear && d < CD().difficulty.length && !P().crystalLock(d + 1) ? el('p', { class: 'good', text: `${CD().difficulty[d].name} 난이도가 열렸습니다 (공명석 ${CD().difficulty[d].reward.toLocaleString()})` }) : null,
+    ]));
+    if (rr.crystals > 0) setTimeout(() => UI.sfx('star'), 500);
+    const bd = rr.bond;
+    if (bd && bd.gain > 0) {
+      const hn = D().heroes[bd.heroId].name;
+      box.appendChild(el('div', { class: 'growth-box' }, [el('div', { class: `gb-bond ${bd.levelUp ? 'up' : ''}` }, [
+        UI.portrait(bd.heroId, bd.levelUp ? 'happy' : 'normal', 'mini-portrait'),
+        el('span', { text: bd.levelUp ? `${hn} 인연 Lv${bd.after}! 재능 점수 +${bd.after - bd.before}` : `${hn} 인연 +${bd.gain}` }),
+      ])]));
+    }
+    if (RG.ui.resultStats) box.appendChild(RG.ui.resultStats(data, hero));
+    box.appendChild(el('div', { class: 'result-buttons' }, [
+      el('button', { class: 'btn', onclick: () => UI.show('game', { opts: crystalOpts(d, hero) }) }, ['다시 하기']),
+      el('button', { class: 'btn', onclick: () => UI.show('crystal', { keep: true, d, hero }) }, ['공명석 웨이브로']),
+      el('button', { class: `btn btn-primary btn-gacha ${pulls ? 'ready' : ''}`, 'data-autofocus': '', onclick: () => UI.show('gacha', { back: { screen: 'crystal', data: { keep: true, d, hero } } }) }, [UI.icon('crystal', 'tiny'), '탑 뽑기']),
+    ]));
+    sec.appendChild(box);
+  };
+})();
+
+</script>
   <script>/* js/ui/game.js */
 'use strict';
 
@@ -39113,7 +39521,8 @@ RG.render = (() => {
       const which = game;
       setTimeout(() => { if (game === which && UI.currentId() === 'game') RG.ui.tutorial.start(root, () => setTimeout(nextTip, 400)); }, 700);
     } else if (!data.resume && opts.mode === 'normal') setTimeout(nextTip, 600);
-    if (!data.resume && opts.raid) banner(`조각 레이드 · ${D().towers[opts.raid.tower].name}`, `${D().raid.difficulty[opts.raid.d - 1].name} · ${D().towers[opts.raid.tower].name}만 지을 수 있습니다`);
+    if (!data.resume && opts.crystal) banner(`공명석 웨이브 · ${D().crystal.difficulty[opts.crystal.d - 1].name}`, `끝까지 막으면 공명석 ${D().crystal.difficulty[opts.crystal.d - 1].reward.toLocaleString()} — 가진 탑을 모두 쓸 수 있습니다`);
+    else if (!data.resume && opts.raid) banner(`조각 레이드 · ${D().towers[opts.raid.tower].name}`, `${D().raid.difficulty[opts.raid.d - 1].name} · ${D().towers[opts.raid.tower].name}만 지을 수 있습니다`);
     else if (!data.resume) banner(`${game.def.id} ${game.def.name}`, opts.mode === 'challenge' ? `도전: ${game.def.challenge.text}` : opts.mode === 'endless' ? '무한 모드' : '준비가 되면 웨이브를 호출하세요');
   }
 
@@ -39415,6 +39824,14 @@ RG.render = (() => {
       const tk = st.task;
       setC(R.task, 'done', tk.done);
       setH(R.task, `<span class="task-head">공명 과제${tk.done ? ' ✓' : ''}</span><span>${esc(tk.def.text)}</span>${!tk.done && tk.need ? `<span class="dim">최고 ${Math.floor(tk.best)}/${tk.need}</span>` : ''}`);
+    } else if (game.opts.crystal) {
+      // 공명석 웨이브: 지금까지 막아 낸 웨이브와 받을 공명석
+      const cd = game.opts.crystal.d;
+      const done = st.result === 'win' ? st.wave.total : RG.raid.wavesCleared(st);
+      const now = RG.crystal.reward(cd, { win: st.result === 'win', cleared: done, total: st.wave.total });
+      const full = D().crystal.difficulty[cd - 1].reward;
+      setC(R.task, 'done', st.result === 'win');
+      setH(R.task, `<span class="task-head">공명석 웨이브</span><span>막아 낸 웨이브 ${done}/${st.wave.total}</span><span>지금 끝나면 <b class="good">+${now}</b> · 끝까지 <b class="gold">+${full}</b></span>`);
     } else if (game.challenge) {
       setH(R.task, `<span class="task-head">도전</span><span>${esc(game.challenge.text)}</span>`);
     } else setH(R.task, '');
@@ -40570,7 +40987,7 @@ RG.render = (() => {
     if (!game) return;
     UI.sfx('click');
     const body = el('div', { class: 'pause-body' }, [
-      el('p', { class: 'dim', text: `${opts.raid ? `조각 레이드 · ${D().towers[opts.raid.tower].name} · ${D().raid.difficulty[opts.raid.d - 1].name}` : `${game.def.id} ${game.def.name}`} · 웨이브 ${game.state.wave.index}/${isFinite(game.state.wave.total) ? game.state.wave.total : '∞'}` }),
+      el('p', { class: 'dim', text: `${opts.crystal ? `공명석 웨이브 · ${D().crystal.difficulty[opts.crystal.d - 1].name}` : opts.raid ? `조각 레이드 · ${D().towers[opts.raid.tower].name} · ${D().raid.difficulty[opts.raid.d - 1].name}` : `${game.def.id} ${game.def.name}`} · 웨이브 ${game.state.wave.index}/${isFinite(game.state.wave.total) ? game.state.wave.total : '∞'}` }),
     ]);
     UI.modal(body, {
       title: '일시정지',
@@ -40578,7 +40995,8 @@ RG.render = (() => {
         { text: '설정', onClick: () => RG.ui.openSettings && RG.ui.openSettings() },
         { text: '조작법', onClick: openControls },
         { text: '다시 시작', onClick: () => UI.confirmBox('처음부터 다시 시작할까요?', () => { RG.save.remove(RG.save.KEYS.run); UI.show('game', { opts }); }) },
-        opts.raid ? { text: '레이드로', onClick: () => UI.confirmBox('레이드 화면으로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('raid', { tower: opts.raid.tower, d: opts.raid.d })) }
+        opts.crystal ? { text: '공명석 웨이브로', onClick: () => UI.confirmBox('공명석 웨이브 화면으로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('crystal', { keep: true, d: opts.crystal.d })) }
+          : opts.raid ? { text: '레이드로', onClick: () => UI.confirmBox('레이드 화면으로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('raid', { tower: opts.raid.tower, d: opts.raid.d })) }
           : { text: '지도로', onClick: () => UI.confirmBox('지도로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('world', {})) },
         { text: '계속하기', primary: true },
       ],
@@ -40631,12 +41049,13 @@ RG.render = (() => {
     if (!game || !game.state.result) return null;
     const st = game.state;
     // 조각 레이드: 맵 기록·별·공명석이 아니라 그 탑의 조각 (js/core/progress.js recordRaid)
-    const rec = opts.raid ? RG.progress.recordRaid(opts.raid.tower, opts.raid.d, st) : RG.progress.record(game.def.id, opts.mode, st);
+    // 공명석 웨이브: 공명석 (js/core/progress.js recordCrystal)
+    const rec = opts.crystal ? RG.progress.recordCrystal(opts.crystal.d, st) : opts.raid ? RG.progress.recordRaid(opts.raid.tower, opts.raid.d, st) : RG.progress.record(game.def.id, opts.mode, st);
     const stats = {
       damage: st.stats.damageByTower, kills: st.stats.kills, gold: st.stats.goldEarned, heroDamage: st.stats.heroDamage,
       towers: st.towers.map((t) => ({ id: t.id, type: t.type, level: t.level, branch: t.branch })), time: st.time,
     };
-    return { mapId: game.def.id, mode: opts.mode, result: st.result, lives: st.lives, maxLives: st.maxLives, task: st.task, rec, stats, opts, waves: st.wave.index, totalWaves: st.wave.total, timeout: st.timeout, raid: opts.raid ? { tower: opts.raid.tower, d: opts.raid.d } : null };
+    return { mapId: game.def.id, mode: opts.mode, result: st.result, lives: st.lives, maxLives: st.maxLives, task: st.task, rec, stats, opts, waves: st.wave.index, totalWaves: st.wave.total, timeout: st.timeout, raid: opts.raid ? { tower: opts.raid.tower, d: opts.raid.d } : null, crystal: opts.crystal ? { d: opts.crystal.d } : null };
   }
 
   /* =====================================================
