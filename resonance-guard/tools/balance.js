@@ -32,9 +32,10 @@ function optsFor(mapId, seed, hero) {
 
 if (has('soak')) {
   const n = +arg('soak', 1000);
+  const off = +arg('offset', 0); // 여러 프로세스로 나눠 돌릴 때 서로 다른 판이 되게
   let errors = 0;
   const t0 = Date.now();
-  for (let i = 0; i < n; i++) {
+  for (let i = off; i < off + n; i++) {
     // 맵·모드·봇을 섞음: 5판에 1판은 도전, 7판에 1판은 무한 모드
     const endless = i % 7 === 6;
     const mapId = endless ? D.endless[i % D.endless.length].id : maps[i % maps.length];
@@ -50,7 +51,7 @@ if (has('soak')) {
       errors += 1;
       console.log(`오류: ${mapId} ${bot} #${i}: ${e.message}`);
     }
-    if ((i + 1) % 100 === 0) console.log(`${i + 1}/${n} (${Math.round((Date.now() - t0) / 1000)}초, 오류 ${errors})`);
+    if ((i + 1 - off) % 250 === 0) console.log(`${i + 1 - off}/${n} (${Math.round((Date.now() - t0) / 1000)}초, 오류 ${errors})`);
   }
   console.log(`장기 실행 ${n}판 완료, 오류 ${errors}개`);
   process.exitCode = errors ? 1 : 0;

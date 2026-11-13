@@ -3041,7 +3041,7 @@ RG.sim = (() => {
     RG.stats.computeAll(game);
 
     Object.assign(game, {
-      step, cmd, canBuild, previewLinks, towerInfo, hash, upgradeCost, sellValue, startLevel,
+      step, cmd, canBuild, previewLinks, towerInfo, hash, upgradeCost, sellValue, startLevel, towerAllowed,
       checkTask, resonanceSnapshot, api, blocked,
     });
     Object.defineProperty(game, 'flow', { get: () => flow, enumerable: true });

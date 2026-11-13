@@ -186,7 +186,8 @@ function makeEnv(RG) {
     let t = 0;
     let route = routeTiles(g);
     let air = airSegs(g);
-    const types = (g.opts.towers || D.towerOrder).filter((x) => D.towers[x]);
+    // 도전 규칙으로 못 짓는 탑(원소 제한·지원 금지 등)은 처음부터 빼 둠 — 실패하는 짓기만 고르다 첫 웨이브를 영영 안 부르던 것
+    const types = (g.opts.towers || D.towerOrder).filter((x) => D.towers[x] && (!g.towerAllowed || g.towerAllowed(x) == null));
     const hasStealth = RG.grid.parseWaves(g.def.waves || []).some((w) => w.groups.some((gr) => D.enemies[gr.e].traits.stealth));
     const allowOpen = g.def.type !== 'fixed';
     const maze = options.noMaze ? [] : mazePlan(g);
@@ -282,12 +283,14 @@ function makeEnv(RG) {
           }
         }
       }
+      let acted = false;
       if (best) {
         const res = g.cmd(best.action);
+        acted = res.ok;
         if (res.ok && best.action.type === 'build') { route = routeTiles(g); air = airSegs(g); }
       }
-      // 웨이브 호출
-      if (st.wave.index === 0 && (!best || st.gold < 60)) g.cmd({ type: 'callWave' });
+      // 웨이브 호출 (고른 행동이 실패했어도 — 탑 수 제한 등으로 막히면 그대로 기다리기만 했음)
+      if (st.wave.index === 0 && (!acted || st.gold < 60)) g.cmd({ type: 'callWave' });
       if (options.early !== false && st.wave.countdown !== null && st.enemies.length <= 2 && st.lives >= st.maxLives - 1 && !best && st.wave.countdown < 10) g.cmd({ type: 'callWave' });
       // 영웅 기술
       heroAI(g);
