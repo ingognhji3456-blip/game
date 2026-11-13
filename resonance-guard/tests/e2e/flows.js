@@ -2,7 +2,7 @@
 
 /*
  * 입력 방식별 한 판 + 이어하기 (QUALITY.md §5)
- *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|mouse|resume|world|gacha|tutorial|a11y|transfer]
+ *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|mouse|resume|world|gacha|tutorial|a11y|transfer|raid]
  *
  * - keyboard: 숫자(탑 고르기)·방향키·Enter·U·Space·F만으로 1-1을 깬다 (마우스·터치 없음)
  * - touch:    휴대폰 가로(터치 에뮬레이션)에서 탑 목록 탭 → 칸 탭, 탑 끌어다 놓기만으로 1-1을 깬다
@@ -684,9 +684,89 @@ async function transferRun(browser) {
   return { name: '진행 옮기기', ok, detail: Object.entries(r).map(([k, v]) => `${k} ${v ? '✓' : '✗'}`).join(' · '), errors };
 }
 
+/* ---------------- 조각 레이드: 월드 지도 → 레이드 → 탑 하나만 지을 수 있는 판 → 결과(조각) → 조각 강화 → 캠페인 판에 반영 ---------------- */
+async function raidRun(browser) {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  const r = {};
+  await page.goto(URL);
+  await page.waitForSelector('#screen-title.active');
+  // 잠김: 2-6 전에는 들어가지 않음
+  await page.evaluate(() => { RG.progress.get().maps['1-1'] = { cleared: true, stars: 3 }; RG.progress.save(); RG.ui.show('world', { view: 'regions' }); });
+  await page.click('#screen-world .btn-raid');
+  r.lockedBefore = await page.evaluate(() => RG.ui.currentId() === 'world');
+  await page.evaluate(() => {
+    const P = RG.progress;
+    for (const m of RG.data.maps.filter((x) => x.region <= 2)) P.record(m.id, 'normal', { result: 'win', lives: 12, task: { done: true }, wave: { index: 8 } });
+    for (const id of Object.keys(RG.data.story)) P.markSeen('story', id);
+    P.gachaState().owned.flame_mortar = 0; P.save();
+    RG.ui.show('world', { view: 'regions' });
+  });
+  await page.click('#screen-world .btn-raid');
+  await page.waitForSelector('#screen-raid.active .rd-tower');
+  r.opens = true;
+  r.listOwned = await page.evaluate(() => document.querySelectorAll('.rd-tower').length === RG.progress.ownedTowers().length);
+  await page.click('.rd-tower:has-text("화염 박격포")');
+  r.locked2 = await page.evaluate(() => document.querySelectorAll('.rd-diff.locked').length === 4);
+  await page.click('#screen-raid .brief-actions .btn-primary');
+  await page.waitForFunction(() => RG.ui.game.game && !document.querySelector('#screen-game').classList.contains('loading'));
+  const g0 = await page.evaluate(() => {
+    const g = RG.ui.game.game;
+    const dock = [...document.querySelectorAll('.tower-card')].map((c) => c.dataset.type);
+    let other = null;
+    for (let rr = 0; rr < g.map.rows && !other; rr++) for (let c = 0; c < g.map.cols; c++) { const cb = g.canBuild('flame_mortar', c, rr); if (cb.ok) { other = g.cmd({ type: 'build', tower: 'ember_archer', c, r: rr }); break; } }
+    return { dock, other, map: g.def.id, banner: document.querySelector('#screen-game').textContent.includes('조각 레이드') };
+  });
+  r.onlyThatTower = JSON.stringify(g0.dock) === JSON.stringify(['flame_mortar']) && g0.other && !g0.other.ok;
+  r.banner = g0.banner && g0.map === 'R1';
+  // 박격포를 지어 실제로 이기기 (빨리 끝내려고 시뮬레이션만 코드로 돌림 — 짓기는 실제 카드 누르기)
+  await page.click('.tower-card[data-type="flame_mortar"]');
+  const spots = await page.evaluate(targetsInPage);
+  for (const t of spots.slice(0, 1)) {
+    const p = await page.evaluate(({ c, r }) => { const s = RG.render.worldToScreen(c + 0.5, r + 0.5); const b = document.querySelector('.game-canvas').getBoundingClientRect(); return { x: b.left + s.x, y: b.top + s.y }; }, t);
+    await page.mouse.click(p.x, p.y);
+  }
+  r.builtByClick = await page.evaluate(() => RG.ui.game.game.state.towers.length === 1);
+  await page.evaluate((spots) => {
+    const g = RG.ui.game.game;
+    g.state.gold += 3000;
+    for (const t of spots.slice(1, 7)) g.cmd({ type: 'build', tower: 'flame_mortar', c: t.c, r: t.r });
+    for (let k = 0; k < 3; k++) for (const t of g.state.towers) g.cmd({ type: 'upgrade', id: t.id });
+    g.cmd({ type: 'callWave' });
+    for (let i = 0; i < 30 * 60 * 20 && !g.state.result; i++) { if (g.state.wave.countdown != null) g.cmd({ type: 'callWave' }); g.step(); }
+  }, spots);
+  await page.waitForSelector('#screen-result.active .rd-reward', { timeout: 15000 });
+  const res = await page.evaluate(() => ({ text: document.querySelector('#screen-result').textContent, shards: RG.progress.shardsOf('flame_mortar'), best: RG.progress.raidBest('flame_mortar'), rmaps: Object.keys(RG.progress.get().maps).filter((k) => k.startsWith('R')).length }));
+  r.wonShards = res.shards === 6 && res.best === 1 && res.text.includes('+6') && res.text.includes('화염 박격포 조각');
+  r.noMapRecord = res.rmaps === 0;
+  r.nextDiffButton = await page.evaluate(() => [...document.querySelectorAll('#screen-result .result-buttons .btn')].some((b) => b.textContent.includes('다음 난이도')));
+  // 레이드로 돌아가 조각 강화
+  await page.click('#screen-result .result-buttons .btn:has-text("레이드로")');
+  await page.waitForSelector('#screen-raid.active .rd-shard');
+  await page.evaluate(() => { RG.progress.get().shards.flame_mortar = 30; RG.progress.save(); RG.ui.show('raid', { tower: 'flame_mortar' }); });
+  await page.click('.rd-shard-act .btn-primary');
+  r.upgraded = await page.evaluate(() => RG.progress.shardLvOf('flame_mortar') === 1 && RG.progress.shardsOf('flame_mortar') === 20);
+  // 캠페인 출정 준비 → 판에 조각 강화가 넘어감, 도전에는 안 넘어감
+  await page.evaluate(() => RG.ui.show('brief', { mapId: '1-2' }));
+  r.chipBadge = await page.evaluate(() => !!document.querySelector('#screen-brief .t-chip .shard-lv'));
+  await page.click('#screen-brief .btn-primary.btn-big');
+  await page.waitForFunction(() => RG.ui.game.game && RG.ui.currentId() === 'game');
+  r.campaignGetsShard = await page.evaluate(() => RG.ui.game.game.shards.flame_mortar === 1);
+  await page.evaluate(() => { RG.save.remove(RG.save.KEYS.run); RG.ui.show('brief', { mapId: '1-2', mode: 'challenge' }); });
+  await page.click('#screen-brief .btn-primary.btn-big');
+  await page.waitForFunction(() => RG.ui.game.game && RG.ui.currentId() === 'game');
+  r.challengeNoShard = await page.evaluate(() => !RG.ui.game.game.shards.flame_mortar && !RG.ui.game.game.opts.shardLv);
+  await ctx.close();
+  const ok = Object.values(r).every(Boolean);
+  return { name: '조각 레이드', ok, detail: Object.entries(r).map(([k, v]) => `${k} ${v ? '✓' : '✗'}`).join(' · '), errors };
+}
+
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
-  const runs = { keyboard: keyboardRun, touch: touchRun, mouse: mouseRun, resume: resumeRun, world: worldRun, gacha: gachaRun, tutorial: tutorialRun, a11y: a11yRun, transfer: transferRun };
+  const runs = { keyboard: keyboardRun, touch: touchRun, mouse: mouseRun, resume: resumeRun, world: worldRun, gacha: gachaRun, tutorial: tutorialRun, a11y: a11yRun, transfer: transferRun, raid: raidRun };
   let fail = 0;
   for (const [k, fn] of Object.entries(runs)) {
     if (only && only !== k) continue;

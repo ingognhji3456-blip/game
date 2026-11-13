@@ -1188,6 +1188,99 @@ button { font-family: var(--font); color: inherit; font-size: inherit; } /* 브�
   .xfer > p { grid-column: 1 / -1; margin: 0; }
 }
 
+/* ---------- 조각 레이드 (js/ui/raid.js) ---------- */
+#screen-raid { display: none; flex-direction: column; background: radial-gradient(ellipse at 70% 30%, #1d3a5a 0%, #182238 45%, #0c0f1a 100%); }
+#screen-raid.active { display: flex; }
+#screen-raid .top-bar { background: linear-gradient(180deg, #1c2c44, #121a2a); border-bottom: 1px solid #9fd8ff33; }
+#screen-raid .top-bar h2 { display: inline-flex; align-items: center; gap: 6px; }
+.rd-head-note { font-size: 0.85rem; }
+.rd-locked { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+.rd-locked .big-ico { width: 64px; height: 64px; }
+.rd-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(240px, 0.9fr) minmax(320px, 1.3fr); gap: 14px; padding: 12px calc(14px + var(--safe-r)) calc(12px + var(--safe-b)) calc(14px + var(--safe-l)); overflow: hidden; }
+.rd-left, .rd-right { min-height: 0; min-width: 0; overflow: auto; }
+.rd-left { display: flex; flex-direction: column; gap: 8px; }
+.rd-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; padding: 2px; }
+.rd-tower { appearance: none; position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 4px 7px; border-radius: 12px; border: 2px solid #ffffff22; background: linear-gradient(180deg, #24324acc, #141c2ccc); color: var(--text); cursor: pointer; font: inherit; }
+.rd-tower:hover { border-color: #9fd8ff88; }
+.rd-tower.on { border-color: var(--gold); background: linear-gradient(180deg, #3e3424, #1f1a14); box-shadow: 0 0 12px #ffd27a55; }
+.rd-tower.rar-rare { box-shadow: inset 0 -3px 0 #5fb4ff; } .rd-tower.rar-epic { box-shadow: inset 0 -3px 0 #ffc44a; } .rd-tower.rar-legendary { box-shadow: inset 0 -3px 0 #ff6a3d; } .rd-tower.rar-mythic { box-shadow: inset 0 -3px 0 #ff5ad6; }
+.rd-timg { position: relative; display: inline-flex; }
+.rd-timg .mini { width: 54px; height: 68px; }
+.rd-tname { font-size: 0.76rem; font-weight: 800; text-align: center; line-height: 1.15; min-height: 2.3em; display: flex; align-items: center; }
+.shard-lv { position: absolute; left: -6px; bottom: -4px; font-style: normal; font-weight: 900; font-size: 0.66rem; padding: 0 4px; border-radius: 6px; color: #08223a; background: linear-gradient(180deg, #d6f6ff, #5ab8f0); border: 1px solid #0a1a2a; }
+.shard-lv.big { font-size: 0.9rem; left: -4px; bottom: 0; padding: 1px 6px; }
+.t-chip .shard-lv.chip { top: auto; right: auto; left: -5px; bottom: -5px; font-size: 0.56rem; background: linear-gradient(180deg, #d6f6ff, #5ab8f0); color: #08223a; }
+.rd-bar { position: relative; display: block; width: 100%; height: 14px; border-radius: 7px; background: #0008; border: 1px solid #ffffff22; overflow: hidden; }
+.rd-bar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #3a8ad8, #8fe0ff); }
+.rd-bar.ready i { background: linear-gradient(90deg, #d8962a, #ffe08a); }
+.rd-bar.max i { background: linear-gradient(90deg, #c04aa8, #ffb0f0); }
+.rd-bar b { position: relative; display: block; text-align: center; font-size: 0.66rem; line-height: 12px; color: #fff; text-shadow: 0 1px 2px #000; }
+.rd-pips { display: flex; gap: 3px; }
+.rd-pips i, .rd-steps i { width: 8px; height: 8px; border-radius: 50%; background: #ffffff22; border: 1px solid #0006; }
+.rd-pips i.on { background: #7ad46a; }
+.rd-up-dot { position: absolute; top: 4px; right: 6px; font-style: normal; color: #ffe08a; font-size: 0.7rem; animation: gc-ready 2.4s ease-in-out infinite; }
+.rd-right { display: flex; flex-direction: column; gap: 8px; padding-right: 2px; }
+.rd-title { display: flex; gap: 12px; align-items: center; }
+.rd-title h3 { margin: 0; font-size: 1.3rem; color: var(--gold2); }
+.rd-title p { margin: 2px 0; }
+.rd-big { position: relative; flex: none; display: inline-flex; padding: 4px; border-radius: 14px; background: #0005; }
+.rd-big .rd-big-img { width: 72px; height: 92px; }
+.rd-shard { padding: 10px 12px; border-radius: 12px; background: linear-gradient(180deg, #1c3048cc, #111a28cc); border: 1px solid #9fd8ff44; display: flex; flex-direction: column; gap: 6px; }
+.rd-shard-head { display: flex; align-items: center; gap: 8px; }
+.rd-shard-head .small { width: 22px; height: 22px; }
+.rd-have { margin-left: auto; font-weight: 800; color: #bfe8ff; }
+.rd-steps { display: flex; gap: 5px; }
+.rd-steps i { width: 18px; height: 8px; border-radius: 4px; }
+.rd-steps i.on { background: linear-gradient(90deg, #5ab8f0, #d6f6ff); }
+.rd-eff { margin: 0; font-size: 0.86rem; }
+.rd-eff.next { color: #bfe8ff; }
+.rd-shard-act { display: flex; align-items: center; gap: 10px; }
+.rd-shard-act .rd-bar { flex: 1; }
+.rd-shard-act .btn { flex: none; }
+.rd-diffs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.rd-diff { appearance: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 10px; border: 2px solid #ffffff22; background: #0006; color: var(--text); cursor: pointer; font: inherit; min-height: 64px; }
+.rd-diff b { font-size: 0.8rem; line-height: 1.1; text-align: center; }
+.rd-diff small { font-size: 0.64rem; }
+.rd-diff .rd-rw { display: inline-flex; align-items: center; gap: 2px; font-weight: 800; color: #bfe8ff; font-size: 0.8rem; }
+.rd-diff.on { border-color: var(--gold); background: #3c2f22; }
+.rd-diff.cleared { border-color: #7ad46a88; }
+.rd-diff.cleared.on { border-color: var(--gold); }
+.rd-diff.locked { opacity: 0.45; cursor: default; }
+.rd-diff .gold { color: var(--gold2); }
+.rd-mapline { margin: 0; font-size: 0.84rem; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.rd-rules { margin: 0; padding-left: 1.1em; font-size: 0.82rem; color: #d8e6f2; display: flex; flex-direction: column; gap: 2px; }
+.rd-heroes .hp-item { width: 62px; }
+#screen-raid .brief-actions { background: linear-gradient(transparent, #121a2a 35%); }
+.btn-raid { display: inline-flex; align-items: center; gap: 4px; position: relative; }
+.btn-raid.locked { opacity: 0.6; }
+.btn-raid.ready { border-color: #9fd8ff; box-shadow: 0 0 12px #5ab8f088; }
+.btn-raid .rd-up-dot { position: static; }
+.tm-raid { flex: none; min-height: 44px; justify-content: center; font-weight: 800; background: linear-gradient(180deg, #24405e, #142438) !important; border: 2px solid #8fd0ff !important; box-shadow: 0 0 0 2px #0a0612, 0 4px 0 #0a0612 !important; color: #eaf6ff; }
+.tm-raid .tiny { width: 22px; height: 22px; }
+.rd-reward .rw-total .mini { width: 30px; height: 38px; }
+.rd-result-bar { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.rd-result-bar .rd-bar { flex: 1; max-width: 220px; height: 16px; }
+/* 휴대폰 세로: 탑 목록은 위쪽 가로 띠, 그 아래 고른 탑 */
+@media (max-width: 640px) and (min-height: 461px) {
+  .rd-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); overflow: hidden; }
+  .rd-title { align-items: flex-start; }
+  .rd-big .rd-big-img { width: 56px; height: 72px; }
+  .rd-left { overflow: visible; }
+  .rd-list { display: flex; overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x proximity; }
+  .rd-tower { flex: 0 0 92px; scroll-snap-align: start; }
+  .rd-left > p { display: none; }
+  .rd-head-note { display: none; }
+  .rd-diff b { font-size: 0.7rem; }
+}
+/* 휴대폰 가로 (낮은 화면) */
+@media (max-height: 460px) {
+  .rd-body { grid-template-columns: minmax(200px, 0.8fr) minmax(300px, 1.4fr); gap: 10px; padding-top: 8px; }
+  .rd-list { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 6px; }
+  .rd-tname { font-size: 0.7rem; }
+  .rd-head-note { display: none; }
+  .rd-big .rd-big-img { width: 54px; height: 70px; }
+}
+
 </style>
   <style>/* css/game.css */
 /* =========================================================
@@ -1508,6 +1601,7 @@ body.rg-dragging, body.rg-dragging * { cursor: grabbing !important; }
     <section class="screen" id="screen-heroes"></section>
     <section class="screen" id="screen-tree"></section>
     <section class="screen" id="screen-gacha"></section>
+    <section class="screen" id="screen-raid"></section>
   </div>
   <div id="modal-root"></div>
   <div id="tooltip" class="tooltip" role="tooltip"></div>
@@ -4527,18 +4621,25 @@ RG.data.raid = {
   firstClearMult: 2,
   loseShards: 1,                 // 지더라도 절반 넘게 버텼으면
   goldPerCost: 4, goldBase: 100, // 시작 골드 = 탑 Lv1 값 × 4 + 100 (탑 값에 따라 지을 수 있는 수가 비슷하게)
-  /** 지원·경제 탑 레이드: 영웅이 싸우고, 근처(반경 칸)에 지은 그 탑마다 영웅 피해·기술 +25% × 탑 단계 배율(Lv1~4, 가장 센 4개) — 적은 더 약하게 */
-  supportHero: { radius: 2.5, perTower: 0.25, levelMult: [1, 1.5, 2, 2.6], max: 4, hpMult: 0.6 },
-  /** 탑마다 적 체력 보정 — 탑 하나로 싸우므로 탑 세기 차이를 메움. tools/raid-balance.js --calibrate (보통 난이도를 그리디 봇이 이기는 최대 배율 ÷ 1.3) */
+  /** 지원·경제 탑 레이드: 영웅이 싸우고, 근처(반경 칸)에 지은 그 탑마다 영웅 피해·기술 +25% × 탑 단계 배율(Lv1~4, 가장 센 4개).
+   *  영웅 하나는 떼로 오는 적을 다 붙잡지 못하므로 적 수는 countMult배(띄엄띄엄 gapMult배)로 줄이고 그만큼 단단하게(hpMult) */
+  /*  영웅은 레이드 동안 기본 피해 base배(혼자 싸우므로), 갑옷 적(armored 무리)은 나오지 않음 */
+  /*  heroHp: 영웅마다 적 체력 보정(영웅 세기 차이를 메움, 카라 = 1) — tools/raid-balance.js --calibrate-heroes */
+  supportHero: {
+    radius: 2.5, perTower: 0.25, levelMult: [1, 1.5, 2, 2.6], max: 4, countMult: 0.35, gapMult: 1.8, hpMult: 1.6, base: 2,
+    heroHp: { kara: 1, sera: 0.21, sio: 0.77, zena: 0.46, bawi: 1, yaro: 0.77, haru: 0.21, dohan: 0.27, narae: 0.21, tori: 0.17, byeori: 0.77, mujin: 0.21 },
+  },
+  /** 탑마다 적 체력 보정 — 탑 하나로 싸우므로 탑 세기 차이를 메움. tools/raid-balance.js --calibrate (보통 난이도를 그리디 봇이 이기는 최대 배율 ÷ 1.3,
+   *  지원·경제 탑은 영웅 봇이 단순해 ÷ 1.6). 보통~어려움에서 무너지던 탑(병영·저주 첨탑·영혼 수확자·시간 첨탑)은 ×0.75 */
   towerHp: {
-    ember_archer: 0.69, flame_mortar: 2.08, forge: 0.69, flame_jet: 0.83,
+    ember_archer: 0.69, flame_mortar: 2.08, forge: 1.17, flame_jet: 0.83,
     frost_crystal: 0.58, ice_ballista: 1.2, winter_bell: 0.48, icicle_cloud: 1,
-    lightning_rod: 1.44, gale_cannon: 0.23, dynamo: 0.48, thunder_cloud: 1.73,
-    stone_barracks: 0.4, quake_hammer: 0.69, crystal_mine: 0.48, thorn_garden: 0.58,
-    sun_lens: 1.44, sanctuary: 0.48, radiance_spire: 1.44, lighthouse: 1,
-    hex_spire: 0.83, void_orb: 1.44, shadow_snare: 0.48, dread_bell: 1,
+    lightning_rod: 1.44, gale_cannon: 0.23, dynamo: 1.41, thunder_cloud: 1.73,
+    stone_barracks: 0.3, quake_hammer: 0.69, crystal_mine: 2.44, thorn_garden: 0.58,
+    sun_lens: 1.44, sanctuary: 2.44, radiance_spire: 1.44, lighthouse: 1,
+    hex_spire: 0.62, void_orb: 1.44, shadow_snare: 0.48, dread_bell: 0.85,
     phoenix_nest: 1.73, blizzard_keep: 1.2, storm_eye: 0.83, titan_boulder: 1.73,
-    judgment_spire: 1.44, soul_reaper: 2.49, chrono_spire: 2.08, shadow_dragon: 2.49,
+    judgment_spire: 1.44, soul_reaper: 1.87, chrono_spire: 1.56, shadow_dragon: 2.49,
   },
   /** 적 무리 (탑 원소에 면역·흡수인 적, 공중을 못 치면 비행 적은 빠짐). 숨는 적·탑을 멈추는 적은 넣지 않음 */
   pool: {
@@ -5396,7 +5497,10 @@ RG.stats = (() => {
       c.dmgBonus = 0;
       c.speedBonus = 0;
       c.rangeBonus = meta.rangePct || 0;
-      if (shardLvOf(game, t) >= 1 && RG.raid) { const sb0 = RG.raid.shardBonus(shardLvOf(game, t)); c.rangeBonus += sb0.rangePct; if (def.role === 'attack') c.speedBonus += sb0.speedPct; }
+      // 조각 강화(조각 레이드): 단계마다 +5%를 뽑기 강화와 같은 곳에 곱함(아래 rk), 3단계 사거리·5단계 공격 속도(공격 탑)
+      const shardLv = shardLvOf(game, t);
+      const sb = shardLv && RG.raid ? RG.raid.shardBonus(shardLv) : null;
+      if (sb && def.role === 'attack') { c.rangeBonus += sb.rangePct; c.speedBonus += sb.speedPct; }
       // 6지역 별빛 건설지: 사거리 +15%
       if (game.map && game.map.kinds[t.r * game.map.cols + t.c] === RG.grid.T.STAR) c.rangeBonus += RG.data.rules.starRange || 0.15;
       // 그믐달 군주 '별 가리기': 잠시 사거리 감소
@@ -5410,10 +5514,7 @@ RG.stats = (() => {
       // 뽑기 중복 강화: 단계마다 +6% (공격 탑은 공격력, 지원 탑은 지원 효과, 병영은 병사 체력·공격력, 광산은 수입)
       const rank = (game.ranks && game.ranks[t.type]) || 0;
       c.rank = rank;
-      // 조각 강화(조각 레이드): 단계마다 +5%를 뽑기 강화와 같은 곳에 곱함, 3단계 사거리·5단계 공격 속도
-      const shardLv = (game.shards && game.shards[t.type]) || 0;
       c.shardLv = shardLv;
-      const sb = shardLv && RG.raid ? RG.raid.shardBonus(shardLv) : null;
       const rk = (RG.gacha ? RG.gacha.rankMult(rank) : 1) * (sb ? 1 + sb.pct : 1);
       if (rk !== 1) {
         if (def.role === 'economy') { if (c.income) c.income = Math.round(c.income * rk); }
@@ -5891,15 +5992,22 @@ RG.raid = (() => {
     const P = R().pool;
     const air = canAir(type, heroId);
     const pick = (cat, i) => {
+      if (cat === 'armored' && isSupport(type)) return null; // 영웅 혼자 갑옷 적은 무리
       const list = P[cat].filter((e) => hitsEnemy(type, heroId, e) && (cat !== 'flying' || air));
       return list.length ? list[(i + hash(type)) % list.length] : null;
     };
     const N = diff.waves;
     const out = [];
+    const SH = R().supportHero;
+    const sup = isSupport(type);
     for (let i = 0; i < N; i++) {
       const f = N > 1 ? i / (N - 1) : 1;
       const groups = [];
-      const add = (cat, n, iv, delay, spawn = 0) => { const e = pick(cat, i); if (e && n > 0) groups.push(`${e}*${n}/${iv}${delay ? `@${delay}` : ''}${spawn ? `>${spawn}` : ''}`); };
+      const add = (cat, n, iv, delay, spawn = 0) => {
+        const e = pick(cat, i);
+        if (sup) { n = Math.max(1, Math.round(n * SH.countMult)); iv = Math.round(iv * SH.gapMult * 100) / 100; } // 지원 탑 레이드: 적게·띄엄띄엄
+        if (e && n > 0) groups.push(`${e}*${n}/${iv}${delay ? `@${delay}` : ''}${spawn ? `>${spawn}` : ''}`);
+      };
       if (i === N - 1) {
         // 마지막 웨이브: 큰 적 + 호위
         add('big', 2 + Math.floor(d / 2), 2.4);
@@ -5921,6 +6029,8 @@ RG.raid = (() => {
 
   /** 탑마다 적 체력 보정 (탑 하나만 쓰므로 탑 세기 차이를 메움 — tools/raid-balance.js --calibrate) */
   const towerScale = (type) => (R().towerHp && R().towerHp[type]) || 1;
+  /** 지원·경제 탑 레이드에서 영웅마다 적 체력 보정 (영웅이 싸우므로 영웅 세기 차이를 메움 — --calibrate-heroes) */
+  const heroScale = (heroId) => (R().supportHero.heroHp && R().supportHero.heroHp[heroId]) || 1;
 
   /** 판 설정 조각 (게임 opts에 합침): { mapId, hpMult, towers, raid } */
   function setup(type, d, heroId) {
@@ -5929,12 +6039,13 @@ RG.raid = (() => {
     const support = isSupport(type);
     return {
       mapId: diff.map,
-      hpMult: Math.round(diff.hp * (support ? R().supportHero.hpMult : 1) * towerScale(type) * 1000) / 1000,
+      hpMult: Math.round(diff.hp * (support ? R().supportHero.hpMult * heroScale(heroId) : 1) * towerScale(type) * 1000) / 1000,
       towers: [type],
       raid: {
         tower: type, d, support,
         waves: waves(type, d, heroId),
         startGold: td.levels[0].cost * R().goldPerCost + R().goldBase,
+        bountyMult: support ? Math.round(100 / R().supportHero.countMult) / 100 : 0,
       },
     };
   }
@@ -5945,7 +6056,7 @@ RG.raid = (() => {
     return w >= Math.ceil(total / 2) ? R().loseShards : 0;
   }
 
-  return { shardBonus, shardCost, isSupport, canAir, hitsEnemy, waves, towerScale, setup, reward };
+  return { shardBonus, shardCost, isSupport, canAir, hitsEnemy, waves, towerScale, heroScale, setup, reward };
 })();
 
 </script>
@@ -6105,7 +6216,7 @@ RG.sim = (() => {
       let sum = 0;
       for (let i = 0; i < Math.min(S.max, got.length); i++) sum += got[i];
       const sl = shards[RA.tower] || 0;
-      return 1 + sum * S.perTower * (1 + RG.raid.shardBonus(sl).pct);
+      return (S.base || 1) * (1 + sum * S.perTower) * (1 + RG.raid.shardBonus(sl).pct);
     }
     function heroStat(h) {
       const hd = D().heroes[h.heroId];
@@ -6205,6 +6316,7 @@ RG.sim = (() => {
       const ed = D().enemies[e.type];
       let xp = ed.boss ? 10 : ed.elite ? 3 : 1;
       if (!full) xp *= 0.5;
+      if (RA && RA.bountyMult) xp *= RA.bountyMult; // 지원 탑 레이드: 적이 적은 만큼 경험치도 더
       h.xp += xp;
       const table = D().heroXp;
       while (h.level < table.length && h.xp >= table[h.level]) {
@@ -6453,6 +6565,7 @@ RG.sim = (() => {
       let bounty = ed.bounty;
       if (e.fragment) bounty = Math.max(1, Math.round(ed.bounty * (ed.traits.split ? ed.traits.split.hpPct || 0.25 : 0.25)));
       bounty = Math.round(bounty * (1 + bountyBonus(e, src)));
+      if (RA && RA.bountyMult) bounty = Math.round(bounty * RA.bountyMult); // 지원 탑 레이드: 적이 적은 만큼 처치 골드를 더
       st.gold += bounty;
       st.stats.goldEarned += bounty;
       st.stats.kills += 1;
@@ -8805,7 +8918,9 @@ RG.sim = (() => {
         if (time >= h.downUntil) {
           h.dead = false;
           h.hp = h.maxHp;
-          const tile = RG.grid.nearestHeroTile(map, blocked, map.lantern.x - 0.6, map.lantern.y);
+          // 지원 탑 레이드는 처음 자리(지원 탑을 모아 지은 곳)에서 다시 일어남 — 등불 곁에서 일어나면 탑 강화를 못 받으므로
+          const home = RA && RA.support ? heroStartTile() : null;
+          const tile = home ? RG.grid.nearestHeroTile(map, blocked, home.c + 0.5, home.r + 0.5) : RG.grid.nearestHeroTile(map, blocked, map.lantern.x - 0.6, map.lantern.y);
           h.x = tile ? tile.c + 0.5 : map.lantern.x; h.y = tile ? tile.r + 0.5 : map.lantern.y; h.px = h.x; h.py = h.y;
           h.path = [];
           ev('heroRevive', { heroId: h.heroId, x: h.x, y: h.y });
@@ -9019,6 +9134,7 @@ RG.sim = (() => {
 
     Object.assign(game, {
       step, cmd, canBuild, previewLinks, towerInfo, hash, upgradeCost, sellValue, startLevel, towerAllowed,
+      waveStrings: (RA ? RA.waves : def.waves) || [], // 이 판의 웨이브 글 (레이드는 맵 데이터가 아니라 레이드 규칙의 것) — 다음 웨이브 미리보기·그림 미리 굽기
       checkTask, resonanceSnapshot, api, blocked,
     });
     Object.defineProperty(game, 'flow', { get: () => flow, enumerable: true });
@@ -32216,7 +32332,7 @@ RG.art.sprites = (() => {
       if (types.has('titan_boulder')) { jobs.push(load('fx:boulder', () => A.fxSprite('boulder', 0), 120, 120)); jobs.push(load('fx:ironball', () => A.fxSprite('ironball', 0), 120, 120)); }
     }
     const enemies = new Set();
-    for (const w of RG.grid.parseWaves(game.def.waves || [])) for (const g of w.groups) enemies.add(g.e);
+    for (const w of RG.grid.parseWaves(game.waveStrings || game.def.waves || [])) for (const g of w.groups) enemies.add(g.e);
     if (game.opts.mode === 'endless') for (const e of RG.data.regionPools[game.def.region] || []) enemies.add(e);
     // 분열·소환으로 나오는 적
     for (const e of [...enemies]) {
@@ -36595,17 +36711,18 @@ RG.render = (() => {
     const starsNow = P().starsTotal();
     // 가운데: 모험 카드 (이어할 판이 있으면 그 카드가 금빛, 지도 카드는 그 아래 보조)
     const mainCol = el('div', { class: 'tm-main' });
-    const resumable = run && maps.concat(D().endless).some((m) => m.id === run.mapId);
+    const resumable = run && maps.concat(D().endless, D().raidMaps || []).some((m) => m.id === run.mapId);
     const bannerOf = (region) => (RG.art.regionBanner ? UI.svgImg(RG.art.regionBanner(region), 'tm-banner', '') : null);
     if (resumable) {
-      const rd = maps.concat(D().endless).find((m) => m.id === run.mapId);
+      const rd = maps.concat(D().endless, D().raidMaps || []).find((m) => m.id === run.mapId);
+      const raidRun = run.opts && run.opts.raid;
       mainCol.appendChild(el('button', { class: 'btn btn-primary btn-big tm-card tm-hero', 'data-autofocus': '', onclick: go(() => UI.show('game', { resume: run })) }, [
         bannerOf(rd.region || 1),
         el('span', { class: 'tm-medal tm-medal-big' }, [UI.icon('play', 'tm-ico')]),
         el('span', { class: 'tm-text' }, [
-          el('span', { class: 'tm-kicker', text: `하던 판 · ${run.mapId} 웨이브 ${run.wave}` }),
+          el('span', { class: 'tm-kicker', text: raidRun ? `하던 판 · 조각 레이드 웨이브 ${run.wave}` : `하던 판 · ${run.mapId} 웨이브 ${run.wave}` }),
           el('b', { class: 'tm-title', text: '이어하기' }),
-          el('span', { class: 'tm-sub', text: rd.name || '' }),
+          el('span', { class: 'tm-sub', text: raidRun ? `${D().towers[raidRun.tower].name} · ${D().raid.difficulty[raidRun.d - 1].name}` : rd.name || '' }),
         ]),
         el('span', { class: 'tm-go', text: '이어서 ›' }),
       ]));
@@ -36645,6 +36762,7 @@ RG.render = (() => {
       tile('tm-tree', '#7ad46a', UI.icon('tree', 'tm-ico'), '기술 나무', free > 0 ? `쓸 수 있는 별 ★${free}` : `모은 별 ★${starsNow}`, free > 0 ? `★${free}` : '', go(() => UI.show('tree', {}))),
       tile('tm-codex', '#f2b24a', UI.icon('book', 'tm-ico'), '도감', `만난 적 ${enemiesSeen}/${enemiesAll}`, '', go(() => UI.show('codex', {}))),
     ];
+    if (P().raidOpen()) mainCol.appendChild(raidButton('btn tm-raid'));
     menu.append(tiles[0], tiles[1], mainCol, tiles[2], tiles[3]);
     return menu;
   }
@@ -36852,6 +36970,17 @@ RG.render = (() => {
   let regionPick = null;        // 지역 고르기에서 펼쳐진 지역
   const regionArt = {};         // 지역 그림 SVG (한 번만 만듦)
   const artOf = (r) => regionArt[r] || (regionArt[r] = RG.art.regionMap ? RG.art.regionMap(r) : RG.art.regionBanner(r));
+  /** 조각 레이드로 가는 단추 (열리기 전엔 잠김 안내) */
+  function raidButton(cls) {
+    const open = P().raidOpen();
+    const ready = open && P().ownedTowers().some((t) => { const c = RG.raid.shardCost(P().shardLvOf(t)); return c != null && P().shardsOf(t) >= c; });
+    return el('button', {
+      class: `${cls} btn-raid ${open ? '' : 'locked'} ${ready ? 'ready' : ''}`, title: open ? '조각 레이드 — 탑 하나로 막아 그 탑의 조각을 모읍니다' : `${D().raid.unlockAfter}을(를) 지켜 내면 열립니다`,
+      onclick: () => { if (!open) { UI.toast(`조각 레이드는 ${D().raid.unlockAfter}을(를) 지켜 내면 열립니다`, 'warn'); return; } UI.show('raid', { back: UI.currentId() === 'title' ? 'title' : 'world' }); },
+    }, [UI.icon(open ? 'shard' : 'lock', 'tiny'), '조각 레이드', ready ? el('i', { class: 'rd-up-dot', text: '▲' }) : null]);
+  }
+  RG.ui.raidButton = raidButton;
+
   /** 지역 요약: 열림, 별, 클리어 수, 보스, 다음 맵 */
   function regionInfo(r) {
     const maps = D().maps.filter((m) => m.region === r);
@@ -36967,6 +37096,7 @@ RG.render = (() => {
           el('button', { class: 'btn small', onclick: () => UI.show('tree', {}) }, [UI.icon('tree', 'tiny'), `기술 나무${P().starsFree() > 0 ? ` (${P().starsFree()})` : ''}`]),
           el('button', { class: 'btn small', onclick: () => UI.show('heroes', {}) }, [UI.icon('hero', 'tiny'), '수호대']),
           el('button', { class: 'btn small', onclick: () => UI.show('codex', {}) }, [UI.icon('book', 'tiny'), '도감']),
+          raidButton('btn small'),
           el('button', { class: 'icon-btn', title: '설정', onclick: openSettings }, [UI.icon('settings')]),
         ]),
       ]);
@@ -37140,10 +37270,12 @@ RG.render = (() => {
       for (const t of towers) {
         const rank = P().towerRank(t);
         const fin = RG.gacha.isFinal(rank);
-        const chip = el('span', { class: `t-chip rar-${RG.gacha.rarityOf(t)}` }, [UI.towerImg(t, fin && mode !== 'challenge' ? 2 : 1, null, 'mini'), rank > 0 ? el('em', { class: `rank${fin ? ' fin' : ''}`, text: fin ? '★' : `+${rank}` }) : null]);
+        const slv = P().shardLvOf(t);
+        const chip = el('span', { class: `t-chip rar-${RG.gacha.rarityOf(t)}` }, [UI.towerImg(t, fin && mode !== 'challenge' ? 2 : 1, null, 'mini'), rank > 0 ? el('em', { class: `rank${fin ? ' fin' : ''}`, text: fin ? '★' : `+${rank}` }) : null, mode !== 'challenge' && RG.ui.shardBadge ? RG.ui.shardBadge(slv, 'chip') : null]);
         // 도전 모드는 뽑기 강화를 쓰지 않음(sim.js ranks)
         const rankNote = mode === 'challenge' ? (rank > 0 ? '<br><span class="dim">도전에서는 뽑기 강화가 적용되지 않습니다</span>' : '') : fin ? '<br><span class="good">맵에 같은 값으로 Lv2부터 지어집니다</span>' : '';
-        UI.tooltipFor(chip, () => `<b>${esc(D().towers[t].name)}</b>${rank > 0 ? ` <span class="good">${RG.gacha.rankLabel(rank)} (${esc(rankText(t, rank))})</span>` : ''}${rankNote}<br>${esc(D().towers[t].desc)}`);
+        const shardNote = slv > 0 ? (mode === 'challenge' ? '<br><span class="dim">도전에서는 조각 강화가 적용되지 않습니다</span>' : `<br><span class="good">조각 강화 ${slv}단계 (${esc(RG.ui.shardEffectText(t, slv))})</span>`) : '';
+        UI.tooltipFor(chip, () => `<b>${esc(D().towers[t].name)}</b>${rank > 0 ? ` <span class="good">${RG.gacha.rankLabel(rank)} (${esc(rankText(t, rank))})</span>` : ''}${rankNote}${shardNote}<br>${esc(D().towers[t].desc)}`);
         towerRow.appendChild(chip);
       }
       const missing = D().towerOrder.length - towers.length;
@@ -37171,6 +37303,9 @@ RG.render = (() => {
         // 영웅 성장(인연 재능·장신구)은 시작 때 복사 — 도전 모드에서는 판이 쓰지 않음
         const growth = !noHero && hero && mode !== 'challenge' ? P().heroGrowth(hero) : null;
         if (growth) opts.heroGrowth = growth;
+        // 조각 강화(조각 레이드) — 도전 모드는 판이 쓰지 않음
+        const sl = mode !== 'challenge' ? P().shardLevels() : null;
+        if (sl) opts.shardLv = sl;
         const go = () => UI.show('game', { opts });
         const story = def.story && def.story.before;
         if (mode === 'normal' && story && D().story[story] && !P().seen('story', story)) UI.show('story', { id: story, then: go });
@@ -37197,12 +37332,28 @@ RG.render = (() => {
   /* =====================================================
    * 결과
    * ===================================================== */
+  /** 결과 통계: 처치·골드·시간, 탑별 피해 막대(상위 6) + 영웅 */
+  function resultStats(data, hero) {
+    const dmg = Object.entries(data.stats.damage || {}).map(([id, v]) => [data.stats.towers.find((t) => String(t.id) === id), v]).filter(([t]) => t).sort((a, b) => b[1] - a[1]).slice(0, 6);
+    const total = dmg.reduce((s, [, v]) => s + v, 0) + (data.stats.heroDamage || 0) || 1;
+    const st = el('div', { class: 'result-stats' });
+    st.appendChild(el('div', { class: 'sec-title', text: `처치 ${data.stats.kills} · 번 골드 ${Math.round(data.stats.gold)} · ${Math.floor(data.stats.time / 60)}분 ${Math.floor(data.stats.time % 60)}초` }));
+    for (const [t, v] of dmg) {
+      const name = t.level >= 4 ? D().towers[t.type].branches[t.branch].name : `${D().towers[t.type].name} Lv${t.level}`;
+      st.appendChild(el('div', { class: 'dmg-row' }, [UI.towerImg(t.type, t.level, t.branch, 'mini'), el('span', { text: name }), el('div', { class: 'dmg-bar' }, [el('i', { style: { width: `${(v / total) * 100}%`, background: D().elements[D().towers[t.type].element].color } })]), el('b', { text: Math.round(v).toLocaleString() })]));
+    }
+    if (data.stats.heroDamage && hero) st.appendChild(el('div', { class: 'dmg-row' }, [UI.portrait(hero, 'normal', 'mini-portrait'), el('span', { text: D().heroes[hero].name }), el('div', { class: 'dmg-bar' }, [el('i', { style: { width: `${(data.stats.heroDamage / total) * 100}%`, background: '#fff' } })]), el('b', { text: Math.round(data.stats.heroDamage).toLocaleString() })]));
+    return st;
+  }
+  RG.ui.resultStats = resultStats;
+
   UI.register('result', {
     enter(sec, data) {
       sec.innerHTML = '';
       const win = data.result === 'win';
       UI.music(win ? 'victory' : 'defeat');
       UI.sfx(win ? 'win' : 'lose');
+      if (data.raid && RG.ui.raidResult) { RG.ui.raidResult(sec, data); return; } // 조각 레이드 (js/ui/raid.js)
       const def = D().maps.find((m) => m.id === data.mapId) || D().endless.find((m) => m.id === data.mapId);
       const box = el('div', { class: `result-box ${win ? 'win' : 'lose'}` });
       const hero = data.opts.heroId;
@@ -37270,16 +37421,7 @@ RG.render = (() => {
         if ((bd && bd.levelUp) || gearGot.some((g) => g.isNew)) setTimeout(() => UI.sfx('unlock'), 1600);
       }
       // 통계
-      const dmg = Object.entries(data.stats.damage || {}).map(([id, v]) => [data.stats.towers.find((t) => String(t.id) === id), v]).filter(([t]) => t).sort((a, b) => b[1] - a[1]).slice(0, 6);
-      const total = dmg.reduce((s, [, v]) => s + v, 0) + (data.stats.heroDamage || 0) || 1;
-      const st = el('div', { class: 'result-stats' });
-      st.appendChild(el('div', { class: 'sec-title', text: `처치 ${data.stats.kills} · 번 골드 ${Math.round(data.stats.gold)} · ${Math.floor(data.stats.time / 60)}분 ${Math.floor(data.stats.time % 60)}초` }));
-      for (const [t, v] of dmg) {
-        const name = t.level >= 4 ? D().towers[t.type].branches[t.branch].name : `${D().towers[t.type].name} Lv${t.level}`;
-        st.appendChild(el('div', { class: 'dmg-row' }, [UI.towerImg(t.type, t.level, t.branch, 'mini'), el('span', { text: name }), el('div', { class: 'dmg-bar' }, [el('i', { style: { width: `${(v / total) * 100}%`, background: D().elements[D().towers[t.type].element].color } })]), el('b', { text: Math.round(v).toLocaleString() })]));
-      }
-      if (data.stats.heroDamage) st.appendChild(el('div', { class: 'dmg-row' }, [UI.portrait(hero, 'normal', 'mini-portrait'), el('span', { text: D().heroes[hero].name }), el('div', { class: 'dmg-bar' }, [el('i', { style: { width: `${(data.stats.heroDamage / total) * 100}%`, background: '#fff' } })]), el('b', { text: Math.round(data.stats.heroDamage).toLocaleString() })]));
-      box.appendChild(st);
+      box.appendChild(resultStats(data, hero));
       // 버튼
       const next = P().nextMapId(def.id);
       const after = win && data.mode === 'normal' && def.story && def.story.after;
@@ -38156,6 +38298,287 @@ RG.render = (() => {
 })();
 
 </script>
+  <script>/* js/ui/raid.js */
+'use strict';
+
+/* =========================================================
+ * 조각 레이드 화면 — 설계: docs/design/raid.md · 규칙: js/core/raid.js · 데이터: js/data/raid.js
+ * 왼쪽: 내 탑(조각 강화 단계·모은 조각·깬 난이도) / 오른쪽: 고른 탑의 조각 강화, 난이도 1~5, 영웅, 레이드 시작
+ * 레이드 판에서는 고른 탑만 지을 수 있음(영웅은 함께). 이기면 그 탑의 조각, 조각으로 그 탑을 강화(캠페인·무한·레이드, 도전 제외).
+ * 결과 화면(RG.ui.raidResult)도 여기서: 얻은 조각, 다음 강화까지, 다시·다음 난이도·레이드로
+ * ========================================================= */
+(() => {
+  const { el, escapeHtml: esc, withJosa: wj } = RG.util;
+  const UI = RG.ui;
+  const D = () => RG.data;
+  const P = () => RG.progress;
+  const RD = () => RG.data.raid;
+
+  let pickTower = null;
+  let pickDiff = {};   // 탑마다 마지막으로 고른 난이도
+  let pickHero = null;
+
+  const ROLE = { attack: '공격', support: '지원', barracks: '병영', economy: '경제' };
+
+  /** 조각 강화 단계의 효과 글 (그 탑 역할에 맞는 것만) */
+  function effectText(type, lv) {
+    if (lv <= 0) return '효과 없음';
+    const b = RG.raid.shardBonus(lv);
+    const role = D().towers[type].role;
+    const pct = Math.round(b.pct * 100);
+    const out = [role === 'support' ? `지원 효과 +${pct}%` : role === 'economy' ? `수입 +${pct}%` : role === 'barracks' ? `병사 체력·공격력 +${pct}%` : `공격력 +${pct}%`];
+    if (role === 'attack' && b.rangePct) out.push(`사거리 +${Math.round(b.rangePct * 100)}%`);
+    if (role === 'attack' && b.speedPct) out.push(`공격 속도 +${Math.round(b.speedPct * 100)}%`);
+    if (RG.raid.isSupport(type)) out.push(`레이드 영웅 강화 +${pct}%`);
+    return out.join(' · ');
+  }
+  RG.ui.shardEffectText = effectText;
+
+  /** 조각 단계 배지 ◆n (0이면 없음) */
+  function lvBadge(lv, cls = '') { return lv > 0 ? el('em', { class: `shard-lv ${cls}`, title: `조각 강화 ${lv}단계`, text: `◆${lv}` }) : null; }
+  RG.ui.shardBadge = lvBadge;
+
+  /** 다음 단계까지 막대 */
+  function progressBar(type) {
+    const lv = P().shardLvOf(type);
+    const cost = RG.raid.shardCost(lv);
+    const have = P().shardsOf(type);
+    if (cost == null) return el('span', { class: 'rd-bar max' }, [el('i', { style: 'width:100%' }), el('b', { text: '최대' })]);
+    return el('span', { class: `rd-bar ${have >= cost ? 'ready' : ''}`, title: `조각 ${have}/${cost}` }, [el('i', { style: `width:${Math.min(100, (have / cost) * 100)}%` }), el('b', { text: `${have}/${cost}` })]);
+  }
+
+  /** 웨이브에 나오는 적 (보기용) */
+  function enemiesOf(type, d, heroId) {
+    const set = [];
+    for (const w of RG.grid.parseWaves(RG.raid.waves(type, d, heroId))) for (const g of w.groups) if (!set.includes(g.e)) set.push(g.e);
+    return set;
+  }
+
+  /** 레이드 시작 opts (캠페인과 같은 성장: 기술 나무·뽑기 강화·조각 강화·영웅 성장) */
+  function raidOpts(type, d, heroId) {
+    const opts = Object.assign({
+      mode: 'normal', heroId, skills: P().get().skills.slice(), seed: (Math.random() * 1e9) >>> 0,
+      towerRanks: P().towerRanks(), finalLv2: true, branches: P().branchesUnlocked(),
+    }, RG.raid.setup(type, d, heroId));
+    const sl = P().shardLevels();
+    if (sl) opts.shardLv = sl;
+    const growth = heroId ? P().heroGrowth(heroId) : null;
+    if (growth) opts.heroGrowth = growth;
+    return opts;
+  }
+  RG.ui.raidOpts = raidOpts;
+
+  function start(type, d, heroId) {
+    try { if (RG.audio) RG.audio.init(); } catch (e) { /* 무시 */ }
+    UI.sfx('click');
+    if (heroId) { P().get().lastHero = heroId; P().save(); }
+    pickTower = type; pickDiff[type] = d; pickHero = heroId;
+    UI.show('game', { opts: raidOpts(type, d, heroId) });
+  }
+
+  UI.register('raid', {
+    enter(sec, data = {}) {
+      UI.music('worldmap');
+      sec.innerHTML = '';
+      const back = () => UI.show(data.back || 'world', data.backData || {});
+      const head = el('header', { class: 'top-bar' }, [
+        el('button', { class: 'icon-btn', title: '돌아가기', 'aria-label': '돌아가기', onclick: back }, [UI.icon('back')]),
+        el('h2', {}, [UI.icon('shard', 'tiny'), ' 조각 레이드']),
+        el('span', { class: 'dim rd-head-note', text: '탑 하나만으로 막아 내면 그 탑의 조각을 얻습니다' }),
+      ]);
+      if (!P().raidOpen()) {
+        const def = D().maps.find((m) => m.id === RD().unlockAfter);
+        sec.append(head, el('div', { class: 'rd-locked' }, [UI.icon('lock', 'big-ico'), el('p', { text: `${def.id} ${def.name}을(를) 지켜 내면 열립니다.` })]));
+        return;
+      }
+      const owned = P().ownedTowers();
+      if (data.tower && owned.includes(data.tower)) pickTower = data.tower;
+      if (!pickTower || !owned.includes(pickTower)) pickTower = owned[0];
+      const heroes = P().heroesFor(P().frontier());
+      if (data.hero && heroes.includes(data.hero)) pickHero = data.hero;
+      if (!pickHero || !heroes.includes(pickHero)) pickHero = heroes.includes(P().get().lastHero) ? P().get().lastHero : heroes[0];
+      const type = pickTower;
+      const maxD = P().raidMaxDiff(type);
+      let d = data.d || pickDiff[type] || maxD;
+      d = Math.max(1, Math.min(maxD, d));
+      pickDiff[type] = d;
+      const td = D().towers[type];
+      const support = RG.raid.isSupport(type);
+      const rerender = (patch) => UI.show('raid', Object.assign({ back: data.back, backData: data.backData, tower: pickTower, d: pickDiff[pickTower], hero: pickHero }, patch));
+
+      /* ---------- 내 탑 목록 ---------- */
+      const list = el('div', { class: 'rd-list', role: 'listbox', 'aria-label': '레이드할 탑' });
+      for (const t of owned) {
+        const lv = P().shardLvOf(t);
+        const best = P().raidBest(t);
+        const cost = RG.raid.shardCost(lv);
+        const canUp = cost != null && P().shardsOf(t) >= cost;
+        list.appendChild(el('button', {
+          class: `rd-tower rar-${RG.gacha.rarityOf(t)} ${t === type ? 'on' : ''}`, role: 'option', 'aria-selected': t === type ? 'true' : 'false',
+          'aria-label': `${D().towers[t].name} — 조각 강화 ${lv}단계, 깬 난이도 ${best}`,
+          onclick: () => { UI.sfx('click'); rerender({ tower: t, d: pickDiff[t] || P().raidMaxDiff(t) }); },
+        }, [
+          el('span', { class: 'rd-timg' }, [UI.towerImg(t, 1, null, 'mini'), lvBadge(lv)]),
+          el('span', { class: 'rd-tname', text: D().towers[t].name }),
+          progressBar(t),
+          el('span', { class: 'rd-pips', 'aria-hidden': 'true' }, RD().difficulty.map((_, i) => el('i', { class: i < best ? 'on' : '' }))),
+          canUp ? el('span', { class: 'rd-up-dot', title: '조각 강화 가능', text: '▲' }) : null,
+        ]));
+      }
+      const missing = D().towerOrder.length - owned.length;
+      const listWrap = el('section', { class: 'rd-left' }, [
+        el('div', { class: 'sec-title', text: `내 탑 (${owned.length}/${D().towerOrder.length})` }),
+        list,
+        missing > 0 ? el('p', { class: 'small dim', text: `아직 없는 탑 ${missing}종은 뽑기에서 얻으면 레이드할 수 있어요.` }) : null,
+      ]);
+
+      /* ---------- 고른 탑 ---------- */
+      const lv = P().shardLvOf(type);
+      const cost = RG.raid.shardCost(lv);
+      const have = P().shardsOf(type);
+      const upgrade = () => {
+        const r = P().upgradeShard(type);
+        if (!r.ok) { UI.toast(r.reason, 'warn'); UI.sfx('error'); return; }
+        UI.sfx('unlock');
+        UI.toast(`${td.name} 조각 강화 ${r.lv}단계! ${effectText(type, r.lv)}`, 'good', 2600);
+        rerender({});
+      };
+      const shardBox = el('div', { class: 'rd-shard' }, [
+        el('div', { class: 'rd-shard-head' }, [
+          UI.icon('shard', 'small'),
+          el('b', { text: `조각 강화 ${lv}/${RD().shard.max}단계` }),
+          el('span', { class: 'rd-have', text: `조각 ${have}개` }),
+        ]),
+        el('div', { class: 'rd-steps', 'aria-hidden': 'true' }, Array.from({ length: RD().shard.max }, (_, i) => el('i', { class: i < lv ? 'on' : '' }))),
+        el('p', { class: 'rd-eff' }, [el('span', { class: 'dim', text: '지금 ' }), effectText(type, lv)]),
+        cost != null ? el('p', { class: 'rd-eff next' }, [el('span', { class: 'dim', text: `${lv + 1}단계 ` }), effectText(type, lv + 1)]) : null,
+        el('div', { class: 'rd-shard-act' }, [
+          progressBar(type),
+          cost != null ? el('button', { class: `btn small ${have >= cost ? 'btn-primary' : ''}`, disabled: have < cost, onclick: upgrade }, [`강화 (조각 ${cost})`]) : el('span', { class: 'good', text: '최대 단계' }),
+        ]),
+        el('p', { class: 'small dim', text: '조각 강화는 캠페인·무한·레이드에 적용됩니다 (도전 모드 제외). 뽑기 강화와 따로 쌓여요.' }),
+      ]);
+
+      // 난이도
+      const diffRow = el('div', { class: 'rd-diffs', role: 'radiogroup', 'aria-label': '난이도' });
+      RD().difficulty.forEach((df, i) => {
+        const n = i + 1;
+        const open = n <= maxD;
+        const cleared = P().raidBest(type) >= n;
+        const map = D().raidMaps.find((m) => m.id === df.map);
+        diffRow.appendChild(el('button', {
+          class: `rd-diff ${n === d ? 'on' : ''} ${open ? '' : 'locked'} ${cleared ? 'cleared' : ''}`, role: 'radio', 'aria-checked': n === d ? 'true' : 'false',
+          tabindex: open ? null : '-1', 'aria-disabled': open ? null : 'true',
+          title: open ? `${df.name} · ${map.name} · 웨이브 ${df.waves}` : '앞 난이도를 이 탑으로 먼저 깨야 합니다',
+          onclick: () => { if (!open) { UI.toast('앞 난이도를 이 탑으로 먼저 깨야 합니다', 'warn'); return; } UI.sfx('click'); rerender({ d: n }); },
+        }, [
+          el('b', { text: open ? df.name : '잠김' }),
+          el('span', { class: 'rd-rw' }, [UI.icon('shard', 'tiny'), cleared ? `${df.reward}` : `${df.reward * RD().firstClearMult}`]),
+          cleared ? el('small', { class: 'good', text: '✓ 깸' }) : open ? el('small', { class: 'gold', text: `첫 클리어 ×${RD().firstClearMult}` }) : el('small', { class: 'dim', text: '앞 난이도 먼저' }),
+        ]));
+      });
+      const df = RD().difficulty[d - 1];
+      const map = D().raidMaps.find((m) => m.id === df.map);
+
+      // 영웅
+      const heroRow = el('div', { class: 'hero-pick rd-heroes' });
+      for (const h of heroes) {
+        const hd = D().heroes[h];
+        heroRow.appendChild(el('button', {
+          class: `hp-item ${pickHero === h ? 'on' : ''}`, title: `${hd.name} — ${hd.title}`,
+          onclick: () => { UI.sfx('click'); rerender({ hero: h }); },
+        }, [UI.portrait(h, pickHero === h ? 'happy' : 'normal', 'hp-portrait'), el('span', { text: hd.name })]));
+      }
+      const hd = D().heroes[pickHero];
+
+      // 적
+      const enemyRow = el('div', { class: 'chip-row' });
+      for (const e of enemiesOf(type, d, pickHero)) {
+        const chip = el('span', { class: 'e-chip' }, [UI.enemyImg(e, 'mini')]);
+        UI.tooltipFor(chip, () => `<b>${esc(D().enemies[e].name)}</b><br>${esc(D().enemies[e].desc)}`);
+        enemyRow.appendChild(chip);
+      }
+      const air = RG.raid.canAir(type, pickHero);
+      const rules = [
+        `${td.name}만 지을 수 있습니다 · 영웅은 함께`,
+        support ? `지원 탑 레이드: ${wj(hd ? hd.name : '영웅', '이/가')} 싸웁니다. 영웅 곁(${RD().supportHero.radius}칸 안)에 지은 ${td.name}마다 영웅 피해·기술 +${Math.round(RD().supportHero.perTower * 100)}% (탑 단계가 높을수록 더, 가장 센 ${RD().supportHero.max}개까지)` : null,
+        !air ? (support ? `${wj(hd ? hd.name : '영웅', '은/는')} 공중을 못 쳐서 비행 적은 나오지 않습니다` : `${wj(td.name, '은/는')} 공중을 못 쳐서 비행 적은 나오지 않습니다`) : null,
+        support ? '영웅의 원소에 면역인 적은 나오지 않습니다' : `${td.name}의 원소에 면역인 적은 나오지 않습니다`,
+      ].filter(Boolean);
+      const run = RG.save.get(RG.save.KEYS.run, null);
+      const resume = run && run.opts && run.opts.raid && run.opts.raid.tower === type && run.opts.raid.d === d;
+      const detail = el('section', { class: 'rd-right' }, [
+        el('div', { class: 'rd-title' }, [
+          el('span', { class: 'rd-big' }, [UI.towerImg(type, Math.min(3, 1 + Math.floor(lv / 2)), null, 'rd-big-img'), lvBadge(lv, 'big')]),
+          el('div', {}, [
+            el('h3', { text: td.name }),
+            el('p', { class: 'dim small', text: `${RG.gacha.RARITIES[RG.gacha.rarityOf(type)].name} · ${D().elements[td.element].name} · ${ROLE[td.role] || td.role}` }),
+            el('p', { class: 'small', text: td.desc }),
+          ]),
+        ]),
+        shardBox,
+        el('div', { class: 'sec-title', text: '난이도' }), diffRow,
+        el('p', { class: 'rd-mapline' }, [UI.icon('map', 'tiny'), ` ${map.name} · 웨이브 ${df.waves} · 시작 골드 ${RG.raid.setup(type, d, pickHero).raid.startGold}`]),
+        el('ul', { class: 'rd-rules' }, rules.map((r) => el('li', { text: r }))),
+        el('div', { class: 'sec-title', text: '나오는 적' }), enemyRow,
+        el('div', { class: 'sec-title', text: '영웅' }), heroRow,
+        el('div', { class: 'brief-actions' }, [
+          resume ? el('button', { class: 'btn', onclick: () => UI.show('game', { resume: run }) }, [`이어하기 (웨이브 ${run.wave})`]) : null,
+          el('button', { class: 'btn btn-primary btn-big', 'data-autofocus': '', onclick: () => start(type, d, pickHero) }, [resume ? '새로 시작' : '레이드 시작!']),
+        ]),
+      ]);
+      sec.append(head, el('div', { class: 'rd-body' }, [listWrap, detail]));
+      // 고른 탑이 목록에서 보이게
+      requestAnimationFrame(() => { const on = list.querySelector('.rd-tower.on'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' }); });
+    },
+  });
+
+  /* =====================================================
+   * 레이드 결과 (result 화면이 data.raid면 여기로)
+   * ===================================================== */
+  RG.ui.raidResult = function raidResult(sec, data) {
+    const win = data.result === 'win';
+    const R = data.raid;
+    const type = R.tower;
+    const td = D().towers[type];
+    const df = RD().difficulty[R.d - 1];
+    const box = el('div', { class: `result-box ${win ? 'win' : 'lose'}` });
+    const hero = data.opts.heroId;
+    if (hero) box.appendChild(UI.portrait(hero, win ? 'happy' : 'worried', 'result-portrait'));
+    box.appendChild(el('h2', { text: win ? '레이드를 막아 냈다!' : data.timeout ? '시간이 너무 오래 걸렸다…' : '등불이 꺼졌다…' }));
+    box.appendChild(el('p', { class: 'dim', text: `조각 레이드 · ${td.name} · ${df.name} (${data.waves}/${data.totalWaves}웨이브)` }));
+    const rr = data.rec;
+    const lv = P().shardLvOf(type);
+    const cost = RG.raid.shardCost(lv);
+    const got = el('div', { class: 'reward-box rd-reward' }, [
+      el('div', { class: 'rw-total' }, [UI.towerImg(type, 1, null, 'mini'), UI.icon('shard', 'small'), el('b', { text: `+${rr.shards}` }), el('span', { text: `${td.name} 조각` })]),
+      el('div', { class: 'rw-lines dim', text: win ? (rr.firstClear ? `${df.name} 첫 클리어 ×${RD().firstClearMult}` : `${df.name} 클리어`) : rr.shards ? '절반 넘게 버텨 위로 조각' : '절반을 넘기면 지더라도 조각 1개' }),
+      el('div', { class: 'rd-result-bar' }, [progressBar(type), cost != null ? el('span', { class: P().shardsOf(type) >= cost ? 'good' : 'dim', text: P().shardsOf(type) >= cost ? ' 조각 강화를 할 수 있어요!' : ` 다음 강화까지 ${cost - P().shardsOf(type)}개` }) : el('span', { class: 'good', text: ' 최대 단계' })]),
+      win && rr.firstClear && R.d < RD().difficulty.length ? el('p', { class: 'good', text: `${RD().difficulty[R.d].name} 난이도가 열렸습니다` }) : null,
+    ]);
+    box.appendChild(got);
+    if (rr.shards > 0) setTimeout(() => UI.sfx('star'), 500);
+    const bd = rr.bond;
+    if (bd && bd.gain > 0) {
+      const hn = D().heroes[bd.heroId].name;
+      box.appendChild(el('div', { class: 'growth-box' }, [el('div', { class: `gb-bond ${bd.levelUp ? 'up' : ''}` }, [
+        UI.portrait(bd.heroId, bd.levelUp ? 'happy' : 'normal', 'mini-portrait'),
+        el('span', { text: bd.levelUp ? `${hn} 인연 Lv${bd.after}! 재능 점수 +${bd.after - bd.before}` : `${hn} 인연 +${bd.gain}` }),
+      ])]));
+    }
+    if (RG.ui.resultStats) box.appendChild(RG.ui.resultStats(data, hero));
+    const nextD = win && R.d < RD().difficulty.length && P().raidMaxDiff(type) > R.d ? R.d + 1 : null;
+    const btns = el('div', { class: 'result-buttons' }, [
+      el('button', { class: 'btn', 'data-autofocus': nextD ? null : '', onclick: () => UI.show('game', { opts: raidOpts(type, R.d, hero) }) }, ['다시 하기']),
+      el('button', { class: 'btn', onclick: () => UI.show('raid', { tower: type, d: nextD || R.d, hero }) }, ['레이드로']),
+      nextD ? el('button', { class: 'btn btn-primary', 'data-autofocus': '', onclick: () => UI.show('game', { opts: raidOpts(type, nextD, hero) }) }, [`다음 난이도 (${RD().difficulty[nextD - 1].name})`]) : null,
+    ]);
+    box.appendChild(btns);
+    sec.appendChild(box);
+  };
+})();
+
+</script>
   <script>/* js/ui/game.js */
 'use strict';
 
@@ -38244,7 +38667,8 @@ RG.render = (() => {
       const which = game;
       setTimeout(() => { if (game === which && UI.currentId() === 'game') RG.ui.tutorial.start(root, () => setTimeout(nextTip, 400)); }, 700);
     } else if (!data.resume && opts.mode === 'normal') setTimeout(nextTip, 600);
-    if (!data.resume) banner(`${game.def.id} ${game.def.name}`, opts.mode === 'challenge' ? `도전: ${game.def.challenge.text}` : opts.mode === 'endless' ? '무한 모드' : '준비가 되면 웨이브를 호출하세요');
+    if (!data.resume && opts.raid) banner(`조각 레이드 · ${D().towers[opts.raid.tower].name}`, `${D().raid.difficulty[opts.raid.d - 1].name} · ${D().towers[opts.raid.tower].name}만 지을 수 있습니다`);
+    else if (!data.resume) banner(`${game.def.id} ${game.def.name}`, opts.mode === 'challenge' ? `도전: ${game.def.challenge.text}` : opts.mode === 'endless' ? '무한 모드' : '준비가 되면 웨이브를 호출하세요');
   }
 
   function leave() {
@@ -38527,7 +38951,7 @@ RG.render = (() => {
       R.nextFor = w.index;
       R.next.innerHTML = '';
       if (w.index < w.total && game.opts.mode !== 'endless') {
-        const wd = RG.grid.parseWaves([game.def.waves[w.index]])[0];
+        const wd = RG.grid.parseWaves([game.waveStrings[w.index]])[0];
         const counts = new Map();
         for (const g of wd.groups) counts.set(g.e, (counts.get(g.e) || 0) + g.n);
         R.next.appendChild(el('span', { class: 'next-title', text: '다음' }));
@@ -39671,7 +40095,7 @@ RG.render = (() => {
     if (!game) return;
     UI.sfx('click');
     const body = el('div', { class: 'pause-body' }, [
-      el('p', { class: 'dim', text: `${game.def.id} ${game.def.name} · 웨이브 ${game.state.wave.index}/${isFinite(game.state.wave.total) ? game.state.wave.total : '∞'}` }),
+      el('p', { class: 'dim', text: `${opts.raid ? `조각 레이드 · ${D().towers[opts.raid.tower].name} · ${D().raid.difficulty[opts.raid.d - 1].name}` : `${game.def.id} ${game.def.name}`} · 웨이브 ${game.state.wave.index}/${isFinite(game.state.wave.total) ? game.state.wave.total : '∞'}` }),
     ]);
     UI.modal(body, {
       title: '일시정지',
@@ -39679,7 +40103,8 @@ RG.render = (() => {
         { text: '설정', onClick: () => RG.ui.openSettings && RG.ui.openSettings() },
         { text: '조작법', onClick: openControls },
         { text: '다시 시작', onClick: () => UI.confirmBox('처음부터 다시 시작할까요?', () => { RG.save.remove(RG.save.KEYS.run); UI.show('game', { opts }); }) },
-        { text: '지도로', onClick: () => UI.confirmBox('지도로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('world', {})) },
+        opts.raid ? { text: '레이드로', onClick: () => UI.confirmBox('레이드 화면으로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('raid', { tower: opts.raid.tower, d: opts.raid.d })) }
+          : { text: '지도로', onClick: () => UI.confirmBox('지도로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('world', {})) },
         { text: '계속하기', primary: true },
       ],
     });
@@ -39730,12 +40155,13 @@ RG.render = (() => {
   function finish() {
     if (!game || !game.state.result) return null;
     const st = game.state;
-    const rec = RG.progress.record(game.def.id, opts.mode, st);
+    // 조각 레이드: 맵 기록·별·공명석이 아니라 그 탑의 조각 (js/core/progress.js recordRaid)
+    const rec = opts.raid ? RG.progress.recordRaid(opts.raid.tower, opts.raid.d, st) : RG.progress.record(game.def.id, opts.mode, st);
     const stats = {
       damage: st.stats.damageByTower, kills: st.stats.kills, gold: st.stats.goldEarned, heroDamage: st.stats.heroDamage,
       towers: st.towers.map((t) => ({ id: t.id, type: t.type, level: t.level, branch: t.branch })), time: st.time,
     };
-    return { mapId: game.def.id, mode: opts.mode, result: st.result, lives: st.lives, maxLives: st.maxLives, task: st.task, rec, stats, opts, waves: st.wave.index, timeout: st.timeout };
+    return { mapId: game.def.id, mode: opts.mode, result: st.result, lives: st.lives, maxLives: st.maxLives, task: st.task, rec, stats, opts, waves: st.wave.index, totalWaves: st.wave.total, timeout: st.timeout, raid: opts.raid ? { tower: opts.raid.tower, d: opts.raid.d } : null };
   }
 
   /* =====================================================

@@ -207,4 +207,41 @@ test('레이드 판: 과제 없음, 시작 골드·웨이브 수가 설정대로
   assert.strictEqual(g.state.task, null);
   assert.strictEqual(g.state.gold, RG.raid.setup('flame_mortar', 1).raid.startGold);
   assert.strictEqual(g.state.wave.total, RG.data.raid.difficulty[0].waves);
+  // 화면(다음 웨이브 미리보기·그림 미리 굽기)이 읽는 웨이브 글은 맵 데이터가 아니라 레이드 웨이브
+  assert.strictEqual(JSON.stringify(g.waveStrings), JSON.stringify(RG.raid.setup('flame_mortar', 1).raid.waves));
+  const c = RG.sim.create({ mapId: '1-1', mode: 'normal', seed: 1 });
+  assert.strictEqual(JSON.stringify(c.waveStrings), JSON.stringify(RG.data.maps[0].waves));
+});
+
+test('지원 탑 레이드: 적은 적게·단단하게, 갑옷 적 없음, 처치 골드·경험치 더, 쓰러지면 처음 자리에서 일어남, 영웅 보정', () => {
+  const { RG } = fresh();
+  const S = RG.data.raid.supportHero;
+  const sup = RG.grid.parseWaves(RG.raid.waves('sanctuary', 4, 'kara'));
+  const atk = RG.grid.parseWaves(RG.raid.waves('ember_archer', 4, 'kara'));
+  const count = (ws) => ws.reduce((a, w) => a + w.groups.reduce((b, g) => b + g.n, 0), 0);
+  assert.ok(count(sup) < count(atk) * 0.6, `적 수 ${count(sup)} < ${count(atk)}`);
+  for (const w of sup) for (const g of w.groups) assert.ok(!RG.data.raid.pool.armored.includes(g.e), `갑옷 적 ${g.e}`);
+  const s = RG.raid.setup('sanctuary', 2, 'kara');
+  assert.ok(s.raid.support && s.raid.bountyMult > 2);
+  assert.strictEqual(RG.raid.setup('ember_archer', 2, 'kara').raid.bountyMult, 0, '공격 탑 레이드는 그대로');
+  // 영웅마다 체력 보정: 모든 영웅에 값이 있고, 같은 탑·난이도라도 영웅에 따라 적 체력이 다름
+  for (const h of RG.data.heroOrder) assert.ok(S.heroHp[h] > 0, h);
+  assert.ok(RG.raid.setup('sanctuary', 2, 'sera').hpMult < RG.raid.setup('sanctuary', 2, 'kara').hpMult);
+  assert.strictEqual(RG.raid.setup('ember_archer', 2, 'sera').hpMult, RG.raid.setup('ember_archer', 2, 'kara').hpMult, '공격 탑 레이드는 영웅 보정 없음');
+  // 쓰러진 영웅: 등불 곁이 아니라 처음 자리 근처에서 일어남
+  const g = raidGame(RG, 'sanctuary', 1);
+  const h = g.state.hero;
+  const home = { x: h.x, y: h.y };
+  // 등불 쪽에서 쓰러진 것처럼
+  h.x = g.map.lantern.x - 1; h.y = g.map.lantern.y; h.hp = 0; h.dead = true; h.downUntil = g.state.time + 0.3;
+  let revived = false;
+  for (let i = 0; i < 30 * 5 && !revived; i++) { g.step(); revived = !h.dead; }
+  assert.ok(revived, '다시 일어남');
+  assert.ok(Math.hypot(h.x - home.x, h.y - home.y) < 1.5, `처음 자리 근처 (${h.x.toFixed(1)},${h.y.toFixed(1)}) vs (${home.x},${home.y})`);
+  // 공격 탑 레이드는 예전처럼 등불 곁
+  const q = raidGame(RG, 'ember_archer', 1);
+  const qh = q.state.hero;
+  qh.hp = 0; qh.dead = true; qh.downUntil = q.state.time + 0.3;
+  for (let i = 0; i < 30 * 5 && qh.dead; i++) q.step();
+  assert.ok(Math.hypot(qh.x - q.map.lantern.x, qh.y - q.map.lantern.y) < 2, '공격 탑 레이드는 등불 곁');
 });

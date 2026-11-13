@@ -6,6 +6,7 @@
  *   node tools/raid-balance.js --towers sanctuary,forge --d 1-3 --hero kara --shard 0
  *   node tools/raid-balance.js --search --d 3-5       # 그리디가 지면 탐색 봇으로 다시
  *   node tools/raid-balance.js --json out.json
+ *   node tools/raid-balance.js --towers stone_barracks --f 0.2 --d 4-5 --search   # 보정값을 바꿔 봄
  * 공격 탑·병영: 그리디 봇(그 탑만 지을 수 있음). 지원·경제 탑: 영웅 곁에 그 탑을 모아 짓고 올리는 봇.
  */
 const fs = require('fs');
@@ -93,6 +94,28 @@ function one(type, d, f = null) {
 
 const out = {};
 const t0 = Date.now();
+if (flag('--calibrate-heroes')) {
+  // 지원 탑 레이드의 영웅 보정: 기준 탑(--tower, 기본 성소)·기준 난이도(--at 2)를 영웅마다 이기는 최대 배율 ÷ 카라의 것
+  const at = Number(arg('--at', 2));
+  const ref = arg('--tower', 'sanctuary');
+  const grid = [0.1, 0.13, 0.17, 0.22, 0.28, 0.36, 0.46, 0.6, 0.78, 1, 1.3, 1.69, 2.2, 2.86, 3.7, 4.8, 6.3];
+  const maxOf = (h) => {
+    let best = 0;
+    for (const f of grid) {
+      const setup = RG.raid.setup(ref, at, h);
+      const opts = Object.assign({ mode: 'normal', seed: 1, heroId: h }, setup);
+      opts.hpMult = Math.round(setup.hpMult / RG.raid.heroScale(h) * f * 1000) / 1000;
+      const r = supportRun(opts);
+      if (r.result === 'win') best = f; else break;
+    }
+    return best;
+  };
+  const base = maxOf('kara');
+  const table = {};
+  for (const h of D.heroOrder) { const m = h === 'kara' ? base : maxOf(h); table[h] = Math.max(0.1, Math.round((m / base) * 100) / 100); console.log(`${h.padEnd(8)} 이김 최대 ×${m} → 보정 ${table[h]}`); }
+  console.log(JSON.stringify(table));
+  process.exit(0);
+}
 if (flag('--calibrate')) {
   // 탑마다 보정값: 기준 난이도(--at, 기본 2)를 봇이 이기는 가장 큰 배율 ÷ 여유(--margin)
   const at = Number(arg('--at', 2));
@@ -113,7 +136,7 @@ for (const type of towers) {
   out[type] = {};
   const line = [];
   for (const d of diffs) {
-    const r = one(type, d);
+    const r = one(type, d, arg('--f') ? Number(arg('--f')) : null);
     out[type][d] = r;
     line.push(`d${d}:${r.result === 'win' ? `W${r.lives}` : `L${r.waves}/${r.total}`}${r.bot === 'search' ? 's' : ''}`);
   }

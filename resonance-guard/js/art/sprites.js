@@ -117,7 +117,7 @@ RG.art.sprites = (() => {
       if (types.has('titan_boulder')) { jobs.push(load('fx:boulder', () => A.fxSprite('boulder', 0), 120, 120)); jobs.push(load('fx:ironball', () => A.fxSprite('ironball', 0), 120, 120)); }
     }
     const enemies = new Set();
-    for (const w of RG.grid.parseWaves(game.def.waves || [])) for (const g of w.groups) enemies.add(g.e);
+    for (const w of RG.grid.parseWaves(game.waveStrings || game.def.waves || [])) for (const g of w.groups) enemies.add(g.e);
     if (game.opts.mode === 'endless') for (const e of RG.data.regionPools[game.def.region] || []) enemies.add(e);
     // 분열·소환으로 나오는 적
     for (const e of [...enemies]) {

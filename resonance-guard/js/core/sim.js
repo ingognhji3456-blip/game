@@ -153,7 +153,7 @@ RG.sim = (() => {
       let sum = 0;
       for (let i = 0; i < Math.min(S.max, got.length); i++) sum += got[i];
       const sl = shards[RA.tower] || 0;
-      return 1 + sum * S.perTower * (1 + RG.raid.shardBonus(sl).pct);
+      return (S.base || 1) * (1 + sum * S.perTower) * (1 + RG.raid.shardBonus(sl).pct);
     }
     function heroStat(h) {
       const hd = D().heroes[h.heroId];
@@ -253,6 +253,7 @@ RG.sim = (() => {
       const ed = D().enemies[e.type];
       let xp = ed.boss ? 10 : ed.elite ? 3 : 1;
       if (!full) xp *= 0.5;
+      if (RA && RA.bountyMult) xp *= RA.bountyMult; // 지원 탑 레이드: 적이 적은 만큼 경험치도 더
       h.xp += xp;
       const table = D().heroXp;
       while (h.level < table.length && h.xp >= table[h.level]) {
@@ -501,6 +502,7 @@ RG.sim = (() => {
       let bounty = ed.bounty;
       if (e.fragment) bounty = Math.max(1, Math.round(ed.bounty * (ed.traits.split ? ed.traits.split.hpPct || 0.25 : 0.25)));
       bounty = Math.round(bounty * (1 + bountyBonus(e, src)));
+      if (RA && RA.bountyMult) bounty = Math.round(bounty * RA.bountyMult); // 지원 탑 레이드: 적이 적은 만큼 처치 골드를 더
       st.gold += bounty;
       st.stats.goldEarned += bounty;
       st.stats.kills += 1;
@@ -2853,7 +2855,9 @@ RG.sim = (() => {
         if (time >= h.downUntil) {
           h.dead = false;
           h.hp = h.maxHp;
-          const tile = RG.grid.nearestHeroTile(map, blocked, map.lantern.x - 0.6, map.lantern.y);
+          // 지원 탑 레이드는 처음 자리(지원 탑을 모아 지은 곳)에서 다시 일어남 — 등불 곁에서 일어나면 탑 강화를 못 받으므로
+          const home = RA && RA.support ? heroStartTile() : null;
+          const tile = home ? RG.grid.nearestHeroTile(map, blocked, home.c + 0.5, home.r + 0.5) : RG.grid.nearestHeroTile(map, blocked, map.lantern.x - 0.6, map.lantern.y);
           h.x = tile ? tile.c + 0.5 : map.lantern.x; h.y = tile ? tile.r + 0.5 : map.lantern.y; h.px = h.x; h.py = h.y;
           h.path = [];
           ev('heroRevive', { heroId: h.heroId, x: h.x, y: h.y });
@@ -3067,6 +3071,7 @@ RG.sim = (() => {
 
     Object.assign(game, {
       step, cmd, canBuild, previewLinks, towerInfo, hash, upgradeCost, sellValue, startLevel, towerAllowed,
+      waveStrings: (RA ? RA.waves : def.waves) || [], // 이 판의 웨이브 글 (레이드는 맵 데이터가 아니라 레이드 규칙의 것) — 다음 웨이브 미리보기·그림 미리 굽기
       checkTask, resonanceSnapshot, api, blocked,
     });
     Object.defineProperty(game, 'flow', { get: () => flow, enumerable: true });

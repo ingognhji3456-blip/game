@@ -65,17 +65,18 @@
     const starsNow = P().starsTotal();
     // 가운데: 모험 카드 (이어할 판이 있으면 그 카드가 금빛, 지도 카드는 그 아래 보조)
     const mainCol = el('div', { class: 'tm-main' });
-    const resumable = run && maps.concat(D().endless).some((m) => m.id === run.mapId);
+    const resumable = run && maps.concat(D().endless, D().raidMaps || []).some((m) => m.id === run.mapId);
     const bannerOf = (region) => (RG.art.regionBanner ? UI.svgImg(RG.art.regionBanner(region), 'tm-banner', '') : null);
     if (resumable) {
-      const rd = maps.concat(D().endless).find((m) => m.id === run.mapId);
+      const rd = maps.concat(D().endless, D().raidMaps || []).find((m) => m.id === run.mapId);
+      const raidRun = run.opts && run.opts.raid;
       mainCol.appendChild(el('button', { class: 'btn btn-primary btn-big tm-card tm-hero', 'data-autofocus': '', onclick: go(() => UI.show('game', { resume: run })) }, [
         bannerOf(rd.region || 1),
         el('span', { class: 'tm-medal tm-medal-big' }, [UI.icon('play', 'tm-ico')]),
         el('span', { class: 'tm-text' }, [
-          el('span', { class: 'tm-kicker', text: `하던 판 · ${run.mapId} 웨이브 ${run.wave}` }),
+          el('span', { class: 'tm-kicker', text: raidRun ? `하던 판 · 조각 레이드 웨이브 ${run.wave}` : `하던 판 · ${run.mapId} 웨이브 ${run.wave}` }),
           el('b', { class: 'tm-title', text: '이어하기' }),
-          el('span', { class: 'tm-sub', text: rd.name || '' }),
+          el('span', { class: 'tm-sub', text: raidRun ? `${D().towers[raidRun.tower].name} · ${D().raid.difficulty[raidRun.d - 1].name}` : rd.name || '' }),
         ]),
         el('span', { class: 'tm-go', text: '이어서 ›' }),
       ]));
@@ -115,6 +116,7 @@
       tile('tm-tree', '#7ad46a', UI.icon('tree', 'tm-ico'), '기술 나무', free > 0 ? `쓸 수 있는 별 ★${free}` : `모은 별 ★${starsNow}`, free > 0 ? `★${free}` : '', go(() => UI.show('tree', {}))),
       tile('tm-codex', '#f2b24a', UI.icon('book', 'tm-ico'), '도감', `만난 적 ${enemiesSeen}/${enemiesAll}`, '', go(() => UI.show('codex', {}))),
     ];
+    if (P().raidOpen()) mainCol.appendChild(raidButton('btn tm-raid'));
     menu.append(tiles[0], tiles[1], mainCol, tiles[2], tiles[3]);
     return menu;
   }
@@ -322,6 +324,17 @@
   let regionPick = null;        // 지역 고르기에서 펼쳐진 지역
   const regionArt = {};         // 지역 그림 SVG (한 번만 만듦)
   const artOf = (r) => regionArt[r] || (regionArt[r] = RG.art.regionMap ? RG.art.regionMap(r) : RG.art.regionBanner(r));
+  /** 조각 레이드로 가는 단추 (열리기 전엔 잠김 안내) */
+  function raidButton(cls) {
+    const open = P().raidOpen();
+    const ready = open && P().ownedTowers().some((t) => { const c = RG.raid.shardCost(P().shardLvOf(t)); return c != null && P().shardsOf(t) >= c; });
+    return el('button', {
+      class: `${cls} btn-raid ${open ? '' : 'locked'} ${ready ? 'ready' : ''}`, title: open ? '조각 레이드 — 탑 하나로 막아 그 탑의 조각을 모읍니다' : `${D().raid.unlockAfter}을(를) 지켜 내면 열립니다`,
+      onclick: () => { if (!open) { UI.toast(`조각 레이드는 ${D().raid.unlockAfter}을(를) 지켜 내면 열립니다`, 'warn'); return; } UI.show('raid', { back: UI.currentId() === 'title' ? 'title' : 'world' }); },
+    }, [UI.icon(open ? 'shard' : 'lock', 'tiny'), '조각 레이드', ready ? el('i', { class: 'rd-up-dot', text: '▲' }) : null]);
+  }
+  RG.ui.raidButton = raidButton;
+
   /** 지역 요약: 열림, 별, 클리어 수, 보스, 다음 맵 */
   function regionInfo(r) {
     const maps = D().maps.filter((m) => m.region === r);
@@ -437,6 +450,7 @@
           el('button', { class: 'btn small', onclick: () => UI.show('tree', {}) }, [UI.icon('tree', 'tiny'), `기술 나무${P().starsFree() > 0 ? ` (${P().starsFree()})` : ''}`]),
           el('button', { class: 'btn small', onclick: () => UI.show('heroes', {}) }, [UI.icon('hero', 'tiny'), '수호대']),
           el('button', { class: 'btn small', onclick: () => UI.show('codex', {}) }, [UI.icon('book', 'tiny'), '도감']),
+          raidButton('btn small'),
           el('button', { class: 'icon-btn', title: '설정', onclick: openSettings }, [UI.icon('settings')]),
         ]),
       ]);
@@ -610,10 +624,12 @@
       for (const t of towers) {
         const rank = P().towerRank(t);
         const fin = RG.gacha.isFinal(rank);
-        const chip = el('span', { class: `t-chip rar-${RG.gacha.rarityOf(t)}` }, [UI.towerImg(t, fin && mode !== 'challenge' ? 2 : 1, null, 'mini'), rank > 0 ? el('em', { class: `rank${fin ? ' fin' : ''}`, text: fin ? '★' : `+${rank}` }) : null]);
+        const slv = P().shardLvOf(t);
+        const chip = el('span', { class: `t-chip rar-${RG.gacha.rarityOf(t)}` }, [UI.towerImg(t, fin && mode !== 'challenge' ? 2 : 1, null, 'mini'), rank > 0 ? el('em', { class: `rank${fin ? ' fin' : ''}`, text: fin ? '★' : `+${rank}` }) : null, mode !== 'challenge' && RG.ui.shardBadge ? RG.ui.shardBadge(slv, 'chip') : null]);
         // 도전 모드는 뽑기 강화를 쓰지 않음(sim.js ranks)
         const rankNote = mode === 'challenge' ? (rank > 0 ? '<br><span class="dim">도전에서는 뽑기 강화가 적용되지 않습니다</span>' : '') : fin ? '<br><span class="good">맵에 같은 값으로 Lv2부터 지어집니다</span>' : '';
-        UI.tooltipFor(chip, () => `<b>${esc(D().towers[t].name)}</b>${rank > 0 ? ` <span class="good">${RG.gacha.rankLabel(rank)} (${esc(rankText(t, rank))})</span>` : ''}${rankNote}<br>${esc(D().towers[t].desc)}`);
+        const shardNote = slv > 0 ? (mode === 'challenge' ? '<br><span class="dim">도전에서는 조각 강화가 적용되지 않습니다</span>' : `<br><span class="good">조각 강화 ${slv}단계 (${esc(RG.ui.shardEffectText(t, slv))})</span>`) : '';
+        UI.tooltipFor(chip, () => `<b>${esc(D().towers[t].name)}</b>${rank > 0 ? ` <span class="good">${RG.gacha.rankLabel(rank)} (${esc(rankText(t, rank))})</span>` : ''}${rankNote}${shardNote}<br>${esc(D().towers[t].desc)}`);
         towerRow.appendChild(chip);
       }
       const missing = D().towerOrder.length - towers.length;
@@ -641,6 +657,9 @@
         // 영웅 성장(인연 재능·장신구)은 시작 때 복사 — 도전 모드에서는 판이 쓰지 않음
         const growth = !noHero && hero && mode !== 'challenge' ? P().heroGrowth(hero) : null;
         if (growth) opts.heroGrowth = growth;
+        // 조각 강화(조각 레이드) — 도전 모드는 판이 쓰지 않음
+        const sl = mode !== 'challenge' ? P().shardLevels() : null;
+        if (sl) opts.shardLv = sl;
         const go = () => UI.show('game', { opts });
         const story = def.story && def.story.before;
         if (mode === 'normal' && story && D().story[story] && !P().seen('story', story)) UI.show('story', { id: story, then: go });
@@ -667,12 +686,28 @@
   /* =====================================================
    * 결과
    * ===================================================== */
+  /** 결과 통계: 처치·골드·시간, 탑별 피해 막대(상위 6) + 영웅 */
+  function resultStats(data, hero) {
+    const dmg = Object.entries(data.stats.damage || {}).map(([id, v]) => [data.stats.towers.find((t) => String(t.id) === id), v]).filter(([t]) => t).sort((a, b) => b[1] - a[1]).slice(0, 6);
+    const total = dmg.reduce((s, [, v]) => s + v, 0) + (data.stats.heroDamage || 0) || 1;
+    const st = el('div', { class: 'result-stats' });
+    st.appendChild(el('div', { class: 'sec-title', text: `처치 ${data.stats.kills} · 번 골드 ${Math.round(data.stats.gold)} · ${Math.floor(data.stats.time / 60)}분 ${Math.floor(data.stats.time % 60)}초` }));
+    for (const [t, v] of dmg) {
+      const name = t.level >= 4 ? D().towers[t.type].branches[t.branch].name : `${D().towers[t.type].name} Lv${t.level}`;
+      st.appendChild(el('div', { class: 'dmg-row' }, [UI.towerImg(t.type, t.level, t.branch, 'mini'), el('span', { text: name }), el('div', { class: 'dmg-bar' }, [el('i', { style: { width: `${(v / total) * 100}%`, background: D().elements[D().towers[t.type].element].color } })]), el('b', { text: Math.round(v).toLocaleString() })]));
+    }
+    if (data.stats.heroDamage && hero) st.appendChild(el('div', { class: 'dmg-row' }, [UI.portrait(hero, 'normal', 'mini-portrait'), el('span', { text: D().heroes[hero].name }), el('div', { class: 'dmg-bar' }, [el('i', { style: { width: `${(data.stats.heroDamage / total) * 100}%`, background: '#fff' } })]), el('b', { text: Math.round(data.stats.heroDamage).toLocaleString() })]));
+    return st;
+  }
+  RG.ui.resultStats = resultStats;
+
   UI.register('result', {
     enter(sec, data) {
       sec.innerHTML = '';
       const win = data.result === 'win';
       UI.music(win ? 'victory' : 'defeat');
       UI.sfx(win ? 'win' : 'lose');
+      if (data.raid && RG.ui.raidResult) { RG.ui.raidResult(sec, data); return; } // 조각 레이드 (js/ui/raid.js)
       const def = D().maps.find((m) => m.id === data.mapId) || D().endless.find((m) => m.id === data.mapId);
       const box = el('div', { class: `result-box ${win ? 'win' : 'lose'}` });
       const hero = data.opts.heroId;
@@ -740,16 +775,7 @@
         if ((bd && bd.levelUp) || gearGot.some((g) => g.isNew)) setTimeout(() => UI.sfx('unlock'), 1600);
       }
       // 통계
-      const dmg = Object.entries(data.stats.damage || {}).map(([id, v]) => [data.stats.towers.find((t) => String(t.id) === id), v]).filter(([t]) => t).sort((a, b) => b[1] - a[1]).slice(0, 6);
-      const total = dmg.reduce((s, [, v]) => s + v, 0) + (data.stats.heroDamage || 0) || 1;
-      const st = el('div', { class: 'result-stats' });
-      st.appendChild(el('div', { class: 'sec-title', text: `처치 ${data.stats.kills} · 번 골드 ${Math.round(data.stats.gold)} · ${Math.floor(data.stats.time / 60)}분 ${Math.floor(data.stats.time % 60)}초` }));
-      for (const [t, v] of dmg) {
-        const name = t.level >= 4 ? D().towers[t.type].branches[t.branch].name : `${D().towers[t.type].name} Lv${t.level}`;
-        st.appendChild(el('div', { class: 'dmg-row' }, [UI.towerImg(t.type, t.level, t.branch, 'mini'), el('span', { text: name }), el('div', { class: 'dmg-bar' }, [el('i', { style: { width: `${(v / total) * 100}%`, background: D().elements[D().towers[t.type].element].color } })]), el('b', { text: Math.round(v).toLocaleString() })]));
-      }
-      if (data.stats.heroDamage) st.appendChild(el('div', { class: 'dmg-row' }, [UI.portrait(hero, 'normal', 'mini-portrait'), el('span', { text: D().heroes[hero].name }), el('div', { class: 'dmg-bar' }, [el('i', { style: { width: `${(data.stats.heroDamage / total) * 100}%`, background: '#fff' } })]), el('b', { text: Math.round(data.stats.heroDamage).toLocaleString() })]));
-      box.appendChild(st);
+      box.appendChild(resultStats(data, hero));
       // 버튼
       const next = P().nextMapId(def.id);
       const after = win && data.mode === 'normal' && def.story && def.story.after;

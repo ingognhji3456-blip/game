@@ -50,15 +50,22 @@ RG.raid = (() => {
     const P = R().pool;
     const air = canAir(type, heroId);
     const pick = (cat, i) => {
+      if (cat === 'armored' && isSupport(type)) return null; // 영웅 혼자 갑옷 적은 무리
       const list = P[cat].filter((e) => hitsEnemy(type, heroId, e) && (cat !== 'flying' || air));
       return list.length ? list[(i + hash(type)) % list.length] : null;
     };
     const N = diff.waves;
     const out = [];
+    const SH = R().supportHero;
+    const sup = isSupport(type);
     for (let i = 0; i < N; i++) {
       const f = N > 1 ? i / (N - 1) : 1;
       const groups = [];
-      const add = (cat, n, iv, delay, spawn = 0) => { const e = pick(cat, i); if (e && n > 0) groups.push(`${e}*${n}/${iv}${delay ? `@${delay}` : ''}${spawn ? `>${spawn}` : ''}`); };
+      const add = (cat, n, iv, delay, spawn = 0) => {
+        const e = pick(cat, i);
+        if (sup) { n = Math.max(1, Math.round(n * SH.countMult)); iv = Math.round(iv * SH.gapMult * 100) / 100; } // 지원 탑 레이드: 적게·띄엄띄엄
+        if (e && n > 0) groups.push(`${e}*${n}/${iv}${delay ? `@${delay}` : ''}${spawn ? `>${spawn}` : ''}`);
+      };
       if (i === N - 1) {
         // 마지막 웨이브: 큰 적 + 호위
         add('big', 2 + Math.floor(d / 2), 2.4);
@@ -80,6 +87,8 @@ RG.raid = (() => {
 
   /** 탑마다 적 체력 보정 (탑 하나만 쓰므로 탑 세기 차이를 메움 — tools/raid-balance.js --calibrate) */
   const towerScale = (type) => (R().towerHp && R().towerHp[type]) || 1;
+  /** 지원·경제 탑 레이드에서 영웅마다 적 체력 보정 (영웅이 싸우므로 영웅 세기 차이를 메움 — --calibrate-heroes) */
+  const heroScale = (heroId) => (R().supportHero.heroHp && R().supportHero.heroHp[heroId]) || 1;
 
   /** 판 설정 조각 (게임 opts에 합침): { mapId, hpMult, towers, raid } */
   function setup(type, d, heroId) {
@@ -88,12 +97,13 @@ RG.raid = (() => {
     const support = isSupport(type);
     return {
       mapId: diff.map,
-      hpMult: Math.round(diff.hp * (support ? R().supportHero.hpMult : 1) * towerScale(type) * 1000) / 1000,
+      hpMult: Math.round(diff.hp * (support ? R().supportHero.hpMult * heroScale(heroId) : 1) * towerScale(type) * 1000) / 1000,
       towers: [type],
       raid: {
         tower: type, d, support,
         waves: waves(type, d, heroId),
         startGold: td.levels[0].cost * R().goldPerCost + R().goldBase,
+        bountyMult: support ? Math.round(100 / R().supportHero.countMult) / 100 : 0,
       },
     };
   }
@@ -104,5 +114,5 @@ RG.raid = (() => {
     return w >= Math.ceil(total / 2) ? R().loseShards : 0;
   }
 
-  return { shardBonus, shardCost, isSupport, canAir, hitsEnemy, waves, towerScale, setup, reward };
+  return { shardBonus, shardCost, isSupport, canAir, hitsEnemy, waves, towerScale, heroScale, setup, reward };
 })();

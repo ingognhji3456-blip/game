@@ -193,6 +193,40 @@ async function run() {
     });
     await page.waitForTimeout(1200);
     await shot(page, dir, '19-r6-boss'); await checkLayout(page, `${sizeName}/r6-boss`, issues);
+    // 조각 레이드: 레이드 화면(공격 탑·지원 탑), 레이드 판, 레이드 결과 (js/ui/raid.js)
+    await page.evaluate(() => {
+      const P = RG.progress;
+      const g = P.gachaState(); for (const t of ['flame_mortar', 'sanctuary', 'ice_ballista', 'shadow_dragon']) g.owned[t] = 0;
+      P.get().shards.ember_archer = 26; P.get().shardLv.ember_archer = 2; P.get().raid.ember_archer = 2; P.get().shards.sanctuary = 4;
+      P.save();
+      RG.ui.show('raid', { tower: 'ember_archer' });
+    });
+    await page.waitForTimeout(500);
+    await shot(page, dir, '20-raid'); await checkLayout(page, `${sizeName}/raid`, issues);
+    await page.evaluate(() => RG.ui.show('raid', { tower: 'sanctuary' }));
+    await page.waitForTimeout(300);
+    await shot(page, dir, '20a-raid-support'); await checkLayout(page, `${sizeName}/raid-support`, issues);
+    await page.evaluate(() => RG.ui.show('game', { opts: RG.ui.raidOpts('ember_archer', 3, 'kara') }));
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => {
+      const ui = RG.ui.game; const g = ui.game;
+      RG.ui.closeAllModals();
+      g.state.gold = 2000;
+      const m = g.map; let n = 0;
+      for (let r = 0; r < m.rows && n < 6; r++) for (let c = 0; c < m.cols && n < 6; c++) if (m.kinds[r * m.cols + c] === RG.grid.T.BUILD && ui.doCmd({ type: 'build', tower: 'ember_archer', c, r }, true).ok) n++;
+      ui.doCmd({ type: 'callWave' }, true);
+      ui.setSpeed(2);
+    });
+    await page.waitForTimeout(3000);
+    await page.evaluate(() => RG.ui.game.setSpeed(1));
+    await shot(page, dir, '20b-raid-battle'); await checkLayout(page, `${sizeName}/raid-battle`, issues);
+    await page.evaluate(() => {
+      const st = { result: 'win', wave: { index: 9, total: 9 }, hero: { heroId: 'kara' } };
+      const rec = RG.progress.recordRaid('ember_archer', 3, st);
+      RG.ui.show('result', { raid: { tower: 'ember_archer', d: 3 }, mapId: 'R2', mode: 'normal', result: 'win', rec, opts: { heroId: 'kara', mode: 'normal' }, waves: 9, totalWaves: 9, stats: { damage: {}, kills: 120, gold: 1400, heroDamage: 900, towers: [], time: 280 } });
+    });
+    await page.waitForTimeout(1800);
+    await shot(page, dir, '20c-raid-result'); await checkLayout(page, `${sizeName}/raid-result`, issues);
     await ctx.close();
   }
   await browser.close();

@@ -26,18 +26,25 @@ RG.data.raid = {
   firstClearMult: 2,
   loseShards: 1,                 // 지더라도 절반 넘게 버텼으면
   goldPerCost: 4, goldBase: 100, // 시작 골드 = 탑 Lv1 값 × 4 + 100 (탑 값에 따라 지을 수 있는 수가 비슷하게)
-  /** 지원·경제 탑 레이드: 영웅이 싸우고, 근처(반경 칸)에 지은 그 탑마다 영웅 피해·기술 +25% × 탑 단계 배율(Lv1~4, 가장 센 4개) — 적은 더 약하게 */
-  supportHero: { radius: 2.5, perTower: 0.25, levelMult: [1, 1.5, 2, 2.6], max: 4, hpMult: 0.6 },
-  /** 탑마다 적 체력 보정 — 탑 하나로 싸우므로 탑 세기 차이를 메움. tools/raid-balance.js --calibrate (보통 난이도를 그리디 봇이 이기는 최대 배율 ÷ 1.3) */
+  /** 지원·경제 탑 레이드: 영웅이 싸우고, 근처(반경 칸)에 지은 그 탑마다 영웅 피해·기술 +25% × 탑 단계 배율(Lv1~4, 가장 센 4개).
+   *  영웅 하나는 떼로 오는 적을 다 붙잡지 못하므로 적 수는 countMult배(띄엄띄엄 gapMult배)로 줄이고 그만큼 단단하게(hpMult) */
+  /*  영웅은 레이드 동안 기본 피해 base배(혼자 싸우므로), 갑옷 적(armored 무리)은 나오지 않음 */
+  /*  heroHp: 영웅마다 적 체력 보정(영웅 세기 차이를 메움, 카라 = 1) — tools/raid-balance.js --calibrate-heroes */
+  supportHero: {
+    radius: 2.5, perTower: 0.25, levelMult: [1, 1.5, 2, 2.6], max: 4, countMult: 0.35, gapMult: 1.8, hpMult: 1.6, base: 2,
+    heroHp: { kara: 1, sera: 0.21, sio: 0.77, zena: 0.46, bawi: 1, yaro: 0.77, haru: 0.21, dohan: 0.27, narae: 0.21, tori: 0.17, byeori: 0.77, mujin: 0.21 },
+  },
+  /** 탑마다 적 체력 보정 — 탑 하나로 싸우므로 탑 세기 차이를 메움. tools/raid-balance.js --calibrate (보통 난이도를 그리디 봇이 이기는 최대 배율 ÷ 1.3,
+   *  지원·경제 탑은 영웅 봇이 단순해 ÷ 1.6). 보통~어려움에서 무너지던 탑(병영·저주 첨탑·영혼 수확자·시간 첨탑)은 ×0.75 */
   towerHp: {
-    ember_archer: 0.69, flame_mortar: 2.08, forge: 0.69, flame_jet: 0.83,
+    ember_archer: 0.69, flame_mortar: 2.08, forge: 1.17, flame_jet: 0.83,
     frost_crystal: 0.58, ice_ballista: 1.2, winter_bell: 0.48, icicle_cloud: 1,
-    lightning_rod: 1.44, gale_cannon: 0.23, dynamo: 0.48, thunder_cloud: 1.73,
-    stone_barracks: 0.4, quake_hammer: 0.69, crystal_mine: 0.48, thorn_garden: 0.58,
-    sun_lens: 1.44, sanctuary: 0.48, radiance_spire: 1.44, lighthouse: 1,
-    hex_spire: 0.83, void_orb: 1.44, shadow_snare: 0.48, dread_bell: 1,
+    lightning_rod: 1.44, gale_cannon: 0.23, dynamo: 1.41, thunder_cloud: 1.73,
+    stone_barracks: 0.3, quake_hammer: 0.69, crystal_mine: 2.44, thorn_garden: 0.58,
+    sun_lens: 1.44, sanctuary: 2.44, radiance_spire: 1.44, lighthouse: 1,
+    hex_spire: 0.62, void_orb: 1.44, shadow_snare: 0.48, dread_bell: 0.85,
     phoenix_nest: 1.73, blizzard_keep: 1.2, storm_eye: 0.83, titan_boulder: 1.73,
-    judgment_spire: 1.44, soul_reaper: 2.49, chrono_spire: 2.08, shadow_dragon: 2.49,
+    judgment_spire: 1.44, soul_reaper: 1.87, chrono_spire: 1.56, shadow_dragon: 2.49,
   },
   /** 적 무리 (탑 원소에 면역·흡수인 적, 공중을 못 치면 비행 적은 빠짐). 숨는 적·탑을 멈추는 적은 넣지 않음 */
   pool: {
