@@ -331,7 +331,7 @@
       const cur = regionInfo(worldRegion);
       const curReg = D().regions.find((r) => r.id === worldRegion);
       const tabs = el('nav', { class: 'wm-nav' }, [
-        el('button', { class: 'btn wm-all', onclick: () => { regionPick = worldRegion; UI.show('world', { view: 'regions', keepPick: true }); } }, [UI.icon('map', 'tiny'), '지역 고르기']),
+        el('button', { class: 'btn wm-all', title: '지역 고르기', 'aria-label': '지역 고르기', onclick: () => { regionPick = worldRegion; UI.show('world', { view: 'regions', keepPick: true }); } }, [UI.icon('map', 'tiny'), el('span', { text: '지역 고르기' })]),
         el('button', { class: 'icon-btn wm-step', 'aria-label': '이전 지역', disabled: worldRegion <= 1, onclick: () => go(worldRegion - 1) }, ['◀']),
         el('div', { class: `wm-title theme-${curReg.theme}` }, [el('span', { class: 'rg-num', text: String(worldRegion) }), el('b', { text: curReg.name }), el('span', { class: 'wm-stars' }, [UI.icon('star', 'tiny'), `${cur.stars}/${cur.maxStars}`])]),
         el('button', { class: 'icon-btn wm-step', 'aria-label': '다음 지역', disabled: worldRegion >= D().regions.length || !regionInfo(worldRegion + 1).open, onclick: () => go(worldRegion + 1) }, ['▶']),
@@ -385,7 +385,8 @@
         if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') { list[(i + 1) % list.length].focus(); ev.preventDefault(); }
         if (ev.key === 'ArrowLeft' || ev.key === 'ArrowUp') { list[(i - 1 + list.length) % list.length].focus(); ev.preventDefault(); }
       });
-      const plate = el('div', { class: 'region-desc wm-plate' }, [
+      // 짝수 지역은 메달 길이 위쪽으로 뒤집혀 있어(REGION_NODES) 설명 판을 왼쪽 아래로 — 첫 메달을 가리지 않게
+      const plate = el('div', { class: `region-desc wm-plate ${reg.id % 2 === 0 ? 'wm-plate-low' : ''}` }, [
         RG.art.regionEmblem ? UI.svgImg(RG.art.regionEmblem(reg.id), 'wm-emblem', '') : null,
         el('div', {}, [el('h3', { text: `${reg.id}. ${reg.name}` }), el('p', { text: reg.desc })]),
       ]);

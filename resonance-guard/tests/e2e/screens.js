@@ -38,6 +38,18 @@ async function checkLayout(page, label, issues) {
       if (cs.visibility === 'hidden' || cs.display === 'none') continue;
       if (r.width < min || r.height < min) out.push(`작은 버튼 "${(b.textContent || b.title || b.getAttribute('aria-label') || b.className || '').trim().slice(0, 18)}" ${Math.round(r.width)}×${Math.round(r.height)}`);
     }
+    // 겹치면 안 되는 것: 출정 준비의 지도 미리보기 ↔ 정보 칸, 월드 지도의 설명 판 ↔ 맵 메달
+    const box = (e) => e.getBoundingClientRect();
+    const overlap = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+    const pv = active.querySelector('.brief-preview');
+    const inf = active.querySelector('.brief-info');
+    if (pv && inf && overlap(box(pv), box(inf)) > 4) out.push('출정 준비: 정보 칸이 지도 미리보기와 겹침');
+    const plate = active.querySelector('.wm-plate');
+    if (plate && getComputedStyle(plate).display !== 'none') {
+      for (const n of active.querySelectorAll('.map-node .mn-medal')) {
+        if (overlap(box(plate), box(n)) > 4) { out.push(`월드 지도: 설명 판이 메달 "${n.textContent.trim().slice(0, 6)}"을 가림`); break; }
+      }
+    }
     return out.slice(0, 12);
   }, min);
   for (const r of res) issues.push(`${label}: ${r}`);
@@ -126,6 +138,56 @@ async function run() {
     await page.evaluate(() => document.querySelector('.gc-skip').click());
     await page.waitForTimeout(700);
     await shot(page, dir, '14-gacha-result'); await checkLayout(page, `${sizeName}/gacha-result`, issues);
+    // 6지역 "별울림 첨탑": 지역 지도, 별다리 맵 준비, 전투(별다리·별빛 건설지·새 적), 보스, 6막 이야기
+    await page.evaluate(() => {
+      const st = { result: 'win', lives: 12, task: { done: true }, wave: { index: 20 } };
+      for (const m of RG.data.maps) { if (m.region >= 6) break; RG.progress.record(m.id, 'normal', st); }
+      for (const k of Object.keys(RG.data.story)) RG.progress.markSeen('story', k);
+      for (const m of RG.data.maps) for (const t of m.tips || []) RG.progress.markSeen('tips', t);
+      RG.progress.save();
+      RG.ui.show('world', { region: 6 });
+    });
+    await page.waitForTimeout(500);
+    await shot(page, dir, '15-r6-world'); await checkLayout(page, `${sizeName}/r6-world`, issues);
+    await page.evaluate(() => RG.ui.show('brief', { mapId: '6-2' }));
+    await shot(page, dir, '16-r6-brief'); await checkLayout(page, `${sizeName}/r6-brief`, issues);
+    await page.evaluate(() => RG.ui.show('story', { id: 's6_1', then: () => RG.ui.show('world', {}) }));
+    await page.waitForTimeout(900);
+    await shot(page, dir, '17-r6-story');
+    await page.evaluate(() => {
+      RG.ui.show('game', { opts: { mapId: '6-2', heroId: 'dohan', seed: 3, mode: 'normal', towers: RG.progress.towersFor('6-2'), branches: true } });
+    });
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => {
+      const ui = RG.ui.game; const g = ui.game;
+      RG.ui.closeAllModals();
+      g.state.gold = 6000;
+      const m = g.map; let n = 0;
+      const kinds = [RG.grid.T.BUILD, RG.grid.T.STAR];
+      for (let r = 0; r < m.rows && n < 9; r++) for (let c = 0; c < m.cols && n < 9; c++) {
+        if (kinds.includes(m.kinds[r * m.cols + c])) { const t = g.opts.towers[(n * 5) % g.opts.towers.length]; if (ui.doCmd({ type: 'build', tower: t, c, r }, true).ok) n++; }
+      }
+      ui.doCmd({ type: 'callWave' }, true);
+      for (const t of ['cloud_sheep', 'comet_knight', 'phase_wraith', 'nebula_jelly']) g.api.spawnEnemy(t, 0);
+      ui.setSpeed(2);
+    });
+    await page.waitForTimeout(5000);
+    await page.evaluate(() => RG.ui.game.setSpeed(1));
+    await shot(page, dir, '18-r6-battle'); await checkLayout(page, `${sizeName}/r6-battle`, issues);
+    await page.evaluate(() => {
+      RG.ui.show('game', { opts: { mapId: '6-6', heroId: 'mujin', seed: 3, mode: 'normal', towers: RG.progress.towersFor('6-6'), branches: true } });
+    });
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => {
+      const ui = RG.ui.game; const g = ui.game;
+      RG.ui.closeAllModals();
+      ui.doCmd({ type: 'callWave' }, true);
+      const e = g.api.spawnEnemy('gloom_monarch', 0);
+      e.hp = e.maxHp * 0.8; // 70% 아래면 2단계(나방 소환) 알림이 겹쳐 찍힘
+      ui.setSpeed(2);
+    });
+    await page.waitForTimeout(1200);
+    await shot(page, dir, '19-r6-boss'); await checkLayout(page, `${sizeName}/r6-boss`, issues);
     await ctx.close();
   }
   await browser.close();
