@@ -46,7 +46,8 @@
   /* ---------------- 설정 ---------------- */
   // reduceFx(효과 줄이기)는 기기의 "동작 줄이기" 설정을 따라 기본값을 정함
   const prefersReduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const DEFAULT_SETTINGS = { master: 0.8, sfx: 0.8, music: 0.5, muted: false, speed: 1, shake: true, numbers: true, bigText: false, paths: true, reduceFx: prefersReduced, cvd: false };
+  const DEFAULT_SETTINGS = { master: 0.8, sfx: 0.8, music: 0.5, muted: false, speed: 1, shake: true, numbers: true, textSize: 'normal', paths: true, reduceFx: prefersReduced, cvd: false };
+  const TEXT_SCALE = { normal: 1, large: 1.2, xl: 1.4 };
   /* 색약 친화 색 (설정 cvd): 원소 6색과 좋음·주의·나쁨 색을 적록·청황 색약에서도 서로 구별되는 값으로 (가장 가까운 짝의 색차 ΔE 16 이상).
      원소 아이콘·글자가 함께 있으므로 색은 보조 — 이미 구운 탑·적 그림의 색은 그대로 */
   const CVD = {
@@ -69,7 +70,14 @@
   }
   let settings = null;
   function getSettings() {
-    if (!settings) settings = Object.assign({}, DEFAULT_SETTINGS, RG.save.get(RG.save.KEYS.settings, {}));
+    if (!settings) {
+      const saved = RG.save.get(RG.save.KEYS.settings, {});
+      settings = Object.assign({}, DEFAULT_SETTINGS, saved);
+      // 예전 "큰 글씨"(켜고 끄기) → 글자 크기 3단계
+      if (saved.textSize == null && saved.bigText) settings.textSize = 'large';
+      delete settings.bigText;
+      if (!TEXT_SCALE[settings.textSize]) settings.textSize = 'normal';
+    }
     return settings;
   }
   function setSettings(patch) {
@@ -88,7 +96,11 @@
     applyPalette(!!s.cvd);
     document.documentElement.classList.toggle('reduce-fx', !!s.reduceFx);
     RG.render.overlay.showPaths = s.paths;
-    document.documentElement.classList.toggle('big-text', !!s.bigText);
+    const ts = TEXT_SCALE[s.textSize] ? s.textSize : 'normal';
+    if (ts === 'normal') delete document.documentElement.dataset.text; else document.documentElement.dataset.text = ts;
+    RG.fx.settings.textScale = TEXT_SCALE[ts];
+    // 판 중에 바꾸면 탑 목록·전장 크기를 다시 맞춤
+    if (current && current.id === 'game') window.dispatchEvent(new Event('resize'));
   }
 
   /* ---------------- 모달 ---------------- */

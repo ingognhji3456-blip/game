@@ -19,7 +19,7 @@ RG.fx = (() => {
   let curGame = null;    // 표식이 적을 따라가도록
   let shake = 0;
   // reduce: 설정 "효과 줄이기" — 흔들림 끔, 번쩍이는 효과(번개·빛기둥)는 1초에 3번까지, 깜박임 대신 고정 표시
-  const settings = { numbers: true, shake: true, reduce: false };
+  const settings = { numbers: true, shake: true, reduce: false, textScale: 1 }; // textScale: 설정 글자 크기(1·1.2·1.4) — 전장 위 숫자에도
   /** 번쩍임 한도: 효과 줄이기 중에는 큰 번쩍임(번개·빛기둥)을 1초에 3번까지 (광과민 기준 — 초당 3회 이하) */
   const flashLog = [];
   function allowFlash() {
@@ -608,7 +608,7 @@ RG.fx = (() => {
       const t = texts[i];
       const a = Math.min(1, t.life / t.max * 2);
       ctx.globalAlpha = a;
-      const fs = Math.round(Math.max(11, T * (t.big ? 0.42 : 0.3)));
+      const fs = Math.round(Math.max(11, T * (t.big ? 0.42 : 0.3)) * (settings.textScale || 1));
       let font = fontCache.get(fs);
       if (!font) { font = `800 ${fs}px system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`; fontCache.set(fs, font); }
       if (ctx.font !== font) ctx.font = font;

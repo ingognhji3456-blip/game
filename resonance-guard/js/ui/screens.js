@@ -184,6 +184,23 @@
       input.addEventListener('input', () => UI.setSettings({ [key]: +input.value }));
       return el('label', { class: 'set-row' }, [el('span', { text: label }), input]);
     };
+    // 글자 크기: 보통 · 크게 · 아주 크게 (라디오처럼 — 방향키로도 고름)
+    const textSizeRow = () => {
+      const opts = [['normal', '보통'], ['large', '크게'], ['xl', '아주 크게']];
+      const group = el('div', { class: 'seg', role: 'radiogroup', 'aria-label': '글자 크기' });
+      const btns = opts.map(([v, name]) => el('button', {
+        class: `seg-b ${(s.textSize || 'normal') === v ? 'on' : ''}`, type: 'button', role: 'radio', 'aria-checked': (s.textSize || 'normal') === v ? 'true' : 'false',
+        onclick: (e) => { UI.setSettings({ textSize: v }); for (const b of btns) { const on = b === e.currentTarget; b.classList.toggle('on', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); } },
+      }, [name]));
+      group.append(...btns);
+      group.addEventListener('keydown', (e) => {
+        const i = btns.indexOf(document.activeElement);
+        if (i < 0) return;
+        const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+        if (d) { const n = btns[(i + d + btns.length) % btns.length]; n.focus(); n.click(); e.preventDefault(); }
+      });
+      return el('div', { class: 'set-row' }, [el('span', { text: '글자 크기' }), group]);
+    };
     const toggle = (key, label) => {
       const input = el('input', { type: 'checkbox' });
       input.checked = !!s[key];
@@ -192,7 +209,7 @@
     };
     body.append(
       slider('master', '전체 음량'), slider('sfx', '효과음'), slider('music', '음악'),
-      toggle('muted', '소리 끄기'), toggle('shake', '화면 흔들림'), toggle('reduceFx', '효과 줄이기 (번쩍임·깜박임·흔들림)'), toggle('cvd', '색약 친화 색'), toggle('numbers', '피해 숫자'), toggle('paths', '준비 중 길 미리보기'), toggle('bigText', '큰 글씨'),
+      toggle('muted', '소리 끄기'), toggle('shake', '화면 흔들림'), toggle('reduceFx', '효과 줄이기 (번쩍임·깜박임·흔들림)'), toggle('cvd', '색약 친화 색'), toggle('numbers', '피해 숫자'), toggle('paths', '준비 중 길 미리보기'), textSizeRow(),
       el('div', { class: 'set-row' }, [el('span', { text: '첫 판 안내' }), el('button', { class: 'btn small', type: 'button', onclick: () => { RG.ui.tutorial.reset(); UI.toast('1-1을 시작하면 단계별 안내가 다시 나와요', 'info', 2600); } }, ['튜토리얼 다시 보기'])]),
     );
     UI.modal(body, { title: '설정', buttons: [{ text: '닫기', primary: true }] });

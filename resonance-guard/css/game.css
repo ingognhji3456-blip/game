@@ -7,6 +7,7 @@
   grid-template-areas: 'left stage right' 'left dock right';
   padding: var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l); background: radial-gradient(ellipse at center, #221a2e, #110d16);
 }
+.rail > * { flex-shrink: 0; } /* 글자가 커지면 줄이지 말고 레일이 스크롤 */
 .rail { flex: none; width: clamp(96px, 15vw, 210px); min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 10px 8px; overflow-y: auto; overflow-x: hidden; background: linear-gradient(90deg, #1b1524, #211a2c); }
 .rail-left { grid-area: left; border-right: 2px solid var(--line); }
 .rail-right { grid-area: right; border-left: 2px solid var(--line); }
@@ -292,3 +293,7 @@ body.rg-dragging, body.rg-dragging * { cursor: grabbing !important; }
 @keyframes tut-pop { 0% { scale: 0.94; opacity: 0.4; } 100% { scale: 1; opacity: 1; } }
 @media (max-height: 460px) { .tut-bubble { padding: 5px 10px 7px; max-width: min(420px, 80%); } .tut-text { font-size: 0.8rem; } .tut-text small { display: none; } }
 @media (prefers-reduced-motion: reduce) { .tut-hand span, .tut-ring, .tut-bubble.pop { animation: none; } }
+
+/* 글자 크기 "아주 크게": 전투 화면의 글자(레일·탑 목록)는 "크게"까지만 — 지도와 탑 목록이 비좁아지지 않게. 전장 위 숫자는 따로 키움 */
+:root[data-text="xl"] #screen-game { font-size: calc(15px * 1.2); }
+.tower-card .tc-cost, .btn-up .cost, .stat b, .stat small { white-space: nowrap; }

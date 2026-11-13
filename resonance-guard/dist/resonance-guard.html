@@ -29,13 +29,17 @@
   --safe-r: env(safe-area-inset-right, 0px);
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
-  font-size: 15px;
+  /* 글자 크기 3단계(설정 textSize): 뿌리 크기만 바꾸면 rem으로 정한 글자가 모두 따라 커짐. --ts는 화면 비례(clamp) 글자에도 곱함 */
+  --ts: 1;
+  font-size: calc(15px * var(--ts));
 }
-html.big-text { font-size: 17px; }
+:root[data-text="large"] { --ts: 1.2; }
+:root[data-text="xl"] { --ts: 1.4; }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); overflow: hidden; -webkit-tap-highlight-color: transparent; }
-body { overscroll-behavior: none; touch-action: manipulation; user-select: none; -webkit-user-select: none; word-break: keep-all; overflow-wrap: anywhere; }
+/* break-word: 긴 글은 끊되 숫자 덩어리의 최소 너비는 줄이지 않음(anywhere는 글자가 커지면 "100"이 "10/0"으로 쪼개졌음) */
+body { overscroll-behavior: none; touch-action: manipulation; user-select: none; -webkit-user-select: none; word-break: keep-all; overflow-wrap: break-word; }
 #app { position: fixed; inset: 0; }
 img { -webkit-user-drag: none; }
 h1, h2, h3 { margin: 0; font-weight: 800; letter-spacing: -0.01em; }
@@ -52,7 +56,7 @@ kbd { font: 700 0.7rem var(--font); padding: 0 4px; border-radius: 4px; backgrou
 @keyframes screen-in { from { opacity: 0; } to { opacity: 1; } }
 
 /* 버튼 */
-button { font-family: var(--font); color: inherit; }
+button { font-family: var(--font); color: inherit; font-size: inherit; } /* 브라우저 기본 13.3px 대신 글자 크기 설정을 따름 */
 /* 키보드 초점: 어떤 바탕에서도 보이는 굵은 테 (부품마다 따로 정한 모양이 있으면 그쪽이 이김 — :where는 우선순위 0) */
 :where(button, [tabindex], a, input, select, summary):focus-visible { outline: 3px solid #fff2c4; outline-offset: 2px; }
 .btn {
@@ -141,7 +145,7 @@ button { font-family: var(--font); color: inherit; }
 .sec-title { font-size: 0.82rem; font-weight: 800; color: var(--gold); letter-spacing: 0.04em; margin: 12px 0 6px; text-transform: uppercase; }
 
 .tabs { display: flex; gap: 6px; padding: 8px 14px; overflow-x: auto; }
-.tab { appearance: none; border: 2px solid var(--line); background: var(--panel); padding: 8px 14px; border-radius: 10px; font-weight: 700; cursor: pointer; min-height: 40px; color: var(--text); }
+.tab { appearance: none; border: 2px solid var(--line); background: var(--panel); padding: 8px 14px; border-radius: 10px; font-weight: 700; cursor: pointer; min-height: 40px; color: var(--text); font-size: 0.89rem; }
 .tab.on { border-color: var(--gold); background: #3c2f22; color: var(--gold2); }
 
 .stat-list { display: grid; gap: 3px; margin: 6px 0; }
@@ -364,7 +368,7 @@ button { font-family: var(--font); color: inherit; }
 .wm-plate { position: absolute; left: 1.4%; top: 2%; max-width: min(46%, 420px); display: flex; gap: 10px; align-items: center; padding: calc(var(--wm) * 0.008 + 4px) calc(var(--wm) * 0.012 + 6px); border-radius: 12px; background: linear-gradient(180deg, #2a1d40e6, #160f24e6); border: 1px solid #ffdf9a55; box-shadow: 0 6px 18px #0009; }
 .wm-plate.wm-plate-low { top: auto; bottom: 2.5%; }
 .wm-plate h3 { margin: 0; font-size: clamp(0.9rem, calc(var(--wm) * 0.02), 1.3rem); color: var(--gold2); }
-.wm-plate p { margin: 2px 0 0; font-size: clamp(0.68rem, calc(var(--wm) * 0.012), 0.9rem); color: #e8dcc6; }
+.wm-plate p { margin: 2px 0 0; font-size: clamp(0.68rem, calc(var(--wm) * 0.012 * var(--ts)), 0.9rem); color: #e8dcc6; }
 .wm-emblem { width: 44px; height: 44px; }
 
 /* 메달(노드) */
@@ -389,8 +393,8 @@ button { font-family: var(--font); color: inherit; }
 .map-node.boss .mn-medal { background: radial-gradient(circle at 35% 30%, #fff, #ffe18a 22%, #e0a030 50%, #8a2a14 100%); box-shadow: 0 0 0 calc(var(--m) * 0.045) #2a0606, 0 0 0 calc(var(--m) * 0.1) #c8303088, 0 calc(var(--m) * 0.1) calc(var(--m) * 0.2) #000a; }
 .map-node .mn-stars { display: flex; gap: 0; margin-top: calc(var(--m) * -0.12); padding: 1px 5px; border-radius: 999px; background: #1a1030e0; box-shadow: 0 0 0 1px #ffdf9a66; position: relative; z-index: 1; }
 .map-node .mn-stars .icon { width: calc(var(--m) * 0.2); height: calc(var(--m) * 0.2); }
-.map-node .mn-name { font-weight: 800; font-size: clamp(0.62rem, calc(var(--wm) * 0.0125), 0.92rem); white-space: nowrap; padding: 1px 7px; border-radius: 7px; background: #120a1ed8; color: #fff1d6; text-shadow: 0 1px 1px #000; box-shadow: 0 2px 6px #0008; }
-.map-node .mn-extra { font-size: clamp(0.56rem, calc(var(--wm) * 0.01), 0.75rem); color: #9dffb0; font-weight: 800; text-shadow: 0 1px 2px #000; white-space: nowrap; }
+.map-node .mn-name { font-weight: 800; font-size: clamp(0.62rem, calc(var(--wm) * 0.0125 * var(--ts)), 0.92rem); white-space: nowrap; padding: 1px 7px; border-radius: 7px; background: #120a1ed8; color: #fff1d6; text-shadow: 0 1px 1px #000; box-shadow: 0 2px 6px #0008; }
+.map-node .mn-extra { font-size: clamp(0.62rem, calc(var(--wm) * 0.01 * var(--ts)), 0.75rem); color: #9dffb0; font-weight: 800; text-shadow: 0 1px 2px #000; white-space: nowrap; }
 .map-node:hover .mn-medal, .map-node:focus-visible .mn-medal { transform: translateY(-3px) scale(1.06); box-shadow: 0 0 0 calc(var(--m) * 0.045) #2a1406, 0 0 22px #ffd27acc, 0 calc(var(--m) * 0.1) calc(var(--m) * 0.2) #000a; }
 .map-node:focus-visible { outline: none; }
 .map-node:focus-visible .mn-name { outline: 2px solid var(--gold2); }
@@ -430,7 +434,7 @@ button { font-family: var(--font); color: inherit; }
 .fact { display: flex; align-items: center; gap: 6px; background: #0004; border-radius: 10px; padding: 6px 8px; font-size: 0.86rem; }
 .fact b { margin-left: auto; }
 .mode-tabs { display: flex; gap: 6px; margin-top: 6px; }
-.mode-tab { appearance: none; flex: 1; border: 2px solid var(--line); background: var(--panel); border-radius: 10px; padding: 8px; font-weight: 800; cursor: pointer; color: var(--text); min-height: 40px; }
+.mode-tab { appearance: none; flex: 1; border: 2px solid var(--line); background: var(--panel); border-radius: 10px; padding: 8px; font-weight: 800; cursor: pointer; color: var(--text); min-height: 40px; font-size: 0.89rem; }
 .mode-tab.on { border-color: var(--gold); background: #3c2f22; color: var(--gold2); }
 .mode-tab.locked { opacity: 0.45; }
 .brief-goal { background: #0004; border-left: 4px solid var(--gold); border-radius: 8px; padding: 6px 10px; font-size: 0.88rem; display: flex; gap: 6px; flex-wrap: wrap; align-items: baseline; margin-top: 6px; }
@@ -450,7 +454,8 @@ button { font-family: var(--font); color: inherit; }
 .t-chip .mini { width: 34px; height: 44px; }
 .e-chip .mini { width: 38px; height: 38px; }
 .t-chip em, .e-chip em { position: absolute; top: -6px; right: -6px; font-size: 0.58rem; font-style: normal; font-weight: 900; background: var(--bad); color: #fff; border-radius: 6px; padding: 0 3px; }
-.brief-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
+/* 출정 버튼 줄은 아래에 붙어 있음 — 글자가 커지거나 화면이 낮아도 스크롤 없이 보임 */
+.brief-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; position: sticky; bottom: 0; padding: 8px 0 2px; background: linear-gradient(transparent, #16111d 35%); z-index: 1; }
 
 /* 결과 */
 #screen-result { display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, #2a2036, #110d16); padding: 12px; overflow: auto; }
@@ -612,7 +617,7 @@ button { font-family: var(--font); color: inherit; }
 .hx-info { --ec: #ffd56a; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 6px 4px 22px 0; -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 10px, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(180deg, transparent 0, #000 10px, #000 calc(100% - 24px), transparent); }
 .hx-bio { padding: 2px 12px; border-left: 3px solid color-mix(in srgb, var(--ec) 70%, transparent); font-size: 0.95rem; line-height: 1.5; color: #f1e8fc; text-wrap: pretty; word-break: keep-all; }
 .hx-stats { display: grid; gap: 8px; padding: 12px 14px; border-radius: 16px; background: linear-gradient(180deg, color-mix(in srgb, var(--ec) 12%, #1a1228), #110b1c); border: 1px solid color-mix(in srgb, var(--ec) 35%, transparent); }
-.hx-stat { display: grid; grid-template-columns: 22px 66px 1fr minmax(60px, auto); align-items: center; gap: 8px; font-size: 0.9rem; }
+.hx-stat { display: grid; grid-template-columns: 1.5em minmax(4.6em, max-content) 1fr minmax(4em, auto); align-items: center; gap: 8px; font-size: 0.9rem; }
 .hx-si { width: 20px; height: 20px; }
 .hx-sn { color: #d9cdea; font-weight: 700; white-space: nowrap; }
 .hx-bar { height: 10px; border-radius: 99px; background: #ffffff1f; overflow: hidden; box-shadow: inset 0 0 0 1px #ffffff14, inset 0 1px 2px #0008; }
@@ -631,7 +636,7 @@ button { font-family: var(--font); color: inherit; }
 .hx-sec { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 16px; background: #0005; border: 1px solid #ffffff14; }
 .hx-sec > .hx-kind { align-self: flex-start; padding: 2px 10px; border-radius: 999px; background: color-mix(in srgb, var(--ec) 22%, #0006); border: 1px solid color-mix(in srgb, var(--ec) 45%, transparent); }
 .hx-lines { display: grid; gap: 6px; }
-.hx-line { display: grid; grid-template-columns: 84px 1fr; gap: 8px; align-items: baseline; }
+.hx-line { display: grid; grid-template-columns: minmax(5.6em, max-content) 1fr; gap: 8px; align-items: baseline; }
 .hx-when { font-size: 0.74rem; font-weight: 800; color: #bfb2d4; white-space: nowrap; }
 .hx-line q { quotes: '“' '”'; font-size: 0.88rem; color: #f0e6fb; text-wrap: pretty; word-break: keep-all; }
 /* 잠긴 영웅의 정보: 빗금 막대·점선 카드 (고장이 아니라 비밀처럼) */
@@ -674,7 +679,7 @@ button { font-family: var(--font); color: inherit; }
   .hx-info { gap: 8px; }
   .hx-bio { font-size: 0.84rem; order: 3; }
   .hx-stats { gap: 4px; padding: 8px 10px; }
-  .hx-stat { font-size: 0.78rem; grid-template-columns: 18px 58px 1fr minmax(52px, auto); }
+  .hx-stat { font-size: 0.78rem; grid-template-columns: 1.4em minmax(4.6em, max-content) 1fr minmax(3.8em, auto); }
   .hx-bar { height: 8px; }
   .hx-cap { font-size: 0.66rem; }
   .hx-card { padding: 8px 10px; gap: 8px; }
@@ -682,7 +687,7 @@ button { font-family: var(--font); color: inherit; }
   .hx-ci { width: 26px; height: 26px; }
   .hx-desc { font-size: 0.82rem; }
   .hx-sec { order: 5; padding: 8px 10px; }
-  .hx-line { grid-template-columns: 72px 1fr; }
+  .hx-line { grid-template-columns: minmax(5.4em, max-content) 1fr; }
   .hx-count { font-size: 0.78rem; }
   #screen-heroes .top-bar { padding-top: calc(4px + var(--safe-t)); padding-bottom: 4px; }
 }
@@ -1146,6 +1151,17 @@ button { font-family: var(--font); color: inherit; }
 :root.reduce-fx .stat-lives.flash { animation: none !important; background: #ff4a4a55; }
 :root.reduce-fx .gc-flash.go:not(.soft) { animation: none !important; opacity: 0; }
 
+/* 설정 창: 줄마다 이름 왼쪽 · 조절 오른쪽 */
+.settings { display: grid; gap: 4px; min-width: min(24rem, 78vw); }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; }
+.set-row > span:first-child { flex: 1; min-width: 0; }
+.set-row input[type="range"] { width: min(12rem, 42vw); }
+.set-row input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--gold); flex: none; }
+.seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 10px; background: #0006; border: 1px solid var(--line); flex: none; }
+.seg-b { appearance: none; border: 0; border-radius: 8px; padding: 6px 10px; min-height: 36px; background: transparent; color: var(--dim); font-weight: 800; cursor: pointer; white-space: nowrap; }
+.seg-b.on { background: linear-gradient(#5a4a2a, #3a2c18); color: #fff2c4; box-shadow: inset 0 0 0 1px var(--gold); }
+@media (pointer: coarse) { .seg-b { min-height: 42px; } }
+
 </style>
   <style>/* css/game.css */
 /* =========================================================
@@ -1157,6 +1173,7 @@ button { font-family: var(--font); color: inherit; }
   grid-template-areas: 'left stage right' 'left dock right';
   padding: var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l); background: radial-gradient(ellipse at center, #221a2e, #110d16);
 }
+.rail > * { flex-shrink: 0; } /* 글자가 커지면 줄이지 말고 레일이 스크롤 */
 .rail { flex: none; width: clamp(96px, 15vw, 210px); min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 10px 8px; overflow-y: auto; overflow-x: hidden; background: linear-gradient(90deg, #1b1524, #211a2c); }
 .rail-left { grid-area: left; border-right: 2px solid var(--line); }
 .rail-right { grid-area: right; border-left: 2px solid var(--line); }
@@ -1442,6 +1459,10 @@ body.rg-dragging, body.rg-dragging * { cursor: grabbing !important; }
 @keyframes tut-pop { 0% { scale: 0.94; opacity: 0.4; } 100% { scale: 1; opacity: 1; } }
 @media (max-height: 460px) { .tut-bubble { padding: 5px 10px 7px; max-width: min(420px, 80%); } .tut-text { font-size: 0.8rem; } .tut-text small { display: none; } }
 @media (prefers-reduced-motion: reduce) { .tut-hand span, .tut-ring, .tut-bubble.pop { animation: none; } }
+
+/* 글자 크기 "아주 크게": 전투 화면의 글자(레일·탑 목록)는 "크게"까지만 — 지도와 탑 목록이 비좁아지지 않게. 전장 위 숫자는 따로 키움 */
+:root[data-text="xl"] #screen-game { font-size: calc(15px * 1.2); }
+.tower-card .tc-cost, .btn-up .cost, .stat b, .stat small { white-space: nowrap; }
 
 </style>
 </head>
@@ -32955,7 +32976,7 @@ RG.fx = (() => {
   let curGame = null;    // 표식이 적을 따라가도록
   let shake = 0;
   // reduce: 설정 "효과 줄이기" — 흔들림 끔, 번쩍이는 효과(번개·빛기둥)는 1초에 3번까지, 깜박임 대신 고정 표시
-  const settings = { numbers: true, shake: true, reduce: false };
+  const settings = { numbers: true, shake: true, reduce: false, textScale: 1 }; // textScale: 설정 글자 크기(1·1.2·1.4) — 전장 위 숫자에도
   /** 번쩍임 한도: 효과 줄이기 중에는 큰 번쩍임(번개·빛기둥)을 1초에 3번까지 (광과민 기준 — 초당 3회 이하) */
   const flashLog = [];
   function allowFlash() {
@@ -33544,7 +33565,7 @@ RG.fx = (() => {
       const t = texts[i];
       const a = Math.min(1, t.life / t.max * 2);
       ctx.globalAlpha = a;
-      const fs = Math.round(Math.max(11, T * (t.big ? 0.42 : 0.3)));
+      const fs = Math.round(Math.max(11, T * (t.big ? 0.42 : 0.3)) * (settings.textScale || 1));
       let font = fontCache.get(fs);
       if (!font) { font = `800 ${fs}px system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`; fontCache.set(fs, font); }
       if (ctx.font !== font) ctx.font = font;
@@ -34316,7 +34337,7 @@ RG.render = (() => {
         const cx = X(sx / tiles.length + 0.5);
         const cy = Y(sy / tiles.length + 0.5) - T * 0.55;
         ctx.globalAlpha = 1;
-        ctx.font = `900 ${Math.max(11, Math.round(T * 0.36))}px system-ui, sans-serif`;
+        ctx.font = `900 ${Math.round(Math.max(11, T * 0.36) * (RG.fx.settings.textScale || 1))}px system-ui, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.lineWidth = 4;
@@ -35206,7 +35227,7 @@ RG.render = (() => {
       bar(cx, cy - top * 0.98, Math.max(22, T * 0.8), u.hp / u.maxHp, '#6fd3ff', 0, false);
       // 레벨
       ctx.save();
-      ctx.font = `800 ${Math.max(9, Math.round(T * 0.22))}px system-ui, sans-serif`;
+      ctx.font = `800 ${Math.round(Math.max(9, T * 0.22) * (RG.fx.settings.textScale || 1))}px system-ui, sans-serif`;
       ctx.textAlign = 'center';
       ctx.lineWidth = 3;
       ctx.strokeStyle = '#1c1426';
@@ -35397,7 +35418,7 @@ RG.render = (() => {
         ctx.lineWidth = Math.max(2, T * 0.06);
         ctx.beginPath(); ctx.arc(X(t.x), Y(t.y), T * (0.45 + 0.2 * k), 0, Math.PI * 2); ctx.stroke();
         ctx.fillStyle = '#ff5a5a';
-        ctx.font = `900 ${Math.max(12, Math.round(T * 0.5))}px system-ui, sans-serif`;
+        ctx.font = `900 ${Math.round(Math.max(12, T * 0.5) * (RG.fx.settings.textScale || 1))}px system-ui, sans-serif`;
         ctx.textAlign = 'center';
         ctx.fillText('!', X(t.x), Y(t.y) - T * 0.85);
         ctx.restore();
@@ -35808,7 +35829,8 @@ RG.render = (() => {
   /* ---------------- 설정 ---------------- */
   // reduceFx(효과 줄이기)는 기기의 "동작 줄이기" 설정을 따라 기본값을 정함
   const prefersReduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const DEFAULT_SETTINGS = { master: 0.8, sfx: 0.8, music: 0.5, muted: false, speed: 1, shake: true, numbers: true, bigText: false, paths: true, reduceFx: prefersReduced, cvd: false };
+  const DEFAULT_SETTINGS = { master: 0.8, sfx: 0.8, music: 0.5, muted: false, speed: 1, shake: true, numbers: true, textSize: 'normal', paths: true, reduceFx: prefersReduced, cvd: false };
+  const TEXT_SCALE = { normal: 1, large: 1.2, xl: 1.4 };
   /* 색약 친화 색 (설정 cvd): 원소 6색과 좋음·주의·나쁨 색을 적록·청황 색약에서도 서로 구별되는 값으로 (가장 가까운 짝의 색차 ΔE 16 이상).
      원소 아이콘·글자가 함께 있으므로 색은 보조 — 이미 구운 탑·적 그림의 색은 그대로 */
   const CVD = {
@@ -35831,7 +35853,14 @@ RG.render = (() => {
   }
   let settings = null;
   function getSettings() {
-    if (!settings) settings = Object.assign({}, DEFAULT_SETTINGS, RG.save.get(RG.save.KEYS.settings, {}));
+    if (!settings) {
+      const saved = RG.save.get(RG.save.KEYS.settings, {});
+      settings = Object.assign({}, DEFAULT_SETTINGS, saved);
+      // 예전 "큰 글씨"(켜고 끄기) → 글자 크기 3단계
+      if (saved.textSize == null && saved.bigText) settings.textSize = 'large';
+      delete settings.bigText;
+      if (!TEXT_SCALE[settings.textSize]) settings.textSize = 'normal';
+    }
     return settings;
   }
   function setSettings(patch) {
@@ -35850,7 +35879,11 @@ RG.render = (() => {
     applyPalette(!!s.cvd);
     document.documentElement.classList.toggle('reduce-fx', !!s.reduceFx);
     RG.render.overlay.showPaths = s.paths;
-    document.documentElement.classList.toggle('big-text', !!s.bigText);
+    const ts = TEXT_SCALE[s.textSize] ? s.textSize : 'normal';
+    if (ts === 'normal') delete document.documentElement.dataset.text; else document.documentElement.dataset.text = ts;
+    RG.fx.settings.textScale = TEXT_SCALE[ts];
+    // 판 중에 바꾸면 탑 목록·전장 크기를 다시 맞춤
+    if (current && current.id === 'game') window.dispatchEvent(new Event('resize'));
   }
 
   /* ---------------- 모달 ---------------- */
@@ -36184,6 +36217,23 @@ RG.render = (() => {
       input.addEventListener('input', () => UI.setSettings({ [key]: +input.value }));
       return el('label', { class: 'set-row' }, [el('span', { text: label }), input]);
     };
+    // 글자 크기: 보통 · 크게 · 아주 크게 (라디오처럼 — 방향키로도 고름)
+    const textSizeRow = () => {
+      const opts = [['normal', '보통'], ['large', '크게'], ['xl', '아주 크게']];
+      const group = el('div', { class: 'seg', role: 'radiogroup', 'aria-label': '글자 크기' });
+      const btns = opts.map(([v, name]) => el('button', {
+        class: `seg-b ${(s.textSize || 'normal') === v ? 'on' : ''}`, type: 'button', role: 'radio', 'aria-checked': (s.textSize || 'normal') === v ? 'true' : 'false',
+        onclick: (e) => { UI.setSettings({ textSize: v }); for (const b of btns) { const on = b === e.currentTarget; b.classList.toggle('on', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); } },
+      }, [name]));
+      group.append(...btns);
+      group.addEventListener('keydown', (e) => {
+        const i = btns.indexOf(document.activeElement);
+        if (i < 0) return;
+        const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+        if (d) { const n = btns[(i + d + btns.length) % btns.length]; n.focus(); n.click(); e.preventDefault(); }
+      });
+      return el('div', { class: 'set-row' }, [el('span', { text: '글자 크기' }), group]);
+    };
     const toggle = (key, label) => {
       const input = el('input', { type: 'checkbox' });
       input.checked = !!s[key];
@@ -36192,7 +36242,7 @@ RG.render = (() => {
     };
     body.append(
       slider('master', '전체 음량'), slider('sfx', '효과음'), slider('music', '음악'),
-      toggle('muted', '소리 끄기'), toggle('shake', '화면 흔들림'), toggle('reduceFx', '효과 줄이기 (번쩍임·깜박임·흔들림)'), toggle('cvd', '색약 친화 색'), toggle('numbers', '피해 숫자'), toggle('paths', '준비 중 길 미리보기'), toggle('bigText', '큰 글씨'),
+      toggle('muted', '소리 끄기'), toggle('shake', '화면 흔들림'), toggle('reduceFx', '효과 줄이기 (번쩍임·깜박임·흔들림)'), toggle('cvd', '색약 친화 색'), toggle('numbers', '피해 숫자'), toggle('paths', '준비 중 길 미리보기'), textSizeRow(),
       el('div', { class: 'set-row' }, [el('span', { text: '첫 판 안내' }), el('button', { class: 'btn small', type: 'button', onclick: () => { RG.ui.tutorial.reset(); UI.toast('1-1을 시작하면 단계별 안내가 다시 나와요', 'info', 2600); } }, ['튜토리얼 다시 보기'])]),
     );
     UI.modal(body, { title: '설정', buttons: [{ text: '닫기', primary: true }] });

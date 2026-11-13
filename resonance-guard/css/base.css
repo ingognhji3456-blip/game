@@ -21,13 +21,17 @@
   --safe-r: env(safe-area-inset-right, 0px);
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
-  font-size: 15px;
+  /* 글자 크기 3단계(설정 textSize): 뿌리 크기만 바꾸면 rem으로 정한 글자가 모두 따라 커짐. --ts는 화면 비례(clamp) 글자에도 곱함 */
+  --ts: 1;
+  font-size: calc(15px * var(--ts));
 }
-html.big-text { font-size: 17px; }
+:root[data-text="large"] { --ts: 1.2; }
+:root[data-text="xl"] { --ts: 1.4; }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); overflow: hidden; -webkit-tap-highlight-color: transparent; }
-body { overscroll-behavior: none; touch-action: manipulation; user-select: none; -webkit-user-select: none; word-break: keep-all; overflow-wrap: anywhere; }
+/* break-word: 긴 글은 끊되 숫자 덩어리의 최소 너비는 줄이지 않음(anywhere는 글자가 커지면 "100"이 "10/0"으로 쪼개졌음) */
+body { overscroll-behavior: none; touch-action: manipulation; user-select: none; -webkit-user-select: none; word-break: keep-all; overflow-wrap: break-word; }
 #app { position: fixed; inset: 0; }
 img { -webkit-user-drag: none; }
 h1, h2, h3 { margin: 0; font-weight: 800; letter-spacing: -0.01em; }
@@ -44,7 +48,7 @@ kbd { font: 700 0.7rem var(--font); padding: 0 4px; border-radius: 4px; backgrou
 @keyframes screen-in { from { opacity: 0; } to { opacity: 1; } }
 
 /* 버튼 */
-button { font-family: var(--font); color: inherit; }
+button { font-family: var(--font); color: inherit; font-size: inherit; } /* 브라우저 기본 13.3px 대신 글자 크기 설정을 따름 */
 /* 키보드 초점: 어떤 바탕에서도 보이는 굵은 테 (부품마다 따로 정한 모양이 있으면 그쪽이 이김 — :where는 우선순위 0) */
 :where(button, [tabindex], a, input, select, summary):focus-visible { outline: 3px solid #fff2c4; outline-offset: 2px; }
 .btn {
@@ -133,7 +137,7 @@ button { font-family: var(--font); color: inherit; }
 .sec-title { font-size: 0.82rem; font-weight: 800; color: var(--gold); letter-spacing: 0.04em; margin: 12px 0 6px; text-transform: uppercase; }
 
 .tabs { display: flex; gap: 6px; padding: 8px 14px; overflow-x: auto; }
-.tab { appearance: none; border: 2px solid var(--line); background: var(--panel); padding: 8px 14px; border-radius: 10px; font-weight: 700; cursor: pointer; min-height: 40px; color: var(--text); }
+.tab { appearance: none; border: 2px solid var(--line); background: var(--panel); padding: 8px 14px; border-radius: 10px; font-weight: 700; cursor: pointer; min-height: 40px; color: var(--text); font-size: 0.89rem; }
 .tab.on { border-color: var(--gold); background: #3c2f22; color: var(--gold2); }
 
 .stat-list { display: grid; gap: 3px; margin: 6px 0; }

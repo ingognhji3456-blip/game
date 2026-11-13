@@ -748,7 +748,7 @@ RG.render = (() => {
         const cx = X(sx / tiles.length + 0.5);
         const cy = Y(sy / tiles.length + 0.5) - T * 0.55;
         ctx.globalAlpha = 1;
-        ctx.font = `900 ${Math.max(11, Math.round(T * 0.36))}px system-ui, sans-serif`;
+        ctx.font = `900 ${Math.round(Math.max(11, T * 0.36) * (RG.fx.settings.textScale || 1))}px system-ui, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.lineWidth = 4;
@@ -1638,7 +1638,7 @@ RG.render = (() => {
       bar(cx, cy - top * 0.98, Math.max(22, T * 0.8), u.hp / u.maxHp, '#6fd3ff', 0, false);
       // 레벨
       ctx.save();
-      ctx.font = `800 ${Math.max(9, Math.round(T * 0.22))}px system-ui, sans-serif`;
+      ctx.font = `800 ${Math.round(Math.max(9, T * 0.22) * (RG.fx.settings.textScale || 1))}px system-ui, sans-serif`;
       ctx.textAlign = 'center';
       ctx.lineWidth = 3;
       ctx.strokeStyle = '#1c1426';
@@ -1829,7 +1829,7 @@ RG.render = (() => {
         ctx.lineWidth = Math.max(2, T * 0.06);
         ctx.beginPath(); ctx.arc(X(t.x), Y(t.y), T * (0.45 + 0.2 * k), 0, Math.PI * 2); ctx.stroke();
         ctx.fillStyle = '#ff5a5a';
-        ctx.font = `900 ${Math.max(12, Math.round(T * 0.5))}px system-ui, sans-serif`;
+        ctx.font = `900 ${Math.round(Math.max(12, T * 0.5) * (RG.fx.settings.textScale || 1))}px system-ui, sans-serif`;
         ctx.textAlign = 'center';
         ctx.fillText('!', X(t.x), Y(t.y) - T * 0.85);
         ctx.restore();

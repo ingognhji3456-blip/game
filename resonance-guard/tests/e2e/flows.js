@@ -563,6 +563,15 @@ async function a11yRun(browser) {
     const c2 = RG.fx.counts();
     return ok && c2.bolts + c2.pillars > 3;
   });
+  // 8) 글자 크기 3단계: 뿌리 글자 크기와 버튼 글자가 함께 커짐, 예전 "큰 글씨" 설정은 "크게"로
+  r.textSize = await page.evaluate(() => {
+    const fs = () => parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const btn = () => parseFloat(getComputedStyle(document.querySelector('.btn')).fontSize);
+    RG.ui.setSettings({ textSize: 'normal' }); const a = [fs(), btn()];
+    RG.ui.setSettings({ textSize: 'xl' }); const b = [fs(), btn()];
+    RG.ui.setSettings({ textSize: 'normal' });
+    return a[0] === 15 && b[0] === 21 && b[1] > a[1] * 1.3;
+  });
   await page.close();
   const ok = Object.values(r).every(Boolean);
   return { name: '키보드 접근성', ok, detail: Object.entries(r).map(([k, v]) => `${k} ${v ? '✓' : '✗'}`).join(' · '), errors };
