@@ -550,8 +550,8 @@
         else go();
       };
       const actions = el('div', { class: 'brief-actions' }, [
-        resume ? el('button', { class: 'btn', onclick: () => UI.show('game', { resume: run }) }, [`이어하기 (웨이브 ${run.wave})`]) : null,
-        el('button', { class: 'btn btn-primary btn-big', onclick: start }, [resume ? '새로 시작' : '출정!']),
+        resume ? el('button', { class: 'btn', 'data-autofocus': '', onclick: () => UI.show('game', { resume: run }) }, [`이어하기 (웨이브 ${run.wave})`]) : null,
+        el('button', { class: 'btn btn-primary btn-big', 'data-autofocus': resume ? null : '', onclick: start }, [resume ? '새로 시작' : '출정!']),
       ]);
       info.append(
         el('div', { class: 'sec-title', text: '영웅' }), heroRow, heroInfo,
@@ -660,9 +660,9 @@
       const goWorld = () => UI.show('world', {});
       const btns = el('div', { class: 'result-buttons' }, [
         el('button', { class: 'btn', onclick: () => UI.show('brief', { mapId: def.id, mode: data.mode, hero }) }, ['다시 하기']),
-        el('button', { class: 'btn', onclick: () => (afterStory ? UI.show('story', { id: after, then: goWorld }) : goWorld()) }, ['월드 지도']),
+        el('button', { class: 'btn', 'data-autofocus': win && next && data.mode === 'normal' ? null : '', onclick: () => (afterStory ? UI.show('story', { id: after, then: goWorld }) : goWorld()) }, ['월드 지도']),
         el('button', { class: `btn btn-gacha ${canPull() ? 'ready' : ''}`, onclick: () => UI.show('gacha', {}) }, [UI.icon('crystal', 'tiny'), '탑 뽑기']),
-        win && next && data.mode === 'normal' ? el('button', { class: 'btn btn-primary', onclick: () => { const go = () => UI.show('brief', { mapId: next }); if (afterStory) UI.show('story', { id: after, then: go }); else go(); } }, ['다음 맵 ▶']) : null,
+        win && next && data.mode === 'normal' ? el('button', { class: 'btn btn-primary', 'data-autofocus': '', onclick: () => { const go = () => UI.show('brief', { mapId: next }); if (afterStory) UI.show('story', { id: after, then: go }); else go(); } }, ['다음 맵 ▶']) : null,
       ]);
       box.appendChild(btns);
       sec.appendChild(box);

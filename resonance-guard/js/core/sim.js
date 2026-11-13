@@ -169,7 +169,7 @@ RG.sim = (() => {
       return { melee: true, range: gi.range, splash: gi.splash, speed: gi.speed, targets: 'ground', interval: hd.interval, element: hd.element, giant: true };
     }
     /** 붙잡기 수 (장신구 거인의 허리띠) */
-    const heroBlock = (hd) => hd.block + (GR ? GR.blockAdd : 0);
+    const heroBlock = (hd) => hd.block + (GR && !hd.flying ? GR.blockAdd : 0); // 나는 영웅(나래)은 붙잡지 못함 — 허리띠도 마찬가지
 
     /* 영웅 패시브 오라 (틱마다 한 번 계산 — 피해 계산에서 매번 찾지 않게) */
     let auraSmith = null; let auraSmithR2 = 0; let auraSmithPct = 0;
@@ -569,6 +569,7 @@ RG.sim = (() => {
       if (from && from.from) {
         e.trail = from.from.trail.slice(-6);
         e.tc = from.from.tc; e.tr = from.from.tr;
+        if (from.from.cross) e.cross = from.from.cross; // 다리를 건너던 적이 부른·갈라진 적도 함께 건너감
       } else {
         const nx = RG.grid.nextStep(map, flow, blocked, c, r, e.lane);
         if (nx) { e.tc = nx.c; e.tr = nx.r; }
@@ -724,15 +725,18 @@ RG.sim = (() => {
       if (e.flying) return;
       let c = e.tc;
       let r = e.tr;
+      const F = e.cross ? e.cross.flow : flow;
+      const Bk = e.cross ? e.cross.blocked : blocked;
       for (let i = 0; i < tiles; i++) {
-        const nx = RG.grid.nextStep(map, flow, blocked, c, r, e.lane);
+        const nx = RG.grid.nextStep(map, F, Bk, c, r, e.lane);
         if (!nx) break;
         if (nx.c === map.lantern.c && nx.r === map.lantern.r) break;
         e.trail.push({ x: c + 0.5, y: r + 0.5 });
         c = nx.c; r = nx.r;
       }
       e.c = c; e.r = r; e.x = c + 0.5; e.y = r + 0.5; e.px = e.x; e.py = e.y;
-      const nx = RG.grid.nextStep(map, flow, blocked, c, r, e.lane);
+      if (e.cross && !RG.grid.isBridgeKind(map.kinds[r * map.cols + c])) e.cross = null;
+      const nx = e.cross ? RG.grid.nextStep(map, e.cross.flow, e.cross.blocked, c, r, e.lane) : RG.grid.nextStep(map, flow, blocked, c, r, e.lane);
       if (nx) { e.tc = nx.c; e.tr = nx.r; } else { e.tc = c; e.tr = r; }
       releaseEnemy(e);
       updateProg(e);
@@ -1671,6 +1675,17 @@ RG.sim = (() => {
         }
         for (const e of st.enemies) {
           if (e.dead || e.flying) continue;
+          if (e.cross) {
+            // 닫힌 다리를 건너는 중: 닫히기 전 흐름장으로 다리를 벗어난 첫 칸에서 길이 이어지면 됨
+            let c = e.tc; let r = e.tr; let k = 0;
+            while (RG.grid.isBridgeKind(map.kinds[r * map.cols + c]) && k++ < 32) {
+              const nx = RG.grid.nextStep(map, e.cross.flow, e.cross.blocked, c, r, e.lane);
+              if (!nx) break;
+              c = nx.c; r = nx.r;
+            }
+            if (r * map.cols + c === i || !isFinite(nd[r * map.cols + c])) return fail('적이 갇히게 되어 지을 수 없습니다');
+            continue;
+          }
           if (!isFinite(nd[e.r * map.cols + e.c]) || !isFinite(nd[e.tr * map.cols + e.tc])) return fail('적이 갇히게 되어 지을 수 없습니다');
         }
       }
@@ -1711,7 +1726,7 @@ RG.sim = (() => {
       const closeSet = new Set(closing);
       const old = { flow, blocked: blocked.slice() };
       for (const e of st.enemies) {
-        if (e.dead || e.flying) continue;
+        if (e.dead) continue; // 비행 적도 땅의 흐름장을 따라가므로 함께 건너가게 (아니면 다리 가운데에서 갈 곳이 없어 새어 버림)
         if (closeSet.has(e.r * map.cols + e.c) || closeSet.has(e.tr * map.cols + e.tc)) e.cross = old;
       }
       for (const i of opening) blocked[i] = 0;
@@ -1719,6 +1734,16 @@ RG.sim = (() => {
       B.phase = 1 - B.phase;
       B.next += B.period;
       refreshFlow();
+      // 닫힌 다리 위의 집결지·눈사람 자리는 걸을 수 있는 칸으로 (그대로 두면 병사가 닫힌 다리로 되돌아감)
+      for (const t of st.towers) {
+        if (!t.rally || !closeSet.has(Math.floor(t.rally.y) * map.cols + Math.floor(t.rally.x))) continue;
+        t.rally = defaultRally(t);
+        syncSoldiers(t);
+      }
+      for (const u of st.units) {
+        if (u.dead || u.kind !== 'snowman' || !closeSet.has(Math.floor(u.homeY) * map.cols + Math.floor(u.homeX))) continue;
+        u.homeX = u.x; u.homeY = u.y; // refreshFlow가 이미 걸을 수 있는 칸으로 옮김
+      }
       ev('bridges', { phase: B.phase });
     }
 
@@ -2425,8 +2450,7 @@ RG.sim = (() => {
           e.phaseWarn = false;
           const fx = e.x;
           const fy = e.y;
-          e.cross = null;
-          advance(e, tr.phase.tiles);
+          advance(e, tr.phase.tiles); // 닫힌 다리를 건너는 중이면 건너는 흐름장으로 (advance가 다리를 벗어나면 cross를 지움)
           ev('phase', { enemyId: e.id, x: e.x, y: e.y, fromX: fx, fromY: fy });
         }
       }
@@ -2536,7 +2560,9 @@ RG.sim = (() => {
     /** 탑 강화 효과(영웅 기술): 같은 시간이면 큰 배율을 남김. temper면 멈춤·침묵 면역 */
     function boostTower(t, mult, dur, temper) {
       const until = st.time + dur;
-      if (!(t.boostUntil > st.time) || mult >= t.boostMult) { t.boostMult = mult; t.boostUntil = Math.max(until, t.boostUntil > st.time && mult === t.boostMult ? t.boostUntil : 0); }
+      const live = t.boostUntil > st.time;
+      const oldM = t.boostMult;
+      if (!live || mult >= oldM) { t.boostMult = mult; t.boostUntil = live && mult === oldM ? Math.max(until, t.boostUntil) : until; } // 같은 배율이면 긴 쪽, 더 큰 배율이면 그 시간만
       if (temper) t.temperUntil = Math.max(t.temperUntil || 0, until);
       if (temper && t.disabled) { t.disabled = false; t.silenced = false; statsDirty = true; }
     }
@@ -2659,18 +2685,19 @@ RG.sim = (() => {
     /** 성장의 '첫 표적' 효과(공격 한 번에 한 번): 빛 퍼짐·큰 눈덩이(범위), 꿰뚫기, 튕기기, 폭풍 눈(튐), 지진 주먹 */
     function heroPrimaryHit(e, base, src, hd) {
       const h = st.hero;
-      const opt = { area: true, noCrit: true, procMult: 0 };
+      // 맞힘 옵션은 맞힐 때마다 새로 — hitEnemy가 치명타 표시를 써 넣어서 다음 맞힘으로 옮겨 가지 않게
+      const optF = () => ({ area: true, noCrit: true, procMult: 0 });
       if (atkU && atkU.splash) {
-        for (const o3 of enemiesInRadius(e.x, e.y, atkU.splash.radius, hd.targets === 'ground' ? 'ground' : null)) if (o3 !== e) hitEnemy(o3, base * atkU.splash.pct, src, opt);
+        for (const o3 of enemiesInRadius(e.x, e.y, atkU.splash.radius, hd.targets === 'ground' ? 'ground' : null)) if (o3 !== e) hitEnemy(o3, base * atkU.splash.pct, src, optF());
       }
       const jump = atkU && (atkU.pierce || atkU.bounce);
       if (jump) {
         const nb = nearestOther(e, jump.radius, hd);
-        if (nb) { hitEnemy(nb, base * jump.pct, src, opt); ev('chain', { points: [[e.x, e.y - 0.3], [nb.x, nb.y - 0.3]], element: hd.element, small: true }); }
+        if (nb) { hitEnemy(nb, base * jump.pct, src, optF()); ev('chain', { points: [[e.x, e.y - 0.3], [nb.x, nb.y - 0.3]], element: hd.element, small: true }); }
       }
       if (GR.chainPct) {
         const nb = nearestOther(e, 1.5, hd);
-        if (nb) { hitEnemy(nb, base * GR.chainPct, src, opt); ev('chain', { points: [[e.x, e.y - 0.3], [nb.x, nb.y - 0.3]], element: 'storm', small: true }); }
+        if (nb) { hitEnemy(nb, base * GR.chainPct, src, optF()); ev('chain', { points: [[e.x, e.y - 0.3], [nb.x, nb.y - 0.3]], element: 'storm', small: true }); }
       }
       if (atkU && atkU.quake) {
         h.hitN = (h.hitN || 0) + 1;

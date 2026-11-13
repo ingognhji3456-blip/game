@@ -1500,8 +1500,14 @@ RG.render = (() => {
     // 위상 망령: 순간이동 직전 일렁임 — 초당 2.5번 이하로, 효과 줄이기면 흐릿하게만 (발밑 점선 원은 아래에서)
     if (e.phaseWarn) { if (RG.fx.settings.reduce) alphaS *= 0.6; else { alphaS *= 0.45 + 0.4 * Math.abs(Math.sin(time * 8)); dx += Math.sin(time * 16) * T * 0.04; } }
     // 맞은 번쩍임: 한 적이 여러 탑에 맞아도 1초에 3번 정도까지(실제 시간), 효과 줄이기면 없음 — 체력 막대가 대신 알려 줌
-    let hurt = !manyEnemies && !RG.fx.settings.reduce && st.time - e.lastHurt < 0.08; // 적이 아주 많으면 어차피 안 그림 — 셈도 건너뜀
-    if (hurt) { if (hurtAt.size > 400) hurtAt.clear(); const at = hurtAt.get(e.id); if (at != null && time - at < 0.34 && time - at > 0.08) hurt = false; else if (at == null || time - at >= 0.34) hurtAt.set(e.id, time); }
+    // 한 번 맞을 때마다 한 번만(멈춤 중에 되풀이하지 않게), 새로 맞아도 0.34초 안이면 건너뜀. 적이 아주 많으면 셈도 건너뜀
+    let hurt = !manyEnemies && !RG.fx.settings.reduce && st.time - e.lastHurt < 0.08;
+    if (hurt) {
+      if (hurtAt.size > 400) hurtAt.clear();
+      const h = hurtAt.get(e.id);
+      if (!h || (h.hit !== e.lastHurt && time - h.at >= 0.34)) hurtAt.set(e.id, { hit: e.lastHurt, at: time });
+      else if (h.hit !== e.lastHurt || time - h.at > 0.08) hurt = false; // 같은 맞음은 0.08초만 보이고, 너무 잦은 새 맞음은 건너뜀
+    }
     const flip = e.dir < 0;
     const big = ed.size >= 1.4 ? 288 : 168;
     const k0 = ekey(e.type, frame);

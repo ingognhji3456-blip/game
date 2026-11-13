@@ -25,6 +25,15 @@ RG.progress = (() => {
     profile.seen = Object.assign({ enemies: [], story: [], tips: [] }, profile.seen || {});
     if (!profile.heroes || typeof profile.heroes !== 'object') profile.heroes = {};
     if (!profile.gear || typeof profile.gear !== 'object') profile.gear = {};
+    // 영웅 성장(장신구)이 생기기 전 기록: 장신구는 도전을 처음 깰 때·무한 기록이 10·20·30·40을 넘을 때만 주므로,
+    // 이미 해 둔 것만큼 한 번 채워 줌 (record()와 같은 순서·같은 시드 이름 — 결과가 늘 같음)
+    if (p && !('gear' in p)) {
+      for (const m of D().maps) if (profile.maps[m.id] && profile.maps[m.id].challenge) grantGear(rarityForRegion(m.region), `ch:${m.id}`);
+      for (const e of D().endless || []) {
+        const best = (profile.endless && profile.endless[e.id]) || 0;
+        D().growth.endlessMilestones.forEach((w, i) => { if (best >= w) grantGear(['common', 'rare', 'epic', 'epic'][i], `en:${e.id}:${w}`); });
+      }
+    }
     // 잠깐 있었던 원정 모드(없앰)의 기록·저장된 원정 전투는 지움
     if ('expRun' in profile || 'expStats' in profile) { delete profile.expRun; delete profile.expStats; RG.save.set(RG.save.KEYS.progress, profile); }
     const savedRun = RG.save.get(RG.save.KEYS.run, null);

@@ -23,12 +23,13 @@
     hideTooltip();
     if (next.enter) next.enter(sec, data || {});
     document.body.dataset.screen = id;
-    // 키보드로 쓰는 중이면 첫 초점: data.focus(같은 화면을 다시 그릴 때 누르던 것) → [data-autofocus] → 첫 버튼
+    // 키보드로 쓰는 중이면 첫 초점: data.focus(같은 화면을 다시 그릴 때 누르던 것) → [data-autofocus](화면이 고른 주 버튼)만.
+    // "첫 버튼"으로는 주지 않음 — 이야기의 건너뛰기·전투의 웨이브 호출·뒤로 가기가 잡혀 첫 Enter가 엉뚱하게 눌렸음
     if (kbUser) requestAnimationFrame(() => {
       if (current !== next || modals.length) return;
       const a = document.activeElement;
       if (a && a !== document.body && sec.contains(a)) return; // 화면이 스스로 초점을 줌
-      const f = (data && data.focus && sec.querySelector(`[data-focus="${data.focus}"]`)) || sec.querySelector('[data-autofocus]') || sec.querySelector('button:not([disabled]), [tabindex="0"]');
+      const f = (data && data.focus && sec.querySelector(`[data-focus="${data.focus}"]`)) || sec.querySelector('[data-autofocus]');
       if (f) f.focus({ preventScroll: true });
     });
   }

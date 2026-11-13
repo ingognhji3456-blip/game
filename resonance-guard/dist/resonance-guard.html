@@ -1150,6 +1150,9 @@ button { font-family: var(--font); color: inherit; font-size: inherit; } /* 브�
 :root.reduce-fx .boss-intro.show .bi-art { animation: none !important; }
 :root.reduce-fx .stat-lives.flash { animation: none !important; background: #ff4a4a55; }
 :root.reduce-fx .gc-flash.go:not(.soft) { animation: none !important; opacity: 0; }
+/* 효과 줄이기에서도 뽑기 마지막에 한 번, 아주 약하게 (가장 높은 등급이 영웅 이상일 때) */
+:root.reduce-fx .gc-flash.soft.go { animation: gc-flash-soft 0.9s ease-out !important; animation-duration: 0.9s !important; }
+@keyframes gc-flash-soft { 0% { opacity: 0; } 40% { opacity: 0.3; } 100% { opacity: 0; } }
 
 /* 설정 창: 줄마다 이름 왼쪽 · 조절 오른쪽 */
 .settings { display: grid; gap: 4px; min-width: min(24rem, 78vw); }
@@ -1460,8 +1463,7 @@ body.rg-dragging, body.rg-dragging * { cursor: grabbing !important; }
 @media (max-height: 460px) { .tut-bubble { padding: 5px 10px 7px; max-width: min(420px, 80%); } .tut-text { font-size: 0.8rem; } .tut-text small { display: none; } }
 @media (prefers-reduced-motion: reduce) { .tut-hand span, .tut-ring, .tut-bubble.pop { animation: none; } }
 
-/* 글자 크기 "아주 크게": 전투 화면의 글자(레일·탑 목록)는 "크게"까지만 — 지도와 탑 목록이 비좁아지지 않게. 전장 위 숫자는 따로 키움 */
-:root[data-text="xl"] #screen-game { font-size: calc(15px * 1.2); }
+/* 글자 크기 "아주 크게"는 전투 화면에도 그대로 — 레일은 스크롤되고 숫자는 쪼개지지 않음 (3크기 점검 통과) */
 .tower-card .tc-cost, .btn-up .cost, .stat b, .stat small { white-space: nowrap; }
 
 /* 느린 기기(자동): 판 화면의 꾸밈 애니메이션·전환을 멈춤. 배너·보스 카드는 고정으로 보였다 사라짐 */
@@ -5873,7 +5875,7 @@ RG.sim = (() => {
       return { melee: true, range: gi.range, splash: gi.splash, speed: gi.speed, targets: 'ground', interval: hd.interval, element: hd.element, giant: true };
     }
     /** 붙잡기 수 (장신구 거인의 허리띠) */
-    const heroBlock = (hd) => hd.block + (GR ? GR.blockAdd : 0);
+    const heroBlock = (hd) => hd.block + (GR && !hd.flying ? GR.blockAdd : 0); // 나는 영웅(나래)은 붙잡지 못함 — 허리띠도 마찬가지
 
     /* 영웅 패시브 오라 (틱마다 한 번 계산 — 피해 계산에서 매번 찾지 않게) */
     let auraSmith = null; let auraSmithR2 = 0; let auraSmithPct = 0;
@@ -6273,6 +6275,7 @@ RG.sim = (() => {
       if (from && from.from) {
         e.trail = from.from.trail.slice(-6);
         e.tc = from.from.tc; e.tr = from.from.tr;
+        if (from.from.cross) e.cross = from.from.cross; // 다리를 건너던 적이 부른·갈라진 적도 함께 건너감
       } else {
         const nx = RG.grid.nextStep(map, flow, blocked, c, r, e.lane);
         if (nx) { e.tc = nx.c; e.tr = nx.r; }
@@ -6428,15 +6431,18 @@ RG.sim = (() => {
       if (e.flying) return;
       let c = e.tc;
       let r = e.tr;
+      const F = e.cross ? e.cross.flow : flow;
+      const Bk = e.cross ? e.cross.blocked : blocked;
       for (let i = 0; i < tiles; i++) {
-        const nx = RG.grid.nextStep(map, flow, blocked, c, r, e.lane);
+        const nx = RG.grid.nextStep(map, F, Bk, c, r, e.lane);
         if (!nx) break;
         if (nx.c === map.lantern.c && nx.r === map.lantern.r) break;
         e.trail.push({ x: c + 0.5, y: r + 0.5 });
         c = nx.c; r = nx.r;
       }
       e.c = c; e.r = r; e.x = c + 0.5; e.y = r + 0.5; e.px = e.x; e.py = e.y;
-      const nx = RG.grid.nextStep(map, flow, blocked, c, r, e.lane);
+      if (e.cross && !RG.grid.isBridgeKind(map.kinds[r * map.cols + c])) e.cross = null;
+      const nx = e.cross ? RG.grid.nextStep(map, e.cross.flow, e.cross.blocked, c, r, e.lane) : RG.grid.nextStep(map, flow, blocked, c, r, e.lane);
       if (nx) { e.tc = nx.c; e.tr = nx.r; } else { e.tc = c; e.tr = r; }
       releaseEnemy(e);
       updateProg(e);
@@ -7375,6 +7381,17 @@ RG.sim = (() => {
         }
         for (const e of st.enemies) {
           if (e.dead || e.flying) continue;
+          if (e.cross) {
+            // 닫힌 다리를 건너는 중: 닫히기 전 흐름장으로 다리를 벗어난 첫 칸에서 길이 이어지면 됨
+            let c = e.tc; let r = e.tr; let k = 0;
+            while (RG.grid.isBridgeKind(map.kinds[r * map.cols + c]) && k++ < 32) {
+              const nx = RG.grid.nextStep(map, e.cross.flow, e.cross.blocked, c, r, e.lane);
+              if (!nx) break;
+              c = nx.c; r = nx.r;
+            }
+            if (r * map.cols + c === i || !isFinite(nd[r * map.cols + c])) return fail('적이 갇히게 되어 지을 수 없습니다');
+            continue;
+          }
           if (!isFinite(nd[e.r * map.cols + e.c]) || !isFinite(nd[e.tr * map.cols + e.tc])) return fail('적이 갇히게 되어 지을 수 없습니다');
         }
       }
@@ -7415,7 +7432,7 @@ RG.sim = (() => {
       const closeSet = new Set(closing);
       const old = { flow, blocked: blocked.slice() };
       for (const e of st.enemies) {
-        if (e.dead || e.flying) continue;
+        if (e.dead) continue; // 비행 적도 땅의 흐름장을 따라가므로 함께 건너가게 (아니면 다리 가운데에서 갈 곳이 없어 새어 버림)
         if (closeSet.has(e.r * map.cols + e.c) || closeSet.has(e.tr * map.cols + e.tc)) e.cross = old;
       }
       for (const i of opening) blocked[i] = 0;
@@ -7423,6 +7440,16 @@ RG.sim = (() => {
       B.phase = 1 - B.phase;
       B.next += B.period;
       refreshFlow();
+      // 닫힌 다리 위의 집결지·눈사람 자리는 걸을 수 있는 칸으로 (그대로 두면 병사가 닫힌 다리로 되돌아감)
+      for (const t of st.towers) {
+        if (!t.rally || !closeSet.has(Math.floor(t.rally.y) * map.cols + Math.floor(t.rally.x))) continue;
+        t.rally = defaultRally(t);
+        syncSoldiers(t);
+      }
+      for (const u of st.units) {
+        if (u.dead || u.kind !== 'snowman' || !closeSet.has(Math.floor(u.homeY) * map.cols + Math.floor(u.homeX))) continue;
+        u.homeX = u.x; u.homeY = u.y; // refreshFlow가 이미 걸을 수 있는 칸으로 옮김
+      }
       ev('bridges', { phase: B.phase });
     }
 
@@ -8129,8 +8156,7 @@ RG.sim = (() => {
           e.phaseWarn = false;
           const fx = e.x;
           const fy = e.y;
-          e.cross = null;
-          advance(e, tr.phase.tiles);
+          advance(e, tr.phase.tiles); // 닫힌 다리를 건너는 중이면 건너는 흐름장으로 (advance가 다리를 벗어나면 cross를 지움)
           ev('phase', { enemyId: e.id, x: e.x, y: e.y, fromX: fx, fromY: fy });
         }
       }
@@ -8240,7 +8266,9 @@ RG.sim = (() => {
     /** 탑 강화 효과(영웅 기술): 같은 시간이면 큰 배율을 남김. temper면 멈춤·침묵 면역 */
     function boostTower(t, mult, dur, temper) {
       const until = st.time + dur;
-      if (!(t.boostUntil > st.time) || mult >= t.boostMult) { t.boostMult = mult; t.boostUntil = Math.max(until, t.boostUntil > st.time && mult === t.boostMult ? t.boostUntil : 0); }
+      const live = t.boostUntil > st.time;
+      const oldM = t.boostMult;
+      if (!live || mult >= oldM) { t.boostMult = mult; t.boostUntil = live && mult === oldM ? Math.max(until, t.boostUntil) : until; } // 같은 배율이면 긴 쪽, 더 큰 배율이면 그 시간만
       if (temper) t.temperUntil = Math.max(t.temperUntil || 0, until);
       if (temper && t.disabled) { t.disabled = false; t.silenced = false; statsDirty = true; }
     }
@@ -8363,18 +8391,19 @@ RG.sim = (() => {
     /** 성장의 '첫 표적' 효과(공격 한 번에 한 번): 빛 퍼짐·큰 눈덩이(범위), 꿰뚫기, 튕기기, 폭풍 눈(튐), 지진 주먹 */
     function heroPrimaryHit(e, base, src, hd) {
       const h = st.hero;
-      const opt = { area: true, noCrit: true, procMult: 0 };
+      // 맞힘 옵션은 맞힐 때마다 새로 — hitEnemy가 치명타 표시를 써 넣어서 다음 맞힘으로 옮겨 가지 않게
+      const optF = () => ({ area: true, noCrit: true, procMult: 0 });
       if (atkU && atkU.splash) {
-        for (const o3 of enemiesInRadius(e.x, e.y, atkU.splash.radius, hd.targets === 'ground' ? 'ground' : null)) if (o3 !== e) hitEnemy(o3, base * atkU.splash.pct, src, opt);
+        for (const o3 of enemiesInRadius(e.x, e.y, atkU.splash.radius, hd.targets === 'ground' ? 'ground' : null)) if (o3 !== e) hitEnemy(o3, base * atkU.splash.pct, src, optF());
       }
       const jump = atkU && (atkU.pierce || atkU.bounce);
       if (jump) {
         const nb = nearestOther(e, jump.radius, hd);
-        if (nb) { hitEnemy(nb, base * jump.pct, src, opt); ev('chain', { points: [[e.x, e.y - 0.3], [nb.x, nb.y - 0.3]], element: hd.element, small: true }); }
+        if (nb) { hitEnemy(nb, base * jump.pct, src, optF()); ev('chain', { points: [[e.x, e.y - 0.3], [nb.x, nb.y - 0.3]], element: hd.element, small: true }); }
       }
       if (GR.chainPct) {
         const nb = nearestOther(e, 1.5, hd);
-        if (nb) { hitEnemy(nb, base * GR.chainPct, src, opt); ev('chain', { points: [[e.x, e.y - 0.3], [nb.x, nb.y - 0.3]], element: 'storm', small: true }); }
+        if (nb) { hitEnemy(nb, base * GR.chainPct, src, optF()); ev('chain', { points: [[e.x, e.y - 0.3], [nb.x, nb.y - 0.3]], element: 'storm', small: true }); }
       }
       if (atkU && atkU.quake) {
         h.hitN = (h.hitN || 0) + 1;
@@ -9006,6 +9035,15 @@ RG.progress = (() => {
     profile.seen = Object.assign({ enemies: [], story: [], tips: [] }, profile.seen || {});
     if (!profile.heroes || typeof profile.heroes !== 'object') profile.heroes = {};
     if (!profile.gear || typeof profile.gear !== 'object') profile.gear = {};
+    // 영웅 성장(장신구)이 생기기 전 기록: 장신구는 도전을 처음 깰 때·무한 기록이 10·20·30·40을 넘을 때만 주므로,
+    // 이미 해 둔 것만큼 한 번 채워 줌 (record()와 같은 순서·같은 시드 이름 — 결과가 늘 같음)
+    if (p && !('gear' in p)) {
+      for (const m of D().maps) if (profile.maps[m.id] && profile.maps[m.id].challenge) grantGear(rarityForRegion(m.region), `ch:${m.id}`);
+      for (const e of D().endless || []) {
+        const best = (profile.endless && profile.endless[e.id]) || 0;
+        D().growth.endlessMilestones.forEach((w, i) => { if (best >= w) grantGear(['common', 'rare', 'epic', 'epic'][i], `en:${e.id}:${w}`); });
+      }
+    }
     // 잠깐 있었던 원정 모드(없앰)의 기록·저장된 원정 전투는 지움
     if ('expRun' in profile || 'expStats' in profile) { delete profile.expRun; delete profile.expStats; RG.save.set(RG.save.KEYS.progress, profile); }
     const savedRun = RG.save.get(RG.save.KEYS.run, null);
@@ -35094,8 +35132,14 @@ RG.render = (() => {
     // 위상 망령: 순간이동 직전 일렁임 — 초당 2.5번 이하로, 효과 줄이기면 흐릿하게만 (발밑 점선 원은 아래에서)
     if (e.phaseWarn) { if (RG.fx.settings.reduce) alphaS *= 0.6; else { alphaS *= 0.45 + 0.4 * Math.abs(Math.sin(time * 8)); dx += Math.sin(time * 16) * T * 0.04; } }
     // 맞은 번쩍임: 한 적이 여러 탑에 맞아도 1초에 3번 정도까지(실제 시간), 효과 줄이기면 없음 — 체력 막대가 대신 알려 줌
-    let hurt = !manyEnemies && !RG.fx.settings.reduce && st.time - e.lastHurt < 0.08; // 적이 아주 많으면 어차피 안 그림 — 셈도 건너뜀
-    if (hurt) { if (hurtAt.size > 400) hurtAt.clear(); const at = hurtAt.get(e.id); if (at != null && time - at < 0.34 && time - at > 0.08) hurt = false; else if (at == null || time - at >= 0.34) hurtAt.set(e.id, time); }
+    // 한 번 맞을 때마다 한 번만(멈춤 중에 되풀이하지 않게), 새로 맞아도 0.34초 안이면 건너뜀. 적이 아주 많으면 셈도 건너뜀
+    let hurt = !manyEnemies && !RG.fx.settings.reduce && st.time - e.lastHurt < 0.08;
+    if (hurt) {
+      if (hurtAt.size > 400) hurtAt.clear();
+      const h = hurtAt.get(e.id);
+      if (!h || (h.hit !== e.lastHurt && time - h.at >= 0.34)) hurtAt.set(e.id, { hit: e.lastHurt, at: time });
+      else if (h.hit !== e.lastHurt || time - h.at > 0.08) hurt = false; // 같은 맞음은 0.08초만 보이고, 너무 잦은 새 맞음은 건너뜀
+    }
     const flip = e.dir < 0;
     const big = ed.size >= 1.4 ? 288 : 168;
     const k0 = ekey(e.type, frame);
@@ -35820,12 +35864,13 @@ RG.render = (() => {
     hideTooltip();
     if (next.enter) next.enter(sec, data || {});
     document.body.dataset.screen = id;
-    // 키보드로 쓰는 중이면 첫 초점: data.focus(같은 화면을 다시 그릴 때 누르던 것) → [data-autofocus] → 첫 버튼
+    // 키보드로 쓰는 중이면 첫 초점: data.focus(같은 화면을 다시 그릴 때 누르던 것) → [data-autofocus](화면이 고른 주 버튼)만.
+    // "첫 버튼"으로는 주지 않음 — 이야기의 건너뛰기·전투의 웨이브 호출·뒤로 가기가 잡혀 첫 Enter가 엉뚱하게 눌렸음
     if (kbUser) requestAnimationFrame(() => {
       if (current !== next || modals.length) return;
       const a = document.activeElement;
       if (a && a !== document.body && sec.contains(a)) return; // 화면이 스스로 초점을 줌
-      const f = (data && data.focus && sec.querySelector(`[data-focus="${data.focus}"]`)) || sec.querySelector('[data-autofocus]') || sec.querySelector('button:not([disabled]), [tabindex="0"]');
+      const f = (data && data.focus && sec.querySelector(`[data-focus="${data.focus}"]`)) || sec.querySelector('[data-autofocus]');
       if (f) f.focus({ preventScroll: true });
     });
   }
@@ -36597,8 +36642,8 @@ RG.render = (() => {
         else go();
       };
       const actions = el('div', { class: 'brief-actions' }, [
-        resume ? el('button', { class: 'btn', onclick: () => UI.show('game', { resume: run }) }, [`이어하기 (웨이브 ${run.wave})`]) : null,
-        el('button', { class: 'btn btn-primary btn-big', onclick: start }, [resume ? '새로 시작' : '출정!']),
+        resume ? el('button', { class: 'btn', 'data-autofocus': '', onclick: () => UI.show('game', { resume: run }) }, [`이어하기 (웨이브 ${run.wave})`]) : null,
+        el('button', { class: 'btn btn-primary btn-big', 'data-autofocus': resume ? null : '', onclick: start }, [resume ? '새로 시작' : '출정!']),
       ]);
       info.append(
         el('div', { class: 'sec-title', text: '영웅' }), heroRow, heroInfo,
@@ -36707,9 +36752,9 @@ RG.render = (() => {
       const goWorld = () => UI.show('world', {});
       const btns = el('div', { class: 'result-buttons' }, [
         el('button', { class: 'btn', onclick: () => UI.show('brief', { mapId: def.id, mode: data.mode, hero }) }, ['다시 하기']),
-        el('button', { class: 'btn', onclick: () => (afterStory ? UI.show('story', { id: after, then: goWorld }) : goWorld()) }, ['월드 지도']),
+        el('button', { class: 'btn', 'data-autofocus': win && next && data.mode === 'normal' ? null : '', onclick: () => (afterStory ? UI.show('story', { id: after, then: goWorld }) : goWorld()) }, ['월드 지도']),
         el('button', { class: `btn btn-gacha ${canPull() ? 'ready' : ''}`, onclick: () => UI.show('gacha', {}) }, [UI.icon('crystal', 'tiny'), '탑 뽑기']),
-        win && next && data.mode === 'normal' ? el('button', { class: 'btn btn-primary', onclick: () => { const go = () => UI.show('brief', { mapId: next }); if (afterStory) UI.show('story', { id: after, then: go }); else go(); } }, ['다음 맵 ▶']) : null,
+        win && next && data.mode === 'normal' ? el('button', { class: 'btn btn-primary', 'data-autofocus': '', onclick: () => { const go = () => UI.show('brief', { mapId: next }); if (afterStory) UI.show('story', { id: after, then: go }); else go(); } }, ['다음 맵 ▶']) : null,
       ]);
       box.appendChild(btns);
       sec.appendChild(box);
@@ -38781,11 +38826,11 @@ RG.render = (() => {
     R.info.dataset.sig = sig;
     // 창은 골드·피해가 바뀔 때마다 다시 그려짐 — 키보드 초점이 창 안에 있었으면 같은 버튼으로 돌려줌
     const fa = document.activeElement;
-    if (fa && fa !== R.info && R.info.contains(fa)) {
-      const key = { cls: fa.className, txt: (fa.textContent || '').trim().slice(0, 16) };
+    if (fa && fa !== R.info && R.info.contains(fa) && fa.dataset && fa.dataset.k) {
+      // 버튼마다 고정 이름(data-k)으로 찾음 — 고른 표적 버튼은 모양(클래스)이 바뀌므로 클래스로 찾으면 다른 버튼으로 갔음
+      const k = fa.dataset.k;
       queueMicrotask(() => {
-        const cand = [...R.info.querySelectorAll('button')];
-        const f = cand.find((b) => b.className === key.cls && (b.textContent || '').trim().slice(0, 16) === key.txt) || cand.find((b) => b.className === key.cls && !b.disabled);
+        const f = R.info.querySelector(`[data-k="${k}"]`) || (k === 'up' ? R.info.querySelector('[data-k^="br:"]:not([disabled])') : null);
         if (f) f.focus({ preventScroll: true });
       });
     }
@@ -38799,7 +38844,7 @@ RG.render = (() => {
         el('b', { text: info.name }),
         el('span', { class: 'ip-sub' }, [UI.elementBadge(td.element), el('span', { text: t.level >= 4 ? ' 분기' : ` Lv${t.level}` }), calc && calc.rank ? el('em', { class: `ip-rank ${RG.gacha.isFinal(calc.rank) ? 'fin' : ''}`, title: `뽑기 중복 강화: ${UI.rankText ? UI.rankText(t.type, calc.rank) : ''}`, text: RG.gacha.isFinal(calc.rank) ? ' ★ 최종 강화' : ` 강화 +${calc.rank}` }) : null]),
       ]),
-      el('button', { class: 'x-btn', 'aria-label': '닫기', onclick: cancelAll }, [UI.icon('close')]),
+      el('button', { class: 'x-btn', 'aria-label': '닫기', 'data-k': 'close', onclick: cancelAll }, [UI.icon('close')]),
     ]);
     R.info.appendChild(head);
     const desc = t.level >= 4 ? td.branches[t.branch].desc : td.desc;
@@ -38842,13 +38887,13 @@ RG.render = (() => {
     const up = el('div', { class: 'up-box' });
     for (const n of info.next) {
       if (n.type === 'upgrade') {
-        const b = el('button', { class: 'btn btn-up', disabled: game.state.gold < n.cost || t.building, onclick: () => doCmd({ type: 'upgrade', id: t.id }) }, [
+        const b = el('button', { class: 'btn btn-up', 'data-k': 'up', disabled: game.state.gold < n.cost || t.building, onclick: () => doCmd({ type: 'upgrade', id: t.id }) }, [
           UI.icon('upgrade', 'tiny'), el('span', { text: `Lv${n.level} 강화` }), el('span', { class: 'cost' }, [UI.icon('gold', 'tiny'), String(n.cost)]),
         ]);
         UI.tooltipFor(b, () => upgradeDiff(t, n.spec));
         up.appendChild(b);
       } else {
-        const card = el('button', { class: `branch-card ${n.locked ? 'locked' : ''}`, disabled: n.locked || game.state.gold < n.cost || t.building, onclick: () => confirmBranch(t, n) }, [
+        const card = el('button', { class: `branch-card ${n.locked ? 'locked' : ''}`, 'data-k': `br:${n.branch}`, disabled: n.locked || game.state.gold < n.cost || t.building, onclick: () => confirmBranch(t, n) }, [
           UI.towerImg(t.type, 4, n.branch, 'br-img'),
           el('b', { text: `${n.branch} · ${n.spec.name}` }),
           el('span', { class: 'br-desc', text: n.locked ? '첫 보스(1-6)를 쓰러뜨리면 열립니다' : n.spec.desc }),
@@ -38864,16 +38909,16 @@ RG.render = (() => {
     if (td.role === 'attack') {
       const tm = el('div', { class: 'target-modes' });
       for (const m of D().targetModeOrder) {
-        tm.appendChild(el('button', { class: `tm-btn ${t.targetMode === m ? 'on' : ''}`, title: D().targetModes[m].desc, text: D().targetModes[m].name, onclick: () => { doCmd({ type: 'target', id: t.id, mode: m }); refreshTowerPanel(true); } }));
+        tm.appendChild(el('button', { class: `tm-btn ${t.targetMode === m ? 'on' : ''}`, 'data-k': `tm:${m}`, title: D().targetModes[m].desc, text: D().targetModes[m].name, onclick: () => { doCmd({ type: 'target', id: t.id, mode: m }); refreshTowerPanel(true); } }));
       }
       R.info.appendChild(el('div', { class: 'sec-title', text: '표적' }));
       R.info.appendChild(tm);
     }
     if (td.role === 'barracks') {
-      row.appendChild(el('button', { class: `btn ${mode === 'rally' ? 'btn-primary' : ''}`, onclick: () => { mode = 'rally'; RG.render.overlay.rally = t.id; UI.toast('병사가 설 길을 누르세요', 'info'); refreshTowerPanel(true); } }, ['집결지 옮기기']));
+      row.appendChild(el('button', { class: `btn ${mode === 'rally' ? 'btn-primary' : ''}`, 'data-k': 'rally', onclick: () => { mode = 'rally'; RG.render.overlay.rally = t.id; UI.toast('병사가 설 길을 누르세요', 'info'); refreshTowerPanel(true); } }, ['집결지 옮기기']));
     }
     if (info.canSell) {
-      row.appendChild(el('button', { class: 'btn btn-sell', onclick: () => confirmSell(t, info.sellValue) }, [UI.icon('sell', 'tiny'), `팔기 ${info.sellValue}`]));
+      row.appendChild(el('button', { class: 'btn btn-sell', 'data-k': 'sell', onclick: () => confirmSell(t, info.sellValue) }, [UI.icon('sell', 'tiny'), `팔기 ${info.sellValue}`]));
     }
     R.info.appendChild(row);
     if (info.damageDealt > 0) R.info.appendChild(el('p', { class: 'dim small', text: `이번 판 피해 ${Math.round(info.damageDealt).toLocaleString()}` }));
@@ -38999,6 +39044,8 @@ RG.render = (() => {
   /* =====================================================
    * 키보드
    * ===================================================== */
+  /** 키보드로 전장을 쓰기 시작하면 초점을 전장으로 — 버튼에 남은 초점이 Enter를 가로채지 않게 */
+  function focusMap() { if (canvas && document.activeElement !== canvas) canvas.focus({ preventScroll: true }); }
   function onKey(e) {
     if (!game || UI.currentId() !== 'game') return;
     if (e.target && /input|textarea/i.test(e.target.tagName)) return;
@@ -39022,7 +39069,7 @@ RG.render = (() => {
     if (/^[0-9]$/.test(k) && !e.ctrlKey && !e.metaKey && !e.altKey) {
       if ((k === '1' || k === '2') && branchKey(k)) return;
       const type = availableTowers()[k === '0' ? 9 : +k - 1];
-      if (type) togglePick(type, 'key');
+      if (type) { togglePick(type, 'key'); focusMap(); }
       e.preventDefault();
       return;
     }
@@ -39035,6 +39082,7 @@ RG.render = (() => {
       keyCursor = { c: Math.max(0, Math.min(m.cols - 1, cur.c + arrows[k][0])), r: Math.max(0, Math.min(m.rows - 1, cur.r + arrows[k][1])) };
       RG.render.overlay.hover = { c: keyCursor.c, r: keyCursor.r };
       RG.render.overlay.keyCursor = true; // 키보드 커서는 눈에 잘 띄게(렌더러 위쪽 층에 굵은 모서리)
+      focusMap(); // 이어서 누르는 Enter가 (초점이 남아 있던) 버튼이 아니라 이 칸으로 가게
       if (mode === 'skill') RG.render.overlay.skillPos = { x: keyCursor.c + 0.5, y: keyCursor.r + 0.5 };
       if (pick) setGhost(keyCursor.c, keyCursor.r);
       e.preventDefault();
@@ -39194,7 +39242,7 @@ RG.render = (() => {
     support: { title: '지원 탑', text: '성소는 직접 공격하지 않지만 이웃 탑의 사거리를 늘리고 숨은 적을 드러내며 병사를 치료합니다. 지원 탑은 공명할수록 효과가 커집니다.' },
   };
   function nextTip() {
-    if (!game || !tipsQueue.length || UI.currentId() !== 'game') return;
+    if (!game || !tipsQueue.length || UI.currentId() !== 'game' || game.state.result) return;
     const id = tipsQueue.shift();
     const tip = TIPS[id];
     RG.progress.markSeen('tips', id);
@@ -39367,9 +39415,7 @@ RG.render = (() => {
     const g = G().game;
     spot = bestTile(g);
     spot2 = null;
-    // 이 안내가 탑 짓기·웨이브 호출 팁을 대신함
-    RG.progress.markSeen('tips', 'build');
-    RG.progress.markSeen('tips', 'callWave');
+    // (이 안내가 탑 짓기·웨이브 호출 팁을 대신함 — '봤음' 표시는 끝내거나 건너뛸 때. 도중에 나가거나 다시 시작하면 다음에 처음부터)
     hand = el('div', { class: 'tut-hand', 'aria-hidden': 'true' }, [el('span', { text: '👆' })]);
     ring = el('div', { class: 'tut-ring', 'aria-hidden': 'true' });
     const skip = el('button', { class: 'btn small tut-skip', type: 'button', onclick: () => finish(true) }, ['건너뛰기']);
@@ -39381,9 +39427,10 @@ RG.render = (() => {
     root.appendChild(layer);
   }
 
+  function markDone() { for (const id of ['tutorial', 'build', 'callWave']) RG.progress.markSeen('tips', id); }
   function finish(skipped) {
     if (!on) return;
-    RG.progress.markSeen('tips', 'tutorial');
+    markDone();
     const cb = onDone;
     stop();
     if (skipped) UI.toast('안내를 건너뛰었어요. 설정에서 다시 볼 수 있어요.', 'info', 2600);
@@ -39416,7 +39463,12 @@ RG.render = (() => {
   function tick(dt) {
     if (!on || !layer) return;
     const g = G().game;
-    if (!g || g.state.result) { finish(false); return; }
+    if (!g || g.state.result) {
+      // 판이 끝남: 결과 화면 위로 다음 팁을 띄우지 않음. 강화 단계까지 왔으면 배운 것으로, 아니면 다음에 다시
+      if (stepIdx >= STEPS.findIndex((x) => x.id === 'upgrade')) markDone();
+      stop();
+      return;
+    }
     const s = snap();
     // 이미 해 둔 단계는 바로 넘김
     while (stepIdx < STEPS.length - 1 && STEPS[stepIdx].done(s)) stepIdx += 1;

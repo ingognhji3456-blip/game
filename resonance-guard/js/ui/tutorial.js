@@ -146,9 +146,7 @@
     const g = G().game;
     spot = bestTile(g);
     spot2 = null;
-    // 이 안내가 탑 짓기·웨이브 호출 팁을 대신함
-    RG.progress.markSeen('tips', 'build');
-    RG.progress.markSeen('tips', 'callWave');
+    // (이 안내가 탑 짓기·웨이브 호출 팁을 대신함 — '봤음' 표시는 끝내거나 건너뛸 때. 도중에 나가거나 다시 시작하면 다음에 처음부터)
     hand = el('div', { class: 'tut-hand', 'aria-hidden': 'true' }, [el('span', { text: '👆' })]);
     ring = el('div', { class: 'tut-ring', 'aria-hidden': 'true' });
     const skip = el('button', { class: 'btn small tut-skip', type: 'button', onclick: () => finish(true) }, ['건너뛰기']);
@@ -160,9 +158,10 @@
     root.appendChild(layer);
   }
 
+  function markDone() { for (const id of ['tutorial', 'build', 'callWave']) RG.progress.markSeen('tips', id); }
   function finish(skipped) {
     if (!on) return;
-    RG.progress.markSeen('tips', 'tutorial');
+    markDone();
     const cb = onDone;
     stop();
     if (skipped) UI.toast('안내를 건너뛰었어요. 설정에서 다시 볼 수 있어요.', 'info', 2600);
@@ -195,7 +194,12 @@
   function tick(dt) {
     if (!on || !layer) return;
     const g = G().game;
-    if (!g || g.state.result) { finish(false); return; }
+    if (!g || g.state.result) {
+      // 판이 끝남: 결과 화면 위로 다음 팁을 띄우지 않음. 강화 단계까지 왔으면 배운 것으로, 아니면 다음에 다시
+      if (stepIdx >= STEPS.findIndex((x) => x.id === 'upgrade')) markDone();
+      stop();
+      return;
+    }
     const s = snap();
     // 이미 해 둔 단계는 바로 넘김
     while (stepIdx < STEPS.length - 1 && STEPS[stepIdx].done(s)) stepIdx += 1;

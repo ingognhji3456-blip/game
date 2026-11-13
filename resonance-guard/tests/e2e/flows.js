@@ -400,6 +400,10 @@ async function tutorialRun(browser) {
   await page.evaluate(() => { RG.progress.reset(); RG.progress.markSeen('story', 'prologue'); });
   await openGame(page, '1-1');
   await page.waitForFunction(() => RG.ui.tutorial.active, null, { timeout: 5000 });
+  // 도중에 다시 시작해도 안내가 다시 나옴 (끝내거나 건너뛸 때만 '봤음')
+  await page.evaluate(() => { RG.ui.closeAllModals(); RG.save.remove(RG.save.KEYS.run); RG.ui.show('game', { opts: RG.ui.game.game.opts }); });
+  await page.waitForFunction(() => RG.ui.game.game && !document.querySelector('#screen-game').classList.contains('loading'));
+  const restartOk = await page.waitForFunction(() => RG.ui.tutorial.active && RG.ui.tutorial.step === 'pick', null, { timeout: 5000 }).then(() => true).catch(() => false);
   const step = () => page.evaluate(() => RG.ui.tutorial.step);
   const steps = [await step()];
   const handOn = async (sel) => page.evaluate((sel) => {
@@ -455,9 +459,9 @@ async function tutorialRun(browser) {
   const skipped = await page.evaluate(() => ({ active: RG.ui.tutorial.active, seen: RG.progress.seen('tips', 'tutorial') }));
   await page.close();
   const want = ['pick', 'place', 'wave', 'upgrade', 'resonance', 'end'];
-  const ok = want.every((w, i) => steps[i] === w) && pointsCard && ring.shown && pointsCall && pointsUp && done.seen && done.links >= 1 && done.level >= 2 && done.tip
+  const ok = restartOk && want.every((w, i) => steps[i] === w) && pointsCard && ring.shown && pointsCall && pointsUp && done.seen && done.links >= 1 && done.level >= 2 && done.tip
     && !again && back && !skipped.active && skipped.seen;
-  return { name: '첫 판 안내', ok, detail: `단계 ${steps.join('→')}, 손가락(카드 ${pointsCard}·호출 ${pointsCall}·강화 ${pointsUp}), 끝난 뒤 병영 팁 ${done.tip}, 다시 안 나옴 ${!again}, 설정으로 되살림 ${back}, 건너뛰기 ${!skipped.active}`, errors };
+  return { name: '첫 판 안내', ok, detail: `다시 시작해도 나옴 ${restartOk}, 단계 ${steps.join('→')}, 손가락(카드 ${pointsCard}·호출 ${pointsCall}·강화 ${pointsUp}), 끝난 뒤 병영 팁 ${done.tip}, 다시 안 나옴 ${!again}, 설정으로 되살림 ${back}, 건너뛰기 ${!skipped.active}`, errors };
 }
 
 /* ---------------- 키보드 접근성: 창 안 Tab 순환·Esc·초점 되돌림, 위험 확인은 취소에 초점, 뽑기 두 번 안 됨, 6지역 방향키, 전투 키보드 흐름 ---------------- */
@@ -547,6 +551,37 @@ async function a11yRun(browser) {
   await page.evaluate(() => { RG.ui.game.game.state.gold += 55; });
   await page.waitForTimeout(400);
   r.panelFocus = await page.evaluate(() => document.activeElement && document.activeElement.matches('.info-panel .btn-up'));
+  // 6b) 키보드: 웨이브 호출 버튼에 초점이 있어도 숫자로 탑을 고르면 Enter는 짓기(웨이브 호출 아님) · 표적 버튼은 다시 그려도 같은 버튼에
+  await page.evaluate(() => RG.ui.show('game', { opts: { mapId: '1-2', heroId: 'kara', seed: 4, mode: 'normal', towers: ['ember_archer', 'frost_crystal', 'stone_barracks'], branches: true } }));
+  await page.waitForFunction(() => RG.ui.game.game && !document.querySelector('#screen-game').classList.contains('loading'));
+  await page.evaluate(() => RG.ui.closeAllModals());
+  r.noAutoCall = await page.evaluate(() => !document.activeElement.classList.contains('btn-call'));
+  await page.focus('.btn-call');
+  await page.keyboard.press('1');
+  for (const k of ['ArrowRight', 'ArrowDown']) await page.keyboard.press(k);
+  let placed = false;
+  for (let i = 0; i < 16 && !placed; i++) {
+    await page.keyboard.press('Enter'); await page.waitForTimeout(50);
+    placed = await page.evaluate(() => RG.ui.game.game.state.towers.length > 0);
+    if (!placed) await page.keyboard.press(i % 2 ? 'ArrowRight' : 'ArrowDown');
+  }
+  r.enterBuilds = placed && await page.evaluate(() => RG.ui.game.game.state.wave.index === 0);
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => { const t = RG.ui.game.game.state.towers[0]; const p = RG.render.worldToScreen(t.c + 0.5, t.r + 0.5); const cv = document.querySelector('.game-canvas'); const b = cv.getBoundingClientRect(); const o = { clientX: b.left + p.x, clientY: b.top + p.y, bubbles: true, pointerType: 'mouse' }; cv.dispatchEvent(new PointerEvent('pointerdown', o)); cv.dispatchEvent(new PointerEvent('pointerup', o)); });
+  await page.waitForTimeout(150);
+  await page.focus('.info-panel [data-k="tm:strong"]');
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(150);
+  r.targetFocus = await page.evaluate(() => RG.ui.game.game.state.towers[0].targetMode === 'strong' && document.activeElement.dataset.k === 'tm:strong');
+  // 6c) 이야기: 키보드로 들어가도 첫 Enter는 다음 대사(건너뛰기 아님)
+  await page.evaluate(() => { RG.ui.closeAllModals(); RG.ui.show('title', {}); });
+  await page.keyboard.press('Tab');
+  await page.evaluate(() => RG.ui.show('story', { id: 's1_2', then: () => RG.ui.show('title', {}) }));
+  await page.waitForTimeout(500);
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(200);
+  r.storyEnter = await page.evaluate(() => RG.ui.currentId() === 'story');
+  await page.keyboard.press('Escape');
   // 7) 효과 줄이기: 설정을 켜면 번쩍임(번개·빛기둥)은 1초에 3번까지, 흔들림 없음, 화면에 reduce-fx
   r.reduceFx = await page.evaluate(() => {
     RG.ui.setSettings({ reduceFx: true });

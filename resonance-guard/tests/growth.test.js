@@ -357,3 +357,18 @@ test('장신구 얻기: 도전 첫 클리어(지역에 맞는 등급) · 무한 
   assert.strictEqual(P.gachaState().crystals, c0 + GD.gearDupCrystals);
   P.reset();
 });
+
+test('영웅 성장 전 기록: 이미 깬 도전·무한 기록만큼 장신구를 한 번 채워 줌 (다시 불러도 또 주지 않음)', () => {
+  const L = loadGame();
+  const maps = {};
+  for (const id of ['1-1', '1-2', '2-1', '3-1', '5-2']) maps[id] = { cleared: true, stars: 5, challenge: true };
+  const old = { v: 1, maps, skills: [], seen: { enemies: [], story: [], tips: [] }, endless: { E1: 25, E2: 41 }, gacha: { owned: { ember_archer: 0 }, crystals: 0, pity: 0 } };
+  L.store.set(L.RG.save.KEYS.progress, JSON.stringify(old));
+  L.RG.progress.load();
+  const owned = Object.keys(L.RG.progress.ownedGear());
+  // 도전 5개 + 무한 E1(10·20) + E2(10·20·30·40) = 11번 받음 (같은 등급을 다 가지면 강화·공명석으로 바뀌므로 개수는 그 이하)
+  assert.ok(owned.length >= 6, `장신구 ${owned.length}개`);
+  const snap = JSON.stringify(L.RG.progress.get().gear);
+  L.RG.progress.load(); // 이제 gear가 있으니 다시 채우지 않음
+  assert.strictEqual(JSON.stringify(L.RG.progress.get().gear), snap);
+});

@@ -1202,11 +1202,11 @@
     R.info.dataset.sig = sig;
     // 창은 골드·피해가 바뀔 때마다 다시 그려짐 — 키보드 초점이 창 안에 있었으면 같은 버튼으로 돌려줌
     const fa = document.activeElement;
-    if (fa && fa !== R.info && R.info.contains(fa)) {
-      const key = { cls: fa.className, txt: (fa.textContent || '').trim().slice(0, 16) };
+    if (fa && fa !== R.info && R.info.contains(fa) && fa.dataset && fa.dataset.k) {
+      // 버튼마다 고정 이름(data-k)으로 찾음 — 고른 표적 버튼은 모양(클래스)이 바뀌므로 클래스로 찾으면 다른 버튼으로 갔음
+      const k = fa.dataset.k;
       queueMicrotask(() => {
-        const cand = [...R.info.querySelectorAll('button')];
-        const f = cand.find((b) => b.className === key.cls && (b.textContent || '').trim().slice(0, 16) === key.txt) || cand.find((b) => b.className === key.cls && !b.disabled);
+        const f = R.info.querySelector(`[data-k="${k}"]`) || (k === 'up' ? R.info.querySelector('[data-k^="br:"]:not([disabled])') : null);
         if (f) f.focus({ preventScroll: true });
       });
     }
@@ -1220,7 +1220,7 @@
         el('b', { text: info.name }),
         el('span', { class: 'ip-sub' }, [UI.elementBadge(td.element), el('span', { text: t.level >= 4 ? ' 분기' : ` Lv${t.level}` }), calc && calc.rank ? el('em', { class: `ip-rank ${RG.gacha.isFinal(calc.rank) ? 'fin' : ''}`, title: `뽑기 중복 강화: ${UI.rankText ? UI.rankText(t.type, calc.rank) : ''}`, text: RG.gacha.isFinal(calc.rank) ? ' ★ 최종 강화' : ` 강화 +${calc.rank}` }) : null]),
       ]),
-      el('button', { class: 'x-btn', 'aria-label': '닫기', onclick: cancelAll }, [UI.icon('close')]),
+      el('button', { class: 'x-btn', 'aria-label': '닫기', 'data-k': 'close', onclick: cancelAll }, [UI.icon('close')]),
     ]);
     R.info.appendChild(head);
     const desc = t.level >= 4 ? td.branches[t.branch].desc : td.desc;
@@ -1263,13 +1263,13 @@
     const up = el('div', { class: 'up-box' });
     for (const n of info.next) {
       if (n.type === 'upgrade') {
-        const b = el('button', { class: 'btn btn-up', disabled: game.state.gold < n.cost || t.building, onclick: () => doCmd({ type: 'upgrade', id: t.id }) }, [
+        const b = el('button', { class: 'btn btn-up', 'data-k': 'up', disabled: game.state.gold < n.cost || t.building, onclick: () => doCmd({ type: 'upgrade', id: t.id }) }, [
           UI.icon('upgrade', 'tiny'), el('span', { text: `Lv${n.level} 강화` }), el('span', { class: 'cost' }, [UI.icon('gold', 'tiny'), String(n.cost)]),
         ]);
         UI.tooltipFor(b, () => upgradeDiff(t, n.spec));
         up.appendChild(b);
       } else {
-        const card = el('button', { class: `branch-card ${n.locked ? 'locked' : ''}`, disabled: n.locked || game.state.gold < n.cost || t.building, onclick: () => confirmBranch(t, n) }, [
+        const card = el('button', { class: `branch-card ${n.locked ? 'locked' : ''}`, 'data-k': `br:${n.branch}`, disabled: n.locked || game.state.gold < n.cost || t.building, onclick: () => confirmBranch(t, n) }, [
           UI.towerImg(t.type, 4, n.branch, 'br-img'),
           el('b', { text: `${n.branch} · ${n.spec.name}` }),
           el('span', { class: 'br-desc', text: n.locked ? '첫 보스(1-6)를 쓰러뜨리면 열립니다' : n.spec.desc }),
@@ -1285,16 +1285,16 @@
     if (td.role === 'attack') {
       const tm = el('div', { class: 'target-modes' });
       for (const m of D().targetModeOrder) {
-        tm.appendChild(el('button', { class: `tm-btn ${t.targetMode === m ? 'on' : ''}`, title: D().targetModes[m].desc, text: D().targetModes[m].name, onclick: () => { doCmd({ type: 'target', id: t.id, mode: m }); refreshTowerPanel(true); } }));
+        tm.appendChild(el('button', { class: `tm-btn ${t.targetMode === m ? 'on' : ''}`, 'data-k': `tm:${m}`, title: D().targetModes[m].desc, text: D().targetModes[m].name, onclick: () => { doCmd({ type: 'target', id: t.id, mode: m }); refreshTowerPanel(true); } }));
       }
       R.info.appendChild(el('div', { class: 'sec-title', text: '표적' }));
       R.info.appendChild(tm);
     }
     if (td.role === 'barracks') {
-      row.appendChild(el('button', { class: `btn ${mode === 'rally' ? 'btn-primary' : ''}`, onclick: () => { mode = 'rally'; RG.render.overlay.rally = t.id; UI.toast('병사가 설 길을 누르세요', 'info'); refreshTowerPanel(true); } }, ['집결지 옮기기']));
+      row.appendChild(el('button', { class: `btn ${mode === 'rally' ? 'btn-primary' : ''}`, 'data-k': 'rally', onclick: () => { mode = 'rally'; RG.render.overlay.rally = t.id; UI.toast('병사가 설 길을 누르세요', 'info'); refreshTowerPanel(true); } }, ['집결지 옮기기']));
     }
     if (info.canSell) {
-      row.appendChild(el('button', { class: 'btn btn-sell', onclick: () => confirmSell(t, info.sellValue) }, [UI.icon('sell', 'tiny'), `팔기 ${info.sellValue}`]));
+      row.appendChild(el('button', { class: 'btn btn-sell', 'data-k': 'sell', onclick: () => confirmSell(t, info.sellValue) }, [UI.icon('sell', 'tiny'), `팔기 ${info.sellValue}`]));
     }
     R.info.appendChild(row);
     if (info.damageDealt > 0) R.info.appendChild(el('p', { class: 'dim small', text: `이번 판 피해 ${Math.round(info.damageDealt).toLocaleString()}` }));
@@ -1420,6 +1420,8 @@
   /* =====================================================
    * 키보드
    * ===================================================== */
+  /** 키보드로 전장을 쓰기 시작하면 초점을 전장으로 — 버튼에 남은 초점이 Enter를 가로채지 않게 */
+  function focusMap() { if (canvas && document.activeElement !== canvas) canvas.focus({ preventScroll: true }); }
   function onKey(e) {
     if (!game || UI.currentId() !== 'game') return;
     if (e.target && /input|textarea/i.test(e.target.tagName)) return;
@@ -1443,7 +1445,7 @@
     if (/^[0-9]$/.test(k) && !e.ctrlKey && !e.metaKey && !e.altKey) {
       if ((k === '1' || k === '2') && branchKey(k)) return;
       const type = availableTowers()[k === '0' ? 9 : +k - 1];
-      if (type) togglePick(type, 'key');
+      if (type) { togglePick(type, 'key'); focusMap(); }
       e.preventDefault();
       return;
     }
@@ -1456,6 +1458,7 @@
       keyCursor = { c: Math.max(0, Math.min(m.cols - 1, cur.c + arrows[k][0])), r: Math.max(0, Math.min(m.rows - 1, cur.r + arrows[k][1])) };
       RG.render.overlay.hover = { c: keyCursor.c, r: keyCursor.r };
       RG.render.overlay.keyCursor = true; // 키보드 커서는 눈에 잘 띄게(렌더러 위쪽 층에 굵은 모서리)
+      focusMap(); // 이어서 누르는 Enter가 (초점이 남아 있던) 버튼이 아니라 이 칸으로 가게
       if (mode === 'skill') RG.render.overlay.skillPos = { x: keyCursor.c + 0.5, y: keyCursor.r + 0.5 };
       if (pick) setGhost(keyCursor.c, keyCursor.r);
       e.preventDefault();
@@ -1615,7 +1618,7 @@
     support: { title: '지원 탑', text: '성소는 직접 공격하지 않지만 이웃 탑의 사거리를 늘리고 숨은 적을 드러내며 병사를 치료합니다. 지원 탑은 공명할수록 효과가 커집니다.' },
   };
   function nextTip() {
-    if (!game || !tipsQueue.length || UI.currentId() !== 'game') return;
+    if (!game || !tipsQueue.length || UI.currentId() !== 'game' || game.state.result) return;
     const id = tipsQueue.shift();
     const tip = TIPS[id];
     RG.progress.markSeen('tips', id);

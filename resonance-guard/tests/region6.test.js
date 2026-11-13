@@ -198,3 +198,49 @@ test('그믐달 군주: 별 가리기(경고 뒤 탑 사거리 −40%, 5초 뒤 
   assert.deepStrictEqual(Array.from(b.immuneEls || []), ['frost']);
   assert.strictEqual(g.api.damage(b, 100, 'frost', SRC('frost'), {}), 0, '얼음 면역');
 });
+
+/* 검토에서 찾은 별다리 결함의 회귀 시험 */
+test('별다리: 닫히는 다리 위의 비행 적(나방)도 건너가고, 다리 가운데에서 새지 않음', () => {
+  const g = game();
+  run(g, 3.6);
+  const e = spawn(g, 'stardust_moth', 2.5, 1.5);
+  e.tc = 3; e.tr = 1;
+  const lives0 = g.state.lives;
+  run(g, 0.5); // 4초에 A가 닫힘
+  assert.strictEqual(g.state.bridge.phase, 1);
+  let leakX = null;
+  for (let i = 0; i < 30 * 8 && !e.dead; i++) { g.step(); if (e.leaked && leakX == null) leakX = e.x; }
+  assert.ok(e.leaked && leakX >= 7, `울림등에서야 샘 (x=${leakX})`);
+  assert.strictEqual(g.state.lives, lives0 - D.enemies.stardust_moth.lives);
+});
+
+test('별다리: 적이 닫힌 다리를 건너는 동안에도 길과 상관없는 공터에는 지을 수 있음', () => {
+  const MAP2 = Object.assign({}, TEST_MAP, { id: 'T6b', grid: ['#*#######', 'S.BBB...L', '.#######.', '..bbbbb..', '##,######'] });
+  D.maps.push(MAP2);
+  const g = RG.sim.create({ mapId: 'T6b', seed: 1, heroId: null }); g.state.gold = 1e6;
+  run(g, 3.6);
+  const e = spawn(g, 'mist_rat', 2.5, 1.5);
+  e.tc = 3; e.tr = 1;
+  run(g, 0.5);
+  assert.ok(e.cross, '건너는 중');
+  const r = g.cmd({ type: 'build', tower: 'ember_archer', c: 2, r: 4 });
+  assert.ok(r.ok, r.reason);
+  D.maps.splice(D.maps.indexOf(MAP2), 1);
+});
+
+test('별다리: 집결지가 닫히는 다리 위면 걸을 수 있는 칸으로 옮겨지고 병사도 따라감', () => {
+  const g = game();
+  const res = g.cmd({ type: 'build', tower: 'stone_barracks', c: 3, r: 0 });
+  assert.ok(res.ok, res.reason);
+  const t = g.state.towers.find((q) => q.id === res.id);
+  const onBridge = (x, y) => RG.grid.isBridgeKind(g.map.kinds[Math.floor(y) * g.map.cols + Math.floor(x)]);
+  run(g, 1);
+  assert.ok(onBridge(t.rally.x, t.rally.y), '처음엔 열린 다리 위가 가장 가까움');
+  run(g, 3.2); // A가 닫힘
+  assert.ok(!onBridge(t.rally.x, t.rally.y), '집결지가 다리 밖으로');
+  run(g, 3);
+  for (const u of g.state.units.filter((q) => q.kind === 'soldier' && q.owner === t.id && !q.dead)) {
+    const i = Math.floor(u.y) * g.map.cols + Math.floor(u.x);
+    assert.ok(!(onBridge(u.x, u.y) && g.blocked[i]), '병사가 닫힌 다리 위에 서 있지 않음');
+  }
+});

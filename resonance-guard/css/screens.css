@@ -977,6 +977,9 @@
 :root.reduce-fx .boss-intro.show .bi-art { animation: none !important; }
 :root.reduce-fx .stat-lives.flash { animation: none !important; background: #ff4a4a55; }
 :root.reduce-fx .gc-flash.go:not(.soft) { animation: none !important; opacity: 0; }
+/* 효과 줄이기에서도 뽑기 마지막에 한 번, 아주 약하게 (가장 높은 등급이 영웅 이상일 때) */
+:root.reduce-fx .gc-flash.soft.go { animation: gc-flash-soft 0.9s ease-out !important; animation-duration: 0.9s !important; }
+@keyframes gc-flash-soft { 0% { opacity: 0; } 40% { opacity: 0.3; } 100% { opacity: 0; } }
 
 /* 설정 창: 줄마다 이름 왼쪽 · 조절 오른쪽 */
 .settings { display: grid; gap: 4px; min-width: min(24rem, 78vw); }
