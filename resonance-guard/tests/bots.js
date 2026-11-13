@@ -457,7 +457,21 @@ function makeEnv(RG) {
     return p;
   }
 
+  /** 'use:탑:최소수' 목표: 그 탑을 몇 개 지었나, 공격 탑이면 탑 피해 중 그 탑 몫 */
+  function useStats(r, objective) {
+    const [, type, min] = objective.split(':');
+    const n = (r.towers || []).filter((t) => t.split(':')[0] === type).length;
+    const tot = Object.values(r.byType || {}).reduce((a, b) => a + b, 0) || 1;
+    const share = (r.byType && r.byType[type] ? r.byType[type] : 0) / tot;
+    const attack = D.towers[type].role === 'attack';
+    return { n, share, attack, ok: n >= +min }; // 피해 몫은 참고만 (감속·밀치기 탑은 피해가 작아도 쓸모 있음 — 쓸모는 빼 보기 시험으로)
+  }
   function fitness(r, objective) {
+    // 탑 쓰임 검증: 그 탑을 쓰면서 이겨야 함 — 안 쓴 승리는 크게 깎음 (공격 탑은 피해 몫이 클수록 조금 더 쳐 줌)
+    if (objective && objective.startsWith('use:')) {
+      const u = useStats(r, objective);
+      return (r.result === 'win' ? 10000 : 0) + r.lives * 300 + r.waves * 100 + (r.bossDone || 0) * 1200 - (u.ok ? 0 : 9000) + Math.min(u.n, 4) * 150 + (u.attack ? u.share * 2000 : 0);
+    }
     // 과제: 이기는 것이 먼저 — 진 판의 과제 달성은 조금만 쳐서, 이길 수 있는 계열이 밀려나지 않게
     if (objective === 'task') return (r.result === 'win' ? 10000 + (r.task ? 6000 : 0) : (r.task ? 400 : 0)) + r.lives * 100 + r.waves * 100 + (r.bossDone || 0) * 600;
     return (r.result === 'win' ? 10000 : 0) + r.lives * 300 + r.waves * 100 + (r.task ? 150 : 0) + (r.bossDone || 0) * 1200;
@@ -591,7 +605,10 @@ function makeEnv(RG) {
     const greedy = run(opts, 'greedy');
     const g0 = RG.sim.create(Object.assign({ mode: 'normal', seed: 1 }, opts));
     let popu = [];
-    for (const style of STYLES) {
+    // 탑 쓰임 검증이면 그 탑을 무겁게 치는 그리디 계획들도 출발점에
+    const useType = objective && objective.startsWith('use:') ? objective.split(':')[1] : null;
+    const styles = useType ? STYLES.concat([{ W: { [useType]: 3 } }, { W: { [useType]: 6 }, res: 0.25 }, { W: { [useType]: 4 }, up: 2 }]) : STYLES;
+    for (const style of styles) {
       const gr = style === STYLES[0] ? greedy : run(opts, 'greedy', style);
       const plan = logToPlan(gr.log, gr.game);
       popu.push({ plan, r: run(opts, 'plan', { plan, early }) });
@@ -626,7 +643,8 @@ function makeEnv(RG) {
     const base = popu[0].plan;
     while (popu.length < pop) { const p = mutate(mutate(popu[popu.length % STYLES.length].plan, g0, rng), g0, rng); popu.push({ plan: p, r: run(opts, 'plan', { plan: p, early }) }); }
     let best = popu.reduce((a, b) => (fitness(b.r, objective) > fitness(a.r, objective) ? b : a));
-    const goalMet = (r) => (objective === 'task' ? r.result === 'win' && r.task : objective === 'challenge' ? r.result === 'win' : r.result === 'win' && r.lives >= RG.data.rules.starLives[1]);
+    const goalMet = (r) => (objective === 'task' ? r.result === 'win' && r.task : objective === 'challenge' ? r.result === 'win'
+      : useType ? r.result === 'win' && r.lives >= RG.data.rules.starLives[1] && useStats(r, objective).ok : r.result === 'win' && r.lives >= RG.data.rules.starLives[1]);
     for (let gen = 0; gen < (goalMet(best.r) ? 0 : maxGens); gen++) {
       if (gen >= gens && best.r.result !== 'win' && gen >= maxGens) break;
       popu.sort((a, b) => fitness(b.r, objective) - fitness(a.r, objective));
@@ -650,7 +668,8 @@ function makeEnv(RG) {
   /** 탐색은 시드에 따라 결과가 크게 흔들림 → 목표를 못 채우면 다른 시드로 다시 (최대 tries번), 가장 좋은 것 */
   function searchBest(opts, params = {}, tries = 3) {
     const objective = params.objective || 'stars';
-    const met = (r) => (objective === 'task' ? r.result === 'win' && r.task : objective === 'challenge' ? r.result === 'win' : r.result === 'win' && r.lives >= RG.data.rules.starLives[1]);
+    const met = (r) => (objective === 'task' ? r.result === 'win' && r.task : objective === 'challenge' ? r.result === 'win'
+      : objective.startsWith('use:') ? r.result === 'win' && r.lives >= RG.data.rules.starLives[1] && useStats(r, objective).ok : r.result === 'win' && r.lives >= RG.data.rules.starLives[1]);
     let best = null;
     for (let i = 0; i < tries; i++) {
       const s = searchPlan(opts, Object.assign({}, params, { seed: (params.seed || 1) + i }));
@@ -660,7 +679,7 @@ function makeEnv(RG) {
     return best;
   }
 
-  return { run, searchPlan, searchBest, routeTiles, coverage, logToPlan, fitness, STYLES, mazePlan, taskSeedPlan };
+  return { run, searchPlan, searchBest, routeTiles, coverage, logToPlan, fitness, useStats, STYLES, mazePlan, taskSeedPlan };
 }
 
 module.exports = { makeEnv, loadGame };
