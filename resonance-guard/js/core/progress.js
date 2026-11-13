@@ -25,6 +25,10 @@ RG.progress = (() => {
     profile.seen = Object.assign({ enemies: [], story: [], tips: [] }, profile.seen || {});
     if (!profile.heroes || typeof profile.heroes !== 'object') profile.heroes = {};
     if (!profile.gear || typeof profile.gear !== 'object') profile.gear = {};
+    // 잠깐 있었던 원정 모드(없앰)의 기록·저장된 원정 전투는 지움
+    if ('expRun' in profile || 'expStats' in profile) { delete profile.expRun; delete profile.expStats; RG.save.set(RG.save.KEYS.progress, profile); }
+    const savedRun = RG.save.get(RG.save.KEYS.run, null);
+    if (savedRun && savedRun.opts && savedRun.opts.mode === 'expedition') RG.save.remove(RG.save.KEYS.run);
     if (!p || !p.gacha) {
       // 뽑기가 생기기 전 기록: 그때까지 해금했던 탑은 그대로 가진 것으로 (빼앗지 않음)
       const g = blankGacha();
@@ -297,46 +301,6 @@ RG.progress = (() => {
     save();
     return out;
   }
-  /* ---------------- 원정 (docs/design/expedition.md) ---------------- */
-  const expOpen = () => !!mapRec(D().expedition.unlockAfter).cleared;
-  const expRun = () => get().expRun || null;
-  const expStats = () => Object.assign({ runs: 0, wins: 0, best: 0 }, get().expStats || {});
-  function expStart(seed, heroId) {
-    const run = RG.expedition.newRun(seed, heroId, ownedTowers());
-    get().expRun = run;
-    save();
-    return run;
-  }
-  /** 원정 판이 끝남: 불꽃·은화·보상 반영 + 영웅 인연 경험치 */
-  function expBattleEnd(st) {
-    const run = expRun();
-    if (!run || run.phase !== 'battle') return null;
-    const win = st.result === 'win';
-    const res = RG.expedition.applyBattle(run, { result: win ? 'win' : 'lose', lives: st.lives });
-    const bond = run.heroId && D().heroes[run.heroId] ? addBond(run.heroId, RG.growth.bondGain({ result: win ? 'win' : 'lose', mode: 'normal', newStars: 0 })) : null;
-    save();
-    return Object.assign({}, res, { bond });
-  }
-  /** 원정을 그만둠 (지금까지 오른 층만큼 보상) */
-  function expAbandon() {
-    const run = expRun();
-    if (!run || run.phase === 'done') return;
-    RG.expedition.finish(run, false);
-    save();
-  }
-  /** 끝난 원정의 보상 받기: 공명석 + 장신구, 기록 갱신, 원정 지움 */
-  function expClaim() {
-    const run = expRun();
-    if (!run || run.phase !== 'done') return null;
-    const rw = run.rewards || RG.expedition.rewardsOf(run);
-    gachaState().crystals += rw.crystals;
-    const gear = rw.gear.map((r, i) => grantGear(r, `exp:${run.seed}:${i}`));
-    const s0 = expStats();
-    get().expStats = { runs: s0.runs + 1, wins: s0.wins + (run.result === 'win' ? 1 : 0), best: Math.max(s0.best, run.floorsCleared) };
-    get().expRun = null;
-    save();
-    return { crystals: rw.crystals, gear, result: run.result, floors: run.floorsCleared };
-  }
 
   /** 판에 넘길 성장 복사본 (opts.heroGrowth) — 재능·장신구가 하나도 없으면 null */
   function heroGrowth(heroId) {
@@ -380,6 +344,5 @@ RG.progress = (() => {
     gachaState, ownedTowers, ownsTower, towerRank, towerRanks, gachaPool, inPool, pullGacha, towersOpen, towerOpen, towerRegion, regionCleared, towerFinal,
     mapStars, starsTotal, starsSpent, starsFree, canLearn, learn, resetSkills, record, nextMapId, markSeen, seen, frontier, skillCost,
     heroRec, bondOf, addBond, takeTalent, resetTalents, talentsOf, ownedGear, equipGear, upgradeGear, grantGear, heroGrowth, rarityForRegion,
-    expOpen, expRun, expStats, expStart, expBattleEnd, expAbandon, expClaim,
   };
 })();

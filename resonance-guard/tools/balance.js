@@ -6,7 +6,6 @@
  *   node tools/balance.js --maps 1-1,1-2  # 일부
  *   node tools/balance.js --search        # 탐색 봇까지 (느림)
  *   node tools/balance.js --soak 2000     # 오류 찾기용 대량 실행
- *   node tools/balance.js --expedition 6 [--bot search]  # 원정을 처음부터 끝까지 (docs/reports/expedition.md)
  * 결과: docs/reports/balance.md
  */
 const fs = require('fs');
@@ -55,68 +54,6 @@ if (has('soak')) {
   console.log(`장기 실행 ${n}판 완료, 오류 ${errors}개`);
   process.exitCode = errors ? 1 : 0;
   return;
-}
-
-if (has('expedition')) {
-  // 원정을 처음부터 끝까지 그리디 봇으로 (노드·보상·상점·사건은 간단한 규칙으로 고름)
-  const EX = RG.expedition;
-  const XD = D.expedition;
-  const n = +arg('expedition', 6);
-  const owned = D.towerOrder.slice(0, +arg('owned', 18));
-  const heroId = arg('hero', 'kara');
-  const useSearch = arg('bot', 'greedy') === 'search';
-  const kindOrder = (run, k) => ({ rest: run.lives < 9 ? 0 : 5, shop: run.silver >= XD.shop.relic ? 1 : 6, battle: 2, event: 3, elite: run.lives >= 12 ? 1.5 : 4 }[k]);
-  const out = [];
-  const t0 = Date.now();
-  for (let i = 0; i < n; i++) {
-    const run = EX.newRun(5000 + i, heroId, owned);
-    EX.pickDeck(run, run.offer.slice(0, Math.min(XD.startDeck.pick, run.offer.length)));
-    const log = [];
-    let guard = 0;
-    while (run.phase !== 'done' && guard++ < 300) {
-      if (run.phase === 'map') {
-        let best = 0;
-        run.nodes.forEach((x, j) => { if (kindOrder(run, x.kind) < kindOrder(run, run.nodes[best].kind)) best = j; });
-        EX.choose(run, best);
-      } else if (run.phase === 'battle') {
-        const set = EX.battleSetup(run);
-        const o = Object.assign({ seed: run.seed + run.battles, heroId, towers: run.deck, mode: 'expedition', branches: true }, set);
-        let r = env.run(o, 'greedy');
-        // --bot search: 그리디가 불꽃을 잃으면 탐색 봇(사람에 가까운 계획)으로 다시 — 더 나은 쪽
-        if (useSearch && (r.result !== 'win' || r.lives < run.lives)) {
-          const sr = env.searchBest(o, { gens: +arg('gens', 6), pop: +arg('pop', 8), maxGens: +arg('maxgens', 10) }).best.r;
-          if (sr.result === 'win' && (r.result !== 'win' || sr.lives > r.lives)) r = sr;
-        }
-        log.push(`${run.act}-${run.floor}${run.node.kind === 'boss' ? '보스' : run.node.kind === 'elite' ? '정예' : ''}(${set.mapId}) ${r.result === 'win' ? `${run.lives}→${r.lives}` : '패'}`);
-        EX.applyBattle(run, { result: r.result === 'win' ? 'win' : 'lose', lives: r.result === 'win' ? r.lives : 0 });
-      } else if (run.phase === 'reward') EX.takeReward(run, run.offer.length && (run.offerKind === 'relic' || run.deck.length < XD.maxDeck) ? run.offer[0] : null);
-      else if (run.phase === 'event') {
-        const ev = XD.events.find((x) => x.id === run.node.event);
-        if (!EX.eventChoose(run, 0).ok) EX.eventChoose(run, ev.options.findIndex((o) => !o.cost));
-      } else if (run.phase === 'shop') {
-        const relic = run.shopStock.find((x) => x.kind === 'relic');
-        if (relic) EX.shopBuy(run, relic.id);
-        EX.shopBuy(run, 'upgrade', run.deck.find((t) => !run.up.includes(t)));
-        if (run.lives < 10) EX.shopBuy(run, 'heal');
-        EX.shopLeave(run);
-      } else if (run.phase === 'rest') {
-        const t = run.deck.find((x) => !run.up.includes(x));
-        EX.rest(run, run.lives < 10 || !t ? 'heal' : { upgrade: t });
-      }
-    }
-    if (run.phase !== 'done') throw new Error(`원정 ${i}: 끝나지 않음 (${run.phase})`);
-    out.push({ i, run, log });
-    console.log(`원정 ${i + 1}: ${run.result === 'win' ? '승리' : `${run.act}막 ${run.floor}층에서 끝`} · 판 ${run.battles} · 덱 ${run.deck.length} · 유물 ${run.relics.length} · 공명석 ${run.rewards.crystals} (${Math.round((Date.now() - t0) / 1000)}초)`);
-  }
-  const file = path.resolve(ROOT, arg('out', path.join('docs', 'reports', 'expedition.md')));
-  const wins = out.filter((x) => x.run.result === 'win').length;
-  const avgDepth = out.reduce((a, x) => a + EX.depth(x.run), 0) / out.length;
-  const lines = ['# 원정 봇 실행', '', `생성: ${new Date().toISOString().slice(0, 16)} · ${useSearch ? '탐색 봇(그리디가 불꽃을 잃는 판만 탐색)' : '그리디 봇'}, 영웅 ${D.heroes[heroId].name}, 가진 탑 ${owned.length}종 · 노드는 쉼터(불꽃 9 미만)·상점(은화 충분)·전투 순, 보상은 첫째 것`, '',
-    `원정 ${out.length}번: 승리 ${wins} · 평균 도달 ${avgDepth.toFixed(1)}층(전체 ${XD.acts * (XD.floors + 1)}층) · 막힘 0`, '', '| # | 결과 | 판 | 덱 | 유물 | 공명석 | 판 기록 (막-층(맵) 불꽃) |', '|---|---|---|---|---|---|---|'];
-  for (const x of out) lines.push(`| ${x.i + 1} | ${x.run.result === 'win' ? '승리' : `${x.run.act}막 ${x.run.floor}층`} | ${x.run.battles} | ${x.run.deck.length} | ${x.run.relics.length} | ${x.run.rewards.crystals} | ${x.log.join(' · ')} |`);
-  fs.writeFileSync(file, `${lines.join('\n')}\n`);
-  console.log(`→ ${path.relative(ROOT, file)}`);
-  process.exit(0);
 }
 
 if (has('challenge') || has('tasks')) {

@@ -72,7 +72,7 @@
         bannerOf(rd.region || 1),
         el('span', { class: 'tm-medal tm-medal-big' }, [UI.icon('play', 'tm-ico')]),
         el('span', { class: 'tm-text' }, [
-          el('span', { class: 'tm-kicker', text: `${run.opts && run.opts.mode === 'expedition' ? '원정 전투' : '하던 판'} · ${run.mapId} 웨이브 ${run.wave}` }),
+          el('span', { class: 'tm-kicker', text: `하던 판 · ${run.mapId} 웨이브 ${run.wave}` }),
           el('b', { class: 'tm-title', text: '이어하기' }),
           el('span', { class: 'tm-sub', text: rd.name || '' }),
         ]),
@@ -93,17 +93,6 @@
       ]),
       resumable ? null : el('span', { class: 'tm-go', text: has ? '출발 ›' : '시작 ›' }),
     ]));
-    // 원정 (3-6을 깨면 열림)
-    if (P().expOpen()) {
-      const xr = P().expRun();
-      mainCol.appendChild(el('button', { class: `btn btn-big tm-card tm-map-small tm-exp ${xr ? 'ready' : ''}`, onclick: go(() => UI.show('expedition', {})) }, [
-        el('span', { class: 'tm-medal' }, [UI.icon('crown', 'tm-ico')]),
-        el('span', { class: 'tm-text' }, [
-          el('b', { class: 'tm-title', text: xr ? '원정 이어 가기' : '원정' }),
-          el('span', { class: 'tm-sub', text: xr ? (xr.phase === 'done' ? '보상을 받으세요' : `${xr.act}막 ${xr.floor > D().expedition.floors ? '보스' : `${xr.floor}층`} · 불꽃 ${xr.lives} · 은화 ${xr.silver}`) : '3막 로그라이크 · 덱과 유물을 모아 하늘 끝까지' }),
-        ]),
-      ]));
-    }
     // 양옆 카드 4장
     const g = P().gachaState();
     const nPull = Math.floor(g.crystals / RG.gacha.COST.one);
@@ -332,7 +321,6 @@
           el('button', { class: `btn small btn-gacha ${canPull() ? 'ready' : ''}`, onclick: () => UI.show('gacha', { back: { screen: 'world' } }) }, [UI.icon('crystal', 'tiny'), `뽑기 ${P().gachaState().crystals}`]),
           el('button', { class: 'btn small', onclick: () => UI.show('tree', {}) }, [UI.icon('tree', 'tiny'), `기술 나무${P().starsFree() > 0 ? ` (${P().starsFree()})` : ''}`]),
           el('button', { class: 'btn small', onclick: () => UI.show('heroes', {}) }, [UI.icon('hero', 'tiny'), '수호대']),
-          P().expOpen() ? el('button', { class: `btn small btn-exp ${P().expRun() ? 'ready' : ''}`, onclick: () => UI.show('expedition', {}) }, [UI.icon('map', 'tiny'), P().expRun() ? '원정 중' : '원정']) : null,
           el('button', { class: 'btn small', onclick: () => UI.show('codex', {}) }, [UI.icon('book', 'tiny'), '도감']),
           el('button', { class: 'icon-btn', title: '설정', onclick: openSettings }, [UI.icon('settings')]),
         ]),

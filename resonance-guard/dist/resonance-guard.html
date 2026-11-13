@@ -1126,90 +1126,6 @@ button { font-family: var(--font); color: inherit; }
 .hp-item { position: relative; }
 .hp-bond { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: linear-gradient(180deg, #ffd0e0, #ff9ab8); color: #4a1428; font-style: normal; font-size: 0.7rem; font-weight: 900; display: grid; place-items: center; box-shadow: 0 0 0 2px #1a1028; }
 
-/* ---------- 원정 (docs/design/expedition.md) ---------- */
-#screen-expedition.active { display: flex; flex-direction: column; }
-.ex-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 12px 16px calc(16px + var(--safe-b)); max-width: 1100px; width: 100%; margin: 0 auto; }
-.ex-quit { margin-left: auto; }
-.btn-exp.ready { box-shadow: 0 0 0 2px #ffe7a8, 0 0 12px #ffe7a866; }
-.ex-progress { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-.ex-act { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 12px; background: #150f20; border: 1px solid var(--line); opacity: 0.7; }
-.ex-act.on { opacity: 1; border-color: var(--gold); }
-.ex-act b { font-size: 0.8rem; color: var(--gold2); }
-.ex-steps { display: flex; gap: 4px; align-items: center; }
-.ex-step { width: 12px; height: 12px; border-radius: 50%; background: #2d2340; border: 2px solid #4a3b5e; }
-.ex-step.boss { width: 16px; height: 16px; border-radius: 4px; transform: rotate(45deg); }
-.ex-step.done { background: var(--gold); border-color: #8a6a2a; }
-.ex-step.cur { background: #fff4c0; border-color: #fff; box-shadow: 0 0 8px #ffe7a8; }
-.ex-head { display: flex; align-items: center; justify-content: center; gap: 8px 14px; flex-wrap: wrap; }
-.ex-hero { display: flex; align-items: center; gap: 8px; justify-content: center; font-weight: 800; }
-@media (max-height: 520px) {
-  .ex-body { gap: 8px; padding-top: 6px; }
-  .ex-act { padding: 4px 8px; }
-  .ex-hero .mini-portrait { width: 30px; height: 30px; }
-  .ex-panel { padding: 10px 12px; gap: 8px; }
-}
-.ex-panel { display: flex; flex-direction: column; gap: 12px; align-items: center; text-align: center; padding: 18px; border-radius: 18px; background: linear-gradient(180deg, #221a32, #150f20); border: 1px solid #4a3b5e; box-shadow: 0 10px 24px #0007; }
-.ex-panel h3 { font-size: 1.15rem; color: #fff1c4; }
-.ex-panel .dim { max-width: 640px; }
-.ex-log { padding: 6px 12px; border-radius: 10px; background: #ffe7a81a; border: 1px solid #ffe7a855; color: #fff4d0; font-weight: 700; }
-.ex-nodes { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; width: 100%; }
-.ex-bossline { display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 8px; border-radius: 12px; background: #2a0f1e99; border: 1px solid #ff7a9a66; color: #ffdfe6; text-align: left; cursor: pointer; }
-.ex-bossline .ex-boss-img { width: 44px; height: 44px; object-fit: contain; }
-.ex-bossline span { display: flex; flex-direction: column; line-height: 1.2; }
-.ex-bossline small { color: #ffb3c4; font-size: 0.75rem; }
-.ex-node { appearance: none; font: inherit; color: var(--text); cursor: pointer; width: 220px; min-height: 170px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 12px; border-radius: 16px; background: linear-gradient(180deg, #2d2340, #1a1228); border: 2px solid #5a4a72; transition: transform 0.15s, box-shadow 0.15s; }
-.ex-node:hover, .ex-node:focus-visible { transform: translateY(-3px); box-shadow: 0 8px 18px #0008, 0 0 0 2px var(--gold2); outline: none; }
-.ex-node-ico { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: #0008; }
-.ex-node-ico .icon { width: 34px; height: 34px; }
-.ex-node b { font-size: 1.05rem; }
-.ex-node-map { font-size: 0.82rem; color: var(--gold2); font-weight: 700; }
-.ex-node-rule { font-size: 0.74rem; padding: 2px 8px; border-radius: 8px; background: #ff9a6a22; color: #ffc8a8; }
-.ex-node small { font-size: 0.74rem; color: var(--dim); line-height: 1.35; }
-.ex-node.k-elite { border-color: #d86a6a; } .ex-node.k-boss { border-color: var(--gold); background: linear-gradient(180deg, #3a2a18, #1a1228); }
-.ex-node.k-event { border-color: #6fb8ff; } .ex-node.k-shop { border-color: #e8c070; } .ex-node.k-rest { border-color: #8fe38a; }
-.ex-picks { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-.ex-pick { appearance: none; font: inherit; color: var(--text); cursor: pointer; width: 150px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px; border-radius: 14px; background: #1d1528; border: 2px solid #4a3b5e; position: relative; }
-.ex-pick .tower-img { width: 72px; height: 94px; }
-.ex-pick b { font-size: 0.88rem; }
-.ex-pick small { font-size: 0.72rem; color: var(--dim); line-height: 1.3; }
-.ex-pick.on { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold2), 0 0 14px #ffdf9a55; background: linear-gradient(180deg, #3a2c18, #1d1528); }
-.ex-pick:disabled { opacity: 0.45; cursor: default; }
-.ex-pick:focus-visible { outline: 2px solid var(--gold2); outline-offset: 2px; }
-.ex-picks.small .ex-pick { width: 110px; }
-.ex-picks.small .tower-img { width: 54px; height: 70px; }
-.ex-relic-ico { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 14px; background: radial-gradient(circle at 40% 35%, #4a3a6a, #120c1c); }
-.ex-relic-ico .icon { width: 36px; height: 36px; }
-.ex-price { display: inline-flex; align-items: center; gap: 3px; font-weight: 800; color: var(--gold2); }
-.ex-shopitem.sold { opacity: 0.4; }
-.ex-options { display: flex; flex-direction: column; gap: 8px; width: min(100%, 460px); }
-.ex-option { width: 100%; text-align: left; padding: 0.7em 1em; }
-.ex-story { max-width: 560px; line-height: 1.6; color: #f1e8fc; }
-.ex-upgrade { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.ex-done.win h3 { color: #ffe7a8; } .ex-done.lose h3 { color: #ffb0a0; }
-.ex-status { display: grid; grid-template-columns: auto 1fr; grid-template-areas: 'res res' 'deck deck' 'relic relic'; gap: 8px; padding: 12px; border-radius: 16px; background: #120c1c; border: 1px solid var(--line); }
-.ex-res { grid-area: res; display: flex; gap: 16px; justify-content: center; font-size: 1.05rem; }
-.ex-res > span { display: inline-flex; align-items: center; gap: 4px; }
-.ex-res b { color: #fff4d0; }
-.ex-deckwrap { grid-area: deck; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.ex-relicwrap { grid-area: relic; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.ex-lbl { font-size: 0.74rem; font-weight: 800; color: var(--dim); min-width: 56px; }
-.ex-deck { display: flex; gap: 4px; flex-wrap: wrap; }
-.ex-card { position: relative; width: 42px; height: 52px; display: grid; place-items: center; border-radius: 10px; background: #1d1528; border: 1.5px solid #4a3b5e; }
-.ex-card .tower-img { width: 34px; height: 44px; }
-.ex-up { position: absolute; top: -4px; right: -4px; font-style: normal; font-size: 0.7rem; color: #2a1a08; background: var(--gold); border-radius: 8px; padding: 0 4px; font-weight: 900; }
-.ex-relics { display: flex; gap: 4px; flex-wrap: wrap; }
-.ex-relic { font-size: 0.74rem; font-weight: 700; padding: 3px 8px; border-radius: 10px; background: #2d2340; border: 1px solid #5a4a72; }
-.ex-relic.k-curse { border-color: #d86a6a; color: #ffc0b8; } .ex-relic.k-element { border-color: #e8a86a; } .ex-relic.k-hero { border-color: #6fd3ff; } .ex-relic.k-life { border-color: #8fe38a; }
-.ex-intro .hero-pick { justify-content: center; }
-.ex-stats { font-size: 0.82rem; }
-@media (max-width: 600px) {
-  /* 좁은 화면: 노드 카드를 가로로 (아이콘 왼쪽, 글 오른쪽) */
-  .ex-node { width: 100%; min-height: 0; display: grid; grid-template-columns: 48px 1fr; column-gap: 12px; row-gap: 3px; align-items: center; justify-items: start; text-align: left; padding: 10px 12px; }
-  .ex-node > .ex-node-ico { grid-row: 1 / span 4; align-self: center; }
-  .ex-node > :not(.ex-node-ico) { grid-column: 2; }
-  .ex-pick { width: calc(50% - 6px); }
-}
-
 </style>
   <style>/* css/game.css */
 /* =========================================================
@@ -1492,7 +1408,6 @@ body.rg-dragging, body.rg-dragging * { cursor: grabbing !important; }
     <section class="screen" id="screen-heroes"></section>
     <section class="screen" id="screen-tree"></section>
     <section class="screen" id="screen-gacha"></section>
-    <section class="screen" id="screen-expedition"></section>
   </div>
   <div id="modal-root"></div>
   <div id="tooltip" class="tooltip" role="tooltip"></div>
@@ -3074,123 +2989,6 @@ RG.data.growth = {
   caps: { takenPct: 0.5, cooldownPct: 0.5, respawnPct: 0.8 },
   /** 무한 기록 보상 웨이브 */
   endlessMilestones: [10, 20, 30, 40],
-};
-
-</script>
-  <script>/* js/data/expedition.js */
-'use strict';
-
-/* =========================================================
- * 원정 모드 데이터 — 설계: docs/design/expedition.md
- * 유물 mods 키: 기술 나무 meta 키(startGoldPct·bountyPct·earlyBonusPct·buildCostPct·upgradeCostPct·mineIncomePct·purePct·ampPct·
- *   tripleDamagePct·quadSpeedPct·rangePct·branchCostPct·branchDamagePct·heroHpPct·heroDamagePct·heroCooldownPct·heroRespawnPct·
- *   heroStartLevel·leakShield) + 원정 전용(elFire…elDark: 원소 탑 피해, hpScale: 적 체력, armorAdd: 적 갑옷, countdownMul,
- *   silverPct: 은화, winLife: 이기면 불꽃)
- * ========================================================= */
-RG.data.expedition = {
-  unlockAfter: '3-6',
-  acts: 3,
-  floors: 5,                 // 막마다 일반 층 수 (그 뒤 막 보스)
-  startLives: 12,
-  maxLives: 20,
-  startDeck: { offer: 6, pick: 4 },
-  maxDeck: 10,
-  actRegions: [[1, 2], [3, 4], [5, 6]],
-  actBoss: [['1-6', '2-6'], ['3-6', '4-6'], ['5-6', '6-6']],
-  actScale: [0.85, 1.0, 1.1],
-  floorScale: 0.03,
-  eliteScale: 1.25,
-  goldMult: 1.5,             // 짧은 작전이라 경제가 덜 쌓임 → 시작 골드를 더 줌
-  waveWindow: 0.75,          // 전투·정예는 맵 웨이브의 앞 75% 안에서 이어진 웨이브 (1층은 처음부터, 5층은 창의 끝까지)
-  boss: { goldMult: 2.5, hpScale: [0.7, 0.7, 0.5] }, // 막 보스(막마다): 마지막 5웨이브를 앞 웨이브 경제 없이, 작은 덱으로 치르므로
-  waves: { battle: 6, elite: 7, boss: 5 },
-  silver: { battle: 20, elite: 40, boss: 80, perAct: 5, skip: 25 },
-  shop: { tower: 60, relic: 110, heal: 45, healLives: 3, upgrade: 70 },
-  rest: { heal: 3 },
-  reward: { perFloor: 15, win: 150 },
-  /** 노드 종류 가중치 (층 2부터 정예, 층 3부터 상점·쉼터) */
-  nodeWeights: { battle: 45, elite: 15, event: 20, shop: 10, rest: 10 },
-  nodeInfo: {
-    battle: { name: '전투', icon: 'wave', desc: '짧은 작전 6웨이브. 이기면 탑 하나를 덱에 넣거나 은화.' },
-    elite: { name: '정예', icon: 'skull', desc: '강한 7웨이브. 이기면 유물 하나를 고름.' },
-    event: { name: '사건', icon: 'book', desc: '무슨 일이 기다리고 있을까요?' },
-    shop: { name: '상점', icon: 'gold', desc: '원정 은화로 탑·유물·불꽃·강화를 삽니다.' },
-    rest: { name: '쉼터', icon: 'lives', desc: '불꽃 +3 또는 탑 하나 원정 강화.' },
-    boss: { name: '막 보스', icon: 'crown', desc: '이 막 지역 보스 맵의 마지막 5웨이브.' },
-  },
-
-  /** 변형 규칙 (전투·정예마다 하나) */
-  rules: {
-    clear: { name: '맑은 하늘', desc: '특별한 일 없음.', mods: {} },
-    fog: { name: '짙은 안개', desc: '탑 사거리 −10%.', mods: { rangePct: -0.1 } },
-    gold: { name: '황금 웨이브', desc: '현상금 +30%.', mods: { bountyPct: 0.3 } },
-    steel: { name: '강철 무리', desc: '적 갑옷 +10%p.', mods: { armorAdd: 0.1 } },
-    hurry: { name: '서두르는 밤', desc: '웨이브 카운트다운 절반, 조기 호출 보너스 +50%.', mods: { countdownMul: 0.5, earlyBonusPct: 0.5 } },
-    fat: { name: '살찐 무리', desc: '적 체력 +15%, 현상금 +20%.', mods: { hpScale: 0.15, bountyPct: 0.2 } },
-  },
-  ruleOrder: ['clear', 'fog', 'gold', 'steel', 'hurry', 'fat'],
-
-  /** 유물 30종 */
-  relics: {
-    coin_pouch: { name: '금화 주머니', kind: 'eco', desc: '시작 골드 +25%', mods: { startGoldPct: 0.25 } },
-    bounty_book: { name: '현상금 수첩', kind: 'eco', desc: '현상금 +20%', mods: { bountyPct: 0.2 } },
-    early_bell: { name: '이른 종소리', kind: 'eco', desc: '조기 호출 보너스 +60%', mods: { earlyBonusPct: 0.6 } },
-    cheap_hammer: { name: '할인 망치', kind: 'eco', desc: '건설비 −10%', mods: { buildCostPct: -0.1 } },
-    file_rasp: { name: '숙련공의 줄', kind: 'eco', desc: '강화비 −15%', mods: { upgradeCostPct: -0.15 } },
-    mine_lamp: { name: '광산 등불', kind: 'eco', desc: '광산 수입 +50%', mods: { mineIncomePct: 0.5 } },
-    ember_heart: { name: '불꽃 심장', kind: 'element', desc: '불 탑 피해 +15%', mods: { elFire: 0.15 } },
-    frost_shard: { name: '서리 조각', kind: 'element', desc: '얼음 탑 피해 +15%', mods: { elFrost: 0.15 } },
-    storm_quill: { name: '폭풍 깃', kind: 'element', desc: '폭풍 탑 피해 +15%', mods: { elStorm: 0.15 } },
-    earth_core: { name: '대지 핵', kind: 'element', desc: '대지 탑 피해 +15%', mods: { elEarth: 0.15 } },
-    dawn_mirror: { name: '새벽 거울', kind: 'element', desc: '빛 탑 피해 +15%', mods: { elLight: 0.15 } },
-    shadow_thorn: { name: '그림자 가시', kind: 'element', desc: '어둠 탑 피해 +15%', mods: { elDark: 0.15 } },
-    pure_fork: { name: '순수 소리굽쇠', kind: 'resonance', desc: '순수 공명 효과 +20%', mods: { purePct: 0.2 } },
-    amp_crystal: { name: '증폭 수정', kind: 'resonance', desc: '지원 탑 증폭 +5%p', mods: { ampPct: 0.05 } },
-    triple_knot: { name: '세 갈래 매듭', kind: 'resonance', desc: '세 원소 이상 공명 피해 +10%', mods: { tripleDamagePct: 0.1 } },
-    quad_drum: { name: '네 박자 북', kind: 'resonance', desc: '네 원소 공명 공격 속도 +10%', mods: { quadSpeedPct: 0.1 } },
-    far_lens: { name: '망원 렌즈', kind: 'tower', desc: '탑 사거리 +10%', mods: { rangePct: 0.1 } },
-    branch_plan: { name: '분기 설계도', kind: 'tower', desc: '분기 강화 비용 −20%', mods: { branchCostPct: -0.2 } },
-    branch_blade: { name: '분기 칼날', kind: 'tower', desc: '분기한 탑 피해 +10%', mods: { branchDamagePct: 0.1 } },
-    hero_cloak: { name: '영웅의 망토', kind: 'hero', desc: '영웅 체력 +25%', mods: { heroHpPct: 0.25 } },
-    hero_blade: { name: '영웅의 칼', kind: 'hero', desc: '영웅 공격력 +20%', mods: { heroDamagePct: 0.2 } },
-    clockwork: { name: '시계태엽', kind: 'hero', desc: '영웅 기술 재사용 −20%', mods: { heroCooldownPct: -0.2 } },
-    quick_rise: { name: '빠른 부활', kind: 'hero', desc: '영웅 부활 시간 −40%', mods: { heroRespawnPct: -0.4 } },
-    lore_book: { name: '경험의 책', kind: 'hero', desc: '영웅이 Lv2로 시작', mods: { heroStartLevel: 1 } },
-    lamp_shield: { name: '등불 방패', kind: 'life', desc: '판마다 새는 적 2마리를 막음', mods: { leakShield: 2 } },
-    life_dew: { name: '생명 이슬', kind: 'life', desc: '판을 이기면 불꽃 +1', mods: { winLife: 1 } },
-    piggy_bank: { name: '은화 저금통', kind: 'life', desc: '은화 +25%', mods: { silverPct: 0.25 } },
-    cursed_crown: { name: '저주받은 금관', kind: 'curse', desc: '적 체력 +10%, 은화 +50%', mods: { hpScale: 0.1, silverPct: 0.5 } },
-    heavy_armor: { name: '무거운 갑옷', kind: 'curse', desc: '적 갑옷 +10%p, 시작 골드 +40%', mods: { armorAdd: 0.1, startGoldPct: 0.4 } },
-    broken_glass: { name: '깨진 모래시계', kind: 'curse', desc: '카운트다운 절반, 현상금 +30%', mods: { countdownMul: 0.5, bountyPct: 0.3 } },
-  },
-
-  /** 사건 12종: 선택지 effect 키 — silver, lives, relic('random'|'curse'), upgrade('random'), addTower('random'), removeTower('random') */
-  events: [
-    { id: 'smith', title: '떠도는 대장장이', text: '망치를 멘 대장장이가 모닥불 곁에 앉아 있습니다. "은화 몇 닢이면 탑 하나 손봐 주지."', options: [
-      { text: '은화 40을 내고 원정 강화', cost: { silver: 40 }, effect: { upgrade: 'random' } }, { text: '고맙다고 하고 지나간다', effect: {} }] },
-    { id: 'spring', title: '별빛 샘', text: '구름 사이로 별빛이 고인 작은 샘이 반짝입니다.', options: [
-      { text: '샘물을 마신다 (불꽃 +2)', effect: { lives: 2 } }, { text: '바닥의 동전을 줍는다 (은화 +30)', effect: { silver: 30 } }] },
-    { id: 'chest', title: '수상한 상자', text: '길가에 이끼 낀 상자가 놓여 있습니다. 안에서 무언가 울립니다.', options: [
-      { text: '연다 (유물 — 저주일지도)', effect: { relic: 'gamble' } }, { text: '건드리지 않는다', effect: {} }] },
-    { id: 'spirit', title: '길 잃은 정령', text: '작은 정령이 길을 잃고 울고 있습니다. 데려다주면 보답하겠다고 합니다.', options: [
-      { text: '데려다준다 (불꽃 −1, 원정 강화)', effect: { lives: -1, upgrade: 'random' } }, { text: '방향만 알려 준다 (은화 +15)', effect: { silver: 15 } }] },
-    { id: 'fork', title: '안개 낀 갈림길', text: '지름길은 짙은 안개 속으로 이어집니다.', options: [
-      { text: '안개 속 지름길 (은화 +60, 불꽃 −2)', effect: { silver: 60, lives: -2 } }, { text: '돌아간다', effect: {} }] },
-    { id: 'recruit', title: '망루 수리공', text: '부서진 망루를 고치던 장인이 함께 가겠다고 합니다.', options: [
-      { text: '함께 간다 (덱에 탑 하나)', effect: { addTower: 'random' } }, { text: '은화를 받는다 (은화 +25)', effect: { silver: 25 } }] },
-    { id: 'shrine', title: '잊힌 사당', text: '금 간 종이 걸린 사당. 기도하면 무언가 바뀔 것 같습니다.', options: [
-      { text: '기도한다 (유물 하나)', cost: { lives: 2 }, effect: { relic: 'random' } }, { text: '종을 닦아 준다 (불꽃 +1)', effect: { lives: 1 } }] },
-    { id: 'merchant', title: '떠돌이 상인', text: '"오늘만 특가! 은화 50에 귀한 물건 하나!"', options: [
-      { text: '산다 (은화 −50, 유물)', cost: { silver: 50 }, effect: { relic: 'random' } }, { text: '구경만 한다', effect: {} }] },
-    { id: 'storm', title: '갑작스런 폭풍', text: '바람이 거세게 불어 장비가 날아갑니다.', options: [
-      { text: '탑 하나를 지킨다 (덱에서 하나 빠짐, 은화 +40)', effect: { removeTower: 'random', silver: 40 } }, { text: '몸을 숙여 버틴다 (불꽃 −1)', effect: { lives: -1 } }] },
-    { id: 'library', title: '별지기의 서고', text: '먼지 쌓인 두루마리에 탑을 다루는 비법이 적혀 있습니다.', options: [
-      { text: '밤새 읽는다 (원정 강화)', effect: { upgrade: 'random' } }, { text: '책을 팔아 은화로 (은화 +35)', effect: { silver: 35 } }] },
-    { id: 'gambler', title: '주사위 노름꾼', text: '"이기면 두 배, 지면 빈손이지."', options: [
-      { text: '은화 30을 건다', cost: { silver: 30 }, effect: { gamble: 60 } }, { text: '거절한다', effect: {} }] },
-    { id: 'campfire', title: '다른 수호대의 모닥불', text: '먼저 지나간 수호대가 남긴 따뜻한 모닥불입니다.', options: [
-      { text: '쉬어 간다 (불꽃 +1)', effect: { lives: 1 } }, { text: '남은 보급품을 챙긴다 (은화 +20)', effect: { silver: 20 } }] },
-  ],
 };
 
 </script>
@@ -5389,9 +5187,6 @@ RG.stats = (() => {
       c.kind = def.kind;
       c.targets = spec.targets || def.targets;
       c.dmgBonus = 0;
-      // 원정 유물: 원소 탑 피해 (meta.elFire …)
-      const elKey = `el${def.element[0].toUpperCase()}${def.element.slice(1)}`;
-      if (meta[elKey]) c.dmgBonus += meta[elKey];
       c.speedBonus = 0;
       c.rangeBonus = meta.rangePct || 0;
       // 6지역 별빛 건설지: 사거리 +15%
@@ -5831,288 +5626,6 @@ RG.growth = (() => {
 })();
 
 </script>
-  <script>/* js/core/expedition.js */
-'use strict';
-
-/* =========================================================
- * 원정 진행 (순수 함수 — 저장할 상태 run을 받아 바꿈) — 설계: docs/design/expedition.md
- * 모든 무작위는 원정 시드에서 파생한 시드 난수(RG.util.makeRng)로 정해짐 → 같은 시드·같은 선택 = 같은 원정.
- * run.phase: 'deck'(시작 덱 고르기) → 'map'(층 노드 고르기) → 'battle'(판 중) → 'reward'(보상 고르기) / 'event' / 'shop' / 'rest' → 'map' … → 'done'
- * ========================================================= */
-RG.expedition = (() => {
-  const E = () => RG.data.expedition;
-  const U = () => RG.util;
-  /** (원정 시드, 이름표) → 새 난수 */
-  const rngOf = (run, ...tags) => U().makeRng(U().hashStr(`${run.seed}|${tags.join('|')}`) >>> 0);
-  const pick = (r, list) => list[Math.floor(r() * list.length) % list.length];
-  function shuffled(r, list) {
-    const a = list.slice();
-    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
-    return a;
-  }
-
-  /** 새 원정: owned = 가진 탑 목록(뽑기), 시작 덱 후보 6종 */
-  function newRun(seed, heroId, owned) {
-    const run = {
-      v: 1, seed: seed >>> 0, heroId, act: 1, floor: 1, lives: E().startLives, silver: 0,
-      owned: owned.slice(), deck: [], up: [], relics: [], phase: 'deck', offer: [], node: null, nodes: null,
-      history: [], shopBought: [], floorsCleared: 0, actsCleared: 0, result: null, battles: 0,
-    };
-    // 시작 덱 후보: 가진 탑에서 무작위 6종, 공격 탑이 3종은 들어가게 (지원·경제 탑만으로 덱이 차지 않게)
-    const isAtk = (t) => RG.data.towers[t].role === 'attack';
-    const all = shuffled(rngOf(run, 'deck'), owned);
-    const n = Math.min(E().startDeck.offer, owned.length);
-    const atk = all.filter(isAtk).slice(0, Math.min(3, n));
-    run.offer = atk.concat(all.filter((t) => !atk.includes(t))).slice(0, n);
-    run.offer = all.filter((t) => run.offer.includes(t)); // 순서는 섞인 그대로
-    return run;
-  }
-  function pickDeck(run, types) {
-    if (run.phase !== 'deck') return { ok: false, reason: '덱을 고르는 때가 아닙니다' };
-    const n = Math.min(E().startDeck.pick, run.offer.length);
-    if (types.length !== n || types.some((t) => !run.offer.includes(t)) || new Set(types).size !== n) return { ok: false, reason: `${n}종을 골라 주세요` };
-    run.deck = types.slice();
-    run.phase = 'map';
-    run.nodes = floorNodes(run);
-    return { ok: true };
-  }
-
-  /** 막 지역의 보스 아닌 맵들 */
-  function actMaps(act) {
-    const regs = E().actRegions[act - 1];
-    return RG.data.maps.filter((m) => regs.includes(m.region) && !m.boss).map((m) => m.id);
-  }
-  const isBossFloor = (run) => run.floor > E().floors;
-  /** 이 막의 보스 맵 (막을 시작할 때부터 정해져 있음 → 지도에서 미리 보여 줌) */
-  const actBossMap = (run, act = run.act) => pick(rngOf(run, 'floor', act, E().floors + 1), E().actBoss[act - 1]);
-
-  /** 이번 층의 노드 2~3개 (보스 층은 보스 하나) */
-  function floorNodes(run) {
-    const r = rngOf(run, 'floor', run.act, run.floor);
-    if (isBossFloor(run)) return [{ kind: 'boss', mapId: actBossMap(run) }];
-    const n = 2 + (r() < 0.6 ? 1 : 0);
-    const maps = shuffled(r, actMaps(run.act));
-    const out = [];
-    for (let i = 0; i < n; i++) {
-      let kind = 'battle';
-      if (run.floor > 1) {
-        const W = E().nodeWeights;
-        const kinds = Object.keys(W).filter((k) => (k !== 'elite' || run.floor >= 2) && ((k !== 'shop' && k !== 'rest') || run.floor >= 3));
-        const tot = kinds.reduce((a, k) => a + W[k], 0);
-        let x = r() * tot;
-        for (const k of kinds) { x -= W[k]; if (x <= 0) { kind = k; break; } }
-      }
-      const node = { kind };
-      if (kind === 'battle' || kind === 'elite') {
-        node.mapId = maps[i % maps.length];
-        node.rule = pick(r, E().ruleOrder);
-      }
-      if (kind === 'event') node.event = pick(r, E().events).id;
-      out.push(node);
-    }
-    // 같은 층에 전투가 하나도 없으면 첫 노드를 전투로 (진행이 너무 쉬워지지 않게)
-    if (!out.some((x) => x.kind === 'battle' || x.kind === 'elite')) { out[0] = { kind: 'battle', mapId: maps[0], rule: pick(r, E().ruleOrder) }; }
-    return out;
-  }
-
-  /** 유물·변형 규칙을 합친 수정치 */
-  function mods(run, ruleId) {
-    const out = {};
-    const add = (m) => { for (const [k, v] of Object.entries(m || {})) out[k] = (out[k] || 0) + v; };
-    for (const id of run.relics) add((E().relics[id] || {}).mods);
-    if (ruleId && E().rules[ruleId]) add(E().rules[ruleId].mods);
-    return out;
-  }
-
-  /** 노드 고르기 → 전투면 { battle: opts 조각 }, 아니면 그 단계로 */
-  function choose(run, idx) {
-    if (run.phase !== 'map') return { ok: false, reason: '지금은 고를 수 없습니다' };
-    const node = run.nodes && run.nodes[idx];
-    if (!node) return { ok: false, reason: '없는 노드' };
-    run.node = Object.assign({ idx }, node);
-    if (node.kind === 'battle' || node.kind === 'elite' || node.kind === 'boss') { run.phase = 'battle'; return { ok: true, battle: true }; }
-    if (node.kind === 'event') run.phase = 'event';
-    else if (node.kind === 'shop') { run.phase = 'shop'; run.shopBought = []; run.shopStock = shopStock(run); }
-    else if (node.kind === 'rest') run.phase = 'rest';
-    return { ok: true };
-  }
-
-  /** 지금 노드의 판 설정: { mapId, expedition, hpMult } (게임 opts에 합쳐 씀) */
-  function battleSetup(run) {
-    const node = run.node;
-    const def = RG.data.maps.find((m) => m.id === node.mapId);
-    const L = def.waves.length;
-    let waves;
-    if (node.kind === 'boss') {
-      const k = Math.min(E().waves.boss, L);
-      waves = Array.from({ length: k }, (_, i) => L - k + i);
-    } else {
-      // 이어진 k웨이브: 층이 오를수록 맵의 뒤쪽으로 (앞 waveWindow 안에서) — 웨이브 사이 경제 흐름은 맵 그대로
-      const k = Math.min(node.kind === 'elite' ? E().waves.elite : E().waves.battle, L);
-      const span = Math.max(k, Math.round(L * (E().waveWindow || 1)));
-      const start = Math.round(((span - k) * (Math.min(run.floor, E().floors) - 1)) / Math.max(1, E().floors - 1));
-      waves = Array.from({ length: k }, (_, i) => start + i);
-    }
-    const m = mods(run, node.kind === 'boss' ? null : node.rule);
-    const boss = node.kind === 'boss';
-    const hpScale = E().actScale[run.act - 1] * (1 + E().floorScale * (Math.min(run.floor, E().floors) - 1)) * (node.kind === 'elite' ? E().eliteScale : 1) * (boss ? E().boss.hpScale[run.act - 1] : 1) * (1 + (m.hpScale || 0));
-    const meta = {};
-    for (const [k, v] of Object.entries(m)) if (!['hpScale', 'armorAdd', 'countdownMul', 'silverPct', 'winLife'].includes(k)) meta[k] = v;
-    return {
-      mapId: node.mapId,
-      hpMult: Math.round(hpScale * 10000) / 10000,
-      expedition: {
-        waves, lives: run.lives, goldMult: boss ? E().boss.goldMult : E().goldMult, meta, upgraded: run.up.slice(),
-        armorAdd: m.armorAdd || 0, countdownMul: m.countdownMul ? Math.max(0.25, 0.5 ** Math.round(m.countdownMul / 0.5)) : 1, // 절반 효과가 겹치면 ¼까지
-        act: run.act, floor: run.floor, kind: node.kind, rule: node.kind === 'boss' ? null : node.rule,
-      },
-    };
-  }
-
-  /** 판 결과 반영: { result: 'win'|'lose', lives } */
-  function applyBattle(run, res) {
-    if (run.phase !== 'battle') return { ok: false, reason: '판 중이 아닙니다' };
-    const node = run.node;
-    const m = mods(run);
-    run.battles += 1;
-    run.lives = Math.max(0, Math.min(E().maxLives, res.lives));
-    if (res.result !== 'win' || run.lives <= 0) { run.lives = 0; return finish(run, false); }
-    if (m.winLife) run.lives = Math.min(E().maxLives, run.lives + m.winLife);
-    const S = E().silver;
-    const base = (node.kind === 'boss' ? S.boss : node.kind === 'elite' ? S.elite : S.battle) + S.perAct * (run.act - 1);
-    const gain = Math.round(base * (1 + (m.silverPct || 0)));
-    run.silver += gain;
-    const r = rngOf(run, 'reward', run.act, run.floor);
-    if (node.kind === 'battle') {
-      run.offer = shuffled(r, run.owned.filter((t) => !run.deck.includes(t))).slice(0, 3);
-      run.offerKind = 'tower';
-    } else {
-      run.offer = shuffled(r, Object.keys(E().relics).filter((k) => !run.relics.includes(k) && E().relics[k].kind !== 'curse')).slice(0, 3);
-      run.offerKind = 'relic';
-    }
-    run.phase = 'reward';
-    return { ok: true, silver: gain };
-  }
-  /** 보상 고르기: id(탑·유물) 또는 null(은화로) */
-  function takeReward(run, id) {
-    if (run.phase !== 'reward') return { ok: false, reason: '보상 단계가 아닙니다' };
-    if (id == null) {
-      if (run.offerKind === 'tower') run.silver += E().silver.skip;
-    } else {
-      if (!run.offer.includes(id)) return { ok: false, reason: '없는 보상' };
-      if (run.offerKind === 'tower') { if (run.deck.length >= E().maxDeck) return { ok: false, reason: `덱은 ${E().maxDeck}종까지입니다` }; run.deck.push(id); } else run.relics.push(id);
-    }
-    run.offer = [];
-    return advance(run);
-  }
-
-  /** 다음 층으로 (보스를 깨면 다음 막, 마지막 막이면 원정 승리) */
-  function advance(run) {
-    run.history.push({ act: run.act, floor: run.floor, kind: run.node ? run.node.kind : null });
-    const wasBoss = run.node && run.node.kind === 'boss';
-    run.node = null;
-    run.floorsCleared += 1;
-    if (wasBoss) {
-      run.actsCleared += 1;
-      if (run.act >= E().acts) return finish(run, true);
-      run.act += 1;
-      run.floor = 1;
-    } else run.floor += 1;
-    run.phase = 'map';
-    run.nodes = floorNodes(run);
-    return { ok: true };
-  }
-
-  /** 사건 선택지 */
-  function eventChoose(run, optIdx) {
-    if (run.phase !== 'event') return { ok: false, reason: '사건이 아닙니다' };
-    const ev = E().events.find((x) => x.id === run.node.event);
-    const opt = ev && ev.options[optIdx];
-    if (!opt) return { ok: false, reason: '없는 선택지' };
-    if (opt.cost) {
-      if (opt.cost.silver && run.silver < opt.cost.silver) return { ok: false, reason: '은화가 모자랍니다' };
-      if (opt.cost.lives && run.lives <= opt.cost.lives) return { ok: false, reason: '불꽃이 모자랍니다' };
-      run.silver -= opt.cost.silver || 0;
-      run.lives -= opt.cost.lives || 0;
-    }
-    const r = rngOf(run, 'event', run.act, run.floor);
-    const fx = opt.effect || {};
-    const log = [];
-    if (fx.silver) { run.silver = Math.max(0, run.silver + fx.silver); log.push(`은화 ${fx.silver > 0 ? '+' : ''}${fx.silver}`); }
-    if (fx.lives) { run.lives = Math.max(1, Math.min(E().maxLives, run.lives + fx.lives)); log.push(`불꽃 ${fx.lives > 0 ? '+' : ''}${fx.lives}`); }
-    if (fx.gamble) { if (r() < 0.5) { run.silver += fx.gamble; log.push(`이겼다! 은화 +${fx.gamble}`); } else log.push('졌다…'); }
-    if (fx.upgrade) { const c = run.deck.filter((t) => !run.up.includes(t)); if (c.length) { const t = pick(r, c); run.up.push(t); log.push(`${RG.data.towers[t].name} 원정 강화`); } }
-    if (fx.addTower) { const c = run.owned.filter((t) => !run.deck.includes(t)); if (c.length && run.deck.length < E().maxDeck) { const t = pick(r, c); run.deck.push(t); log.push(`${RG.data.towers[t].name} 합류`); } }
-    if (fx.removeTower && run.deck.length > 2) { const t = pick(r, run.deck); run.deck = run.deck.filter((x) => x !== t); run.up = run.up.filter((x) => x !== t); log.push(`${RG.data.towers[t].name} 잃음`); }
-    if (fx.relic) {
-      const pool = Object.keys(E().relics).filter((k) => !run.relics.includes(k) && (fx.relic === 'gamble' || E().relics[k].kind !== 'curse'));
-      if (pool.length) { const id = pick(r, pool); run.relics.push(id); log.push(`유물: ${E().relics[id].name}`); }
-    }
-    const done = advance(run);
-    return Object.assign(done, { log });
-  }
-
-  /** 상점 물건 (노드마다 정해짐) */
-  function shopStock(run) {
-    const r = rngOf(run, 'shop', run.act, run.floor);
-    const towers = shuffled(r, run.owned.filter((t) => !run.deck.includes(t))).slice(0, 2);
-    const relic = shuffled(r, Object.keys(E().relics).filter((k) => !run.relics.includes(k) && E().relics[k].kind !== 'curse'))[0];
-    const items = towers.map((t) => ({ id: `t:${t}`, kind: 'tower', type: t, price: E().shop.tower }));
-    if (relic) items.push({ id: `r:${relic}`, kind: 'relic', relic, price: E().shop.relic });
-    items.push({ id: 'heal', kind: 'heal', price: E().shop.heal }, { id: 'upgrade', kind: 'upgrade', price: E().shop.upgrade });
-    return items;
-  }
-  /** 상점에서 사기. upgradeType: 원정 강화할 탑 */
-  function shopBuy(run, itemId, upgradeType) {
-    if (run.phase !== 'shop') return { ok: false, reason: '상점이 아닙니다' };
-    const it = (run.shopStock || []).find((x) => x.id === itemId);
-    if (!it) return { ok: false, reason: '없는 물건' };
-    if (run.shopBought.includes(itemId) && it.kind !== 'heal') return { ok: false, reason: '이미 샀습니다' };
-    if (run.silver < it.price) return { ok: false, reason: '은화가 모자랍니다' };
-    if (it.kind === 'tower') { if (run.deck.length >= E().maxDeck) return { ok: false, reason: `덱은 ${E().maxDeck}종까지입니다` }; run.deck.push(it.type); }
-    else if (it.kind === 'relic') run.relics.push(it.relic);
-    else if (it.kind === 'heal') { if (run.lives >= E().maxLives) return { ok: false, reason: '불꽃이 가득합니다' }; run.lives = Math.min(E().maxLives, run.lives + E().shop.healLives); }
-    else if (it.kind === 'upgrade') {
-      if (!upgradeType || !run.deck.includes(upgradeType) || run.up.includes(upgradeType)) return { ok: false, reason: '강화할 탑을 골라 주세요' };
-      run.up.push(upgradeType);
-    }
-    run.silver -= it.price;
-    run.shopBought.push(itemId);
-    return { ok: true };
-  }
-  const shopLeave = (run) => (run.phase === 'shop' ? advance(run) : { ok: false, reason: '상점이 아닙니다' });
-
-  /** 쉼터: 'heal' 또는 { upgrade: type } */
-  function rest(run, choice) {
-    if (run.phase !== 'rest') return { ok: false, reason: '쉼터가 아닙니다' };
-    if (choice === 'heal') run.lives = Math.min(E().maxLives, run.lives + E().rest.heal);
-    else if (choice && choice.upgrade) {
-      if (!run.deck.includes(choice.upgrade) || run.up.includes(choice.upgrade)) return { ok: false, reason: '강화할 수 없는 탑' };
-      run.up.push(choice.upgrade);
-    } else return { ok: false, reason: '쉬거나 강화를 고르세요' };
-    return advance(run);
-  }
-
-  /** 원정 끝: 보상 계산 (공명석, 장신구 등급들) */
-  function finish(run, win) {
-    run.phase = 'done';
-    run.result = win ? 'win' : 'lose';
-    run.rewards = rewardsOf(run);
-    return { ok: true, done: true, win };
-  }
-  function rewardsOf(run) {
-    const R = E().reward;
-    const crystals = run.floorsCleared * R.perFloor + (run.result === 'win' ? R.win : 0);
-    const gear = ['common', 'rare', 'epic'].slice(0, run.actsCleared);
-    return { crystals, gear };
-  }
-  /** 지금 몇 번째 층인가(전체): 1막 1층 = 1 */
-  const depth = (run) => (run.act - 1) * (E().floors + 1) + run.floor;
-
-  return { newRun, pickDeck, floorNodes, mods, choose, battleSetup, applyBattle, takeReward, advance, eventChoose, shopStock, shopBuy, shopLeave, rest, finish, rewardsOf, actMaps, depth, isBossFloor, actBossMap };
-})();
-
-</script>
   <script>/* js/core/sim.js */
 'use strict';
 
@@ -6185,18 +5698,15 @@ RG.sim = (() => {
     const rules = D().rules;
     const challenge = o.mode === 'challenge' ? (def.challenge || null) : null;
     const meta = (o.mode === 'challenge') ? {} : sumSkills(o.skills);
-    // 원정 판(docs/design/expedition.md): 고른 웨이브만, 유물·변형 규칙 수정치를 기술 나무 수정치에 더함
-    const X = o.expedition || null;
-    if (X && X.meta) for (const [k, v] of Object.entries(X.meta)) meta[k] = (meta[k] || 0) + v;
     const map = RG.grid.parseMap(def);
-    const waves = o.mode === 'endless' ? [] : RG.grid.parseWaves(X && X.waves ? X.waves.map((i) => def.waves[i]).filter(Boolean) : def.waves);
+    const waves = o.mode === 'endless' ? [] : RG.grid.parseWaves(def.waves);
     const rng = U().makeRng(o.seed >>> 0);
     const n = map.cols * map.rows;
 
     const st = {
       tick: 0, time: 0, mapId: def.id, mode: o.mode, map,
-      gold: Math.round(def.startGold * (X && X.goldMult ? X.goldMult : 1) * (1 + (meta.startGoldPct || 0))),
-      lives: X && X.lives ? X.lives : challenge && challenge.type === 'lives' ? challenge.value : rules.lives,
+      gold: Math.round(def.startGold * (1 + (meta.startGoldPct || 0))),
+      lives: challenge && challenge.type === 'lives' ? challenge.value : rules.lives,
       maxLives: rules.lives,
       result: null,
       wave: { index: 0, total: o.mode === 'endless' ? Infinity : waves.length, countdown: null, started: false, queue: [], bonusBase: 0 },
@@ -6204,7 +5714,7 @@ RG.sim = (() => {
       hero: null,
       events: [],
       stats: { damageByTower: {}, kills: 0, leaked: 0, goldEarned: 0, heroDamage: 0, resonanceSeen: {} },
-      task: def.task && !X ? { def: def.task, done: false, best: 0 } : null,
+      task: def.task ? { def: def.task, done: false, best: 0 } : null,
       warnings: [],                         // 데이터 경고(알 수 없는 적 등)
       alerts: [],                           // 보스 경고(1.5초 뒤 탑 멈춤) — 그리기용
       linksFrozenUntil: 0,
@@ -6234,7 +5744,6 @@ RG.sim = (() => {
     /** 지을 때의 단계: 뽑기 최종 강화 탑은 Lv1 값 그대로 Lv2로 지어짐(도전의 최대 단계 제한은 지킴).
      *  o.finalLv2: 이 규칙이 생긴 뒤 시작한 판만 켬 — 그 전에 저장한 판을 이어 할 때 기록 재현이 어긋나지 않게 */
     function startLevel(type) {
-      if (X && X.upgraded && X.upgraded.includes(type)) return 2; // 원정 강화한 탑
       if (!o.finalLv2 || !(RG.gacha && RG.gacha.isFinal(ranks[type]))) return 1;
       if (challenge && challenge.type === 'maxLevel' && challenge.value < 2) return 1;
       return 2;
@@ -6673,7 +6182,7 @@ RG.sim = (() => {
       if (st.wave.hpScale) hp *= st.wave.hpScale;
       const e = {
         id: nextId++, type, x, y, px: x, py: y, c, r, tc: c, tr: r,
-        hp, maxHp: hp, shield: 0, maxShield: 0, armor: X && X.armorAdd ? Math.min(0.9, ed.armor + X.armorAdd) : ed.armor, flying, size: ed.size * (from && from.fragment ? 0.75 : 1),
+        hp, maxHp: hp, shield: 0, maxShield: 0, armor: ed.armor, flying, size: ed.size * (from && from.fragment ? 0.75 : 1),
         stealth: !!ed.traits.stealth, revealed: !ed.traits.stealth,
         lane: Math.floor(rng() * 1000), dir: 1, prog: 0, trail: [],
         st: { slowPct: 0, slowUntil: 0, curse: null, veil: null, blindUntil: 0, stillUntil: 0, purifyUntil: 0, haltUntil: 0, shreds: {}, burns: [], bleeds: [] },
@@ -8316,7 +7825,7 @@ RG.sim = (() => {
         spawnEnemy(q.e, q.s, null, q.wave);
       }
       if (w.started && !w.queue.length && w.countdown === null && w.index < w.total) {
-        w.countdown = challenge && challenge.type === 'countdown' ? challenge.value : rules.countdown * (X && X.countdownMul ? X.countdownMul : 1);
+        w.countdown = challenge && challenge.type === 'countdown' ? challenge.value : rules.countdown;
       }
       if (w.countdown !== null) {
         w.countdown -= DT;
@@ -9422,6 +8931,10 @@ RG.progress = (() => {
     profile.seen = Object.assign({ enemies: [], story: [], tips: [] }, profile.seen || {});
     if (!profile.heroes || typeof profile.heroes !== 'object') profile.heroes = {};
     if (!profile.gear || typeof profile.gear !== 'object') profile.gear = {};
+    // 잠깐 있었던 원정 모드(없앰)의 기록·저장된 원정 전투는 지움
+    if ('expRun' in profile || 'expStats' in profile) { delete profile.expRun; delete profile.expStats; RG.save.set(RG.save.KEYS.progress, profile); }
+    const savedRun = RG.save.get(RG.save.KEYS.run, null);
+    if (savedRun && savedRun.opts && savedRun.opts.mode === 'expedition') RG.save.remove(RG.save.KEYS.run);
     if (!p || !p.gacha) {
       // 뽑기가 생기기 전 기록: 그때까지 해금했던 탑은 그대로 가진 것으로 (빼앗지 않음)
       const g = blankGacha();
@@ -9694,46 +9207,6 @@ RG.progress = (() => {
     save();
     return out;
   }
-  /* ---------------- 원정 (docs/design/expedition.md) ---------------- */
-  const expOpen = () => !!mapRec(D().expedition.unlockAfter).cleared;
-  const expRun = () => get().expRun || null;
-  const expStats = () => Object.assign({ runs: 0, wins: 0, best: 0 }, get().expStats || {});
-  function expStart(seed, heroId) {
-    const run = RG.expedition.newRun(seed, heroId, ownedTowers());
-    get().expRun = run;
-    save();
-    return run;
-  }
-  /** 원정 판이 끝남: 불꽃·은화·보상 반영 + 영웅 인연 경험치 */
-  function expBattleEnd(st) {
-    const run = expRun();
-    if (!run || run.phase !== 'battle') return null;
-    const win = st.result === 'win';
-    const res = RG.expedition.applyBattle(run, { result: win ? 'win' : 'lose', lives: st.lives });
-    const bond = run.heroId && D().heroes[run.heroId] ? addBond(run.heroId, RG.growth.bondGain({ result: win ? 'win' : 'lose', mode: 'normal', newStars: 0 })) : null;
-    save();
-    return Object.assign({}, res, { bond });
-  }
-  /** 원정을 그만둠 (지금까지 오른 층만큼 보상) */
-  function expAbandon() {
-    const run = expRun();
-    if (!run || run.phase === 'done') return;
-    RG.expedition.finish(run, false);
-    save();
-  }
-  /** 끝난 원정의 보상 받기: 공명석 + 장신구, 기록 갱신, 원정 지움 */
-  function expClaim() {
-    const run = expRun();
-    if (!run || run.phase !== 'done') return null;
-    const rw = run.rewards || RG.expedition.rewardsOf(run);
-    gachaState().crystals += rw.crystals;
-    const gear = rw.gear.map((r, i) => grantGear(r, `exp:${run.seed}:${i}`));
-    const s0 = expStats();
-    get().expStats = { runs: s0.runs + 1, wins: s0.wins + (run.result === 'win' ? 1 : 0), best: Math.max(s0.best, run.floorsCleared) };
-    get().expRun = null;
-    save();
-    return { crystals: rw.crystals, gear, result: run.result, floors: run.floorsCleared };
-  }
 
   /** 판에 넘길 성장 복사본 (opts.heroGrowth) — 재능·장신구가 하나도 없으면 null */
   function heroGrowth(heroId) {
@@ -9777,7 +9250,6 @@ RG.progress = (() => {
     gachaState, ownedTowers, ownsTower, towerRank, towerRanks, gachaPool, inPool, pullGacha, towersOpen, towerOpen, towerRegion, regionCleared, towerFinal,
     mapStars, starsTotal, starsSpent, starsFree, canLearn, learn, resetSkills, record, nextMapId, markSeen, seen, frontier, skillCost,
     heroRec, bondOf, addBond, takeTalent, resetTalents, talentsOf, ownedGear, equipGear, upgradeGear, grantGear, heroGrowth, rarityForRegion,
-    expOpen, expRun, expStats, expStart, expBattleEnd, expAbandon, expClaim,
   };
 })();
 
@@ -36432,7 +35904,7 @@ RG.render = (() => {
         bannerOf(rd.region || 1),
         el('span', { class: 'tm-medal tm-medal-big' }, [UI.icon('play', 'tm-ico')]),
         el('span', { class: 'tm-text' }, [
-          el('span', { class: 'tm-kicker', text: `${run.opts && run.opts.mode === 'expedition' ? '원정 전투' : '하던 판'} · ${run.mapId} 웨이브 ${run.wave}` }),
+          el('span', { class: 'tm-kicker', text: `하던 판 · ${run.mapId} 웨이브 ${run.wave}` }),
           el('b', { class: 'tm-title', text: '이어하기' }),
           el('span', { class: 'tm-sub', text: rd.name || '' }),
         ]),
@@ -36453,17 +35925,6 @@ RG.render = (() => {
       ]),
       resumable ? null : el('span', { class: 'tm-go', text: has ? '출발 ›' : '시작 ›' }),
     ]));
-    // 원정 (3-6을 깨면 열림)
-    if (P().expOpen()) {
-      const xr = P().expRun();
-      mainCol.appendChild(el('button', { class: `btn btn-big tm-card tm-map-small tm-exp ${xr ? 'ready' : ''}`, onclick: go(() => UI.show('expedition', {})) }, [
-        el('span', { class: 'tm-medal' }, [UI.icon('crown', 'tm-ico')]),
-        el('span', { class: 'tm-text' }, [
-          el('b', { class: 'tm-title', text: xr ? '원정 이어 가기' : '원정' }),
-          el('span', { class: 'tm-sub', text: xr ? (xr.phase === 'done' ? '보상을 받으세요' : `${xr.act}막 ${xr.floor > D().expedition.floors ? '보스' : `${xr.floor}층`} · 불꽃 ${xr.lives} · 은화 ${xr.silver}`) : '3막 로그라이크 · 덱과 유물을 모아 하늘 끝까지' }),
-        ]),
-      ]));
-    }
     // 양옆 카드 4장
     const g = P().gachaState();
     const nPull = Math.floor(g.crystals / RG.gacha.COST.one);
@@ -36692,7 +36153,6 @@ RG.render = (() => {
           el('button', { class: `btn small btn-gacha ${canPull() ? 'ready' : ''}`, onclick: () => UI.show('gacha', { back: { screen: 'world' } }) }, [UI.icon('crystal', 'tiny'), `뽑기 ${P().gachaState().crystals}`]),
           el('button', { class: 'btn small', onclick: () => UI.show('tree', {}) }, [UI.icon('tree', 'tiny'), `기술 나무${P().starsFree() > 0 ? ` (${P().starsFree()})` : ''}`]),
           el('button', { class: 'btn small', onclick: () => UI.show('heroes', {}) }, [UI.icon('hero', 'tiny'), '수호대']),
-          P().expOpen() ? el('button', { class: `btn small btn-exp ${P().expRun() ? 'ready' : ''}`, onclick: () => UI.show('expedition', {}) }, [UI.icon('map', 'tiny'), P().expRun() ? '원정 중' : '원정']) : null,
           el('button', { class: 'btn small', onclick: () => UI.show('codex', {}) }, [UI.icon('book', 'tiny'), '도감']),
           el('button', { class: 'icon-btn', title: '설정', onclick: openSettings }, [UI.icon('settings')]),
         ]),
@@ -37662,332 +37122,6 @@ RG.render = (() => {
 })();
 
 </script>
-  <script>/* js/ui/expedition.js */
-'use strict';
-
-/* =========================================================
- * 원정 화면 — 설계: docs/design/expedition.md · 규칙: js/core/expedition.js · 저장: progress.exp*
- * 한 화면에서 원정 단계(run.phase)에 따라 가운데 패널이 바뀜. 아래 줄은 늘 덱·유물·불꽃·은화.
- * ========================================================= */
-(() => {
-  const { el } = RG.util;
-  const UI = RG.ui;
-  const D = () => RG.data;
-  const XD = () => RG.data.expedition;
-  const P = () => RG.progress;
-  const EX = () => RG.expedition;
-  const svg = (s, cls) => UI.svgImg(s, cls, '');
-  let deckPick = [];        // 시작 덱 고르는 중
-  let heroPick = null;
-  let lastLog = null;       // 방금 일어난 일 (사건 결과·보상)
-  let upgradeFor = null;    // 'shop' | 'rest' — 원정 강화할 탑 고르는 중
-
-  const refresh = (data = {}) => UI.show('expedition', data);
-  const relicName = (id) => (XD().relics[id] || {}).name || id;
-
-  function topBar() {
-    return el('header', { class: 'top-bar' }, [
-      el('button', { class: 'icon-btn', title: '월드 지도', 'aria-label': '월드 지도', onclick: () => UI.show('world', {}) }, [UI.icon('back')]),
-      el('h2', { text: '원정' }),
-    ]);
-  }
-
-  /** 아래 줄: 불꽃·은화·덱·유물 */
-  function statusBar(run) {
-    const deck = el('div', { class: 'ex-deck', 'aria-label': '원정 덱' }, run.deck.map((t) => el('span', { class: `ex-card rar-${RG.gacha.rarityOf(t)}`, title: `${D().towers[t].name}${run.up.includes(t) ? ' · 원정 강화(Lv2부터)' : ''}` }, [
-      UI.towerImg(t, run.up.includes(t) ? 2 : 1, null, 'mini'), run.up.includes(t) ? el('em', { class: 'ex-up', text: '★' }) : null])));
-    const relics = el('div', { class: 'ex-relics' }, run.relics.length ? run.relics.map((id) => {
-      const r = XD().relics[id];
-      const chip = el('span', { class: `ex-relic k-${r.kind}`, tabindex: '0' }, [r.name]);
-      UI.tooltipFor(chip, () => `<b>${r.name}</b><br>${r.desc}`);
-      return chip;
-    }) : [el('span', { class: 'dim', text: '유물 없음' })]);
-    return el('div', { class: 'ex-status' }, [
-      el('div', { class: 'ex-res' }, [
-        el('span', { class: 'ex-lives', title: '원정 불꽃' }, [UI.icon('lives', 'small'), el('b', { text: String(run.lives) }), el('small', { text: `/${XD().maxLives}` })]),
-        el('span', { class: 'ex-silver', title: '원정 은화' }, [UI.icon('gold', 'small'), el('b', { text: String(run.silver) }), el('small', { text: ' 은화' })]),
-      ]),
-      el('div', { class: 'ex-deckwrap' }, [el('span', { class: 'ex-lbl', text: `덱 ${run.deck.length}/${XD().maxDeck}` }), deck]),
-      el('div', { class: 'ex-relicwrap' }, [el('span', { class: 'ex-lbl', text: `유물 ${run.relics.length}` }), relics]),
-    ]);
-  }
-
-  /** 막·층 진행 줄 */
-  function progressLine(run) {
-    const acts = [];
-    for (let a = 1; a <= XD().acts; a++) {
-      const steps = [];
-      for (let f = 1; f <= XD().floors + 1; f++) {
-        const done = a < run.act || (a === run.act && f < run.floor);
-        const cur = a === run.act && f === run.floor;
-        steps.push(el('i', { class: `ex-step ${done ? 'done' : ''} ${cur ? 'cur' : ''} ${f > XD().floors ? 'boss' : ''}`, title: f > XD().floors ? `${a}막 보스` : `${a}막 ${f}층` }));
-      }
-      acts.push(el('div', { class: `ex-act ${a === run.act ? 'on' : ''}` }, [el('b', { text: `${a}막` }), el('div', { class: 'ex-steps' }, steps)]));
-    }
-    return el('div', { class: 'ex-progress' }, acts);
-  }
-
-  function nodeCard(run, node, i) {
-    const info = XD().nodeInfo[node.kind];
-    const def = node.mapId && D().maps.find((m) => m.id === node.mapId);
-    const rule = node.rule && XD().rules[node.rule];
-    return el('button', {
-      class: `ex-node k-${node.kind}`, 'data-focus': `node-${i}`,
-      onclick: () => {
-        const r = EX().choose(run, i);
-        if (!r.ok) { UI.toast(r.reason, 'warn'); return; }
-        UI.sfx('click');
-        P().save();
-        if (r.battle) startBattle(run); else refresh();
-      },
-    }, [
-      el('span', { class: 'ex-node-ico' }, [UI.icon(info.icon)]),
-      el('b', { text: info.name }),
-      def ? el('span', { class: 'ex-node-map', text: `${def.id} ${def.name}` }) : null,
-      rule && node.rule !== 'clear' ? el('span', { class: 'ex-node-rule', text: `${rule.name}: ${rule.desc}` }) : null,
-      el('small', { text: info.desc }),
-    ]);
-  }
-
-  /** 지금 노드의 판 시작 */
-  function startBattle(run) {
-    const set = EX().battleSetup(run);
-    const growth = P().heroGrowth(run.heroId);
-    const opts = Object.assign({
-      mode: 'expedition', heroId: run.heroId, skills: P().get().skills.slice(), seed: (Math.random() * 1e9) >>> 0,
-      towers: run.deck.slice(), towerRanks: P().towerRanks(), finalLv2: true, branches: P().branchesUnlocked(),
-    }, set);
-    if (growth) opts.heroGrowth = growth;
-    try { if (RG.audio) RG.audio.init(); } catch (e) { /* 무시 */ }
-    UI.show('game', { opts });
-  }
-
-  /* ---------------- 단계별 패널 ---------------- */
-  function introPanel() {
-    const heroes = P().heroesFor(P().frontier());
-    if (!heroPick || !heroes.includes(heroPick)) heroPick = heroes.includes(P().get().lastHero) ? P().get().lastHero : heroes[0];
-    const st = P().expStats();
-    const row = el('div', { class: 'hero-pick' }, heroes.map((h) => el('button', {
-      class: `hp-item ${heroPick === h ? 'on' : ''}`, onclick: () => { heroPick = h; UI.sfx('click'); refresh(); },
-    }, [UI.portrait(h, heroPick === h ? 'happy' : 'normal', 'hp-portrait'), el('span', { text: D().heroes[h].name })])));
-    return el('div', { class: 'ex-panel ex-intro' }, [
-      el('h3', { text: '구름 너머로 떠나는 원정' }),
-      el('p', { class: 'dim', text: `3막 × 5층 + 막 보스. 층마다 갈림길에서 하나를 고르고, 짧은 작전으로 싸우며 덱과 유물을 모읍니다. 불꽃 ${XD().startLives}개로 시작해 0이 되면 원정이 끝나요. 기술 나무·뽑기 강화·영웅 성장이 모두 켜집니다.` }),
-      el('div', { class: 'ex-sec' }, [el('span', { class: 'hx-kind', text: '함께 갈 영웅' }), row]),
-      el('div', { class: 'ex-stats dim', text: `원정 ${st.runs}회 · 승리 ${st.wins}회 · 최고 ${st.best}층` }),
-      el('button', {
-        class: 'btn btn-primary btn-big', 'data-focus': 'start',
-        onclick: () => { UI.sfx('click'); deckPick = []; P().expStart((Math.random() * 1e9) >>> 0, heroPick); refresh(); },
-      }, ['원정 출발 ▶']),
-    ]);
-  }
-
-  function deckPanel(run) {
-    const need = Math.min(XD().startDeck.pick, run.offer.length);
-    const cards = run.offer.map((t) => el('button', {
-      class: `ex-pick rar-${RG.gacha.rarityOf(t)} ${deckPick.includes(t) ? 'on' : ''}`, 'aria-pressed': deckPick.includes(t) ? 'true' : 'false', 'data-focus': `deck-${t}`,
-      onclick: () => {
-        if (deckPick.includes(t)) deckPick = deckPick.filter((x) => x !== t); else if (deckPick.length < need) deckPick.push(t);
-        UI.sfx('click'); refresh({ focus: `deck-${t}` });
-      },
-    }, [UI.towerImg(t, 1, null, ''), el('b', { text: D().towers[t].name }), el('small', { text: D().elements[D().towers[t].element].name })]));
-    return el('div', { class: 'ex-panel' }, [
-      el('h3', { text: `시작 덱: ${need}종을 고르세요 (${deckPick.length}/${need})` }),
-      el('div', { class: 'ex-picks' }, cards),
-      el('button', {
-        class: 'btn btn-primary', disabled: deckPick.length === need ? null : '',
-        onclick: () => { const r = EX().pickDeck(run, deckPick); if (!r.ok) { UI.toast(r.reason, 'warn'); return; } P().save(); UI.sfx('upgrade'); refresh(); },
-      }, ['이 덱으로 출발']),
-    ]);
-  }
-
-  function mapPanel(run) {
-    const boss = EX().isBossFloor(run);
-    return el('div', { class: 'ex-panel' }, [
-      el('h3', { text: boss ? `${run.act}막 보스` : `${run.act}막 ${run.floor}층 — 갈 길을 고르세요` }),
-      lastLog ? el('p', { class: 'ex-log', text: lastLog }) : null,
-      el('div', { class: 'ex-nodes' }, run.nodes.map((n, i) => nodeCard(run, n, i))),
-      boss ? null : bossPreview(run),
-    ]);
-  }
-
-  /** 이 막 보스 미리보기 — 덱·유물을 미리 대비할 수 있게 */
-  function bossPreview(run) {
-    const def = D().maps.find((m) => m.id === EX().actBossMap(run));
-    const ed = D().enemies[def.boss];
-    const row = el('button', { class: 'ex-bossline', 'data-focus': 'boss-preview', title: ed.desc }, [
-      UI.enemyImg(def.boss, 'ex-boss-img'),
-      el('span', {}, [el('small', { text: `${run.act}막 보스 · ${def.id} ${def.name}` }), el('b', { text: ed.name })]),
-    ]);
-    row.addEventListener('click', () => UI.toast(`${ed.name}: ${ed.desc}`, 'info', 4200));
-    return row;
-  }
-
-  function battlePanel(run) {
-    const save = RG.save.get(RG.save.KEYS.run, null);
-    const resumable = save && save.opts && save.opts.mode === 'expedition';
-    const node = run.node;
-    const def = D().maps.find((m) => m.id === node.mapId);
-    return el('div', { class: 'ex-panel' }, [
-      el('h3', { text: `${XD().nodeInfo[node.kind].name} — ${def.id} ${def.name}` }),
-      el('p', { class: 'dim', text: resumable ? '하던 전투가 저장되어 있습니다.' : '전투를 시작하세요.' }),
-      el('button', {
-        class: 'btn btn-primary btn-big', 'data-focus': 'battle',
-        onclick: () => (resumable ? UI.show('game', { resume: save }) : startBattle(run)),
-      }, [resumable ? '전투 이어 하기 ▶' : '전투 시작 ▶']),
-    ]);
-  }
-
-  function rewardPanel(run) {
-    const isTower = run.offerKind === 'tower';
-    const cards = run.offer.map((id) => el('button', {
-      class: `ex-pick ${isTower ? `rar-${RG.gacha.rarityOf(id)}` : `relic k-${XD().relics[id].kind}`}`, 'data-focus': `rw-${id}`,
-      onclick: () => {
-        const r = EX().takeReward(run, id);
-        if (!r.ok) { UI.toast(r.reason, 'warn'); return; }
-        lastLog = isTower ? `${RG.util.withJosa(D().towers[id].name, '이/가')} 덱에 들어왔습니다` : `유물 ${RG.util.withJosa(relicName(id), '을/를')} 얻었습니다`;
-        UI.sfx('upgrade'); P().save(); refresh();
-      },
-    }, isTower ? [UI.towerImg(id, 1, null, ''), el('b', { text: D().towers[id].name }), el('small', { text: D().towers[id].desc })]
-      : [el('span', { class: 'ex-relic-ico' }, [UI.icon('star')]), el('b', { text: XD().relics[id].name }), el('small', { text: XD().relics[id].desc })]));
-    return el('div', { class: 'ex-panel' }, [
-      el('h3', { text: isTower ? '승리! 덱에 넣을 탑을 고르세요' : '승리! 유물 하나를 고르세요' }),
-      lastLog ? el('p', { class: 'ex-log', text: lastLog }) : null,
-      el('div', { class: 'ex-picks' }, cards),
-      isTower ? el('button', { class: 'btn', onclick: () => { EX().takeReward(run, null); lastLog = `은화 +${XD().silver.skip}`; P().save(); refresh(); } }, [`건너뛰고 은화 +${XD().silver.skip}`]) : null,
-    ]);
-  }
-
-  function eventPanel(run) {
-    const ev = XD().events.find((x) => x.id === run.node.event);
-    return el('div', { class: 'ex-panel ex-event' }, [
-      el('h3', { text: ev.title }),
-      el('p', { class: 'ex-story', text: ev.text }),
-      el('div', { class: 'ex-options' }, ev.options.map((o, i) => el('button', {
-        class: 'btn ex-option', 'data-focus': `opt-${i}`,
-        onclick: () => {
-          const r = EX().eventChoose(run, i);
-          if (!r.ok) { UI.toast(r.reason, 'warn'); return; }
-          lastLog = `${ev.title}: ${r.log && r.log.length ? r.log.join(' · ') : '아무 일도 없었다'}`;
-          UI.sfx('click'); P().save(); refresh();
-        },
-      }, [o.text]))),
-    ]);
-  }
-
-  function upgradePicker(run, onPick) {
-    const cand = run.deck.filter((t) => !run.up.includes(t));
-    return el('div', { class: 'ex-upgrade' }, [
-      el('p', { text: '원정 강화할 탑을 고르세요 (원정 동안 Lv2부터 지어짐)' }),
-      el('div', { class: 'ex-picks small' }, cand.map((t) => el('button', { class: `ex-pick rar-${RG.gacha.rarityOf(t)}`, onclick: () => onPick(t) }, [UI.towerImg(t, 2, null, ''), el('b', { text: D().towers[t].name })]))),
-      el('button', { class: 'btn small', onclick: () => { upgradeFor = null; refresh(); } }, ['취소']),
-    ]);
-  }
-
-  function shopPanel(run) {
-    const items = (run.shopStock || []).map((it) => {
-      const bought = run.shopBought.includes(it.id) && it.kind !== 'heal';
-      const label = it.kind === 'tower' ? D().towers[it.type].name : it.kind === 'relic' ? relicName(it.relic) : it.kind === 'heal' ? `불꽃 +${XD().shop.healLives}` : '원정 강화';
-      const desc = it.kind === 'tower' ? '덱에 넣기' : it.kind === 'relic' ? XD().relics[it.relic].desc : it.kind === 'heal' ? '원정 불꽃 회복' : '덱의 탑 하나를 Lv2부터';
-      return el('button', {
-        class: `ex-pick ex-shopitem ${bought ? 'sold' : ''}`, disabled: bought || run.silver < it.price ? '' : null,
-        onclick: () => {
-          if (it.kind === 'upgrade') { upgradeFor = 'shop'; refresh(); return; }
-          const r = EX().shopBuy(run, it.id);
-          if (!r.ok) { UI.toast(r.reason, 'warn'); return; }
-          UI.sfx('gold'); P().save(); refresh();
-        },
-      }, [it.kind === 'tower' ? UI.towerImg(it.type, 1, null, '') : el('span', { class: 'ex-relic-ico' }, [UI.icon(it.kind === 'relic' ? 'star' : it.kind === 'heal' ? 'lives' : 'upgrade')]),
-        el('b', { text: label }), el('small', { text: desc }), el('span', { class: 'ex-price' }, [UI.icon('gold', 'tiny'), bought ? '팔림' : String(it.price)])]);
-    });
-    return el('div', { class: 'ex-panel' }, [
-      el('h3', { text: '떠돌이 상점' }),
-      upgradeFor === 'shop' ? upgradePicker(run, (t) => { const r = EX().shopBuy(run, 'upgrade', t); upgradeFor = null; if (!r.ok) UI.toast(r.reason, 'warn'); else { UI.sfx('upgrade'); P().save(); } refresh(); }) : el('div', { class: 'ex-picks' }, items),
-      el('button', { class: 'btn btn-primary', onclick: () => { EX().shopLeave(run); lastLog = null; P().save(); refresh(); } }, ['상점을 떠난다 ▶']),
-    ]);
-  }
-
-  function restPanel(run) {
-    return el('div', { class: 'ex-panel' }, [
-      el('h3', { text: '쉼터 — 모닥불 곁에서' }),
-      upgradeFor === 'rest' ? upgradePicker(run, (t) => { const r = EX().rest(run, { upgrade: t }); upgradeFor = null; if (!r.ok) UI.toast(r.reason, 'warn'); else { lastLog = `${D().towers[t].name} 원정 강화`; UI.sfx('upgrade'); P().save(); } refresh(); })
-        : el('div', { class: 'ex-options' }, [
-          el('button', { class: 'btn ex-option', disabled: run.lives >= XD().maxLives ? '' : null, onclick: () => { EX().rest(run, 'heal'); lastLog = `불꽃 +${XD().rest.heal}`; UI.sfx('heroRevive'); P().save(); refresh(); } }, [`쉬어 간다 (불꽃 +${XD().rest.heal})`]),
-          el('button', { class: 'btn ex-option', disabled: run.deck.every((t) => run.up.includes(t)) ? '' : null, onclick: () => { upgradeFor = 'rest'; refresh(); } }, ['탑을 손본다 (원정 강화)']),
-        ]),
-    ]);
-  }
-
-  function donePanel(run) {
-    const rw = run.rewards || EX().rewardsOf(run);
-    const win = run.result === 'win';
-    return el('div', { class: `ex-panel ex-done ${win ? 'win' : 'lose'}` }, [
-      el('h3', { text: win ? '원정 승리! 하늘 끝까지 지켜 냈다' : '원정이 끝났습니다' }),
-      el('p', { text: `오른 층 ${run.floorsCleared} · 깬 막 ${run.actsCleared} · 전투 ${run.battles}` }),
-      el('div', { class: 'reward-box' }, [
-        el('div', { class: 'rw-total' }, [UI.icon('crystal', 'small'), el('b', { text: `+${rw.crystals}` }), el('span', { text: '공명석' })]),
-        rw.gear.length ? el('div', { class: 'rw-lines', text: `장신구 ${rw.gear.length}개 (${rw.gear.map((r) => D().growth.gearRarities[r].name).join('·')})` }) : null,
-      ]),
-      el('button', {
-        class: 'btn btn-primary btn-big', 'data-focus': 'claim',
-        onclick: () => {
-          const got = P().expClaim();
-          if (got) {
-            const names = got.gear.filter((g) => g.id).map((g) => D().growth.gear[g.id].name + (g.isNew ? '' : ` +${g.plus}`));
-            UI.toast(`공명석 +${got.crystals}${names.length ? ` · 장신구: ${names.join(', ')}` : ''}`, 'good', 3200);
-            UI.sfx('unlock');
-          }
-          lastLog = null;
-          refresh();
-        },
-      }, ['보상 받기']),
-    ]);
-  }
-
-  UI.register('expedition', {
-    enter(sec, data = {}) {
-      sec.innerHTML = '';
-      UI.music('worldmap');
-      const bar = topBar();
-      let run = P().expRun();
-      // 방금 끝난 원정 전투 결과
-      if (data.battle && data.battle.ex) {
-        const ex = data.battle.ex;
-        lastLog = data.battle.result === 'win' ? `승리! 남은 불꽃 ${data.battle.lives} · 은화 +${ex.silver || 0}${ex.bond && ex.bond.levelUp ? ` · ${D().heroes[ex.bond.heroId].name} 인연 Lv${ex.bond.after}!` : ''}` : '전투에서 졌습니다…';
-      }
-      if (run && run.phase !== 'done') {
-        bar.appendChild(el('button', {
-          class: 'btn small ex-quit', onclick: () => UI.confirmBox('원정을 그만둘까요? 지금까지 오른 층만큼 보상을 받습니다.', () => { P().expAbandon(); refresh(); }),
-        }, ['원정 그만두기']));
-      }
-      let panel;
-      if (!run) panel = introPanel();
-      else if (run.phase === 'deck') panel = deckPanel(run);
-      else if (run.phase === 'map') panel = mapPanel(run);
-      else if (run.phase === 'battle') panel = battlePanel(run);
-      else if (run.phase === 'reward') panel = rewardPanel(run);
-      else if (run.phase === 'event') panel = eventPanel(run);
-      else if (run.phase === 'shop') panel = shopPanel(run);
-      else if (run.phase === 'rest') panel = restPanel(run);
-      else panel = donePanel(run);
-      const body = el('div', { class: 'ex-body' }, [
-        run ? el('div', { class: 'ex-head' }, [
-          run.phase !== 'deck' ? progressLine(run) : null,
-          el('div', { class: 'ex-hero' }, [UI.portrait(run.heroId, run.lives > 6 ? 'happy' : 'worried', 'mini-portrait'), el('span', { text: D().heroes[run.heroId].name })]),
-        ]) : null,
-        panel,
-        run && run.phase !== 'deck' ? statusBar(run) : null,
-      ]);
-      sec.append(bar, body);
-      requestAnimationFrame(() => {
-        const f = data.focus ? sec.querySelector(`[data-focus="${data.focus}"]`) : sec.querySelector('.ex-panel button:not([disabled])');
-        if (f) f.focus({ preventScroll: true });
-      });
-    },
-  });
-})();
-
-</script>
   <script>/* js/ui/gacha.js */
 'use strict';
 
@@ -38266,10 +37400,7 @@ RG.render = (() => {
     const have = new Set(game.opts.towers || D().towerOrder);
     tipsQueue = (game.def.tips || []).filter((t) => !RG.progress.seen('tips', t) && TIPS[t] && (!TIP_TOWER[t] || have.has(TIP_TOWER[t])));
     if (!data.resume && opts.mode === 'normal') setTimeout(nextTip, 600);
-    const XO = opts.expedition;
-    const xRule = XO && XO.rule && D().expedition.rules[XO.rule];
-    if (!data.resume) banner(`${game.def.id} ${game.def.name}`, opts.mode === 'challenge' ? `도전: ${game.def.challenge.text}` : opts.mode === 'endless' ? '무한 모드'
-      : XO ? `원정 ${XO.act}막 ${XO.kind === 'boss' ? '보스' : `${XO.floor}층`}${XO.kind === 'elite' ? ' · 정예' : ''}${xRule && XO.rule !== 'clear' ? ` · ${xRule.name}: ${xRule.desc}` : ''}` : '준비가 되면 웨이브를 호출하세요');
+    if (!data.resume) banner(`${game.def.id} ${game.def.name}`, opts.mode === 'challenge' ? `도전: ${game.def.challenge.text}` : opts.mode === 'endless' ? '무한 모드' : '준비가 되면 웨이브를 호출하세요');
   }
 
   function leave() {
@@ -38397,7 +37528,7 @@ RG.render = (() => {
       // 결과 화면은 잠시 뒤 — 그 사이 다시 시작했으면 띄우지 않음
       const payload = finish();
       const which = game;
-      setTimeout(() => { if (game === which && UI.currentId() === 'game' && payload) UI.show(payload.mode === 'expedition' ? 'expedition' : 'result', payload.mode === 'expedition' ? { battle: payload } : payload); }, st.result === 'win' ? 1400 : 900);
+      setTimeout(() => { if (game === which && UI.currentId() === 'game' && payload) UI.show('result', payload); }, st.result === 'win' ? 1400 : 900);
     }
   }
 
@@ -39670,10 +38801,8 @@ RG.render = (() => {
       buttons: [
         { text: '설정', onClick: () => RG.ui.openSettings && RG.ui.openSettings() },
         { text: '조작법', onClick: openControls },
-        opts.mode === 'expedition' ? null : { text: '다시 시작', onClick: () => UI.confirmBox('처음부터 다시 시작할까요?', () => { RG.save.remove(RG.save.KEYS.run); UI.show('game', { opts }); }) },
-        opts.mode === 'expedition'
-          ? { text: '원정 지도로', onClick: () => UI.confirmBox('원정 지도로 나갈까요? 이 전투는 이어하기로 저장됩니다(원정에서는 다시 시작할 수 없어요).', () => UI.show('expedition', {})) }
-          : { text: '지도로', onClick: () => UI.confirmBox('지도로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('world', {})) },
+        { text: '다시 시작', onClick: () => UI.confirmBox('처음부터 다시 시작할까요?', () => { RG.save.remove(RG.save.KEYS.run); UI.show('game', { opts }); }) },
+        { text: '지도로', onClick: () => UI.confirmBox('지도로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('world', {})) },
         { text: '계속하기', primary: true },
       ],
     });
@@ -39724,11 +38853,6 @@ RG.render = (() => {
   function finish() {
     if (!game || !game.state.result) return null;
     const st = game.state;
-    if (opts.mode === 'expedition') {
-      // 원정 판: 캠페인 기록 대신 원정 상태에 반영 (불꽃·은화·보상)
-      const ex = RG.progress.expBattleEnd(st);
-      return { mapId: game.def.id, mode: 'expedition', result: st.result, lives: st.lives, ex, opts };
-    }
     const rec = RG.progress.record(game.def.id, opts.mode, st);
     const stats = {
       damage: st.stats.damageByTower, kills: st.stats.kills, gold: st.stats.goldEarned, heroDamage: st.stats.heroDamage,

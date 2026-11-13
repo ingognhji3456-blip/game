@@ -2,7 +2,7 @@
 
 > 이 문서는 게임의 **최상위 설계 기준**입니다. 코드·데이터·아트·사운드는 모두 이 문서를 따릅니다.
 > 세부 설계서: [탑](design/towers.md) · [적](design/enemies.md) · [영웅](design/heroes.md) · [맵](design/maps.md) · [이야기](design/story.md)
-> 확장(2026-11-11, 진행 중): [영웅 12명·영웅 성장·6지역·원정 모드·완성도](design/expansion.md)
+> 확장(2026-11-11, 진행 중): [영웅 12명·영웅 성장·6지역·완성도](design/expansion.md) (원정 모드는 2026-11-13 사용자 결정으로 없앰)
 > 기술 구조: [ARCHITECTURE.md](ARCHITECTURE.md) · 품질 기준: [QUALITY.md](QUALITY.md) · 진행 기록: [PROGRESS.md](PROGRESS.md)
 > 개정 1 (2026-11-09): 독립 설계 검토 반영 — 엔진 규칙 부록(§7.2), 제어 감쇠, 지원·경제 중첩 제한, 원소 대응 모순 수정, 별 구조·생명·용어 변경. 자세한 목록은 PROGRESS.md.
 
@@ -441,7 +441,7 @@
 | 기술 나무 | 20칸 |
 | 이야기 장면 | 지역마다 시작·끝 + 영웅 합류 + 엔딩 2 |
 
-(2026-11-11 확장 반영) 남은 확장: 원정 모드 — [expansion.md](design/expansion.md) §4·§6.
+(2026-11-11 확장 반영. 원정 모드는 2026-11-13 사용자 결정으로 없앰 — [expansion.md](design/expansion.md) §4.)
 
 **이 목록은 확정입니다.** 새 콘텐츠를 더하고 싶으면 이 표를 먼저 고치고, 이유를 [PROGRESS.md](PROGRESS.md)에 남깁니다.
 

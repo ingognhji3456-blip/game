@@ -388,3 +388,24 @@ test('최종 강화 탑(Lv2로 지음)이 있어도 이어하기(명령 재현)�
   const ref = RG.sim.replay(opts, g.log, g.state.tick);
   assert.strictEqual(ref.hash(), g.hash());
 });
+
+test('없앤 원정 모드의 저장(원정 기록·저장된 원정 전투)은 불러올 때 지우고, 일반 판 저장은 그대로', () => {
+  const L = loadGame();
+  const prev = { v: 1, maps: { '1-1': { cleared: true, stars: 3 } }, skills: [], seen: {}, endless: {}, gacha: { owned: { ember_archer: 0 }, crystals: 70, pity: 0 },
+    expRun: { v: 1, seed: 3, phase: 'map' }, expStats: { runs: 2, wins: 1, best: 9 } };
+  L.store.set(L.RG.save.KEYS.progress, JSON.stringify(prev));
+  L.store.set(L.RG.save.KEYS.run, JSON.stringify({ opts: { mapId: '1-5', mode: 'expedition', seed: 1 }, log: [], tick: 90, mapId: '1-5', wave: 2 }));
+  L.RG.progress.load();
+  const p = L.RG.progress.get();
+  assert.ok(!('expRun' in p) && !('expStats' in p));
+  assert.ok(!('expRun' in JSON.parse(L.store.get(L.RG.save.KEYS.progress))), '저장에서도 지움');
+  assert.strictEqual(L.RG.save.get(L.RG.save.KEYS.run, null), null, '원정 전투 저장 지움');
+  assert.strictEqual(L.RG.progress.gachaState().crystals, 70, '다른 기록은 그대로');
+  // 일반 판 저장은 남김
+  const L2 = loadGame();
+  L2.store.set(L2.RG.save.KEYS.progress, JSON.stringify(prev));
+  const normal = { opts: { mapId: '1-2', mode: 'normal', seed: 1 }, log: [], tick: 90, mapId: '1-2', wave: 2 };
+  L2.store.set(L2.RG.save.KEYS.run, JSON.stringify(normal));
+  L2.RG.progress.load();
+  assert.strictEqual(L2.RG.save.get(L2.RG.save.KEYS.run, null).mapId, '1-2');
+});

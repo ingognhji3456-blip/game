@@ -69,18 +69,15 @@ RG.sim = (() => {
     const rules = D().rules;
     const challenge = o.mode === 'challenge' ? (def.challenge || null) : null;
     const meta = (o.mode === 'challenge') ? {} : sumSkills(o.skills);
-    // 원정 판(docs/design/expedition.md): 고른 웨이브만, 유물·변형 규칙 수정치를 기술 나무 수정치에 더함
-    const X = o.expedition || null;
-    if (X && X.meta) for (const [k, v] of Object.entries(X.meta)) meta[k] = (meta[k] || 0) + v;
     const map = RG.grid.parseMap(def);
-    const waves = o.mode === 'endless' ? [] : RG.grid.parseWaves(X && X.waves ? X.waves.map((i) => def.waves[i]).filter(Boolean) : def.waves);
+    const waves = o.mode === 'endless' ? [] : RG.grid.parseWaves(def.waves);
     const rng = U().makeRng(o.seed >>> 0);
     const n = map.cols * map.rows;
 
     const st = {
       tick: 0, time: 0, mapId: def.id, mode: o.mode, map,
-      gold: Math.round(def.startGold * (X && X.goldMult ? X.goldMult : 1) * (1 + (meta.startGoldPct || 0))),
-      lives: X && X.lives ? X.lives : challenge && challenge.type === 'lives' ? challenge.value : rules.lives,
+      gold: Math.round(def.startGold * (1 + (meta.startGoldPct || 0))),
+      lives: challenge && challenge.type === 'lives' ? challenge.value : rules.lives,
       maxLives: rules.lives,
       result: null,
       wave: { index: 0, total: o.mode === 'endless' ? Infinity : waves.length, countdown: null, started: false, queue: [], bonusBase: 0 },
@@ -88,7 +85,7 @@ RG.sim = (() => {
       hero: null,
       events: [],
       stats: { damageByTower: {}, kills: 0, leaked: 0, goldEarned: 0, heroDamage: 0, resonanceSeen: {} },
-      task: def.task && !X ? { def: def.task, done: false, best: 0 } : null,
+      task: def.task ? { def: def.task, done: false, best: 0 } : null,
       warnings: [],                         // 데이터 경고(알 수 없는 적 등)
       alerts: [],                           // 보스 경고(1.5초 뒤 탑 멈춤) — 그리기용
       linksFrozenUntil: 0,
@@ -118,7 +115,6 @@ RG.sim = (() => {
     /** 지을 때의 단계: 뽑기 최종 강화 탑은 Lv1 값 그대로 Lv2로 지어짐(도전의 최대 단계 제한은 지킴).
      *  o.finalLv2: 이 규칙이 생긴 뒤 시작한 판만 켬 — 그 전에 저장한 판을 이어 할 때 기록 재현이 어긋나지 않게 */
     function startLevel(type) {
-      if (X && X.upgraded && X.upgraded.includes(type)) return 2; // 원정 강화한 탑
       if (!o.finalLv2 || !(RG.gacha && RG.gacha.isFinal(ranks[type]))) return 1;
       if (challenge && challenge.type === 'maxLevel' && challenge.value < 2) return 1;
       return 2;
@@ -557,7 +553,7 @@ RG.sim = (() => {
       if (st.wave.hpScale) hp *= st.wave.hpScale;
       const e = {
         id: nextId++, type, x, y, px: x, py: y, c, r, tc: c, tr: r,
-        hp, maxHp: hp, shield: 0, maxShield: 0, armor: X && X.armorAdd ? Math.min(0.9, ed.armor + X.armorAdd) : ed.armor, flying, size: ed.size * (from && from.fragment ? 0.75 : 1),
+        hp, maxHp: hp, shield: 0, maxShield: 0, armor: ed.armor, flying, size: ed.size * (from && from.fragment ? 0.75 : 1),
         stealth: !!ed.traits.stealth, revealed: !ed.traits.stealth,
         lane: Math.floor(rng() * 1000), dir: 1, prog: 0, trail: [],
         st: { slowPct: 0, slowUntil: 0, curse: null, veil: null, blindUntil: 0, stillUntil: 0, purifyUntil: 0, haltUntil: 0, shreds: {}, burns: [], bleeds: [] },
@@ -2200,7 +2196,7 @@ RG.sim = (() => {
         spawnEnemy(q.e, q.s, null, q.wave);
       }
       if (w.started && !w.queue.length && w.countdown === null && w.index < w.total) {
-        w.countdown = challenge && challenge.type === 'countdown' ? challenge.value : rules.countdown * (X && X.countdownMul ? X.countdownMul : 1);
+        w.countdown = challenge && challenge.type === 'countdown' ? challenge.value : rules.countdown;
       }
       if (w.countdown !== null) {
         w.countdown -= DT;

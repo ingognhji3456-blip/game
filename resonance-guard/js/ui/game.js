@@ -80,10 +80,7 @@
     const have = new Set(game.opts.towers || D().towerOrder);
     tipsQueue = (game.def.tips || []).filter((t) => !RG.progress.seen('tips', t) && TIPS[t] && (!TIP_TOWER[t] || have.has(TIP_TOWER[t])));
     if (!data.resume && opts.mode === 'normal') setTimeout(nextTip, 600);
-    const XO = opts.expedition;
-    const xRule = XO && XO.rule && D().expedition.rules[XO.rule];
-    if (!data.resume) banner(`${game.def.id} ${game.def.name}`, opts.mode === 'challenge' ? `도전: ${game.def.challenge.text}` : opts.mode === 'endless' ? '무한 모드'
-      : XO ? `원정 ${XO.act}막 ${XO.kind === 'boss' ? '보스' : `${XO.floor}층`}${XO.kind === 'elite' ? ' · 정예' : ''}${xRule && XO.rule !== 'clear' ? ` · ${xRule.name}: ${xRule.desc}` : ''}` : '준비가 되면 웨이브를 호출하세요');
+    if (!data.resume) banner(`${game.def.id} ${game.def.name}`, opts.mode === 'challenge' ? `도전: ${game.def.challenge.text}` : opts.mode === 'endless' ? '무한 모드' : '준비가 되면 웨이브를 호출하세요');
   }
 
   function leave() {
@@ -211,7 +208,7 @@
       // 결과 화면은 잠시 뒤 — 그 사이 다시 시작했으면 띄우지 않음
       const payload = finish();
       const which = game;
-      setTimeout(() => { if (game === which && UI.currentId() === 'game' && payload) UI.show(payload.mode === 'expedition' ? 'expedition' : 'result', payload.mode === 'expedition' ? { battle: payload } : payload); }, st.result === 'win' ? 1400 : 900);
+      setTimeout(() => { if (game === which && UI.currentId() === 'game' && payload) UI.show('result', payload); }, st.result === 'win' ? 1400 : 900);
     }
   }
 
@@ -1484,10 +1481,8 @@
       buttons: [
         { text: '설정', onClick: () => RG.ui.openSettings && RG.ui.openSettings() },
         { text: '조작법', onClick: openControls },
-        opts.mode === 'expedition' ? null : { text: '다시 시작', onClick: () => UI.confirmBox('처음부터 다시 시작할까요?', () => { RG.save.remove(RG.save.KEYS.run); UI.show('game', { opts }); }) },
-        opts.mode === 'expedition'
-          ? { text: '원정 지도로', onClick: () => UI.confirmBox('원정 지도로 나갈까요? 이 전투는 이어하기로 저장됩니다(원정에서는 다시 시작할 수 없어요).', () => UI.show('expedition', {})) }
-          : { text: '지도로', onClick: () => UI.confirmBox('지도로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('world', {})) },
+        { text: '다시 시작', onClick: () => UI.confirmBox('처음부터 다시 시작할까요?', () => { RG.save.remove(RG.save.KEYS.run); UI.show('game', { opts }); }) },
+        { text: '지도로', onClick: () => UI.confirmBox('지도로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('world', {})) },
         { text: '계속하기', primary: true },
       ],
     });
@@ -1538,11 +1533,6 @@
   function finish() {
     if (!game || !game.state.result) return null;
     const st = game.state;
-    if (opts.mode === 'expedition') {
-      // 원정 판: 캠페인 기록 대신 원정 상태에 반영 (불꽃·은화·보상)
-      const ex = RG.progress.expBattleEnd(st);
-      return { mapId: game.def.id, mode: 'expedition', result: st.result, lives: st.lives, ex, opts };
-    }
     const rec = RG.progress.record(game.def.id, opts.mode, st);
     const stats = {
       damage: st.stats.damageByTower, kills: st.stats.kills, gold: st.stats.goldEarned, heroDamage: st.stats.heroDamage,
