@@ -2,7 +2,7 @@
 
 /*
  * 입력 방식별 한 판 + 이어하기 (QUALITY.md §5)
- *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|mouse|resume|world|gacha|tutorial|a11y]
+ *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|mouse|resume|world|gacha|tutorial|a11y|transfer]
  *
  * - keyboard: 숫자(탑 고르기)·방향키·Enter·U·Space·F만으로 1-1을 깬다 (마우스·터치 없음)
  * - touch:    휴대폰 가로(터치 에뮬레이션)에서 탑 목록 탭 → 칸 탭, 탑 끌어다 놓기만으로 1-1을 깬다
@@ -612,9 +612,81 @@ async function a11yRun(browser) {
   return { name: '키보드 접근성', ok, detail: Object.entries(r).map(([k, v]) => `${k} ${v ? '✓' : '✗'}`).join(' · '), errors };
 }
 
+/* ---------------- 진행 옮기기: A 브라우저에서 내보내기(파일·코드) → 저장 공간이 다른 B 브라우저에서 가져오기 ---------------- */
+async function transferRun(browser) {
+  const errors = [];
+  const watch = (page) => { page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); }); };
+  const r = {};
+  // A: 진행을 쌓고 타이틀의 "진행 옮기기"에서 저장 파일 받기 + 코드 읽기
+  const ctxA = await browser.newContext({ viewport: { width: 1280, height: 800 }, acceptDownloads: true });
+  const a = await ctxA.newPage(); watch(a);
+  await a.goto(URL);
+  await a.waitForSelector('#screen-title.active');
+  const sumA = await a.evaluate(() => {
+    const P = RG.progress;
+    for (const id of ['1-1', '1-2', '1-3', '1-4']) P.record(id, 'normal', { result: 'win', lives: 12, task: { done: true }, wave: { index: 8 } });
+    P.gachaState().crystals = 2468; P.get().shards.ember_archer = 9; P.save();
+    RG.ui.show('title', {});
+    return { stars: P.starsTotal(), crystals: 2468 };
+  });
+  await a.click('#screen-title .tc-btn[title^="진행 상황 옮기기"]');
+  await a.waitForSelector('.xfer-modal .xfer-code');
+  await a.waitForFunction(() => /^RG1/.test(document.querySelector('.xfer-code').value));
+  const code = await a.evaluate(() => document.querySelector('.xfer-code').value);
+  const [dl] = await Promise.all([a.waitForEvent('download'), a.click('.xfer-modal button:has-text("저장 파일 받기")')]);
+  const savePath = path.join(require('os').tmpdir(), `rg-save-${Date.now()}.txt`);
+  await dl.saveAs(savePath);
+  r.fileName = /^resonance-guard-save-\d{4}-\d{2}-\d{2}\.txt$/.test(dl.suggestedFilename());
+  r.fileIsCode = require('fs').readFileSync(savePath, 'utf8') === code;
+  await ctxA.close();
+
+  // B-1: 처음 연 브라우저 — 코드를 붙여 넣어 가져오기 (설정 창 경로)
+  const ctxB = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const b = await ctxB.newPage(); watch(b);
+  await b.goto(URL);
+  await b.waitForSelector('#screen-title.active');
+  r.freshB = await b.evaluate(() => !RG.progress.hasSave());
+  await b.click('#screen-title .tc-btn[title="설정"]');
+  await b.click('.settings button:has-text("내보내기 · 가져오기")');
+  await b.waitForSelector('.xfer-modal textarea[aria-label="받은 저장 코드"]');
+  await b.fill('.xfer-modal textarea[aria-label="받은 저장 코드"]', 'RG1z.망가진코드');
+  await b.click('.xfer-modal button:has-text("코드로 가져오기")');
+  await b.waitForSelector('.toast-warn');
+  r.badRejected = await b.evaluate(() => !RG.progress.hasSave());
+  await b.fill('.xfer-modal textarea[aria-label="받은 저장 코드"]', code);
+  await b.click('.xfer-modal button:has-text("코드로 가져오기")');
+  await b.waitForSelector('.xfer-confirm');
+  r.preview = await b.evaluate((s) => document.querySelector('.xfer-confirm .xfer-sum').textContent.includes(`★${s.stars}`) && document.querySelector('.xfer-confirm .xfer-sum').textContent.includes('2,468'), sumA);
+  await b.click('.modal-buttons .btn-danger:has-text("가져오기")');
+  await b.waitForFunction(() => RG.ui.currentId() === 'title' && !RG.ui.modalOpen());
+  const gotB = await b.evaluate(() => ({ stars: RG.progress.starsTotal(), crystals: RG.progress.gachaState().crystals, shards: RG.progress.shardsOf('ember_archer'), has: RG.progress.hasSave() }));
+  r.importedCode = gotB.has && gotB.stars === sumA.stars && gotB.crystals === 2468 && gotB.shards === 9;
+  await b.reload();
+  await b.waitForSelector('#screen-title.active');
+  r.persists = await b.evaluate((s) => RG.progress.starsTotal() === s.stars, sumA);
+  await ctxB.close();
+
+  // B-2: 또 다른 브라우저(휴대폰 크기) — 저장 파일로 가져오기
+  const ctxC = await browser.newContext({ viewport: { width: 390, height: 780 }, hasTouch: true });
+  const c = await ctxC.newPage(); watch(c);
+  await c.goto(URL);
+  await c.waitForSelector('#screen-title.active');
+  await c.click('#screen-title .tc-btn[title^="진행 상황 옮기기"]');
+  await c.setInputFiles('.xfer-modal input.xfer-file', savePath);
+  await c.waitForSelector('.xfer-confirm');
+  r.mobileFits = await c.evaluate(() => { const m = document.querySelector('.xfer-modal .modal'); const b = m.getBoundingClientRect(); return b.left >= 0 && b.right <= innerWidth + 0.5; });
+  await c.click('.modal-buttons .btn-danger:has-text("가져오기")');
+  await c.waitForFunction(() => RG.ui.currentId() === 'title' && !RG.ui.modalOpen());
+  r.importedFile = await c.evaluate((s) => RG.progress.starsTotal() === s.stars && RG.progress.gachaState().crystals === 2468, sumA);
+  await ctxC.close();
+  try { require('fs').unlinkSync(savePath); } catch (e) { /* 무시 */ }
+  const ok = Object.values(r).every(Boolean);
+  return { name: '진행 옮기기', ok, detail: Object.entries(r).map(([k, v]) => `${k} ${v ? '✓' : '✗'}`).join(' · '), errors };
+}
+
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
-  const runs = { keyboard: keyboardRun, touch: touchRun, mouse: mouseRun, resume: resumeRun, world: worldRun, gacha: gachaRun, tutorial: tutorialRun, a11y: a11yRun };
+  const runs = { keyboard: keyboardRun, touch: touchRun, mouse: mouseRun, resume: resumeRun, world: worldRun, gacha: gachaRun, tutorial: tutorialRun, a11y: a11yRun, transfer: transferRun };
   let fail = 0;
   for (const [k, fn] of Object.entries(runs)) {
     if (only && only !== k) continue;

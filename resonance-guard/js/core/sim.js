@@ -142,14 +142,18 @@ RG.sim = (() => {
     };
 
     /* ---------------- 영웅 ---------------- */
-    /** 지원·경제 탑 레이드: 영웅 근처(반경)의 그 탑마다 영웅 피해 +% (최대 개수) */
+    /** 지원·경제 탑 레이드: 영웅 근처(반경)의 그 탑마다 영웅 피해·기술 +% (단계가 높을수록 크게, 가장 센 max개) × 조각 강화 */
     function raidHeroMult(h) {
       if (!RA || !RA.support) return 1;
       const S = D().raid.supportHero;
       const R2 = S.radius * S.radius;
-      let n = 0;
-      for (const t of st.towers) if (t.type === RA.tower && !t.building && d2(t.x, t.y, h.x, h.y) <= R2) n++;
-      return 1 + Math.min(S.max, n) * S.perTower;
+      const got = [];
+      for (const t of st.towers) if (t.type === RA.tower && !t.building && d2(t.x, t.y, h.x, h.y) <= R2) got.push(S.levelMult[Math.min(S.levelMult.length, t.level) - 1]);
+      got.sort((x, y) => y - x);
+      let sum = 0;
+      for (let i = 0; i < Math.min(S.max, got.length); i++) sum += got[i];
+      const sl = shards[RA.tower] || 0;
+      return 1 + sum * S.perTower * (1 + RG.raid.shardBonus(sl).pct);
     }
     function heroStat(h) {
       const hd = D().heroes[h.heroId];

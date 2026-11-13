@@ -10,7 +10,7 @@ const FILES = [
   'js/util.js',
   'js/data/elements.js', 'js/data/towers.js', 'js/data/enemies.js', 'js/data/heroes.js', 'js/data/growth.js', 'js/data/maps.js', 'js/data/raid.js',
   'js/data/meta.js', 'js/data/story.js',
-  'js/core/grid.js', 'js/core/stats.js', 'js/core/bosses.js', 'js/core/growth.js', 'js/core/raid.js', 'js/core/sim.js', 'js/core/gacha.js', 'js/core/progress.js', 'js/core/save.js',
+  'js/core/grid.js', 'js/core/stats.js', 'js/core/bosses.js', 'js/core/growth.js', 'js/core/raid.js', 'js/core/sim.js', 'js/core/gacha.js', 'js/core/progress.js', 'js/core/save.js', 'js/core/transfer.js',
 ];
 
 /** 그림 스크립트 (index.html과 같은 순서) */
@@ -64,6 +64,7 @@ function loadGame({ quiet = true, extra = [] } = {}) {
       removeItem: (k) => store.delete(k),
     },
     Math, JSON, Date, Object, Array, Number, String, Set, Map, Promise, setTimeout, Float64Array, Uint8Array, Int32Array, Infinity, NaN, isFinite,
+    TextEncoder, TextDecoder, btoa, atob, Blob, Response, CompressionStream, DecompressionStream, // 진행 옮기기(transfer.js)
   };
   sandbox.window = sandbox;
   vm.createContext(sandbox);

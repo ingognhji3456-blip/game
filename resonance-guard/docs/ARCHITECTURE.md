@@ -351,6 +351,11 @@ state = {
 | `rg.settings.v1` | 음량, 배속, 흔들림, 숫자, 큰 글씨 |
 | `rg.run.v1` | 진행 중인 판: `{ opts, log, tick }` — 이어하기는 `RG.sim.replay`로 재현 |
 
+**진행 옮기기** (`RG.transfer`, `js/core/transfer.js`): 진행은 브라우저 저장 공간에만 있으므로, 다른 기기·사람에게는 저장 코드/파일로 옮김.
+코드 = `RG1z.` + base64url(deflate-raw(JSON)) (압축을 못 하는 브라우저는 `RG1.` + base64url(JSON)), JSON = `{ game: 'resonance-guard', kind: 'save', v: 1, at, progress }`.
+가져오면 `rg.progress.v1`을 바꾸고 `rg.run.v1`(다른 진행의 판)은 지움 — `progress.load()`가 예전 형식의 빈 칸을 채움. 설정은 기기마다 달라 옮기지 않음.
+화면: 타이틀 오른쪽 위 "진행 옮기기", 설정 → "내보내기 · 가져오기" (저장 파일 받기·코드 복사·휴대폰 공유 / 파일 열기·코드 붙여 넣기 → 요약 확인 → 가져오기).
+
 ## 8. 테스트
 
 - `node tests/run.js` — 모든 `tests/*.test.js` 실행.

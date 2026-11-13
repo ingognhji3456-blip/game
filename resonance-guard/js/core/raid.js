@@ -78,6 +78,9 @@ RG.raid = (() => {
     return out;
   }
 
+  /** 탑마다 적 체력 보정 (탑 하나만 쓰므로 탑 세기 차이를 메움 — tools/raid-balance.js --calibrate) */
+  const towerScale = (type) => (R().towerHp && R().towerHp[type]) || 1;
+
   /** 판 설정 조각 (게임 opts에 합침): { mapId, hpMult, towers, raid } */
   function setup(type, d, heroId) {
     const diff = R().difficulty[d - 1];
@@ -85,7 +88,7 @@ RG.raid = (() => {
     const support = isSupport(type);
     return {
       mapId: diff.map,
-      hpMult: Math.round(diff.hp * (support ? R().supportHero.hpMult : 1) * 1000) / 1000,
+      hpMult: Math.round(diff.hp * (support ? R().supportHero.hpMult : 1) * towerScale(type) * 1000) / 1000,
       towers: [type],
       raid: {
         tower: type, d, support,
@@ -101,5 +104,5 @@ RG.raid = (() => {
     return w >= Math.ceil(total / 2) ? R().loseShards : 0;
   }
 
-  return { shardBonus, shardCost, isSupport, canAir, hitsEnemy, waves, setup, reward };
+  return { shardBonus, shardCost, isSupport, canAir, hitsEnemy, waves, towerScale, setup, reward };
 })();

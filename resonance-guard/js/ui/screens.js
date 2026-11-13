@@ -39,6 +39,7 @@
       const menu = titleMenu(run, has, go);
       const corner = el('div', { class: 'title-corner' }, [
         el('button', { class: 'btn tc-btn', title: '설정', onclick: go(() => openSettings()) }, [UI.icon('settings', 'tc-ico'), el('span', { text: '설정' })]),
+        el('button', { class: 'btn tc-btn', title: '진행 상황 옮기기 (내보내기·가져오기)', onclick: go(() => openTransfer()) }, [UI.icon('share', 'tc-ico'), el('span', { text: '진행 옮기기' })]),
         el('button', { class: 'btn tc-btn', title: '만든 이', onclick: go(() => credits()) }, [UI.icon('crown', 'tc-ico'), el('span', { text: '만든 이' })]),
       ]);
       const foot = el('div', { class: 'title-foot' }, [
@@ -211,10 +212,106 @@
       slider('master', '전체 음량'), slider('sfx', '효과음'), slider('music', '음악'),
       toggle('muted', '소리 끄기'), toggle('shake', '화면 흔들림'), toggle('reduceFx', '효과 줄이기 (번쩍임·깜박임·흔들림)'), toggle('cvd', '색약 친화 색'), toggle('numbers', '피해 숫자'), toggle('paths', '준비 중 길 미리보기'), textSizeRow(),
       el('div', { class: 'set-row' }, [el('span', { text: '첫 판 안내' }), el('button', { class: 'btn small', type: 'button', onclick: () => { RG.ui.tutorial.reset(); UI.toast('1-1을 시작하면 단계별 안내가 다시 나와요', 'info', 2600); } }, ['튜토리얼 다시 보기'])]),
+      el('div', { class: 'set-row' }, [el('span', { text: '진행 상황 옮기기' }), el('button', { class: 'btn small', type: 'button', onclick: () => openTransfer() }, [UI.icon('share', 'tiny'), '내보내기 · 가져오기'])]),
     );
     UI.modal(body, { title: '설정', buttons: [{ text: '닫기', primary: true }] });
   }
   RG.ui.openSettings = openSettings;
+
+  /* =====================================================
+   * 진행 상황 옮기기 (js/core/transfer.js) — 진행은 이 브라우저에만 저장되므로, 다른 기기·사람에게는 저장 파일/코드로
+   * ===================================================== */
+  function sumText(s) {
+    return `별 ★${s.stars} · 클리어 ${s.cleared}/${s.maps} · 탑 ${s.towers}/${s.allTowers} · 공명석 ${s.crystals.toLocaleString()}${s.shardTowers ? ` · 조각 강화 탑 ${s.shardTowers}` : ''}`;
+  }
+  function openTransfer() {
+    const T = RG.transfer;
+    const mine = T.bundle();
+    const codeBox = el('textarea', { class: 'xfer-code', readonly: '', rows: '3', 'aria-label': '내 저장 코드', spellcheck: 'false' });
+    codeBox.value = '만드는 중…';
+    let code = null;
+    const ready = T.encode(mine).then((c) => { code = c; codeBox.value = c; return c; });
+    const copy = async () => {
+      const c = await ready;
+      let ok = false;
+      try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(c); ok = true; } } catch (e) { /* 아래로 */ }
+      if (!ok) { try { codeBox.focus(); codeBox.select(); ok = document.execCommand('copy'); } catch (e) { ok = false; } }
+      UI.toast(ok ? '저장 코드를 복사했습니다 — 메신저 등에 붙여 넣어 보내세요' : '복사하지 못했습니다. 칸의 글자를 길게 눌러 직접 복사해 주세요', ok ? 'good' : 'warn', 3000);
+    };
+    const file = async () => new File([await ready], T.fileName(), { type: 'text/plain' });
+    const download = async () => {
+      const f = await file();
+      const url = URL.createObjectURL(f);
+      const a = el('a', { href: url, download: f.name });
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      UI.toast(`저장 파일 "${f.name}"을 받았습니다`, 'good', 3000);
+    };
+    const canShareFile = () => { try { return !!(navigator.share && navigator.canShare && navigator.canShare({ files: [new File(['x'], 'a.txt', { type: 'text/plain' })] })); } catch (e) { return false; } };
+    const share = async () => { try { await navigator.share({ files: [await file()], title: '공명 수호대 저장' }); } catch (e) { if (e && e.name !== 'AbortError') download(); } };
+
+    // 가져오기: 파일 고르기 또는 코드 붙여 넣기
+    const paste = el('textarea', { class: 'xfer-code', rows: '3', placeholder: '받은 저장 코드(RG1…)를 여기에 붙여 넣으세요', 'aria-label': '받은 저장 코드', spellcheck: 'false' });
+    const picker = el('input', { type: 'file', accept: '.txt,.json,text/plain,application/json', class: 'xfer-file', 'aria-label': '저장 파일 고르기' });
+    const tryImport = async (text) => {
+      let obj;
+      try { obj = await T.decode(text); } catch (e) { UI.toast(e.message, 'warn', 3600); UI.sfx('error'); return; }
+      const s = T.summary(obj);
+      const when = s.at ? new Date(s.at) : null;
+      const box = el('div', { class: 'xfer-confirm' }, [
+        el('p', { class: 'modal-text', text: '이 진행을 가져올까요?' }),
+        el('p', { class: 'xfer-sum', text: sumText(s) }),
+        when && !isNaN(when) ? el('p', { class: 'dim small', text: `저장한 때: ${when.toLocaleString()}` }) : null,
+        el('p', { class: 'warn-text', text: '⚠ 지금 이 기기의 진행은 지워지고 이 진행으로 바뀝니다. 되돌릴 수 없으니, 필요하면 먼저 내 진행을 내보내 두세요.' }),
+      ]);
+      UI.modal(box, {
+        title: '진행 가져오기',
+        buttons: [{ text: '취소' }, {
+          text: '가져오기', danger: true,
+          onClick: () => {
+            UI.closeAllModals();
+            UI.show('title', {}); // 하던 판이 있으면 먼저 나감(나가면서 이어하기 판을 저장하므로, 가져오기는 그 뒤에)
+            const r = T.apply(obj);
+            if (!r.ok) { UI.toast(r.reason, 'warn', 3600); return; }
+            UI.show('title', {});
+            UI.toast('진행을 가져왔습니다!', 'good', 3000);
+            UI.sfx('star');
+          },
+        }],
+      });
+    };
+    picker.addEventListener('change', () => {
+      const f = picker.files && picker.files[0];
+      if (!f) return;
+      if (f.size > 2e6) { UI.toast('저장 파일이 아닙니다 (너무 큼)', 'warn'); picker.value = ''; return; }
+      f.text().then((t) => { picker.value = ''; tryImport(t); });
+    });
+
+    const body = el('div', { class: 'xfer' }, [
+      el('p', { class: 'dim small', text: '진행 상황은 이 브라우저에만 저장됩니다. 게임 파일만 보내면 상대는 처음부터 시작해요. 저장 파일이나 저장 코드를 함께 보내면, 상대가 "가져오기"로 이 진행을 그대로 이어서 할 수 있습니다.' }),
+      el('section', { class: 'xfer-sec' }, [
+        el('h3', { text: '내 진행 내보내기' }),
+        el('p', { class: 'xfer-sum', text: sumText(T.summary(mine)) }),
+        el('div', { class: 'xfer-btns' }, [
+          canShareFile() ? el('button', { class: 'btn btn-primary small', type: 'button', onclick: share }, [UI.icon('share', 'tiny'), '공유하기']) : null,
+          el('button', { class: `btn small ${canShareFile() ? '' : 'btn-primary'}`, type: 'button', onclick: download }, ['저장 파일 받기']),
+          el('button', { class: 'btn small', type: 'button', onclick: copy }, ['저장 코드 복사']),
+        ]),
+        codeBox,
+      ]),
+      el('section', { class: 'xfer-sec' }, [
+        el('h3', { text: '받은 진행 가져오기' }),
+        el('div', { class: 'xfer-btns' }, [
+          el('label', { class: 'btn small xfer-pick' }, ['저장 파일 열기', picker]),
+        ]),
+        paste,
+        el('div', { class: 'xfer-btns' }, [el('button', { class: 'btn small', type: 'button', onclick: () => tryImport(paste.value) }, ['코드로 가져오기'])]),
+      ]),
+    ]);
+    UI.modal(body, { title: '진행 상황 옮기기', className: 'xfer-modal', buttons: [{ text: '닫기', primary: true }] });
+    return { ready: () => ready, code: () => code };
+  }
+  RG.ui.openTransfer = openTransfer;
 
   /* =====================================================
    * 월드 지도
