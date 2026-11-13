@@ -1054,6 +1054,15 @@ RG.sim = (() => {
       if (oh.purify) { e.st.purifyUntil = st.time + oh.purify; if (e.shield > 0) { e.shield = 0; ev('shieldBreak', { enemyId: e.id, x: e.x, y: e.y }); } }
       if (oh.halt) e.st.haltUntil = st.time + oh.halt;
       if (oh.veil) { const v = e.st.veil; if (!v || st.time >= v.until || oh.veil.pct >= v.pct) e.st.veil = { pct: oh.veil.pct, until: st.time + oh.veil.dur }; }
+      if (oh.awBurst && t && !hit.awBurst) {
+        // 각성: N번 맞힐 때마다 맞은 적 주변 폭발 (그 공격 피해의 pct)
+        t.awHits = (t.awHits || 0) + 1;
+        if (t.awHits % oh.awBurst.n === 0) {
+          const dmgB = (attackSide || dealt) * oh.awBurst.pct;
+          for (const o of enemiesInRadius(e.x, e.y, oh.awBurst.radius)) if (o !== e && !o.dead) damage(o, dmgB, el, src, { secondary: true, area: true });
+          ev('pulse', { towerId: t.id, x: e.x, y: e.y, radius: oh.awBurst.radius, element: el });
+        }
+      }
       if (oh.execute && !e.dead) {
         const ed = D().enemies[e.type];
         if (!ed.boss && e.hp / e.maxHp <= oh.execute) { ev('execute', { x: e.x, y: e.y }); kill(e, src, { executed: true }); return; }
@@ -1804,7 +1813,13 @@ RG.sim = (() => {
       return { ok: true, id: t.id };
     }
 
+    /** 각성(Lv5)할 수 있나: 분기를 고른 Lv4 + 그 탑의 조각 강화 마지막 단계 (도전 모드는 조각이 없음) — o.shardStart: 이 규칙 뒤의 판만 */
+    function canAwaken(t) {
+      return t.level === 4 && !!t.branch && !!o.shardStart && !!RG.awaken && RG.awaken.has(t.type) && (shards[t.type] || 0) >= D().raid.shard.max
+        && !(challenge && challenge.type === 'maxLevel' && challenge.value < 5);
+    }
     function upgradeCost(t, branch) {
+      if (t.level === 4 && canAwaken(t)) return RG.stats.costOf(t.type, 5, t.branch, meta);
       if (t.level >= 4) return null;
       const nextLv = t.level + 1;
       if (nextLv === 4) {
@@ -1819,7 +1834,21 @@ RG.sim = (() => {
       if (!t) return fail('탑이 없습니다');
       if (st.result) return fail('판이 끝났습니다');
       const isBranch = cmd.type === 'branch';
-      if (t.level >= 4) return fail('더 강화할 수 없습니다');
+      if (t.level === 4 && !isBranch && canAwaken(t)) {
+        // 각성 (Lv5): 고른 분기는 그대로
+        const cost = upgradeCost(t);
+        if (st.gold < cost) return fail('골드가 부족합니다');
+        st.gold -= cost;
+        t.invested += cost;
+        t.level = 5;
+        t.beamState = [];
+        statsDirty = true;
+        RG.stats.computeAll(game);
+        if (D().towers[t.type].role === 'barracks') syncSoldiers(t);
+        ev('upgrade', { towerId: t.id, c: t.c, r: t.r, level: t.level, branch: t.branch, awaken: true });
+        return { ok: true };
+      }
+      if (t.level >= 4) return fail(t.level === 4 && !isBranch ? '조각 강화를 마지막 단계까지 하면 각성할 수 있습니다' : '더 강화할 수 없습니다');
       if (!isBranch && t.level >= 3) return fail('분기를 골라야 합니다');
       if (isBranch && t.level !== 3) return fail('Lv3에서 분기를 고를 수 있습니다');
       if (isBranch && !branchesOk) return fail('분기 강화는 첫 보스를 쓰러뜨린 뒤 열립니다');
@@ -2588,7 +2617,10 @@ RG.sim = (() => {
       }
       t.cd -= t.boostUntil > time ? DT * t.boostMult : DT; // 담금질·되울림 종: 공격 속도
       if (t.cd <= 0) {
-        if (fireTower(t)) { t.cd += c.interval; t.anim = 0.25; } else t.cd = 0;
+        if (fireTower(t)) {
+          t.cd += c.interval; t.anim = 0.25;
+          if (c.echo) { t.echoN = (t.echoN || 0) + 1; if (t.echoN % c.echo === 0) { fireTower(t); ev('echo', { towerId: t.id, x: t.x, y: t.y, element: c.element }); } } // 각성: N번째 공격마다 한 번 더
+        } else t.cd = 0;
       }
     }
     /** 탑 강화 효과(영웅 기술): 같은 시간이면 큰 배율을 남김. temper면 멈춤·침묵 면역 */
@@ -3027,11 +3059,15 @@ RG.sim = (() => {
       const t = st.towers.find((x) => x.id === id);
       if (!t) return null;
       const td = D().towers[t.type];
-      const name = t.level >= 4 ? td.branches[t.branch].name : td.name;
+      const name = t.level >= 5 ? RG.awaken.spec(t.type, t.branch).name : t.level >= 4 ? td.branches[t.branch].name : td.name;
       const next = [];
       const ch = challenge;
       const maxLv = ch && ch.type === 'maxLevel' ? ch.value : 4;
       if (t.level < 3 && t.level < maxLv) next.push({ type: 'upgrade', level: t.level + 1, cost: upgradeCost(t), spec: RG.stats.specOf(t.type, t.level + 1) });
+      if (canAwaken(t)) {
+        const aw = RG.data.awaken.towers[t.type];
+        next.push({ type: 'awaken', level: 5, cost: upgradeCost(t), spec: RG.awaken.spec(t.type, t.branch), name: aw.name, desc: aw.desc, common: RG.awaken.commonText(t.type) });
+      }
       if (t.level === 3 && maxLv >= 4) {
         for (const b of ['A', 'B']) next.push({ type: 'branch', branch: b, cost: upgradeCost(t, b), spec: td.branches[b], locked: !branchesOk });
       }

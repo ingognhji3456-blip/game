@@ -32,6 +32,7 @@
     if (role === 'attack' && b.speedPct) out.push(`공격 속도 +${Math.round(b.speedPct * 100)}%`);
     if (RG.raid.isSupport(type)) out.push(`레이드 영웅 강화 +${pct}%`);
     if (lv >= RD().shard.buildAt) out.push('한 단계 높게 설치 (값은 그대로)');
+    if (lv >= RD().shard.max && D().awaken && D().awaken.towers[type]) out.push(`✦ 각성(Lv5) 열림`);
     return out.join(' · ');
   }
   RG.ui.shardEffectText = effectText;
@@ -176,6 +177,10 @@
           progressBar(type),
           cost != null ? el('button', { class: `btn small ${have >= cost ? 'btn-primary' : ''}`, 'data-focus': 'up', disabled: have < cost, onclick: upgrade }, [`강화 (조각 ${cost})`]) : el('span', { class: 'good', text: '최대 단계' }),
         ]),
+        D().awaken && D().awaken.towers[type] ? el('div', { class: `rd-awaken ${lv >= RD().shard.max ? 'on' : ''}` }, [
+          el('b', { text: lv >= RD().shard.max ? `✦ 각성 · ${D().awaken.towers[type].name}` : `✦ ${RD().shard.max}단계에서 각성 · ${D().awaken.towers[type].name}` }),
+          el('span', { text: `판 안에서 분기(Lv4) 다음에 Lv5 각성 강화: ${D().awaken.towers[type].desc}${RG.awaken.commonText(type) ? ` (${RG.awaken.commonText(type)})` : ''}` }),
+        ]) : null,
         el('p', { class: 'small dim', text: '조각 강화는 캠페인·무한·레이드에 적용됩니다 (도전 모드 제외). 뽑기 강화와 따로 쌓여요.' }),
       ]);
 

@@ -227,6 +227,28 @@ async function run() {
     });
     await page.waitForTimeout(1800);
     await shot(page, dir, '20c-raid-result'); await checkLayout(page, `${sizeName}/raid-result`, issues);
+    // 각성 (Lv5): 각성한 탑 셋 + 각성 카드가 보이는 탑 정보 창
+    await page.evaluate(() => {
+      RG.progress.get().shardLv = { ember_archer: 5, flame_mortar: 5, shadow_dragon: 5 }; RG.progress.save();
+      RG.ui.show('game', { opts: { mapId: '3-2', heroId: 'kara', seed: 3, mode: 'normal', towers: RG.progress.ownedTowers(), branches: true, finalLv2: true, shardStart: true, shardLv: RG.progress.shardLevels() } });
+    });
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => {
+      const ui = RG.ui.game; const g = ui.game; RG.ui.closeAllModals(); g.state.gold = 99999;
+      const want = ['ember_archer', 'flame_mortar', 'shadow_dragon', 'ember_archer']; let n = 0;
+      for (let r = 0; r < g.map.rows && n < want.length; r++) for (let c = 0; c < g.map.cols && n < want.length; c++) if (g.map.kinds[r * g.map.cols + c] === RG.grid.T.BUILD && ui.doCmd({ type: 'build', tower: want[n], c, r }, true).ok) n++;
+      for (const t of g.state.towers) { for (let i = 0; i < 3; i++) g.cmd({ type: 'upgrade', id: t.id }); g.cmd({ type: 'branch', id: t.id, branch: 'B' }); }
+      for (const t of g.state.towers.slice(0, 3)) g.cmd({ type: 'upgrade', id: t.id });
+      ui.doCmd({ type: 'callWave' }, true); ui.setSpeed(2);
+    });
+    await page.waitForTimeout(2500);
+    await page.evaluate(() => {
+      RG.ui.game.setSpeed(1);
+      const tw = RG.ui.game.game.state.towers; const t = tw.find((x) => x.level === 4) || tw[tw.length - 1]; const pt = RG.render.worldToScreen(t.c + 0.5, t.r + 0.5); const cv = document.querySelector('.game-canvas'); const bb = cv.getBoundingClientRect();
+      const o = { clientX: bb.left + pt.x, clientY: bb.top + pt.y, bubbles: true, pointerType: 'mouse' }; cv.dispatchEvent(new PointerEvent('pointerdown', o)); cv.dispatchEvent(new PointerEvent('pointerup', o));
+    });
+    await page.waitForTimeout(400);
+    await shot(page, dir, '20d-awaken-battle'); await checkLayout(page, `${sizeName}/awaken-battle`, issues);
     await ctx.close();
   }
   await browser.close();

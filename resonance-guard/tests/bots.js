@@ -270,6 +270,12 @@ function makeEnv(RG) {
       const up = UP * (g.def.boss && st.wave.index >= st.wave.total - 5 ? 2 : 1);
       for (const tw of st.towers) {
         const td = D.towers[tw.type];
+        if (tw.level === 4 && g.upgradeCost(tw) != null) {
+          // 각성(Lv5): 조각 5단계 탑만 — 각성이 없으면 upgradeCost가 null
+          const v = td.role === 'economy' ? (st.wave.total - st.wave.index) * 1.2 : towerValue(g, tw.type, 5, tw.branch, tw.c, tw.r, route, air, W) - towerValue(g, tw.type, 4, tw.branch, tw.c, tw.r, route, air, W) * 0.3;
+          consider(v * up, g.upgradeCost(tw), { type: 'upgrade', id: tw.id });
+          continue;
+        }
         if (tw.level >= 4 || tw.level >= maxLv) continue;
         if (tw.level < 3) {
           const cost = g.upgradeCost(tw);

@@ -18,6 +18,10 @@
   let acc = 0;
   let speed = 1;
   let paused = false;
+  let panelPress = false; // 탑 정보 창 안을 누르는 중 (그동안 창을 다시 그리지 않음)
+  const endPanelPress = () => { if (panelPress) setTimeout(() => { panelPress = false; }, 0); }; // click이 먼저 가도록 다음 차례에
+  document.addEventListener('pointerup', endPanelPress, true);
+  document.addEventListener('pointercancel', endPanelPress, true);
   let resultShown = false;
   let mode = 'idle';
   let sel = null;            // { kind:'tower'|'enemy', id }
@@ -134,6 +138,8 @@
     R.heroCard = el('div', { class: 'hero-card' });
     R.skill = el('button', { class: 'skill-btn', title: '영웅 기술 (Q)', onclick: () => startSkill() });
     R.info = el('div', { class: 'info-panel hidden' });
+    // 창 안을 누르는 동안(손가락·마우스를 댄 채) 창을 다시 그리지 않음 — 뗄 때 눌림(click)이 그 단추에 가도록
+    R.info.addEventListener('pointerdown', () => { panelPress = true; });
     right.append(R.heroCard, R.skill, R.info);
 
     // 탑 목록: 데스크톱은 맵 아래, 좁은 화면은 오른쪽 띠 아래 (css/game.css 격자)
@@ -1198,8 +1204,11 @@
     const t = game.state.towers.find((q) => q.id === (sel && sel.id));
     if (!t) { closePanels(); return; }
     const info = game.towerInfo(t.id);
-    const sig = JSON.stringify([t.level, t.branch, t.effects, t.disabled, t.dampened, t.building, Math.floor(game.state.gold / 5), t.targetMode, Math.floor(info.damageDealt / 50), mode]);
-    if (!force && R.info.dataset.sig === sig) return;
+    // 창을 통째로 다시 그리는 건 모양이 바뀔 때만 — 골드·이번 판 피해처럼 자주 바뀌는 값은 그 자리에서 고침(liveTowerPanel).
+    // (예전엔 골드 5·피해 50마다 다시 그려, 적이 맞는 동안 누르던 강화 단추가 손을 떼기 전에 새 단추로 바뀌어 눌리지 않았음)
+    const sig = JSON.stringify([t.id, t.level, t.branch, t.effects, t.disabled, t.dampened, t.building, t.targetMode, mode, game.state.wave.started, info.canSell, info.next.map((n) => `${n.type}${n.branch || ''}:${n.cost}:${n.locked ? 1 : 0}`)]);
+    if (!force && R.info.dataset.sig === sig) { liveTowerPanel(t, info); return; }
+    if (!force && panelPress) return; // 창 안을 누르는 중에는 다시 그리지 않음 (손을 떼면 다음 틱에)
     R.info.dataset.sig = sig;
     // 창은 골드·피해가 바뀔 때마다 다시 그려짐 — 키보드 초점이 창 안에 있었으면 같은 버튼으로 돌려줌
     const fa = document.activeElement;
@@ -1216,16 +1225,17 @@
     R.info.innerHTML = '';
     R.info.classList.remove('hidden');
     const head = el('div', { class: 'ip-head' }, [
-      UI.towerImg(t.type, t.level, t.branch, 'ip-img'),
+      UI.towerImg(t.type, t.level, t.branch, `ip-img ${t.level >= 5 ? 'awakened' : ''}`),
       el('div', { class: 'ip-title' }, [
         el('b', { text: info.name }),
-        el('span', { class: 'ip-sub' }, [UI.elementBadge(td.element), el('span', { text: t.level >= 4 ? ' 분기' : ` Lv${t.level}` }), calc && calc.rank ? el('em', { class: `ip-rank ${RG.gacha.isFinal(calc.rank) ? 'fin' : ''}`, title: `뽑기 중복 강화: ${UI.rankText ? UI.rankText(t.type, calc.rank) : ''}`, text: RG.gacha.isFinal(calc.rank) ? ' ★ 최종 강화' : ` 강화 +${calc.rank}` }) : null]),
+        el('span', { class: 'ip-sub' }, [UI.elementBadge(td.element), el('span', { class: t.level >= 5 ? 'ip-awake' : '', text: t.level >= 5 ? ' ✦ 각성' : t.level >= 4 ? ' 분기' : ` Lv${t.level}` }), calc && calc.rank ? el('em', { class: `ip-rank ${RG.gacha.isFinal(calc.rank) ? 'fin' : ''}`, title: `뽑기 중복 강화: ${UI.rankText ? UI.rankText(t.type, calc.rank) : ''}`, text: RG.gacha.isFinal(calc.rank) ? ' ★ 최종 강화' : ` 강화 +${calc.rank}` }) : null]),
       ]),
       el('button', { class: 'x-btn', 'aria-label': '닫기', 'data-k': 'close', onclick: cancelAll }, [UI.icon('close')]),
     ]);
     R.info.appendChild(head);
     const desc = t.level >= 4 ? td.branches[t.branch].desc : td.desc;
     R.info.appendChild(el('p', { class: 'ip-desc', text: desc }));
+    if (t.level >= 5 && D().awaken.towers[t.type]) R.info.appendChild(el('p', { class: 'ip-desc ip-awake-desc' }, [el('b', { text: `✦ ${D().awaken.towers[t.type].name}: ` }), D().awaken.towers[t.type].desc]));
     if (t.disabled) R.info.appendChild(el('p', { class: 'warn-line', text: t.silenced ? '침묵: 지금은 공격·지원·공명을 못 합니다' : '멈춤: 지금은 공격·지원·공명을 못 합니다' }));
     else if (t.dampened) R.info.appendChild(el('p', { class: 'warn-line', text: '공명이 끊겼습니다' }));
     if (t.building) R.info.appendChild(el('p', { class: 'dim', text: '짓는 중…' }));
@@ -1264,13 +1274,22 @@
     const up = el('div', { class: 'up-box' });
     for (const n of info.next) {
       if (n.type === 'upgrade') {
-        const b = el('button', { class: 'btn btn-up', 'data-k': 'up', disabled: game.state.gold < n.cost || t.building, onclick: () => doCmd({ type: 'upgrade', id: t.id }) }, [
+        const b = el('button', { class: 'btn btn-up', 'data-k': 'up', 'data-cost': n.cost, disabled: game.state.gold < n.cost || t.building, onclick: () => doCmd({ type: 'upgrade', id: t.id }) }, [
           UI.icon('upgrade', 'tiny'), el('span', { text: `Lv${n.level} 강화` }), el('span', { class: 'cost' }, [UI.icon('gold', 'tiny'), String(n.cost)]),
         ]);
         UI.tooltipFor(b, () => upgradeDiff(t, n.spec));
         up.appendChild(b);
+      } else if (n.type === 'awaken') {
+        // 각성 (Lv5): 조각 강화 5단계를 채운 탑
+        const b = el('button', { class: 'btn awaken-card', 'data-k': 'up', 'data-cost': n.cost, disabled: game.state.gold < n.cost || t.building, onclick: () => doCmd({ type: 'upgrade', id: t.id }) }, [
+          UI.towerImg(t.type, 5, t.branch, 'br-img awakened'),
+          el('b', { text: `✦ 각성 · ${n.name}` }),
+          el('span', { class: 'br-desc', text: n.desc + (n.common ? ` (${n.common})` : '') }),
+          el('span', { class: 'cost' }, [UI.icon('gold', 'tiny'), String(n.cost)]),
+        ]);
+        up.appendChild(b);
       } else {
-        const card = el('button', { class: `branch-card ${n.locked ? 'locked' : ''}`, 'data-k': `br:${n.branch}`, disabled: n.locked || game.state.gold < n.cost || t.building, onclick: () => confirmBranch(t, n) }, [
+        const card = el('button', { class: `branch-card ${n.locked ? 'locked' : ''}`, 'data-k': `br:${n.branch}`, 'data-cost': n.locked ? null : n.cost, disabled: n.locked || game.state.gold < n.cost || t.building, onclick: () => confirmBranch(t, n) }, [
           UI.towerImg(t.type, 4, n.branch, 'br-img'),
           el('b', { text: `${n.branch} · ${n.spec.name}` }),
           el('span', { class: 'br-desc', text: n.locked ? '첫 보스(1-6)를 쓰러뜨리면 열립니다' : n.spec.desc }),
@@ -1280,6 +1299,10 @@
       }
     }
     if (!info.next.length && t.level < 4) up.appendChild(el('p', { class: 'dim small', text: '이 도전에서는 더 강화할 수 없습니다' }));
+    if (t.level === 4 && !info.next.length && game.opts.mode !== 'challenge' && D().awaken.towers[t.type]) {
+      const lv = (game.shards && game.shards[t.type]) || 0;
+      up.appendChild(el('p', { class: 'dim small awaken-hint', text: `✦ 조각 강화 ◆${lv}/${D().raid.shard.max} — 마지막 단계를 채우면 이 탑을 각성(Lv5)할 수 있습니다: ${D().awaken.towers[t.type].name}` }));
+    }
     R.info.appendChild(up);
     // 표적·집결지·판매
     const row = el('div', { class: 'ip-actions' });
@@ -1298,7 +1321,17 @@
       row.appendChild(el('button', { class: 'btn btn-sell', 'data-k': 'sell', onclick: () => confirmSell(t, info.sellValue) }, [UI.icon('sell', 'tiny'), `팔기 ${info.sellValue}`]));
     }
     R.info.appendChild(row);
-    if (info.damageDealt > 0) R.info.appendChild(el('p', { class: 'dim small', text: `이번 판 피해 ${Math.round(info.damageDealt).toLocaleString()}` }));
+    R.info.appendChild(el('p', { class: 'dim small ip-dmg', text: info.damageDealt > 0 ? `이번 판 피해 ${Math.round(info.damageDealt).toLocaleString()}` : '' }));
+  }
+  /** 자주 바뀌는 값만 그 자리에서: 강화·분기·각성 단추의 눌림 가능(골드), 이번 판 피해 — 단추는 그대로라 누르는 중에도 눌림 */
+  function liveTowerPanel(t, info) {
+    const gold = game.state.gold;
+    for (const b of R.info.querySelectorAll('[data-cost]')) {
+      const off = gold < +b.dataset.cost || !!t.building;
+      if (b.disabled !== off) b.disabled = off;
+    }
+    const d = R.info.querySelector('.ip-dmg');
+    if (d) { const txt = info.damageDealt > 0 ? `이번 판 피해 ${Math.round(info.damageDealt).toLocaleString()}` : ''; if (d.textContent !== txt) d.textContent = txt; }
   }
 
   function upgradeDiff(t, spec) {
@@ -1482,7 +1515,7 @@
     if (sel && sel.kind === 'tower') {
       const t = game.state.towers.find((q) => q.id === sel.id);
       if (!t) return;
-      if (k === 'u' || k === 'U') { if (t.level < 3) doCmd({ type: 'upgrade', id: t.id }); return; }
+      if (k === 'u' || k === 'U') { if (t.level < 3 || (t.level === 4 && game.towerInfo(t.id).next.some((n) => n.type === 'awaken'))) doCmd({ type: 'upgrade', id: t.id }); return; }
       if (k === 's' || k === 'S') { const info = game.towerInfo(t.id); if (info.canSell) confirmSell(t, info.sellValue); }
     }
   }

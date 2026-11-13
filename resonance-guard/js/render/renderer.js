@@ -1230,6 +1230,40 @@ RG.render = (() => {
   }
 
   /* ---------------- 탑 ---------------- */
+  /** 각성한 탑(Lv5): 발밑 원소 빛 고리(천천히 숨쉬듯) + 머리 위 금빛 별, 가끔 오르는 불티 — 번쩍임 없음(효과 줄이기에도 안전) */
+  function drawAwakenAura(t, cx, baseY, front) {
+    const col = elColor(RG.data.towers[t.type].element);
+    const k = 0.5 + 0.5 * Math.sin(time * 2.2 + t.id);
+    ctx.save();
+    if (!front) {
+      const g = ctx.createRadialGradient(cx, baseY, T * 0.05, cx, baseY, T * 0.62);
+      g.addColorStop(0, '#fff3c8cc');
+      g.addColorStop(0.45, col + 'aa');
+      g.addColorStop(1, col + '00');
+      ctx.globalAlpha = 0.55 + 0.25 * k;
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.ellipse(cx, baseY, T * 0.62, T * 0.26, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.7;
+      ctx.strokeStyle = '#ffd27a';
+      ctx.lineWidth = Math.max(1, T * 0.035);
+      ctx.beginPath(); ctx.ellipse(cx, baseY, T * (0.46 + 0.04 * k), T * (0.18 + 0.015 * k), 0, 0, Math.PI * 2); ctx.stroke();
+    } else {
+      // 머리 위 네 갈래 별
+      const sx = cx;
+      const sy = baseY - T * 1.18 - T * 0.04 * k;
+      const R = T * (0.11 + 0.02 * k);
+      ctx.globalAlpha = 0.95;
+      ctx.fillStyle = '#ffe9a8';
+      ctx.strokeStyle = '#7a4a10';
+      ctx.lineWidth = Math.max(1, T * 0.02);
+      ctx.beginPath();
+      for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2 - Math.PI / 2; const r = i % 2 ? R * 0.38 : R; ctx.lineTo(sx + Math.cos(a) * r, sy + Math.sin(a) * r); }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      if (!lowFx() && Math.random() < 0.06) RG.fx.burst(t.x + (Math.random() - 0.5) * 0.6, t.y + 0.2, col, 1, 0.9, 0.35, 0.04, -1.1);
+    }
+    ctx.restore();
+  }
+
   function drawTower(t) {
     const cx = X(t.x);
     const baseY = Y(t.r + 0.82);
@@ -1241,6 +1275,7 @@ RG.render = (() => {
     const key = poseSprite(RG.art.sprites.towerKey(t.type, t.level, t.branch, pose), RG.art.sprites.towerKey(t.type, t.level, t.branch, 'idle'),
       () => RG.art.tower(t.type, t.level, t.branch, pose), RG.art.sprites.TW, RG.art.sprites.TH);
     if (!shadeBaked) castShadow(key, cx, baseY, w, h, 0.5, 112 / 130, false, t.building ? 0.2 : 0.42);
+    if (t.level >= 5 && !t.building) drawAwakenAura(t, cx, baseY, false);
     // 쏠 때 눌림은 적이 아주 많으면 생략 — 늘이기 변환이 끼면 줄여 둔 그림을 못 써서 느린 길로 그려짐(자세 그림이 동작을 보여 줌)
     const squish = sy !== 1 && !manyEnemies;
     const saved = t.building || squish;
@@ -1253,6 +1288,7 @@ RG.render = (() => {
       ctx.fillRect(cx - T * 0.3, baseY - T * 0.7, T * 0.6, T * 0.7);
     }
     if (saved) ctx.restore();
+    if (t.level >= 5 && !t.building) drawAwakenAura(t, cx, baseY, true);
     if (t.disabled) {
       ctx.save();
       ctx.globalAlpha = 0.5;

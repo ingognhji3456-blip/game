@@ -20,6 +20,7 @@ RG.stats = (() => {
   /** 탑의 현재 단계 spec (분기면 분기 spec) */
   function specOf(type, level, branch) {
     const def = RG.data.towers[type];
+    if (level >= 5 && branch && RG.awaken && RG.awaken.has(type)) return RG.awaken.spec(type, branch); // 각성 (js/core/awaken.js)
     if (level >= 4 && branch) return def.branches[branch];
     return def.levels[Math.min(level, 3) - 1];
   }

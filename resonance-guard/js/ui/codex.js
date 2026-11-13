@@ -69,6 +69,16 @@
       ]));
     }
     box.append(el('p', { text: td.desc }), UI.elementBadge(td.element), row);
+    // 각성 (Lv5): 조각 강화 5단계를 채우면 판 안에서 분기 다음에
+    const aw = D().awaken && D().awaken.towers[t];
+    if (aw) {
+      const lv = RG.progress.shardLvOf(t);
+      const max = D().raid.shard.max;
+      box.appendChild(el('div', { class: `rd-awaken ${lv >= max ? 'on' : ''}` }, [
+        el('b', { text: `✦ 각성 · ${aw.name}${lv >= max ? '' : ` (조각 강화 ◆${lv}/${max})`}` }),
+        el('span', { text: `${aw.desc}${RG.awaken.commonText(t) ? ` (${RG.awaken.commonText(t)})` : ''} · 각성 비용: 분기 비용 × ${D().awaken.costMult}` }),
+      ]));
+    }
     UI.modal(box, { title: td.name, buttons: [{ text: '닫기', primary: true }], className: 'wide' });
   }
 

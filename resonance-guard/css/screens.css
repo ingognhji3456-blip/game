@@ -1114,3 +1114,6 @@
   .top-actions .btn-raid .rb-label { display: none; }
   .top-actions .btn-raid { min-width: 40px; justify-content: center; }
 }
+.rd-awaken { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; border-radius: 8px; border: 1px dashed #ffd27a66; background: #2a1f0f55; font-size: 0.8rem; color: #d8ccb8; }
+.rd-awaken b { color: #ffe08a; }
+.rd-awaken.on { border-style: solid; border-color: #ffd27a; background: linear-gradient(135deg, #3a2a10aa, #24163eaa); box-shadow: 0 0 10px #ffd27a44; color: #fff3dc; }

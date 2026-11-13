@@ -2,7 +2,7 @@
 
 /*
  * 입력 방식별 한 판 + 이어하기 (QUALITY.md §5)
- *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|mouse|resume|world|gacha|tutorial|a11y|transfer|raid]
+ *   node tests/e2e/flows.js [--dist] [--only keyboard|touch|mouse|resume|world|gacha|tutorial|a11y|transfer|raid|awaken|press]
  *
  * - keyboard: 숫자(탑 고르기)·방향키·Enter·U·Space·F만으로 1-1을 깬다 (마우스·터치 없음)
  * - touch:    휴대폰 가로(터치 에뮬레이션)에서 탑 목록 탭 → 칸 탭, 탑 끌어다 놓기만으로 1-1을 깬다
@@ -764,9 +764,105 @@ async function raidRun(browser) {
   return { name: '조각 레이드', ok, detail: Object.entries(r).map(([k, v]) => `${k} ${v ? '✓' : '✗'}`).join(' · '), errors };
 }
 
+/* ---------------- 각성: 조각 5단계 탑 → 판 안에서 분기 뒤 '✦ 각성' 카드 누르기 / U 키 → Lv5, 4단계 탑은 안내만 ---------------- */
+async function awakenRun(browser) {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  const r = {};
+  await page.goto(URL);
+  await page.waitForSelector('#screen-title.active');
+  await page.evaluate(() => {
+    const P = RG.progress;
+    for (const m of RG.data.maps.filter((x) => x.region <= 2)) P.record(m.id, 'normal', { result: 'win', lives: 12, task: { done: true }, wave: { index: 8 } });
+    for (const id of Object.keys(RG.data.story)) P.markSeen('story', id);
+    for (const m of RG.data.maps) for (const t of m.tips || []) P.markSeen('tips', t);
+    P.get().shardLv = { ember_archer: 5, frost_crystal: 4 }; P.save();
+    RG.ui.show('brief', { mapId: '2-2' });
+  });
+  await page.click('#screen-brief .btn-primary.btn-big');
+  await page.waitForFunction(() => RG.ui.game.game && !document.querySelector('#screen-game').classList.contains('loading'));
+  r.optsCarry = await page.evaluate(() => RG.ui.game.game.opts.shardStart === true && RG.ui.game.game.shards.ember_archer === 5);
+  const ids = await page.evaluate(() => {
+    const ui = RG.ui.game; const g = ui.game; RG.ui.closeAllModals(); g.state.gold = 99999;
+    const out = [];
+    for (const type of ['ember_archer', 'ember_archer', 'frost_crystal']) {
+      let done = false;
+      for (let rr = 0; rr < g.map.rows && !done; rr++) for (let c = 0; c < g.map.cols && !done; c++) if (g.map.kinds[rr * g.map.cols + c] === RG.grid.T.BUILD) { const res = ui.doCmd({ type: 'build', tower: type, c, r: rr }, true); if (res.ok) { out.push(res.id); done = true; } }
+    }
+    for (const id of out) { while (g.state.towers.find((t) => t.id === id).level < 3) g.cmd({ type: 'upgrade', id }); g.cmd({ type: 'branch', id, branch: 'B' }); }
+    return out;
+  });
+  const clickTower = (id) => page.evaluate((tid) => { const t = RG.ui.game.game.state.towers.find((x) => x.id === tid); const pt = RG.render.worldToScreen(t.c + 0.5, t.r + 0.5); const cv = document.querySelector('.game-canvas'); const bb = cv.getBoundingClientRect(); const o = { clientX: bb.left + pt.x, clientY: bb.top + pt.y, bubbles: true, pointerType: 'mouse' }; cv.dispatchEvent(new PointerEvent('pointerdown', o)); cv.dispatchEvent(new PointerEvent('pointerup', o)); }, id);
+  // 1) 카드 누르기
+  await clickTower(ids[0]);
+  await page.waitForSelector('.info-panel .awaken-card, .awaken-card', { timeout: 3000 });
+  await page.click('.awaken-card');
+  await page.waitForTimeout(200);
+  r.cardAwakens = await page.evaluate((id) => RG.ui.game.game.state.towers.find((t) => t.id === id).level === 5, ids[0]);
+  r.panelShows = await page.evaluate(() => /각성/.test(document.querySelector('.ip-sub') ? document.querySelector('.ip-sub').textContent : '') && !!document.querySelector('.ip-awake-desc'));
+  // 2) U 키
+  await page.keyboard.press('Escape');
+  await clickTower(ids[1]);
+  await page.waitForTimeout(150);
+  await page.keyboard.press('u');
+  await page.waitForTimeout(200);
+  r.keyAwakens = await page.evaluate((id) => RG.ui.game.game.state.towers.find((t) => t.id === id).level === 5, ids[1]);
+  // 3) 조각 4단계 탑: 각성 없음, 안내만
+  await page.keyboard.press('Escape');
+  await clickTower(ids[2]);
+  await page.waitForTimeout(150);
+  r.hintOnly = await page.evaluate(() => !document.querySelector('.awaken-card') && /◆4\/5/.test((document.querySelector('.awaken-hint') || {}).textContent || ''));
+  await page.keyboard.press('u');
+  await page.waitForTimeout(150);
+  r.noAwakenAt4 = await page.evaluate((id) => RG.ui.game.game.state.towers.find((t) => t.id === id).level === 4, ids[2]);
+  // 4) 그림이 그려지는 동안 오류 없음
+  await page.evaluate(() => { RG.ui.game.doCmd({ type: 'callWave' }, true); RG.ui.game.setSpeed(2); });
+  await page.waitForTimeout(2000);
+  r.noErrors = errors.length === 0;
+  await ctx.close();
+  const ok = Object.values(r).every(Boolean);
+  return { name: '각성', ok, detail: Object.entries(r).map(([k, v]) => `${k} ${v ? '✓' : '✗'}`).join(' · '), errors };
+}
+
+/* ---------------- 싸우는 중 강화 단추: 적이 맞아 피해·골드가 계속 바뀌는 동안 누르고 있다가 떼도 강화됨 (예전엔 창이 다시 그려져 눌리지 않았음) ---------------- */
+async function pressRun(browser) {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(URL);
+  await page.waitForSelector('#screen-title.active');
+  await page.evaluate(() => { for (const id of Object.keys(RG.data.story)) RG.progress.markSeen('story', id); for (const m of RG.data.maps) for (const t of m.tips || []) RG.progress.markSeen('tips', t); RG.progress.get().maps['1-1'] = { cleared: true, stars: 3 }; RG.progress.save(); RG.ui.show('game', { opts: { mapId: '1-2', heroId: 'kara', seed: 4, mode: 'normal', towers: ['ember_archer', 'frost_crystal', 'stone_barracks'], branches: true } }); });
+  await page.waitForFunction(() => RG.ui.game.game && !document.querySelector('#screen-game').classList.contains('loading'));
+  const spots = await page.evaluate(targetsInPage);
+  const id = await page.evaluate((sp) => { const ui = RG.ui.game; RG.ui.closeAllModals(); ui.game.state.gold = 5000; for (const t of sp) { const r = ui.doCmd({ type: 'build', tower: 'ember_archer', c: t.c, r: t.r }, true); if (r.ok) return r.id; } return null; }, spots);
+  await page.evaluate(() => RG.ui.game.doCmd({ type: 'callWave' }, true));
+  await page.waitForFunction(() => Object.values(RG.ui.game.game.state.stats.damageByTower).some((v) => v > 0), null, { timeout: 20000 });
+  await page.evaluate((tid) => { const t = RG.ui.game.game.state.towers.find((x) => x.id === tid); const pt = RG.render.worldToScreen(t.c + 0.5, t.r + 0.5); const cv = document.querySelector('.game-canvas'); const bb = cv.getBoundingClientRect(); const o = { clientX: bb.left + pt.x, clientY: bb.top + pt.y, bubbles: true, pointerType: 'mouse' }; cv.dispatchEvent(new PointerEvent('pointerdown', o)); cv.dispatchEvent(new PointerEvent('pointerup', o)); }, id);
+  await page.waitForSelector('.btn-up');
+  let ok = 0;
+  for (let i = 0; i < 2; i++) {
+    const before = await page.evaluate((tid) => RG.ui.game.game.state.towers.find((x) => x.id === tid).level, id);
+    const box = await page.locator('.btn-up').boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(250);
+    await page.evaluate(() => { RG.ui.game.game.state.gold += 37; }); // 누르는 동안 골드가 바뀜 (처치 골드처럼)
+    await page.waitForTimeout(150);
+    await page.mouse.up();
+    await page.waitForTimeout(200);
+    if (await page.evaluate((tid) => RG.ui.game.game.state.towers.find((x) => x.id === tid).level, id) > before) ok++;
+  }
+  await ctx.close();
+  return { name: '싸우는 중 강화 단추', ok: ok === 2 && !errors.length, detail: `누르고 있다 떼기 2번 중 ${ok}번 강화`, errors };
+}
+
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
-  const runs = { keyboard: keyboardRun, touch: touchRun, mouse: mouseRun, resume: resumeRun, world: worldRun, gacha: gachaRun, tutorial: tutorialRun, a11y: a11yRun, transfer: transferRun, raid: raidRun };
+  const runs = { keyboard: keyboardRun, touch: touchRun, mouse: mouseRun, resume: resumeRun, world: worldRun, gacha: gachaRun, tutorial: tutorialRun, a11y: a11yRun, transfer: transferRun, raid: raidRun, awaken: awakenRun, press: pressRun };
   let fail = 0;
   for (const [k, fn] of Object.entries(runs)) {
     if (only && only !== k) continue;
