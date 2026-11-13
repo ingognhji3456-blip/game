@@ -6,6 +6,8 @@
  * 결과는 tower.calc / tower.links / tower.effects 에 들어갑니다.
  * ========================================================= */
 RG.stats = (() => {
+  /** 조각 강화 단계 (조각 레이드) */
+  const shardLvOf = (game, t) => (game.shards && game.shards[t.type]) || 0;
   const ORDER = () => RG.data.elementOrder;
 
   /** 두 원소의 공명 키 */
@@ -110,6 +112,7 @@ RG.stats = (() => {
       c.dmgBonus = 0;
       c.speedBonus = 0;
       c.rangeBonus = meta.rangePct || 0;
+      if (shardLvOf(game, t) >= 1 && RG.raid) { const sb0 = RG.raid.shardBonus(shardLvOf(game, t)); c.rangeBonus += sb0.rangePct; if (def.role === 'attack') c.speedBonus += sb0.speedPct; }
       // 6지역 별빛 건설지: 사거리 +15%
       if (game.map && game.map.kinds[t.r * game.map.cols + t.c] === RG.grid.T.STAR) c.rangeBonus += RG.data.rules.starRange || 0.15;
       // 그믐달 군주 '별 가리기': 잠시 사거리 감소
@@ -123,7 +126,11 @@ RG.stats = (() => {
       // 뽑기 중복 강화: 단계마다 +6% (공격 탑은 공격력, 지원 탑은 지원 효과, 병영은 병사 체력·공격력, 광산은 수입)
       const rank = (game.ranks && game.ranks[t.type]) || 0;
       c.rank = rank;
-      const rk = RG.gacha ? RG.gacha.rankMult(rank) : 1;
+      // 조각 강화(조각 레이드): 단계마다 +5%를 뽑기 강화와 같은 곳에 곱함, 3단계 사거리·5단계 공격 속도
+      const shardLv = (game.shards && game.shards[t.type]) || 0;
+      c.shardLv = shardLv;
+      const sb = shardLv && RG.raid ? RG.raid.shardBonus(shardLv) : null;
+      const rk = (RG.gacha ? RG.gacha.rankMult(rank) : 1) * (sb ? 1 + sb.pct : 1);
       if (rk !== 1) {
         if (def.role === 'economy') { if (c.income) c.income = Math.round(c.income * rk); }
         else if (def.role === 'barracks') {

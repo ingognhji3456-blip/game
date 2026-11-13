@@ -8,7 +8,7 @@ RG.progress = (() => {
   const D = () => RG.data;
 
   function blank() {
-    return { v: 1, maps: {}, skills: [], seen: { enemies: [], story: [], tips: [] }, endless: {}, lastMap: '1-1', lastHero: 'kara', gacha: blankGacha(), heroes: {}, gear: {} };
+    return { v: 1, maps: {}, skills: [], seen: { enemies: [], story: [], tips: [] }, endless: {}, lastMap: '1-1', lastHero: 'kara', gacha: blankGacha(), heroes: {}, gear: {}, shards: {}, shardLv: {}, raid: {} };
   }
   /** 뽑기 상태: 가진 탑과 강화 단계, 공명석, 천장 */
   function blankGacha() {
@@ -25,6 +25,7 @@ RG.progress = (() => {
     profile.seen = Object.assign({ enemies: [], story: [], tips: [] }, profile.seen || {});
     if (!profile.heroes || typeof profile.heroes !== 'object') profile.heroes = {};
     if (!profile.gear || typeof profile.gear !== 'object') profile.gear = {};
+    for (const k of ['shards', 'shardLv', 'raid']) if (!profile[k] || typeof profile[k] !== 'object') profile[k] = {}; // 조각 레이드
     // 영웅 성장(장신구)이 생기기 전 기록: 장신구는 도전을 처음 깰 때·무한 기록이 10·20·30·40을 넘을 때만 주므로,
     // 이미 해 둔 것만큼 한 번 채워 줌 (record()와 같은 순서·같은 시드 이름 — 결과가 늘 같음)
     if (p && !('gear' in p)) {
@@ -311,6 +312,45 @@ RG.progress = (() => {
     return out;
   }
 
+  /* ---------------- 조각 레이드 (docs/design/raid.md) ---------------- */
+  const raidOpen = () => !!mapRec(D().raid.unlockAfter).cleared;
+  const shardsOf = (type) => get().shards[type] || 0;
+  const shardLvOf = (type) => get().shardLv[type] || 0;
+  /** 판에 넘길 조각 강화 단계 (opts.shardLv) — 하나도 없으면 null (예전 판과 같은 해시) */
+  function shardLevels() {
+    const out = {};
+    for (const [k, v] of Object.entries(get().shardLv)) if (v > 0) out[k] = v;
+    return Object.keys(out).length ? out : null;
+  }
+  /** 그 탑으로 깬 가장 높은 난이도 (0 = 아직) · 고를 수 있는 가장 높은 난이도 */
+  const raidBest = (type) => get().raid[type] || 0;
+  const raidMaxDiff = (type) => Math.min(D().raid.difficulty.length, raidBest(type) + 1);
+  /** 레이드 판 결과: 조각·기록·영웅 인연 경험치 */
+  function recordRaid(type, d, st) {
+    const win = st.result === 'win';
+    const firstClear = win && raidBest(type) < d;
+    const n = RG.raid.reward(d, { win, firstClear, waves: st.wave.index, total: st.wave.total });
+    const p = get();
+    p.shards[type] = (p.shards[type] || 0) + n;
+    if (win && firstClear) p.raid[type] = d;
+    const heroId = st.hero && st.hero.heroId;
+    const bond = heroId && D().heroes[heroId] ? addBond(heroId, RG.growth.bondGain({ result: st.result, mode: 'normal', newStars: 0 })) : null;
+    save();
+    return { shards: n, total: p.shards[type], firstClear, win, bond };
+  }
+  /** 조각 강화 한 단계 */
+  function upgradeShard(type) {
+    const lv = shardLvOf(type);
+    const cost = RG.raid.shardCost(lv);
+    if (cost == null) return { ok: false, reason: '이미 가장 높은 단계입니다' };
+    if (shardsOf(type) < cost) return { ok: false, reason: `조각이 ${cost - shardsOf(type)}개 모자랍니다` };
+    const p = get();
+    p.shards[type] -= cost;
+    p.shardLv[type] = lv + 1;
+    save();
+    return { ok: true, lv: lv + 1 };
+  }
+
   /** 판에 넘길 성장 복사본 (opts.heroGrowth) — 재능·장신구가 하나도 없으면 null */
   function heroGrowth(heroId) {
     if (!D().heroes[heroId]) return null;
@@ -353,5 +393,6 @@ RG.progress = (() => {
     gachaState, ownedTowers, ownsTower, towerRank, towerRanks, gachaPool, inPool, pullGacha, towersOpen, towerOpen, towerRegion, regionCleared, towerFinal,
     mapStars, starsTotal, starsSpent, starsFree, canLearn, learn, resetSkills, record, nextMapId, markSeen, seen, frontier, skillCost,
     heroRec, bondOf, addBond, takeTalent, resetTalents, talentsOf, ownedGear, equipGear, upgradeGear, grantGear, heroGrowth, rarityForRegion,
+    raidOpen, shardsOf, shardLvOf, shardLevels, raidBest, raidMaxDiff, recordRaid, upgradeShard,
   };
 })();

@@ -55,7 +55,7 @@ RG.sim = (() => {
   }
 
   function findMapDef(id) {
-    return D().maps.find((m) => m.id === id) || (D().endless || []).find((m) => m.id === id);
+    return D().maps.find((m) => m.id === id) || (D().endless || []).find((m) => m.id === id) || (D().raidMaps || []).find((m) => m.id === id);
   }
 
   /* =====================================================
@@ -70,13 +70,15 @@ RG.sim = (() => {
     const challenge = o.mode === 'challenge' ? (def.challenge || null) : null;
     const meta = (o.mode === 'challenge') ? {} : sumSkills(o.skills);
     const map = RG.grid.parseMap(def);
-    const waves = o.mode === 'endless' ? [] : RG.grid.parseWaves(def.waves);
+    // 조각 레이드(o.raid, docs/design/raid.md): 탑 하나로 막는 판 — 웨이브·시작 골드는 레이드 규칙(js/core/raid.js)이 정해 넘김
+    const RA = o.raid || null;
+    const waves = o.mode === 'endless' ? [] : RG.grid.parseWaves(RA ? RA.waves : def.waves);
     const rng = U().makeRng(o.seed >>> 0);
     const n = map.cols * map.rows;
 
     const st = {
       tick: 0, time: 0, mapId: def.id, mode: o.mode, map,
-      gold: Math.round(def.startGold * (1 + (meta.startGoldPct || 0))),
+      gold: Math.round((RA ? RA.startGold : def.startGold) * (1 + (meta.startGoldPct || 0))),
       lives: challenge && challenge.type === 'lives' ? challenge.value : rules.lives,
       maxLives: rules.lives,
       result: null,
@@ -85,7 +87,7 @@ RG.sim = (() => {
       hero: null,
       events: [],
       stats: { damageByTower: {}, kills: 0, leaked: 0, goldEarned: 0, heroDamage: 0, resonanceSeen: {} },
-      task: def.task ? { def: def.task, done: false, best: 0 } : null,
+      task: def.task && !RA ? { def: def.task, done: false, best: 0 } : null,
       warnings: [],                         // 데이터 경고(알 수 없는 적 등)
       alerts: [],                           // 보스 경고(1.5초 뒤 탑 멈춤) — 그리기용
       linksFrozenUntil: 0,
@@ -112,6 +114,8 @@ RG.sim = (() => {
 
     // 뽑기 중복 강화 단계 {탑: 0~5, 6 = 최종} — 도전 모드는 기술 나무처럼 쓰지 않음(순수 실력)
     const ranks = o.mode === 'challenge' ? {} : Object.assign({}, o.towerRanks || {});
+    // 조각 강화 단계 {탑: 0~5} (조각 레이드로 모음) — 도전 모드는 쓰지 않음
+    const shards = o.mode === 'challenge' ? {} : Object.assign({}, o.shardLv || {});
     /** 지을 때의 단계: 뽑기 최종 강화 탑은 Lv1 값 그대로 Lv2로 지어짐(도전의 최대 단계 제한은 지킴).
      *  o.finalLv2: 이 규칙이 생긴 뒤 시작한 판만 켬 — 그 전에 저장한 판을 이어 할 때 기록 재현이 어긋나지 않게 */
     function startLevel(type) {
@@ -126,7 +130,7 @@ RG.sim = (() => {
     const atkU = GR && GR.atkU ? GR.atkU : null;   // 공격 갈래 끝 (영웅 고유)
     const skU = GR && GR.skU ? GR.skU : null;      // 기술 갈래 끝 (영웅 고유)
     const game = {
-      opts: o, def, map, rules, meta, ranks, challenge, state: st, log, DT, growth: GR,
+      opts: o, def, map, rules, meta, ranks, shards, challenge, state: st, log, DT, growth: GR,
       tileTower: (c, r) => (c >= 0 && r >= 0 && c < map.cols && r < map.rows ? tileTowers[r * map.cols + c] : null),
     };
 
@@ -138,10 +142,27 @@ RG.sim = (() => {
     };
 
     /* ---------------- 영웅 ---------------- */
+    /** 지원·경제 탑 레이드: 영웅 근처(반경)의 그 탑마다 영웅 피해 +% (최대 개수) */
+    function raidHeroMult(h) {
+      if (!RA || !RA.support) return 1;
+      const S = D().raid.supportHero;
+      const R2 = S.radius * S.radius;
+      let n = 0;
+      for (const t of st.towers) if (t.type === RA.tower && !t.building && d2(t.x, t.y, h.x, h.y) <= R2) n++;
+      return 1 + Math.min(S.max, n) * S.perTower;
+    }
     function heroStat(h) {
       const hd = D().heroes[h.heroId];
       const lv = h.level - 1;
       const k = 1 + D().heroLevelBonus.stat * lv;
+      if (RA && RA.support) {
+        const base = heroStatBase(h, hd, lv, k);
+        const m = raidHeroMult(h);
+        return Object.assign({}, base, { damage: base.damage * m, skillK: base.skillK * m });
+      }
+      return heroStatBase(h, hd, lv, k);
+    }
+    function heroStatBase(h, hd, lv, k) {
       const gi = h.giantUntil > st.time && hd.skill.giant ? hd.skill.giant : null; // 토리: 거인 변신 중
       if (GR) {
         return {
@@ -1621,7 +1642,7 @@ RG.sim = (() => {
     function towerAllowed(type) {
       const td = D().towers[type];
       if (!td) return '알 수 없는 탑입니다';
-      if (unlocked && !unlocked.has(type)) return '아직 해금되지 않은 탑입니다';
+      if (unlocked && !unlocked.has(type)) return RA ? `조각 레이드에서는 ${D().towers[RA.tower].name}만 지을 수 있습니다` : '아직 해금되지 않은 탑입니다';
       const ch = challenge;
       if (ch) {
         if (ch.type === 'allowElements' && !ch.value.includes(td.element)) return `이 도전에서는 ${ch.text}`;
