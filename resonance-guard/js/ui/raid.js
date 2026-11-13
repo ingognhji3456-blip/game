@@ -29,9 +29,13 @@
     if (role === 'attack' && b.rangePct) out.push(`사거리 +${Math.round(b.rangePct * 100)}%`);
     if (role === 'attack' && b.speedPct) out.push(`공격 속도 +${Math.round(b.speedPct * 100)}%`);
     if (RG.raid.isSupport(type)) out.push(`레이드 영웅 강화 +${pct}%`);
+    if (lv >= RD().shard.buildAt) out.push('한 단계 높게 설치 (값은 그대로)');
     return out.join(' · ');
   }
   RG.ui.shardEffectText = effectText;
+
+  /** 지을 때 단계 (sim.js startLevel과 같음): 뽑기 최종 강화 +1, 조각 마지막 단계 +1, Lv3까지 */
+  const buildLv = (t) => Math.min(3, 1 + (RG.gacha.isFinal(P().towerRank(t)) ? 1 : 0) + (P().shardLvOf(t) >= RD().shard.buildAt ? 1 : 0));
 
   /** 조각 단계 배지 ◆n (0이면 없음) */
   function lvBadge(lv, cls = '') { return lv > 0 ? el('em', { class: `shard-lv ${cls}`, title: `조각 강화 ${lv}단계`, text: `◆${lv}` }) : null; }
@@ -117,7 +121,7 @@
           'aria-label': `${D().towers[t].name} — 조각 강화 ${lv}단계, 깬 난이도 ${best}`,
           onclick: () => { UI.sfx('click'); rerender({ tower: t, d: pickDiff[t] || P().raidMaxDiff(t) }); },
         }, [
-          el('span', { class: 'rd-timg' }, [UI.towerImg(t, 1, null, 'mini'), lvBadge(lv)]),
+          el('span', { class: 'rd-timg' }, [UI.towerImg(t, buildLv(t), null, 'mini'), lvBadge(lv)]),
           el('span', { class: 'rd-tname', text: D().towers[t].name }),
           progressBar(t),
           el('span', { class: 'rd-pips', 'aria-hidden': 'true' }, RD().difficulty.map((_, i) => el('i', { class: i < best ? 'on' : '' }))),
@@ -208,11 +212,12 @@
       const resume = run && run.opts && run.opts.raid && run.opts.raid.tower === type && run.opts.raid.d === d;
       const detail = el('section', { class: 'rd-right' }, [
         el('div', { class: 'rd-title' }, [
-          el('span', { class: 'rd-big' }, [UI.towerImg(type, Math.min(3, 1 + Math.floor(lv / 2)), null, 'rd-big-img'), lvBadge(lv, 'big')]),
+          el('span', { class: 'rd-big' }, [UI.towerImg(type, buildLv(type), null, 'rd-big-img'), lvBadge(lv, 'big')]),
           el('div', {}, [
             el('h3', { text: td.name }),
             el('p', { class: 'dim small', text: `${RG.gacha.RARITIES[RG.gacha.rarityOf(type)].name} · ${D().elements[td.element].name} · ${ROLE[td.role] || td.role}` }),
             el('p', { class: 'small', text: td.desc }),
+            buildLv(type) > 1 ? el('p', { class: 'small good', text: `맵에 같은 값으로 Lv${buildLv(type)}부터 지어집니다` }) : null,
           ]),
         ]),
         shardBox,

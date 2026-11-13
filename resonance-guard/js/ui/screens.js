@@ -625,9 +625,11 @@
         const rank = P().towerRank(t);
         const fin = RG.gacha.isFinal(rank);
         const slv = P().shardLvOf(t);
-        const chip = el('span', { class: `t-chip rar-${RG.gacha.rarityOf(t)}` }, [UI.towerImg(t, fin && mode !== 'challenge' ? 2 : 1, null, 'mini'), rank > 0 ? el('em', { class: `rank${fin ? ' fin' : ''}`, text: fin ? '★' : `+${rank}` }) : null, mode !== 'challenge' && RG.ui.shardBadge ? RG.ui.shardBadge(slv, 'chip') : null]);
+        // 지을 때 단계(sim.js startLevel과 같음): 뽑기 최종 강화 +1, 조각 마지막 단계 +1, Lv3까지 — 도전은 둘 다 없음
+        const startLv = mode === 'challenge' ? 1 : Math.min(3, 1 + (fin ? 1 : 0) + (slv >= D().raid.shard.buildAt ? 1 : 0));
+        const chip = el('span', { class: `t-chip rar-${RG.gacha.rarityOf(t)}` }, [UI.towerImg(t, startLv, null, 'mini'), rank > 0 ? el('em', { class: `rank${fin ? ' fin' : ''}`, text: fin ? '★' : `+${rank}` }) : null, mode !== 'challenge' && RG.ui.shardBadge ? RG.ui.shardBadge(slv, 'chip') : null]);
         // 도전 모드는 뽑기 강화를 쓰지 않음(sim.js ranks)
-        const rankNote = mode === 'challenge' ? (rank > 0 ? '<br><span class="dim">도전에서는 뽑기 강화가 적용되지 않습니다</span>' : '') : fin ? '<br><span class="good">맵에 같은 값으로 Lv2부터 지어집니다</span>' : '';
+        const rankNote = mode === 'challenge' ? (rank > 0 ? '<br><span class="dim">도전에서는 뽑기 강화가 적용되지 않습니다</span>' : '') : startLv > 1 ? `<br><span class="good">맵에 같은 값으로 Lv${startLv}부터 지어집니다</span>` : '';
         const shardNote = slv > 0 ? (mode === 'challenge' ? '<br><span class="dim">도전에서는 조각 강화가 적용되지 않습니다</span>' : `<br><span class="good">조각 강화 ${slv}단계 (${esc(RG.ui.shardEffectText(t, slv))})</span>`) : '';
         UI.tooltipFor(chip, () => `<b>${esc(D().towers[t].name)}</b>${rank > 0 ? ` <span class="good">${RG.gacha.rankLabel(rank)} (${esc(rankText(t, rank))})</span>` : ''}${rankNote}${shardNote}<br>${esc(D().towers[t].desc)}`);
         towerRow.appendChild(chip);

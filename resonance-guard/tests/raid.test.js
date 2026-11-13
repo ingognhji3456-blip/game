@@ -245,3 +245,31 @@ test('지원 탑 레이드: 적은 적게·단단하게, 갑옷 적 없음, 처�
   for (let i = 0; i < 30 * 5 && qh.dead; i++) q.step();
   assert.ok(Math.hypot(qh.x - q.map.lantern.x, qh.y - q.map.lantern.y) < 2, '공격 탑 레이드는 등불 곁');
 });
+
+test('조각 5단계: 한 단계 높게 지어짐(값은 Lv1), 뽑기 최종 강화와 합치면 Lv3, 도전은 Lv1, 4단계는 그대로', () => {
+  const { RG } = fresh();
+  const build = (extra, mode = 'normal') => {
+    const g = RG.sim.create(Object.assign({ mapId: '1-1', mode, seed: 1, heroId: null, finalLv2: true }, extra));
+    const spot = buildSpot(g, 'ember_archer');
+    const gold0 = g.state.gold;
+    const res = g.cmd({ type: 'build', tower: 'ember_archer', c: spot.c, r: spot.r });
+    assert.ok(res.ok, JSON.stringify(res));
+    return { lv: g.state.towers[0].level, cost: gold0 - g.state.gold, start: g.startLevel('ember_archer') };
+  };
+  const base = build({});
+  assert.strictEqual(base.lv, 1);
+  assert.strictEqual(build({ shardLv: { ember_archer: 4 } }).lv, 1, '4단계는 그대로');
+  const s5 = build({ shardLv: { ember_archer: 5 } });
+  assert.strictEqual(s5.lv, 2, '5단계 → Lv2');
+  assert.strictEqual(s5.cost, base.cost, '값은 Lv1 그대로');
+  const fin = RG.gacha.MAX_RANK + 1;
+  assert.ok(RG.gacha.isFinal(fin));
+  assert.strictEqual(build({ towerRanks: { ember_archer: fin } }).lv, 2, '뽑기 최종 강화만 → Lv2');
+  const both = build({ towerRanks: { ember_archer: fin }, shardLv: { ember_archer: 5 } });
+  assert.strictEqual(both.lv, 3, '둘 다 → Lv3');
+  assert.strictEqual(both.cost, base.cost);
+  assert.strictEqual(build({ towerRanks: { ember_archer: fin }, shardLv: { ember_archer: 5 } }, 'challenge').lv, 1, '도전은 Lv1');
+  // 조각 레이드 판에서도 (그 탑의 조각 5단계)
+  const g = raidGame(RG, 'ember_archer', 1, 'kara', { shardLv: { ember_archer: 5 } });
+  assert.strictEqual(g.startLevel('ember_archer'), 2);
+});

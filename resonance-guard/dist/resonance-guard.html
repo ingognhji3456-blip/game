@@ -4609,6 +4609,7 @@ RG.data.raid = {
     levelPct: 0.05,              // 단계마다 +5%: 공격 탑은 공격력, 지원 탑은 지원 효과, 병영은 병사 체력·공격력, 광산은 수입
     rangeAt: 3, rangePct: 0.08,  // 3단계부터 사거리 +8% (공격·지원 탑)
     speedAt: 5, speedPct: 0.1,   // 5단계: 공격 속도 +10% (공격 탑)
+    buildAt: 5,                  // 5단계: 한 단계 높게 지어짐(값은 Lv1 그대로) — 뽑기 최종 강화와 합치면 Lv3
   },
   /** 난이도 1~5: 적 체력 배율, 웨이브 수, 맵, 보상 조각(이기면) — 처음 깨면 두 배 */
   difficulty: [
@@ -4624,19 +4625,21 @@ RG.data.raid = {
   /** 지원·경제 탑 레이드: 영웅이 싸우고, 근처(반경 칸)에 지은 그 탑마다 영웅 피해·기술 +25% × 탑 단계 배율(Lv1~4, 가장 센 4개).
    *  영웅 하나는 떼로 오는 적을 다 붙잡지 못하므로 적 수는 countMult배(띄엄띄엄 gapMult배)로 줄이고 그만큼 단단하게(hpMult) */
   /*  영웅은 레이드 동안 기본 피해 base배(혼자 싸우므로), 갑옷 적(armored 무리)은 나오지 않음 */
-  /*  heroHp: 영웅마다 적 체력 보정(영웅 세기 차이를 메움, 카라 = 1) — tools/raid-balance.js --calibrate-heroes */
+  /*  heroHp: 영웅마다 적 체력 보정(영웅 세기 차이를 메움, 카라 = 1) — tools/raid-balance.js --calibrate-heroes --at 3 */
   supportHero: {
     radius: 2.5, perTower: 0.25, levelMult: [1, 1.5, 2, 2.6], max: 4, countMult: 0.35, gapMult: 1.8, hpMult: 1.6, base: 2,
-    heroHp: { kara: 1, sera: 0.21, sio: 0.77, zena: 0.46, bawi: 1, yaro: 0.77, haru: 0.21, dohan: 0.27, narae: 0.21, tori: 0.17, byeori: 0.77, mujin: 0.21 },
+    heroHp: { kara: 1, sera: 0.78, sio: 1.69, zena: 1, bawi: 1.69, yaro: 1, haru: 0.46, dohan: 0.36, narae: 0.36, tori: 0.36, byeori: 2.2, mujin: 0.36 },
   },
+  /** 병영 레이드: 병사는 붙잡을 수 있는 수가 정해져 있어 떼로 오면 지나가 버림 → 적은 적게·띄엄띄엄, 그만큼 단단하게 (처치 골드·경험치는 더) */
+  barracks: { countMult: 0.5, gapMult: 1.5, hpMult: 1.6 },
   /** 탑마다 적 체력 보정 — 탑 하나로 싸우므로 탑 세기 차이를 메움. tools/raid-balance.js --calibrate (보통 난이도를 그리디 봇이 이기는 최대 배율 ÷ 1.3,
    *  지원·경제 탑은 영웅 봇이 단순해 ÷ 1.6). 보통~어려움에서 무너지던 탑(병영·저주 첨탑·영혼 수확자·시간 첨탑)은 ×0.75 */
   towerHp: {
-    ember_archer: 0.69, flame_mortar: 2.08, forge: 1.17, flame_jet: 0.83,
+    ember_archer: 0.69, flame_mortar: 2.08, forge: 1.36, flame_jet: 0.83,
     frost_crystal: 0.58, ice_ballista: 1.2, winter_bell: 0.48, icicle_cloud: 1,
-    lightning_rod: 1.44, gale_cannon: 0.23, dynamo: 1.41, thunder_cloud: 1.73,
-    stone_barracks: 0.3, quake_hammer: 0.69, crystal_mine: 2.44, thorn_garden: 0.58,
-    sun_lens: 1.44, sanctuary: 2.44, radiance_spire: 1.44, lighthouse: 1,
+    lightning_rod: 1.44, gale_cannon: 0.23, dynamo: 1.63, thunder_cloud: 1.73,
+    stone_barracks: 0.65, quake_hammer: 0.69, crystal_mine: 1.63, thorn_garden: 0.58,
+    sun_lens: 1.44, sanctuary: 1.96, radiance_spire: 1.44, lighthouse: 1,
     hex_spire: 0.62, void_orb: 1.44, shadow_snare: 0.48, dread_bell: 0.85,
     phoenix_nest: 1.73, blizzard_keep: 1.2, storm_eye: 0.83, titan_boulder: 1.73,
     judgment_spire: 1.44, soul_reaper: 1.87, chrono_spire: 1.56, shadow_dragon: 2.49,
@@ -5967,6 +5970,8 @@ RG.raid = (() => {
 
   /** 지원·경제 탑: 영웅이 싸우는 레이드 */
   const isSupport = (type) => ['support', 'economy'].includes(D().towers[type].role);
+  /** 붙잡는 수가 정해진 레이드(지원 탑 = 영웅 혼자, 병영 = 병사): 적은 적게·띄엄띄엄·단단하게 { countMult, gapMult, hpMult } 또는 null */
+  const crowdRule = (type) => (isSupport(type) ? R().supportHero : D().towers[type].role === 'barracks' ? R().barracks : null);
   /** 이 레이드에서 공중을 칠 수 있나: 공격 탑·병영은 그 탑, 지원·경제 탑은 영웅 */
   function canAir(type, heroId) {
     const td = D().towers[type];
@@ -5983,6 +5988,7 @@ RG.raid = (() => {
     const a = el && ed.affinity[el];
     return a !== 'immune' && a !== 'absorb';
   }
+  const unblockable = (e) => { const t = D().enemies[e].traits || {}; return !!(t.unstoppable || t.dash); };
   // 이름 → 작은 정수 (탑마다 적 순서를 조금 다르게, 결정적)
   const hash = (s) => { let h = 7; for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
 
@@ -5991,21 +5997,21 @@ RG.raid = (() => {
     const diff = R().difficulty[d - 1];
     const P = R().pool;
     const air = canAir(type, heroId);
+    const CR = crowdRule(type);
     const pick = (cat, i) => {
       if (cat === 'armored' && isSupport(type)) return null; // 영웅 혼자 갑옷 적은 무리
-      const list = P[cat].filter((e) => hitsEnemy(type, heroId, e) && (cat !== 'flying' || air));
+      // 붙잡아 싸우는 레이드(병영·지원 탑의 영웅)는 붙잡을 수 없는 적(막을 수 없음·돌진)을 뺌
+      const list = P[cat].filter((e) => hitsEnemy(type, heroId, e) && (cat !== 'flying' || air) && !(CR && unblockable(e)));
       return list.length ? list[(i + hash(type)) % list.length] : null;
     };
     const N = diff.waves;
     const out = [];
-    const SH = R().supportHero;
-    const sup = isSupport(type);
     for (let i = 0; i < N; i++) {
       const f = N > 1 ? i / (N - 1) : 1;
       const groups = [];
       const add = (cat, n, iv, delay, spawn = 0) => {
         const e = pick(cat, i);
-        if (sup) { n = Math.max(1, Math.round(n * SH.countMult)); iv = Math.round(iv * SH.gapMult * 100) / 100; } // 지원 탑 레이드: 적게·띄엄띄엄
+        if (CR) { n = Math.max(1, Math.round(n * CR.countMult)); iv = Math.round(iv * CR.gapMult * 100) / 100; } // 지원 탑·병영 레이드: 적게·띄엄띄엄
         if (e && n > 0) groups.push(`${e}*${n}/${iv}${delay ? `@${delay}` : ''}${spawn ? `>${spawn}` : ''}`);
       };
       if (i === N - 1) {
@@ -6037,15 +6043,16 @@ RG.raid = (() => {
     const diff = R().difficulty[d - 1];
     const td = D().towers[type];
     const support = isSupport(type);
+    const crowd = crowdRule(type);
     return {
       mapId: diff.map,
-      hpMult: Math.round(diff.hp * (support ? R().supportHero.hpMult * heroScale(heroId) : 1) * towerScale(type) * 1000) / 1000,
+      hpMult: Math.round(diff.hp * (crowd ? crowd.hpMult : 1) * (support ? heroScale(heroId) : 1) * towerScale(type) * 1000) / 1000,
       towers: [type],
       raid: {
         tower: type, d, support,
         waves: waves(type, d, heroId),
         startGold: td.levels[0].cost * R().goldPerCost + R().goldBase,
-        bountyMult: support ? Math.round(100 / R().supportHero.countMult) / 100 : 0,
+        bountyMult: crowd ? Math.round(100 / crowd.countMult) / 100 : 0, // 적이 적은 만큼 처치 골드·영웅 경험치를 더
       },
     };
   }
@@ -6181,10 +6188,14 @@ RG.sim = (() => {
     const shards = o.mode === 'challenge' ? {} : Object.assign({}, o.shardLv || {});
     /** 지을 때의 단계: 뽑기 최종 강화 탑은 Lv1 값 그대로 Lv2로 지어짐(도전의 최대 단계 제한은 지킴).
      *  o.finalLv2: 이 규칙이 생긴 뒤 시작한 판만 켬 — 그 전에 저장한 판을 이어 할 때 기록 재현이 어긋나지 않게 */
+    /** 지을 때 단계 (값은 늘 Lv1): 뽑기 최종 강화 +1, 조각 강화 마지막 단계 +1 — 합쳐도 Lv3까지(Lv4는 분기라 고르게) */
     function startLevel(type) {
-      if (!o.finalLv2 || !(RG.gacha && RG.gacha.isFinal(ranks[type]))) return 1;
-      if (challenge && challenge.type === 'maxLevel' && challenge.value < 2) return 1;
-      return 2;
+      let lv = 1;
+      if (o.finalLv2 && RG.gacha && RG.gacha.isFinal(ranks[type])) lv += 1;
+      if (RG.raid && (shards[type] || 0) >= D().raid.shard.buildAt) lv += 1;
+      lv = Math.min(3, lv);
+      if (challenge && challenge.type === 'maxLevel') lv = Math.max(1, Math.min(lv, challenge.value));
+      return lv;
     }
     /* 영웅 성장(인연 재능·장신구) — 판 시작 때 복사한 o.heroGrowth로 계산, 도전 모드는 쓰지 않음.
      * 성장이 없으면 GR = null 이고 모든 계산이 예전과 같음 */
@@ -37271,9 +37282,11 @@ RG.render = (() => {
         const rank = P().towerRank(t);
         const fin = RG.gacha.isFinal(rank);
         const slv = P().shardLvOf(t);
-        const chip = el('span', { class: `t-chip rar-${RG.gacha.rarityOf(t)}` }, [UI.towerImg(t, fin && mode !== 'challenge' ? 2 : 1, null, 'mini'), rank > 0 ? el('em', { class: `rank${fin ? ' fin' : ''}`, text: fin ? '★' : `+${rank}` }) : null, mode !== 'challenge' && RG.ui.shardBadge ? RG.ui.shardBadge(slv, 'chip') : null]);
+        // 지을 때 단계(sim.js startLevel과 같음): 뽑기 최종 강화 +1, 조각 마지막 단계 +1, Lv3까지 — 도전은 둘 다 없음
+        const startLv = mode === 'challenge' ? 1 : Math.min(3, 1 + (fin ? 1 : 0) + (slv >= D().raid.shard.buildAt ? 1 : 0));
+        const chip = el('span', { class: `t-chip rar-${RG.gacha.rarityOf(t)}` }, [UI.towerImg(t, startLv, null, 'mini'), rank > 0 ? el('em', { class: `rank${fin ? ' fin' : ''}`, text: fin ? '★' : `+${rank}` }) : null, mode !== 'challenge' && RG.ui.shardBadge ? RG.ui.shardBadge(slv, 'chip') : null]);
         // 도전 모드는 뽑기 강화를 쓰지 않음(sim.js ranks)
-        const rankNote = mode === 'challenge' ? (rank > 0 ? '<br><span class="dim">도전에서는 뽑기 강화가 적용되지 않습니다</span>' : '') : fin ? '<br><span class="good">맵에 같은 값으로 Lv2부터 지어집니다</span>' : '';
+        const rankNote = mode === 'challenge' ? (rank > 0 ? '<br><span class="dim">도전에서는 뽑기 강화가 적용되지 않습니다</span>' : '') : startLv > 1 ? `<br><span class="good">맵에 같은 값으로 Lv${startLv}부터 지어집니다</span>` : '';
         const shardNote = slv > 0 ? (mode === 'challenge' ? '<br><span class="dim">도전에서는 조각 강화가 적용되지 않습니다</span>' : `<br><span class="good">조각 강화 ${slv}단계 (${esc(RG.ui.shardEffectText(t, slv))})</span>`) : '';
         UI.tooltipFor(chip, () => `<b>${esc(D().towers[t].name)}</b>${rank > 0 ? ` <span class="good">${RG.gacha.rankLabel(rank)} (${esc(rankText(t, rank))})</span>` : ''}${rankNote}${shardNote}<br>${esc(D().towers[t].desc)}`);
         towerRow.appendChild(chip);
@@ -38330,9 +38343,13 @@ RG.render = (() => {
     if (role === 'attack' && b.rangePct) out.push(`사거리 +${Math.round(b.rangePct * 100)}%`);
     if (role === 'attack' && b.speedPct) out.push(`공격 속도 +${Math.round(b.speedPct * 100)}%`);
     if (RG.raid.isSupport(type)) out.push(`레이드 영웅 강화 +${pct}%`);
+    if (lv >= RD().shard.buildAt) out.push('한 단계 높게 설치 (값은 그대로)');
     return out.join(' · ');
   }
   RG.ui.shardEffectText = effectText;
+
+  /** 지을 때 단계 (sim.js startLevel과 같음): 뽑기 최종 강화 +1, 조각 마지막 단계 +1, Lv3까지 */
+  const buildLv = (t) => Math.min(3, 1 + (RG.gacha.isFinal(P().towerRank(t)) ? 1 : 0) + (P().shardLvOf(t) >= RD().shard.buildAt ? 1 : 0));
 
   /** 조각 단계 배지 ◆n (0이면 없음) */
   function lvBadge(lv, cls = '') { return lv > 0 ? el('em', { class: `shard-lv ${cls}`, title: `조각 강화 ${lv}단계`, text: `◆${lv}` }) : null; }
@@ -38418,7 +38435,7 @@ RG.render = (() => {
           'aria-label': `${D().towers[t].name} — 조각 강화 ${lv}단계, 깬 난이도 ${best}`,
           onclick: () => { UI.sfx('click'); rerender({ tower: t, d: pickDiff[t] || P().raidMaxDiff(t) }); },
         }, [
-          el('span', { class: 'rd-timg' }, [UI.towerImg(t, 1, null, 'mini'), lvBadge(lv)]),
+          el('span', { class: 'rd-timg' }, [UI.towerImg(t, buildLv(t), null, 'mini'), lvBadge(lv)]),
           el('span', { class: 'rd-tname', text: D().towers[t].name }),
           progressBar(t),
           el('span', { class: 'rd-pips', 'aria-hidden': 'true' }, RD().difficulty.map((_, i) => el('i', { class: i < best ? 'on' : '' }))),
@@ -38509,11 +38526,12 @@ RG.render = (() => {
       const resume = run && run.opts && run.opts.raid && run.opts.raid.tower === type && run.opts.raid.d === d;
       const detail = el('section', { class: 'rd-right' }, [
         el('div', { class: 'rd-title' }, [
-          el('span', { class: 'rd-big' }, [UI.towerImg(type, Math.min(3, 1 + Math.floor(lv / 2)), null, 'rd-big-img'), lvBadge(lv, 'big')]),
+          el('span', { class: 'rd-big' }, [UI.towerImg(type, buildLv(type), null, 'rd-big-img'), lvBadge(lv, 'big')]),
           el('div', {}, [
             el('h3', { text: td.name }),
             el('p', { class: 'dim small', text: `${RG.gacha.RARITIES[RG.gacha.rarityOf(type)].name} · ${D().elements[td.element].name} · ${ROLE[td.role] || td.role}` }),
             el('p', { class: 'small', text: td.desc }),
+            buildLv(type) > 1 ? el('p', { class: 'small good', text: `맵에 같은 값으로 Lv${buildLv(type)}부터 지어집니다` }) : null,
           ]),
         ]),
         shardBox,

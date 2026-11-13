@@ -118,10 +118,14 @@ RG.sim = (() => {
     const shards = o.mode === 'challenge' ? {} : Object.assign({}, o.shardLv || {});
     /** 지을 때의 단계: 뽑기 최종 강화 탑은 Lv1 값 그대로 Lv2로 지어짐(도전의 최대 단계 제한은 지킴).
      *  o.finalLv2: 이 규칙이 생긴 뒤 시작한 판만 켬 — 그 전에 저장한 판을 이어 할 때 기록 재현이 어긋나지 않게 */
+    /** 지을 때 단계 (값은 늘 Lv1): 뽑기 최종 강화 +1, 조각 강화 마지막 단계 +1 — 합쳐도 Lv3까지(Lv4는 분기라 고르게) */
     function startLevel(type) {
-      if (!o.finalLv2 || !(RG.gacha && RG.gacha.isFinal(ranks[type]))) return 1;
-      if (challenge && challenge.type === 'maxLevel' && challenge.value < 2) return 1;
-      return 2;
+      let lv = 1;
+      if (o.finalLv2 && RG.gacha && RG.gacha.isFinal(ranks[type])) lv += 1;
+      if (RG.raid && (shards[type] || 0) >= D().raid.shard.buildAt) lv += 1;
+      lv = Math.min(3, lv);
+      if (challenge && challenge.type === 'maxLevel') lv = Math.max(1, Math.min(lv, challenge.value));
+      return lv;
     }
     /* 영웅 성장(인연 재능·장신구) — 판 시작 때 복사한 o.heroGrowth로 계산, 도전 모드는 쓰지 않음.
      * 성장이 없으면 GR = null 이고 모든 계산이 예전과 같음 */

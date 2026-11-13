@@ -25,6 +25,8 @@ RG.raid = (() => {
 
   /** 지원·경제 탑: 영웅이 싸우는 레이드 */
   const isSupport = (type) => ['support', 'economy'].includes(D().towers[type].role);
+  /** 붙잡는 수가 정해진 레이드(지원 탑 = 영웅 혼자, 병영 = 병사): 적은 적게·띄엄띄엄·단단하게 { countMult, gapMult, hpMult } 또는 null */
+  const crowdRule = (type) => (isSupport(type) ? R().supportHero : D().towers[type].role === 'barracks' ? R().barracks : null);
   /** 이 레이드에서 공중을 칠 수 있나: 공격 탑·병영은 그 탑, 지원·경제 탑은 영웅 */
   function canAir(type, heroId) {
     const td = D().towers[type];
@@ -41,6 +43,7 @@ RG.raid = (() => {
     const a = el && ed.affinity[el];
     return a !== 'immune' && a !== 'absorb';
   }
+  const unblockable = (e) => { const t = D().enemies[e].traits || {}; return !!(t.unstoppable || t.dash); };
   // 이름 → 작은 정수 (탑마다 적 순서를 조금 다르게, 결정적)
   const hash = (s) => { let h = 7; for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
 
@@ -49,21 +52,21 @@ RG.raid = (() => {
     const diff = R().difficulty[d - 1];
     const P = R().pool;
     const air = canAir(type, heroId);
+    const CR = crowdRule(type);
     const pick = (cat, i) => {
       if (cat === 'armored' && isSupport(type)) return null; // 영웅 혼자 갑옷 적은 무리
-      const list = P[cat].filter((e) => hitsEnemy(type, heroId, e) && (cat !== 'flying' || air));
+      // 붙잡아 싸우는 레이드(병영·지원 탑의 영웅)는 붙잡을 수 없는 적(막을 수 없음·돌진)을 뺌
+      const list = P[cat].filter((e) => hitsEnemy(type, heroId, e) && (cat !== 'flying' || air) && !(CR && unblockable(e)));
       return list.length ? list[(i + hash(type)) % list.length] : null;
     };
     const N = diff.waves;
     const out = [];
-    const SH = R().supportHero;
-    const sup = isSupport(type);
     for (let i = 0; i < N; i++) {
       const f = N > 1 ? i / (N - 1) : 1;
       const groups = [];
       const add = (cat, n, iv, delay, spawn = 0) => {
         const e = pick(cat, i);
-        if (sup) { n = Math.max(1, Math.round(n * SH.countMult)); iv = Math.round(iv * SH.gapMult * 100) / 100; } // 지원 탑 레이드: 적게·띄엄띄엄
+        if (CR) { n = Math.max(1, Math.round(n * CR.countMult)); iv = Math.round(iv * CR.gapMult * 100) / 100; } // 지원 탑·병영 레이드: 적게·띄엄띄엄
         if (e && n > 0) groups.push(`${e}*${n}/${iv}${delay ? `@${delay}` : ''}${spawn ? `>${spawn}` : ''}`);
       };
       if (i === N - 1) {
@@ -95,15 +98,16 @@ RG.raid = (() => {
     const diff = R().difficulty[d - 1];
     const td = D().towers[type];
     const support = isSupport(type);
+    const crowd = crowdRule(type);
     return {
       mapId: diff.map,
-      hpMult: Math.round(diff.hp * (support ? R().supportHero.hpMult * heroScale(heroId) : 1) * towerScale(type) * 1000) / 1000,
+      hpMult: Math.round(diff.hp * (crowd ? crowd.hpMult : 1) * (support ? heroScale(heroId) : 1) * towerScale(type) * 1000) / 1000,
       towers: [type],
       raid: {
         tower: type, d, support,
         waves: waves(type, d, heroId),
         startGold: td.levels[0].cost * R().goldPerCost + R().goldBase,
-        bountyMult: support ? Math.round(100 / R().supportHero.countMult) / 100 : 0,
+        bountyMult: crowd ? Math.round(100 / crowd.countMult) / 100 : 0, // 적이 적은 만큼 처치 골드·영웅 경험치를 더
       },
     };
   }
