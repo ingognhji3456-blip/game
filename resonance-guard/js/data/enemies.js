@@ -302,7 +302,7 @@ RG.data.enemies = {
     desc: '4초마다 일렁이다가 길을 따라 2칸 앞으로 순간이동합니다(붙잡혀 있어도 빠져나감).',
   },
   gloom_monarch: {
-    name: '그믐달 군주', region: 6, size: 2.0, hp: 52000, speed: 0.38, armor: 0.1, bounty: 0, lives: 99, boss: true, elite: true,
+    name: '그믐달 군주', region: 6, size: 2.0, hp: 45000, speed: 0.38, armor: 0.1, bounty: 0, lives: 99, boss: true, elite: true,
     melee: { damage: 220, interval: 1.5 }, traits: {}, affinity: {},
     bossData: {
       veil: { every: 12, radius: 2.6, pct: 0.4, dur: 5 }, trackEls: true,

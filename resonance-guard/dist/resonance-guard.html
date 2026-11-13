@@ -2647,7 +2647,7 @@ RG.data.enemies = {
     desc: '4초마다 일렁이다가 길을 따라 2칸 앞으로 순간이동합니다(붙잡혀 있어도 빠져나감).',
   },
   gloom_monarch: {
-    name: '그믐달 군주', region: 6, size: 2.0, hp: 52000, speed: 0.38, armor: 0.1, bounty: 0, lives: 99, boss: true, elite: true,
+    name: '그믐달 군주', region: 6, size: 2.0, hp: 45000, speed: 0.38, armor: 0.1, bounty: 0, lives: 99, boss: true, elite: true,
     melee: { damage: 220, interval: 1.5 }, traits: {}, affinity: {},
     bossData: {
       veil: { every: 12, radius: 2.6, pct: 0.4, dur: 5 }, trackEls: true,
@@ -4355,15 +4355,15 @@ RG.data.maps = [
       'meteor_golem*1/2.2>0 ; nebula_jelly*2/1.4@5>1',
       'phase_wraith*3/1.1>1 ; eclipse_priest*1/2@6>0',
       'cloud_sheep*2/1.8>0 ; comet_knight*1/1.1@6>1',
-      'umbral_stargazer*3/1>1 ; meteor_golem*1/2@7>0',
+      'umbral_stargazer*2/1>1 ; meteor_golem*1/2@7>0',
       'nebula_jelly*4/1.1>0 ; phase_wraith*3/1@7>1',
       'eclipse_priest*2/1.6>1 ; cloud_sheep*2/1.6@6>0 ; stardust_moth*8/0.45@10>1',
       'meteor_golem*2/2>0 ; comet_knight*3/1@8>1',
-      'phase_wraith*5/0.9>1 ; umbral_stargazer*3/1@8>0',
+      'phase_wraith*5/0.9>1 ; umbral_stargazer*2/1@8>0',
       'cloud_sheep*4/1.4>0 ; eclipse_priest*2/1.5@8>1',
       'nebula_jelly*5/1>1 ; meteor_golem*2/1.8@9>0',
       'comet_knight*5/0.8>0 ; phase_wraith*4/1@9>1',
-      'umbral_stargazer*5/0.9>1 ; eclipse_priest*2/1.4@9>0 ; cloud_sheep*2/1.6@14>1',
+      'umbral_stargazer*4/0.9>1 ; eclipse_priest*2/1.4@9>0 ; cloud_sheep*2/1.6@14>1',
       'meteor_golem*3/1.6>0 ; nebula_jelly*5/1@10>1',
       'stardust_moth*21/0.3>1 ; comet_knight*4/0.9@10>0',
       'cloud_sheep*5/1.2>0 ; phase_wraith*6/0.8@10>1 ; eclipse_priest*2/1.5@15>0',
@@ -8747,7 +8747,7 @@ RG.sim = (() => {
     RG.stats.computeAll(game);
 
     Object.assign(game, {
-      step, cmd, canBuild, previewLinks, towerInfo, hash, upgradeCost, sellValue, startLevel,
+      step, cmd, canBuild, previewLinks, towerInfo, hash, upgradeCost, sellValue, startLevel, towerAllowed,
       checkTask, resonanceSnapshot, api, blocked,
     });
     Object.defineProperty(game, 'flow', { get: () => flow, enumerable: true });

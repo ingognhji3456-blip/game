@@ -162,6 +162,11 @@ if (has('challenge') || has('tasks')) {
       // 먼저 이기는 계획을 찾고(별 목표), 그 위에 과제 묶음을 얹어 탐색
       const win = env.searchBest(o, { gens: +arg('gens', 12), pop: +arg('pop', 10), maxGens: +arg('maxgens', 20) });
       if (win.best.r.result === 'win') seeds = [win.best.plan];
+    } else {
+      // 도전도 일반 판에서 이긴 계획을 출발점으로 (불꽃 제한 도전은 새지 않은 일반 승리 계획이 그대로 통함 — 탐색이 처음부터 못 찾는 경우가 있었음)
+      const normal = Object.assign({}, o, { mode: 'normal' });
+      const win = env.searchBest(normal, { gens: +arg('gens', 12), pop: +arg('pop', 10), maxGens: +arg('maxgens', 20) });
+      if (win.best.r.result === 'win') seeds = [win.best.plan];
     }
     const s = env.searchBest(o, { gens: +arg('gens', 12), pop: +arg('pop', 10), objective: kind === 'challenge' ? 'challenge' : 'task', maxGens: +arg('maxgens', 20), seeds });
     const r = s.best.r;
