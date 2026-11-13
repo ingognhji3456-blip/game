@@ -19,11 +19,11 @@
 
 ## 지금 상태
 
-- **플레이**: `dist/resonance-guard.html` 하나로 실행. 캠페인 30맵 + 무한 5맵, 이야기 17장면과 엔딩.
+- **플레이**: `dist/resonance-guard.html` 하나로 실행. 캠페인 36맵(지역 6곳) + 무한 6맵, 이야기 24장면(엔딩 둘 포함). 영웅 12명(인연 레벨·재능·장신구), 탑 32종(뽑기), 적 55종(보스 7).
 - **입력**: 마우스·터치·키보드(방향키 커서) 모두로 한 판을 끝까지 할 수 있음 — `tests/e2e/flows.js`.
-- **테스트**: `node tests/run.js` 202개, e2e 4종(`screens`, `play`, `flows`, `perf`), 장기 실행 10,000판 오류 0.
+- **테스트**: `node tests/run.js` 216개, e2e 4종(`screens` — 6지역 포함 19화면 × 3크기와 겹침 검사, `play`, `flows` 6가지, `perf`), 장기 실행(마지막 전체 10,000판 오류 0, 6지역 추가 뒤 6지역·무한 210판 오류 0).
 - **그림**: 탑은 대기·조준·발사, 적은 걷기 4장·공격 직전·공격·죽음 3장, 영웅은 9자세. 빛은 왼쪽 위·그림자는 오른쪽 아래. 맵은 칸 이음새 없이 그림. 규격·방법은 `docs/design/animation.md`.
-- **밸런스**: 맵마다 `hpMult`(적 체력 배율)로 맞춤 — 탐색 봇 30맵 모두 ★3, 공명 과제 30/30, 도전 30/30. 숫자는 `docs/reports/balance.md`, 도전·과제는 `challenges.md`, `tasks.md`.
+- **밸런스**: 맵마다 `hpMult`(적 체력 배율)로 맞춤 — 탐색 봇 36맵 모두 ★3, 공명 과제 36/36, 도전은 `challenges.md`. 숫자는 `docs/reports/balance.md`, 도전·과제는 `challenges.md`, `tasks.md`.
 - **품질 보고서**: `docs/reports/QUALITY-REPORT.md` — QUALITY.md 항목별 판정과 근거.
 
 ## 다음에 손댈 만한 것
