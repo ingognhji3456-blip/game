@@ -165,12 +165,22 @@ test('진행도: 2-6을 깨면 열림, 이기면 조각(처음 깨면 두 배), 
   assert.strictEqual(P.raidMaxDiff('frost_crystal'), 1, '난이도는 탑마다 따로');
   r = P.recordRaid('ember_archer', 1, st('win', 7));
   assert.strictEqual(r.shards, RG.data.raid.difficulty[0].reward, '두 번째는 그대로');
+  r = P.recordRaid('ember_archer', 2, st('lose', 5, 8));
+  assert.strictEqual(r.shards, 1, '절반 넘게 막아 냄');
   r = P.recordRaid('ember_archer', 2, st('lose', 4, 8));
-  assert.strictEqual(r.shards, 1, '절반 버팀');
-  r = P.recordRaid('ember_archer', 2, st('lose', 3, 8));
-  assert.strictEqual(r.shards, 0);
+  assert.strictEqual(r.shards, 0, '딱 절반은 아님');
+  // 웨이브만 연달아 불렀고 1웨이브 적이 아직 살아 있으면 막아 낸 웨이브는 0
+  r = P.recordRaid('ember_archer', 2, Object.assign(st('lose', 7, 8), { enemies: [{ wave: 0, dead: false }], wave: { index: 7, total: 8, queue: [{ wave: 6 }] } }));
+  assert.strictEqual(r.shards, 0, '웨이브만 불러서는 위로 조각 없음');
+  assert.strictEqual(r.cleared, 0);
   assert.strictEqual(P.raidBest('ember_archer'), 1, '지면 기록 그대로');
   assert.strictEqual(P.shardsOf('ember_archer'), 6 + 3 + 1);
+  // 실제 판: 아무것도 짓지 않고 웨이브만 연달아 부르면 져도 조각 0
+  const g = raidGame(RG, 'ember_archer', 1);
+  for (let i = 0; i < 30 * 600 && !g.state.result; i++) { g.cmd({ type: 'callWave' }); g.step(); }
+  assert.strictEqual(g.state.result, 'lose');
+  assert.ok(RG.raid.wavesCleared(g.state) <= g.state.wave.total / 2, `막아 낸 웨이브 ${RG.raid.wavesCleared(g.state)} (영웅이 앞 웨이브 몇 개는 막을 수 있음)`);
+  assert.strictEqual(P.recordRaid('ember_archer', 1, g.state).shards, 0);
   assert.strictEqual(P.shardsOf('frost_crystal'), 0, '조각은 그 탑에만');
 });
 
@@ -249,7 +259,7 @@ test('지원 탑 레이드: 적은 적게·단단하게, 갑옷 적 없음, 처�
 test('조각 5단계: 한 단계 높게 지어짐(값은 Lv1), 뽑기 최종 강화와 합치면 Lv3, 도전은 Lv1, 4단계는 그대로', () => {
   const { RG } = fresh();
   const build = (extra, mode = 'normal') => {
-    const g = RG.sim.create(Object.assign({ mapId: '1-1', mode, seed: 1, heroId: null, finalLv2: true }, extra));
+    const g = RG.sim.create(Object.assign({ mapId: '1-1', mode, seed: 1, heroId: null, finalLv2: true, shardStart: true }, extra));
     const spot = buildSpot(g, 'ember_archer');
     const gold0 = g.state.gold;
     const res = g.cmd({ type: 'build', tower: 'ember_archer', c: spot.c, r: spot.r });
@@ -270,6 +280,8 @@ test('조각 5단계: 한 단계 높게 지어짐(값은 Lv1), 뽑기 최종 강
   assert.strictEqual(both.cost, base.cost);
   assert.strictEqual(build({ towerRanks: { ember_archer: fin }, shardLv: { ember_archer: 5 } }, 'challenge').lv, 1, '도전은 Lv1');
   // 조각 레이드 판에서도 (그 탑의 조각 5단계)
-  const g = raidGame(RG, 'ember_archer', 1, 'kara', { shardLv: { ember_archer: 5 } });
+  const g = raidGame(RG, 'ember_archer', 1, 'kara', { shardLv: { ember_archer: 5 }, shardStart: true });
   assert.strictEqual(g.startLevel('ember_archer'), 2);
+  // shardStart 없이(이 규칙 전에 저장된 판) 이어하면 예전처럼 Lv1 — 재현이 달라지지 않게
+  assert.strictEqual(raidGame(RG, 'ember_archer', 1, 'kara', { shardLv: { ember_archer: 5 } }).startLevel('ember_archer'), 1);
 });

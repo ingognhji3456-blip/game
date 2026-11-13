@@ -122,7 +122,7 @@ RG.sim = (() => {
     function startLevel(type) {
       let lv = 1;
       if (o.finalLv2 && RG.gacha && RG.gacha.isFinal(ranks[type])) lv += 1;
-      if (RG.raid && (shards[type] || 0) >= D().raid.shard.buildAt) lv += 1;
+      if (o.shardStart && RG.raid && (shards[type] || 0) >= D().raid.shard.buildAt) lv += 1; // o.shardStart: 이 규칙 전에 저장된 판을 이어할 때 다르게 재현되지 않게
       lv = Math.min(3, lv);
       if (challenge && challenge.type === 'maxLevel') lv = Math.max(1, Math.min(lv, challenge.value));
       return lv;
@@ -594,6 +594,7 @@ RG.sim = (() => {
         healCd: 0, shieldCd: 0, invulnUntil: 0, fragment: !!(from && from.fragment), dead: false, leaked: false,
         boss: ed.boss ? { phase: 0, t: 0, timers: {} } : null, bossArmor: 0, speedMul: 1, immuneEls: null,
         walkT: 0,
+        wave: waveIdx != null ? waveIdx : from && from.wave != null ? from.wave : -1, // 몇 번째 웨이브의 적인지 (해시에는 안 들어감 — 조각 레이드 '버틴 웨이브')
       };
       if (ed.traits.shield) { e.maxShield = ed.traits.shield.amount * e.maxHp; e.shield = e.maxShield; }
       if (ed.bossData && ed.bossData.phases) e.immuneEls = Object.keys(ed.affinity).filter((k) => ed.affinity[k] === 'immune');
@@ -1902,6 +1903,7 @@ RG.sim = (() => {
         if (!RG.grid.inBounds(map, c, r)) return fail('맵 밖입니다');
         releaseUnit(h);
         h.path = [{ x: c + 0.5, y: r + 0.5 }];
+        if (RA && RA.support) h.raidHome = { c, r }; // 지원 탑 레이드: 쓰러지면 여기서 일어남
         ev('heroMove', { heroId: h.heroId, x: c + 0.5, y: r + 0.5 });
         return { ok: true };
       }
@@ -1910,6 +1912,7 @@ RG.sim = (() => {
       releaseUnit(h);
       h.path = path.map((p) => ({ x: p.c + 0.5, y: p.r + 0.5 }));
       if (!h.path.length) h.path = [{ x: c + 0.5, y: r + 0.5 }];
+      if (RA && RA.support) h.raidHome = { c, r }; // 지원 탑 레이드: 쓰러지면 여기서 일어남
       ev('heroMove', { heroId: h.heroId, x: c + 0.5, y: r + 0.5 });
       return { ok: true };
     }
@@ -2859,8 +2862,8 @@ RG.sim = (() => {
         if (time >= h.downUntil) {
           h.dead = false;
           h.hp = h.maxHp;
-          // 지원 탑 레이드는 처음 자리(지원 탑을 모아 지은 곳)에서 다시 일어남 — 등불 곁에서 일어나면 탑 강화를 못 받으므로
-          const home = RA && RA.support ? heroStartTile() : null;
+          // 지원 탑 레이드는 마지막으로 보낸 자리(없으면 처음 자리 — 지원 탑을 모아 지은 곳)에서 다시 일어남 — 등불 곁에서 일어나면 탑 강화를 못 받으므로
+          const home = RA && RA.support ? (h.raidHome || heroStartTile()) : null;
           const tile = home ? RG.grid.nearestHeroTile(map, blocked, home.c + 0.5, home.r + 0.5) : RG.grid.nearestHeroTile(map, blocked, map.lantern.x - 0.6, map.lantern.y);
           h.x = tile ? tile.c + 0.5 : map.lantern.x; h.y = tile ? tile.r + 0.5 : map.lantern.y; h.px = h.x; h.py = h.y;
           h.path = [];

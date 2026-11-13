@@ -74,7 +74,7 @@
         bannerOf(rd.region || 1),
         el('span', { class: 'tm-medal tm-medal-big' }, [UI.icon('play', 'tm-ico')]),
         el('span', { class: 'tm-text' }, [
-          el('span', { class: 'tm-kicker', text: raidRun ? `하던 판 · 조각 레이드 웨이브 ${run.wave}` : `하던 판 · ${run.mapId} 웨이브 ${run.wave}` }),
+          el('span', { class: 'tm-kicker', text: raidRun ? `하던 레이드 · 웨이브 ${run.wave}` : `하던 판 · ${run.mapId} 웨이브 ${run.wave}` }),
           el('b', { class: 'tm-title', text: '이어하기' }),
           el('span', { class: 'tm-sub', text: raidRun ? `${D().towers[raidRun.tower].name} · ${D().raid.difficulty[raidRun.d - 1].name}` : rd.name || '' }),
         ]),
@@ -116,7 +116,11 @@
       tile('tm-tree', '#7ad46a', UI.icon('tree', 'tm-ico'), '기술 나무', free > 0 ? `쓸 수 있는 별 ★${free}` : `모은 별 ★${starsNow}`, free > 0 ? `★${free}` : '', go(() => UI.show('tree', {}))),
       tile('tm-codex', '#f2b24a', UI.icon('book', 'tm-ico'), '도감', `만난 적 ${enemiesSeen}/${enemiesAll}`, '', go(() => UI.show('codex', {}))),
     ];
-    if (P().raidOpen()) mainCol.appendChild(raidButton('btn tm-raid'));
+    if (P().raidOpen()) {
+      // 이어할 판이 있으면(세로 칸이 모자람) 작은 지도 카드 옆에 나란히
+      if (resumable) { const small = mainCol.querySelector('.tm-map-small'); const row = el('div', { class: 'tm-row' }); small.replaceWith(row); row.append(small, raidButton('btn tm-raid tm-raid-side')); }
+      else mainCol.appendChild(raidButton('btn tm-raid'));
+    }
     menu.append(tiles[0], tiles[1], mainCol, tiles[2], tiles[3]);
     return menu;
   }
@@ -234,7 +238,7 @@
     let code = null;
     const ready = T.encode(mine).then((c) => { code = c; codeBox.value = c; return c; });
     const copy = async () => {
-      const c = await ready;
+      const c = code || await ready; // 이미 만들어졌으면 기다리지 않고 바로 (iOS는 기다리는 사이 '누른 동작'이 사라져 복사가 막힘)
       let ok = false;
       try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(c); ok = true; } } catch (e) { /* 아래로 */ }
       if (!ok) { try { codeBox.focus(); codeBox.select(); ok = document.execCommand('copy'); } catch (e) { ok = false; } }
@@ -330,8 +334,13 @@
     const ready = open && P().ownedTowers().some((t) => { const c = RG.raid.shardCost(P().shardLvOf(t)); return c != null && P().shardsOf(t) >= c; });
     return el('button', {
       class: `${cls} btn-raid ${open ? '' : 'locked'} ${ready ? 'ready' : ''}`, title: open ? '조각 레이드 — 탑 하나로 막아 그 탑의 조각을 모읍니다' : `${D().raid.unlockAfter}을(를) 지켜 내면 열립니다`,
-      onclick: () => { if (!open) { UI.toast(`조각 레이드는 ${D().raid.unlockAfter}을(를) 지켜 내면 열립니다`, 'warn'); return; } UI.show('raid', { back: UI.currentId() === 'title' ? 'title' : 'world' }); },
-    }, [UI.icon(open ? 'shard' : 'lock', 'tiny'), '조각 레이드', ready ? el('i', { class: 'rd-up-dot', text: '▲' }) : null]);
+      'aria-label': '조각 레이드',
+      onclick: () => {
+        if (!open) { UI.toast(`조각 레이드는 ${D().raid.unlockAfter}을(를) 지켜 내면 열립니다`, 'warn'); return; }
+        const from = UI.currentId() === 'title' ? 'title' : 'world';
+        UI.show('raid', { back: from, backData: from === 'world' ? { view: worldView, region: worldView === 'stages' ? worldRegion : undefined, keepPick: true } : {} });
+      },
+    }, [UI.icon(open ? 'shard' : 'lock', 'tiny'), el('span', { class: 'rb-label', text: '조각 레이드' }), ready ? el('i', { class: 'rd-up-dot', text: '▲' }) : null]);
   }
   RG.ui.raidButton = raidButton;
 
@@ -661,7 +670,7 @@
         if (growth) opts.heroGrowth = growth;
         // 조각 강화(조각 레이드) — 도전 모드는 판이 쓰지 않음
         const sl = mode !== 'challenge' ? P().shardLevels() : null;
-        if (sl) opts.shardLv = sl;
+        if (sl) { opts.shardLv = sl; opts.shardStart = true; } // shardStart: 조각 5단계 한 단계 높게 짓기 (이 규칙 뒤의 판만)
         const go = () => UI.show('game', { opts });
         const story = def.story && def.story.before;
         if (mode === 'normal' && story && D().story[story] && !P().seen('story', story)) UI.show('story', { id: story, then: go });

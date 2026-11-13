@@ -112,11 +112,18 @@ RG.raid = (() => {
     };
   }
 
-  /** 판 결과 → 조각: 이기면 난이도 보상(그 탑으로 그 난이도를 처음 깨면 두 배), 지면 절반 넘게 버텼을 때 1 */
+  /** 끝까지 막아 낸 웨이브 수: 아직 남은 적(나올 적 포함) 중 가장 앞 웨이브 전까지 — 웨이브만 연달아 불러서는 늘지 않음 */
+  function wavesCleared(st) {
+    let first = st.wave.index;
+    for (const q of st.wave.queue || []) if (q.wave < first) first = q.wave;
+    for (const e of st.enemies || []) if (!e.dead && !e.leaked && e.wave >= 0 && e.wave < first) first = e.wave;
+    return Math.max(0, first);
+  }
+  /** 판 결과 → 조각: 이기면 난이도 보상(그 탑으로 그 난이도를 처음 깨면 두 배), 지면 절반 넘게 막아 냈을 때 1 */
   function reward(d, { win, firstClear, waves: w, total }) {
     if (win) return R().difficulty[d - 1].reward * (firstClear ? R().firstClearMult : 1);
-    return w >= Math.ceil(total / 2) ? R().loseShards : 0;
+    return w > total / 2 ? R().loseShards : 0;
   }
 
-  return { shardBonus, shardCost, isSupport, canAir, hitsEnemy, waves, towerScale, heroScale, setup, reward };
+  return { shardBonus, shardCost, isSupport, canAir, hitsEnemy, waves, towerScale, heroScale, setup, wavesCleared, reward };
 })();

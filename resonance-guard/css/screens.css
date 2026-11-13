@@ -1107,3 +1107,10 @@
   .rd-head-note { display: none; }
   .rd-big .rd-big-img { width: 54px; height: 70px; }
 }
+.tm-row { display: flex; gap: 8px; align-items: stretch; }
+.tm-row .tm-map-small { flex: 1 1 auto; min-width: 0; }
+.tm-raid-side { flex: 0 0 auto; min-height: 56px; padding: 4px 12px; flex-direction: column; gap: 2px; font-size: 0.78rem; }
+@media (max-height: 460px), (max-width: 760px) {
+  .top-actions .btn-raid .rb-label { display: none; }
+  .top-actions .btn-raid { min-width: 40px; justify-content: center; }
+}

@@ -19,13 +19,51 @@ RG.progress = (() => {
 
   let profile = null;
 
+  /* 저장 값 모양 바로잡기 — 망가진 저장·다른 기기에서 가져온 저장(진행 옮기기)이 화면을 멈추지 않게.
+   * 모양이 틀린 칸은 비우거나 버림(맞는 값은 그대로) */
+  const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+  const nat = (v, max = Infinity) => (Number.isFinite(+v) && +v > 0 ? Math.min(max, Math.floor(+v)) : 0);
+  function cleanMap(v, fix) {
+    const out = {};
+    if (!isObj(v)) return out;
+    for (const [k, x] of Object.entries(v)) { if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue; const y = fix(x); if (y !== undefined) out[k] = y; }
+    return out;
+  }
+  function sanitize(p) {
+    p.maps = cleanMap(p.maps, (r) => (isObj(r) ? r : undefined));
+    p.skills = Array.isArray(p.skills) ? p.skills.filter((x) => typeof x === 'string') : [];
+    const seen = isObj(p.seen) ? p.seen : {};
+    p.seen = {};
+    for (const k of ['enemies', 'story', 'tips']) p.seen[k] = Array.isArray(seen[k]) ? seen[k].filter((x) => typeof x === 'string') : [];
+    for (const [k, v] of Object.entries(seen)) if (!(k in p.seen) && Array.isArray(v)) p.seen[k] = v.filter((x) => typeof x === 'string');
+    p.endless = cleanMap(p.endless, (x) => nat(x));
+    p.heroes = cleanMap(p.heroes, (h) => (isObj(h) ? Object.assign(h, { xp: nat(h.xp) }) : undefined));
+    p.gear = cleanMap(p.gear, (g) => nat(g, 99)); // 장신구 id → 강화 단계
+    if (D().growth && D().growth.gear) for (const k of Object.keys(p.gear)) if (!D().growth.gear[k]) delete p.gear[k];
+    const R = D().raid;
+    p.shards = cleanMap(p.shards, (x) => nat(x));
+    p.shardLv = cleanMap(p.shardLv, (x) => nat(x, R ? R.shard.max : 5));
+    p.raid = cleanMap(p.raid, (x) => nat(x, R ? R.difficulty.length : 5));
+    if (typeof p.lastMap !== 'string') p.lastMap = '1-1';
+    if (typeof p.lastHero !== 'string') p.lastHero = 'kara';
+    if (p.gacha != null) {
+      if (!isObj(p.gacha)) p.gacha = null;
+      else {
+        p.gacha.owned = cleanMap(p.gacha.owned, (x) => nat(x, 99));
+        for (const t of RG.gacha.BASIC) if (!(t in p.gacha.owned)) p.gacha.owned[t] = 0; // 기본 탑 3종은 늘 가짐
+        for (const k of ['crystals', 'pity', 'pityL', 'pulls']) if (k in p.gacha) p.gacha[k] = nat(p.gacha[k]);
+      }
+    }
+    return p;
+  }
+
   function load() {
     const p = RG.save.get(RG.save.KEYS.progress, null);
     profile = p && p.v === 1 ? Object.assign(blank(), p) : blank();
     profile.seen = Object.assign({ enemies: [], story: [], tips: [] }, profile.seen || {});
     if (!profile.heroes || typeof profile.heroes !== 'object') profile.heroes = {};
     if (!profile.gear || typeof profile.gear !== 'object') profile.gear = {};
-    for (const k of ['shards', 'shardLv', 'raid']) if (!profile[k] || typeof profile[k] !== 'object') profile[k] = {}; // 조각 레이드
+    sanitize(profile);
     // 영웅 성장(장신구)이 생기기 전 기록: 장신구는 도전을 처음 깰 때·무한 기록이 10·20·30·40을 넘을 때만 주므로,
     // 이미 해 둔 것만큼 한 번 채워 줌 (record()와 같은 순서·같은 시드 이름 — 결과가 늘 같음)
     if (p && !('gear' in p)) {
@@ -39,7 +77,7 @@ RG.progress = (() => {
     if ('expRun' in profile || 'expStats' in profile) { delete profile.expRun; delete profile.expStats; RG.save.set(RG.save.KEYS.progress, profile); }
     const savedRun = RG.save.get(RG.save.KEYS.run, null);
     if (savedRun && savedRun.opts && savedRun.opts.mode === 'expedition') RG.save.remove(RG.save.KEYS.run);
-    if (!p || !p.gacha) {
+    if (!p || !p.gacha || !profile.gacha) { // 뽑기 전 기록, 또는 뽑기 칸이 망가진 기록
       // 뽑기가 생기기 전 기록: 그때까지 해금했던 탑은 그대로 가진 것으로 (빼앗지 않음)
       const g = blankGacha();
       if (p) for (const t of towersFor(frontier())) if (!(t in g.owned)) g.owned[t] = 0;
@@ -329,14 +367,15 @@ RG.progress = (() => {
   function recordRaid(type, d, st) {
     const win = st.result === 'win';
     const firstClear = win && raidBest(type) < d;
-    const n = RG.raid.reward(d, { win, firstClear, waves: st.wave.index, total: st.wave.total });
+    const cleared = win ? st.wave.total : RG.raid.wavesCleared(st);
+    const n = RG.raid.reward(d, { win, firstClear, waves: cleared, total: st.wave.total });
     const p = get();
     p.shards[type] = (p.shards[type] || 0) + n;
     if (win && firstClear) p.raid[type] = d;
     const heroId = st.hero && st.hero.heroId;
     const bond = heroId && D().heroes[heroId] ? addBond(heroId, RG.growth.bondGain({ result: st.result, mode: 'normal', newStars: 0 })) : null;
     save();
-    return { shards: n, total: p.shards[type], firstClear, win, bond };
+    return { shards: n, total: p.shards[type], firstClear, win, bond, cleared };
   }
   /** 조각 강화 한 단계 */
   function upgradeShard(type) {

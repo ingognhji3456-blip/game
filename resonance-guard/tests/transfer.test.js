@@ -96,3 +96,27 @@ test('설정(음량 등)은 옮기지 않음, 파일 이름', () => {
   assert.ok(!('settings' in b) && !JSON.stringify(b).includes('"master"'));
   assert.strictEqual(A.RG.transfer.fileName(new Date(2026, 10, 3)), 'resonance-guard-save-2026-11-03.txt');
 });
+
+test('조작된 저장도 진행을 망가뜨리지 않음 (틀린 칸은 비우거나 바로잡음)', async () => {
+  const B = fresh();
+  const bad = { game: 'resonance-guard', kind: 'save', v: 1, progress: {
+    v: 1, maps: { '1-1': { cleared: true, stars: '3' }, '1-2': 7 }, skills: null, seen: { story: null, enemies: 'x' }, endless: { E1: 'a' },
+    heroes: { kara: 5, sera: { xp: '12', talents: 'no' } }, gear: { nope: 1 }, gacha: { owned: { ember_archer: '2', fake: [] }, crystals: '500' },
+    shards: [], shardLv: { ember_archer: '3', frost_crystal: 99 }, raid: { ember_archer: '2', x: -4 }, lastMap: 5,
+  } };
+  await assert.rejects(B.RG.transfer.decode(JSON.stringify(Object.assign({}, bad, { progress: Object.assign({}, bad.progress, { gacha: { owned: null } }) }))), /망가/);
+  assert.ok(B.RG.transfer.apply(bad).ok);
+  const P = B.RG.progress;
+  // 화면들이 부르는 것들이 멈추지 않음
+  assert.ok(Array.isArray(P.get().skills) && P.starsFree() >= 0);
+  assert.ok(P.hasSave() === true || P.hasSave() === false);
+  assert.ok(P.ownedTowers().includes('ember_archer') && P.ownedTowers().includes('stone_barracks'), '기본 탑은 늘');
+  assert.strictEqual(P.shardLvOf('ember_archer'), 3);
+  assert.strictEqual(P.shardLvOf('frost_crystal'), RG_MAX(B.RG));
+  assert.strictEqual(P.raidMaxDiff('ember_archer'), 3, '"2" → 2 → 다음 난이도 3 (문자열 이어 붙이기 없음)');
+  assert.ok(P.upgradeShard('ember_archer').ok === false || P.shardLvOf('ember_archer') === 4);
+  assert.strictEqual(P.gachaState().crystals, 500);
+  assert.ok(P.recordRaid('ember_archer', 1, { result: 'win', wave: { index: 7, total: 7, queue: [] }, enemies: [], hero: { heroId: 'kara' } }).shards > 0, '영웅 기록이 망가져 있어도');
+  assert.strictEqual(P.get().lastMap, '1-1');
+});
+function RG_MAX(RG) { return RG.data.raid.shard.max; }
