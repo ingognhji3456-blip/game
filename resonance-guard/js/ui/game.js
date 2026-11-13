@@ -1215,7 +1215,9 @@
     const info = game.towerInfo(t.id);
     // 창을 통째로 다시 그리는 건 모양이 바뀔 때만 — 골드·이번 판 피해처럼 자주 바뀌는 값은 그 자리에서 고침(liveTowerPanel).
     // (예전엔 골드 5·피해 50마다 다시 그려, 적이 맞는 동안 누르던 강화 단추가 손을 떼기 전에 새 단추로 바뀌어 눌리지 않았음)
-    const sig = JSON.stringify([t.id, t.level, t.branch, t.effects, t.disabled, t.dampened, t.building, t.targetMode, mode, game.state.wave.started, info.canSell, info.next.map((n) => `${n.type}${n.branch || ''}:${n.cost}:${n.locked ? 1 : 0}`)]);
+    // 능력치(사거리·피해·지원 받는 중·증폭)는 다시 계산될 때만 바뀌므로 넣어도 매 틱 다시 그리지 않음 — 보스의 '별 가리기'·대장간 완성 등도 바로 보임
+    const calcSig = t.calc ? [statLines(t.calc, info.def).lines.map((l) => `${l[2]}|${l[3] || 0}`).join(','), round((t.calc.amp || 0) * 100), JSON.stringify(t.calc.auras || {}), t.silenced] : null;
+    const sig = JSON.stringify([t.id, t.level, t.branch, t.effects, t.disabled, t.dampened, t.building, t.targetMode, mode, game.state.wave.started, info.canSell, info.next.map((n) => `${n.type}${n.branch || ''}:${n.cost}:${n.locked ? 1 : 0}`), calcSig]);
     if (!force && R.info.dataset.sig === sig) { liveTowerPanel(t, info); return; }
     if (!force && panelPress) return; // 창 안을 누르는 중에는 다시 그리지 않음 (손을 떼면 다음 틱에)
     R.info.dataset.sig = sig;

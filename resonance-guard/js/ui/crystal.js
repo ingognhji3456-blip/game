@@ -47,7 +47,9 @@
       title: open ? '공명석 웨이브 — 웨이브를 막아 뽑기 재화(공명석)를 모읍니다' : P().crystalLock(1),
       onclick: () => {
         if (!open) { UI.toast(`공명석 웨이브는 ${P().crystalLock(1)}`, 'warn'); return; }
-        UI.show('crystal', { back: from || UI.currentId() || 'world' });
+        const b = from || UI.currentId() || 'world';
+        // 뽑기 화면으로 돌아갈 때는 뽑기의 '돌아갈 곳'(타이틀·출정 준비 등)을 지움 없이 그대로 (keepBack)
+        UI.show('crystal', { back: b, backData: b === 'gacha' ? { keepBack: true } : {} });
       },
     }, [UI.icon(open ? 'crystal' : 'lock', 'tiny'), el('span', { class: 'rb-label', text: '공명석 웨이브' })]);
   }

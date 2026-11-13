@@ -1161,3 +1161,7 @@
   .top-actions .btn-crystal .rb-label { display: none; }
   .top-actions .btn-crystal { min-width: 40px; justify-content: center; }
 }
+.tm-raid-side.icon-only { min-width: 48px; padding: 4px 8px; }
+.tm-raid-side.icon-only .rb-label { display: none; }
+.tm-raid-side.icon-only .tiny { width: 26px; height: 26px; }
+@media (max-width: 800px) and (min-width: 600px) { .tm-row.two .tm-map-small .tm-medal { display: none; } }

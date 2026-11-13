@@ -150,3 +150,39 @@ test('봇: 조각 5단계 탑을 각성시킴', () => {
   const r = env.run({ mapId: '4-6', mode: 'normal', seed: 3, heroId: 'kara', towers: ['ember_archer'], shardLv: { ember_archer: 5 }, shardStart: true, branches: true }, 'greedy');
   assert.ok(r.towers.some((t) => t.startsWith('ember_archer:5')), r.towers.join(' '));
 });
+
+test('각성 폭발은 그 공격 피해의 pct만큼 (공격 보너스를 두 번 곱하지 않음 — 검토에서 찾은 것)', () => {
+  const { RG } = fresh();
+  for (const rank of [0, 5]) {
+    const type = 'frost_crystal';
+    const g = RG.sim.create({ mapId: '3-4', mode: 'normal', seed: 2, heroId: null, shardLv: { [type]: 5 }, shardStart: true, branches: true, towers: [type], towerRanks: { [type]: rank } });
+    g.state.gold = 1e6;
+    let sp = null;
+    for (let r = 0; r < g.map.rows && !sp; r++) for (let c = 0; c < g.map.cols && !sp; c++) {
+      const cb = g.canBuild(type, c, r); if (!cb || !cb.ok) continue;
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { const k = (r + dr) * g.map.cols + (c + dc); if (isFinite(g.flow[k]) && g.flow[k] > 3 && g.flow[k] < 200 && !sp) sp = { c, r }; }
+    }
+    const id = g.cmd({ type: 'build', tower: type, c: sp.c, r: sp.r }).id;
+    for (let i = 0; i < 120; i++) g.step();
+    const t = () => g.state.towers.find((x) => x.id === id);
+    while (t().level < 3) g.cmd({ type: 'upgrade', id });
+    g.cmd({ type: 'branch', id, branch: 'B' });
+    assert.ok(g.cmd({ type: 'upgrade', id }).ok);
+    assert.ok(t().calc.dmgBonus > 0, '조각 5단계 보너스가 있는 상태에서');
+    let best = null; let bd = 1e9;
+    for (let r = 0; r < g.map.rows; r++) for (let c = 0; c < g.map.cols; c++) { const k = r * g.map.cols + c; if (!isFinite(g.flow[k]) || g.flow[k] < 3) continue; const dd = (c + 0.5 - t().x) ** 2 + (r + 0.5 - t().y) ** 2; if (dd < bd) { bd = dd; best = { c, r, x: c + 0.5, y: r + 0.5, trail: [], tc: c, tr: r }; } }
+    for (let i = 0; i < 3; i++) { const e = g.api.spawnEnemy('ash_boar', 0, { from: best, index: i }); e.hp = e.maxHp = 1e7; }
+    let checked = 0;
+    for (let k = 0; k < 500 && checked < 2; k++) {
+      g.step();
+      const pulse = g.state.events.find((e) => e.type === 'pulse' && e.towerId === id);
+      if (!pulse) continue;
+      const hits = g.state.events.filter((e) => e.type === 'hit' && !e.dot).map((h) => h.amount).sort((a, b) => b - a);
+      if (hits.length < 2) continue;
+      const ratio = hits[hits.length - 1] / hits[0];
+      assert.ok(Math.abs(ratio - t().calc.onHit.awBurst.pct) < 0.02, `뽑기 강화 +${rank}: 폭발/명중 ${ratio.toFixed(3)} (설명은 ${t().calc.onHit.awBurst.pct})`);
+      checked++;
+    }
+    assert.ok(checked > 0, '폭발을 봄');
+  }
+});

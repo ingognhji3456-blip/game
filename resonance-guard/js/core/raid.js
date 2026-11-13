@@ -112,12 +112,20 @@ RG.raid = (() => {
     };
   }
 
-  /** 끝까지 막아 낸 웨이브 수: 아직 남은 적(나올 적 포함) 중 가장 앞 웨이브 전까지 — 웨이브만 연달아 불러서는 늘지 않음 */
+  /** 끝까지 막아 낸 웨이브 수: 아직 남은 적(나올 적 포함) 중 가장 앞 웨이브 전까지의 웨이브 가운데,
+   *  새어 나간 적이 그 웨이브의 20% 이하인 것만 — 웨이브만 연달아 불러서는, 탑 없이 다 새어 나가게 둬서는 늘지 않음 */
+  const LEAK_OK = 0.2;
   function wavesCleared(st) {
     let first = st.wave.index;
     for (const q of st.wave.queue || []) if (q.wave < first) first = q.wave;
     for (const e of st.enemies || []) if (!e.dead && !e.leaked && e.wave >= 0 && e.wave < first) first = e.wave;
-    return Math.max(0, first);
+    first = Math.max(0, first);
+    const sp = st.wave.spawned;
+    const lk = st.wave.leaks || {};
+    if (!sp) return first; // (예전 기록·시험용 가짜 상태: 셈이 없으면 그대로)
+    let n = 0;
+    for (let w = 0; w < first; w++) if ((lk[w] || 0) <= LEAK_OK * (sp[w] || 0)) n++;
+    return n;
   }
   /** 판 결과 → 조각: 이기면 난이도 보상(그 탑으로 그 난이도를 처음 깨면 두 배), 지면 절반 넘게 막아 냈을 때 1 */
   function reward(d, { win, firstClear, waves: w, total }) {

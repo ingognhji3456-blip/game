@@ -122,7 +122,8 @@
     if (RG.ui.crystalButton && P().crystalOpen()) modes.push((cls) => RG.ui.crystalButton(`${cls} tm-crystal`, 'title'));
     if (P().raidOpen()) modes.push((cls) => raidButton(cls));
     if (modes.length) {
-      if (resumable) { const small = mainCol.querySelector('.tm-map-small'); const row = el('div', { class: 'tm-row' }); small.replaceWith(row); row.append(small, ...modes.map((f) => f('btn tm-raid tm-raid-side'))); }
+      // 둘이면 옆 단추는 아이콘만 — 지도 카드가 밀려 글자가 사라지지 않게 (이름은 title·aria-label)
+      if (resumable) { const small = mainCol.querySelector('.tm-map-small'); const row = el('div', { class: `tm-row ${modes.length > 1 ? 'two' : ''}` }); small.replaceWith(row); row.append(small, ...modes.map((f) => f(`btn tm-raid tm-raid-side${modes.length > 1 ? ' icon-only' : ''}`))); }
       else mainCol.appendChild(el('div', { class: 'tm-modes' }, modes.map((f) => f('btn tm-raid'))));
     }
     menu.append(tiles[0], tiles[1], mainCol, tiles[2], tiles[3]);

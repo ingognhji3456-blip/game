@@ -1334,6 +1334,10 @@ button { font-family: var(--font); color: inherit; font-size: inherit; } /* 브�
   .top-actions .btn-crystal .rb-label { display: none; }
   .top-actions .btn-crystal { min-width: 40px; justify-content: center; }
 }
+.tm-raid-side.icon-only { min-width: 48px; padding: 4px 8px; }
+.tm-raid-side.icon-only .rb-label { display: none; }
+.tm-raid-side.icon-only .tiny { width: 26px; height: 26px; }
+@media (max-width: 800px) and (min-width: 600px) { .tm-row.two .tm-map-small .tm-medal { display: none; } }
 
 </style>
   <style>/* css/game.css */
@@ -6366,12 +6370,20 @@ RG.raid = (() => {
     };
   }
 
-  /** 끝까지 막아 낸 웨이브 수: 아직 남은 적(나올 적 포함) 중 가장 앞 웨이브 전까지 — 웨이브만 연달아 불러서는 늘지 않음 */
+  /** 끝까지 막아 낸 웨이브 수: 아직 남은 적(나올 적 포함) 중 가장 앞 웨이브 전까지의 웨이브 가운데,
+   *  새어 나간 적이 그 웨이브의 20% 이하인 것만 — 웨이브만 연달아 불러서는, 탑 없이 다 새어 나가게 둬서는 늘지 않음 */
+  const LEAK_OK = 0.2;
   function wavesCleared(st) {
     let first = st.wave.index;
     for (const q of st.wave.queue || []) if (q.wave < first) first = q.wave;
     for (const e of st.enemies || []) if (!e.dead && !e.leaked && e.wave >= 0 && e.wave < first) first = e.wave;
-    return Math.max(0, first);
+    first = Math.max(0, first);
+    const sp = st.wave.spawned;
+    const lk = st.wave.leaks || {};
+    if (!sp) return first; // (예전 기록·시험용 가짜 상태: 셈이 없으면 그대로)
+    let n = 0;
+    for (let w = 0; w < first; w++) if ((lk[w] || 0) <= LEAK_OK * (sp[w] || 0)) n++;
+    return n;
   }
   /** 판 결과 → 조각: 이기면 난이도 보상(그 탑으로 그 난이도를 처음 깨면 두 배), 지면 절반 넘게 막아 냈을 때 1 */
   function reward(d, { win, firstClear, waves: w, total }) {
@@ -6896,8 +6908,10 @@ RG.sim = (() => {
      * 반환: 실제로 깎은 양
      */
     let lastAttackSide = 0;
+    let lastAttackBase = 0;
     function damage(e, base, element, src, o2 = {}) {
       lastAttackSide = 0;
+      lastAttackBase = 0;
       if (e.dead || e.burrowed || e.invulnUntil > st.time || base <= 0) return 0;
       const ed = D().enemies[e.type];
       const aff = affinityOf(e, element);
@@ -6944,6 +6958,7 @@ RG.sim = (() => {
       let affMult = aff === 'weak' ? 1.5 : aff === 'resist' ? 0.5 : 1;
       if (e.adapt && e.adapt.el === element) affMult *= 1 - Math.min(ed.traits.adaptive.max, e.adapt.stacks * ed.traits.adaptive.per);
       lastAttackSide = base * (1 + bonus) * (o2.crit || 1); // 받는 쪽 배율 전 (잿불 화상 등 파생 화상의 기준)
+      lastAttackBase = base * (o2.crit || 1);               // 공격 보너스도 빼고 (각성 폭발: 다시 damage()를 거치며 보너스가 붙으므로)
       if (e.boss && ed.bossData && ed.bossData.trackEls) e.boss.els = Object.assign(e.boss.els || {}, { [element]: ((e.boss.els && e.boss.els[element]) || 0) + base }); // 그믐달 군주: 많이 맞은 원소 기록
       let final = base * (1 + bonus) * (1 + vuln) * (1 - armorEff) * affMult;
       if (o2.crit) final *= o2.crit;
@@ -7100,8 +7115,9 @@ RG.sim = (() => {
         healCd: 0, shieldCd: 0, invulnUntil: 0, fragment: !!(from && from.fragment), dead: false, leaked: false,
         boss: ed.boss ? { phase: 0, t: 0, timers: {} } : null, bossArmor: 0, speedMul: 1, immuneEls: null,
         walkT: 0,
-        wave: waveIdx != null ? waveIdx : from && from.wave != null ? from.wave : -1, // 몇 번째 웨이브의 적인지 (해시에는 안 들어감 — 조각 레이드 '버틴 웨이브')
+        wave: waveIdx != null ? waveIdx : from && from.from && from.from.wave != null ? from.from.wave : from && from.wave != null ? from.wave : -1, // 몇 번째 웨이브의 적인지 (분열 새끼는 부모의 것, 해시에는 안 들어감 — '막아 낸 웨이브')
       };
+      if (e.wave >= 0) { const W = st.wave; if (!W.spawned) { W.spawned = {}; W.leaks = {}; } W.spawned[e.wave] = (W.spawned[e.wave] || 0) + 1; } // 웨이브마다 나온 수·새어 나간 수 ('막아 낸 웨이브')
       if (ed.traits.shield) { e.maxShield = ed.traits.shield.amount * e.maxHp; e.shield = e.maxShield; }
       if (ed.bossData && ed.bossData.phases) e.immuneEls = Object.keys(ed.affinity).filter((k) => ed.affinity[k] === 'immune');
       if (from && from.from) {
@@ -7139,6 +7155,7 @@ RG.sim = (() => {
       e.dead = true;
       e.leaked = true;
       releaseEnemy(e);
+      if (e.wave >= 0 && st.wave.leaks) st.wave.leaks[e.wave] = (st.wave.leaks[e.wave] || 0) + 1;
       let lost = ed.boss ? st.lives : ed.lives;
       if (!ed.boss && !ed.elite && st.leakShield > 0) { st.leakShield -= 1; lost = 0; }
       st.lives = Math.max(0, st.lives - lost);
@@ -7539,6 +7556,7 @@ RG.sim = (() => {
 
     function applyOnHit(e, dealt, src, hit) {
       const attackSide = lastAttackSide; // 이 명중의 공격 쪽 피해 (받는 쪽 배율이 틱에서 다시 곱해지지 않게)
+      const attackBase = lastAttackBase; // 공격 보너스 전 (각성 폭발용)
       const calc = src.calc;
       const oh = calc.onHit || {};
       const mods = calc.mods || {};
@@ -7564,7 +7582,7 @@ RG.sim = (() => {
         // 각성: N번 맞힐 때마다 맞은 적 주변 폭발 (그 공격 피해의 pct)
         t.awHits = (t.awHits || 0) + 1;
         if (t.awHits % oh.awBurst.n === 0) {
-          const dmgB = (attackSide || dealt) * oh.awBurst.pct;
+          const dmgB = (attackBase || dealt) * oh.awBurst.pct * pm; // 보너스는 아래 damage()가 한 번만 붙임, 영혼 폭풍 같은 약한 명중은 그만큼 약하게
           for (const o of enemiesInRadius(e.x, e.y, oh.awBurst.radius)) if (o !== e && !o.dead) damage(o, dmgB, el, src, { secondary: true, area: true });
           ev('pulse', { towerId: t.id, x: e.x, y: e.y, radius: oh.awBurst.radius, element: el });
         }
@@ -37376,7 +37394,8 @@ RG.render = (() => {
     if (RG.ui.crystalButton && P().crystalOpen()) modes.push((cls) => RG.ui.crystalButton(`${cls} tm-crystal`, 'title'));
     if (P().raidOpen()) modes.push((cls) => raidButton(cls));
     if (modes.length) {
-      if (resumable) { const small = mainCol.querySelector('.tm-map-small'); const row = el('div', { class: 'tm-row' }); small.replaceWith(row); row.append(small, ...modes.map((f) => f('btn tm-raid tm-raid-side'))); }
+      // 둘이면 옆 단추는 아이콘만 — 지도 카드가 밀려 글자가 사라지지 않게 (이름은 title·aria-label)
+      if (resumable) { const small = mainCol.querySelector('.tm-map-small'); const row = el('div', { class: `tm-row ${modes.length > 1 ? 'two' : ''}` }); small.replaceWith(row); row.append(small, ...modes.map((f) => f(`btn tm-raid tm-raid-side${modes.length > 1 ? ' icon-only' : ''}`))); }
       else mainCol.appendChild(el('div', { class: 'tm-modes' }, modes.map((f) => f('btn tm-raid'))));
     }
     menu.append(tiles[0], tiles[1], mainCol, tiles[2], tiles[3]);
@@ -39292,7 +39311,9 @@ RG.render = (() => {
       title: open ? '공명석 웨이브 — 웨이브를 막아 뽑기 재화(공명석)를 모읍니다' : P().crystalLock(1),
       onclick: () => {
         if (!open) { UI.toast(`공명석 웨이브는 ${P().crystalLock(1)}`, 'warn'); return; }
-        UI.show('crystal', { back: from || UI.currentId() || 'world' });
+        const b = from || UI.currentId() || 'world';
+        // 뽑기 화면으로 돌아갈 때는 뽑기의 '돌아갈 곳'(타이틀·출정 준비 등)을 지움 없이 그대로 (keepBack)
+        UI.show('crystal', { back: b, backData: b === 'gacha' ? { keepBack: true } : {} });
       },
     }, [UI.icon(open ? 'crystal' : 'lock', 'tiny'), el('span', { class: 'rb-label', text: '공명석 웨이브' })]);
   }
@@ -40647,7 +40668,9 @@ RG.render = (() => {
     const info = game.towerInfo(t.id);
     // 창을 통째로 다시 그리는 건 모양이 바뀔 때만 — 골드·이번 판 피해처럼 자주 바뀌는 값은 그 자리에서 고침(liveTowerPanel).
     // (예전엔 골드 5·피해 50마다 다시 그려, 적이 맞는 동안 누르던 강화 단추가 손을 떼기 전에 새 단추로 바뀌어 눌리지 않았음)
-    const sig = JSON.stringify([t.id, t.level, t.branch, t.effects, t.disabled, t.dampened, t.building, t.targetMode, mode, game.state.wave.started, info.canSell, info.next.map((n) => `${n.type}${n.branch || ''}:${n.cost}:${n.locked ? 1 : 0}`)]);
+    // 능력치(사거리·피해·지원 받는 중·증폭)는 다시 계산될 때만 바뀌므로 넣어도 매 틱 다시 그리지 않음 — 보스의 '별 가리기'·대장간 완성 등도 바로 보임
+    const calcSig = t.calc ? [statLines(t.calc, info.def).lines.map((l) => `${l[2]}|${l[3] || 0}`).join(','), round((t.calc.amp || 0) * 100), JSON.stringify(t.calc.auras || {}), t.silenced] : null;
+    const sig = JSON.stringify([t.id, t.level, t.branch, t.effects, t.disabled, t.dampened, t.building, t.targetMode, mode, game.state.wave.started, info.canSell, info.next.map((n) => `${n.type}${n.branch || ''}:${n.cost}:${n.locked ? 1 : 0}`), calcSig]);
     if (!force && R.info.dataset.sig === sig) { liveTowerPanel(t, info); return; }
     if (!force && panelPress) return; // 창 안을 누르는 중에는 다시 그리지 않음 (손을 떼면 다음 틱에)
     R.info.dataset.sig = sig;

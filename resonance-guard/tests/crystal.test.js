@@ -126,3 +126,30 @@ test('공명석 웨이브가 없는 판은 예전과 같은 해시', () => {
   const run = (extra) => { const g = RG.sim.create(Object.assign({ mapId: '2-3', mode: 'normal', seed: 9, heroId: 'sera' }, extra)); g.cmd({ type: 'callWave' }); for (let i = 0; i < 900; i++) g.step(); return g.hash(); };
   assert.strictEqual(run({}), run({ crystal: null }));
 });
+
+test('탑 없이 다 새어 나가게 둔 판은 0 (새어 나간 웨이브는 막아 낸 것이 아님), 분열 새끼도 부모 웨이브 — 검토에서 찾은 것', () => {
+  const { RG } = fresh();
+  for (const id of ['1-1', '1-2', '1-3']) win(RG, id);
+  for (const d of [1, 2]) {
+    const g = RG.sim.create(Object.assign({ mode: 'normal', seed: 3, heroId: 'kara', towers: ['ember_archer'] }, RG.crystal.setup(d)));
+    g.cmd({ type: 'callWave' });
+    for (let i = 0; i < 30 * 60 * 10 && !g.state.result; i++) g.step(); // 다음 웨이브는 저절로, 탑은 하나도 없이
+    assert.strictEqual(g.state.result, 'lose');
+    assert.strictEqual(RG.raid.wavesCleared(g.state), 0, `난이도 ${d}: 막아 낸 웨이브 ${RG.raid.wavesCleared(g.state)}`);
+    assert.strictEqual(RG.progress.recordCrystal(d, g.state).crystals, 0);
+  }
+  // 분열: 포자 주머니 새끼는 부모의 웨이브 번호
+  const g = RG.sim.create(Object.assign({ mode: 'normal', seed: 3, heroId: null }, RG.crystal.setup(1)));
+  const sac = g.api.spawnEnemy('spore_sac', 0, null, 2);
+  assert.strictEqual(sac.wave, 2);
+  g.api.damage(sac, 1e6, 'fire', { calc: { dmgBonus: 0, mods: {}, onHit: {} } }, {});
+  const kids = g.state.enemies.filter((e) => e !== sac && !e.dead);
+  assert.ok(kids.length > 0, '새끼가 나옴');
+  for (const k of kids) assert.strictEqual(k.wave, 2, '새끼도 웨이브 2');
+});
+
+test('막아 낸 웨이브: 새어 나간 적이 그 웨이브의 20% 이하면 셈, 넘으면 안 셈', () => {
+  const { RG } = fresh();
+  const base = { result: 'lose', enemies: [], wave: { index: 4, total: 8, queue: [], spawned: { 0: 10, 1: 10, 2: 10, 3: 10 }, leaks: { 1: 2, 2: 3 } } };
+  assert.strictEqual(RG.raid.wavesCleared(base), 3, '웨이브 2(30%)만 빠짐');
+});

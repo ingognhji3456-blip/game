@@ -390,8 +390,10 @@ RG.sim = (() => {
      * 반환: 실제로 깎은 양
      */
     let lastAttackSide = 0;
+    let lastAttackBase = 0;
     function damage(e, base, element, src, o2 = {}) {
       lastAttackSide = 0;
+      lastAttackBase = 0;
       if (e.dead || e.burrowed || e.invulnUntil > st.time || base <= 0) return 0;
       const ed = D().enemies[e.type];
       const aff = affinityOf(e, element);
@@ -438,6 +440,7 @@ RG.sim = (() => {
       let affMult = aff === 'weak' ? 1.5 : aff === 'resist' ? 0.5 : 1;
       if (e.adapt && e.adapt.el === element) affMult *= 1 - Math.min(ed.traits.adaptive.max, e.adapt.stacks * ed.traits.adaptive.per);
       lastAttackSide = base * (1 + bonus) * (o2.crit || 1); // 받는 쪽 배율 전 (잿불 화상 등 파생 화상의 기준)
+      lastAttackBase = base * (o2.crit || 1);               // 공격 보너스도 빼고 (각성 폭발: 다시 damage()를 거치며 보너스가 붙으므로)
       if (e.boss && ed.bossData && ed.bossData.trackEls) e.boss.els = Object.assign(e.boss.els || {}, { [element]: ((e.boss.els && e.boss.els[element]) || 0) + base }); // 그믐달 군주: 많이 맞은 원소 기록
       let final = base * (1 + bonus) * (1 + vuln) * (1 - armorEff) * affMult;
       if (o2.crit) final *= o2.crit;
@@ -594,8 +597,9 @@ RG.sim = (() => {
         healCd: 0, shieldCd: 0, invulnUntil: 0, fragment: !!(from && from.fragment), dead: false, leaked: false,
         boss: ed.boss ? { phase: 0, t: 0, timers: {} } : null, bossArmor: 0, speedMul: 1, immuneEls: null,
         walkT: 0,
-        wave: waveIdx != null ? waveIdx : from && from.wave != null ? from.wave : -1, // 몇 번째 웨이브의 적인지 (해시에는 안 들어감 — 조각 레이드 '버틴 웨이브')
+        wave: waveIdx != null ? waveIdx : from && from.from && from.from.wave != null ? from.from.wave : from && from.wave != null ? from.wave : -1, // 몇 번째 웨이브의 적인지 (분열 새끼는 부모의 것, 해시에는 안 들어감 — '막아 낸 웨이브')
       };
+      if (e.wave >= 0) { const W = st.wave; if (!W.spawned) { W.spawned = {}; W.leaks = {}; } W.spawned[e.wave] = (W.spawned[e.wave] || 0) + 1; } // 웨이브마다 나온 수·새어 나간 수 ('막아 낸 웨이브')
       if (ed.traits.shield) { e.maxShield = ed.traits.shield.amount * e.maxHp; e.shield = e.maxShield; }
       if (ed.bossData && ed.bossData.phases) e.immuneEls = Object.keys(ed.affinity).filter((k) => ed.affinity[k] === 'immune');
       if (from && from.from) {
@@ -633,6 +637,7 @@ RG.sim = (() => {
       e.dead = true;
       e.leaked = true;
       releaseEnemy(e);
+      if (e.wave >= 0 && st.wave.leaks) st.wave.leaks[e.wave] = (st.wave.leaks[e.wave] || 0) + 1;
       let lost = ed.boss ? st.lives : ed.lives;
       if (!ed.boss && !ed.elite && st.leakShield > 0) { st.leakShield -= 1; lost = 0; }
       st.lives = Math.max(0, st.lives - lost);
@@ -1033,6 +1038,7 @@ RG.sim = (() => {
 
     function applyOnHit(e, dealt, src, hit) {
       const attackSide = lastAttackSide; // 이 명중의 공격 쪽 피해 (받는 쪽 배율이 틱에서 다시 곱해지지 않게)
+      const attackBase = lastAttackBase; // 공격 보너스 전 (각성 폭발용)
       const calc = src.calc;
       const oh = calc.onHit || {};
       const mods = calc.mods || {};
@@ -1058,7 +1064,7 @@ RG.sim = (() => {
         // 각성: N번 맞힐 때마다 맞은 적 주변 폭발 (그 공격 피해의 pct)
         t.awHits = (t.awHits || 0) + 1;
         if (t.awHits % oh.awBurst.n === 0) {
-          const dmgB = (attackSide || dealt) * oh.awBurst.pct;
+          const dmgB = (attackBase || dealt) * oh.awBurst.pct * pm; // 보너스는 아래 damage()가 한 번만 붙임, 영혼 폭풍 같은 약한 명중은 그만큼 약하게
           for (const o of enemiesInRadius(e.x, e.y, oh.awBurst.radius)) if (o !== e && !o.dead) damage(o, dmgB, el, src, { secondary: true, area: true });
           ev('pulse', { towerId: t.id, x: e.x, y: e.y, radius: oh.awBurst.radius, element: el });
         }
