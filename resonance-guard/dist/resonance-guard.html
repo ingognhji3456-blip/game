@@ -34971,6 +34971,10 @@ RG.fx = (() => {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const from = lite ? Math.max(0, texts.length - (lite2 ? 6 : 12)) : 0; // 적이 아주 많으면 최근 글자만
+    // 글꼴·테두리는 바뀔 때만 씀: ctx.font를 읽으면 매번 글꼴 문자열을 새로 만들고, 쓰면 글꼴을 다시 해석함
+    // (탑이 꽉 찬 판에서는 숫자가 늘 수십 개 — 글자마다 읽고 쓰던 것이 숫자 그리기 시간의 40%쯤이었음)
+    let curFont = null;
+    ctx.strokeStyle = 'rgba(20,14,30,0.9)';
     for (let i = from; i < texts.length; i++) {
       const t = texts[i];
       const a = Math.min(1, t.life / t.max * 2);
@@ -34978,9 +34982,7 @@ RG.fx = (() => {
       const fs = Math.round(Math.max(11, T * (t.big ? 0.42 : 0.3)) * (settings.textScale || 1));
       let font = fontCache.get(fs);
       if (!font) { font = `800 ${fs}px system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`; fontCache.set(fs, font); }
-      if (ctx.font !== font) ctx.font = font;
-      ctx.lineWidth = Math.max(2.5, fs * 0.22);
-      ctx.strokeStyle = 'rgba(20,14,30,0.9)';
+      if (curFont !== font) { ctx.font = font; ctx.lineWidth = Math.max(2.5, fs * 0.22); curFont = font; }
       ctx.strokeText(t.str, X(t.x), Y(t.y));
       ctx.fillStyle = t.color;
       ctx.fillText(t.str, X(t.x), Y(t.y));
@@ -35027,8 +35029,11 @@ RG.render = (() => {
     c.lineWidth = 2;
     c.strokeRect(X(0) - 3, Y(0) - 3, game.map.cols * T + 6, game.map.rows * T + 6);
   }
-  let shadeLayer = null;  // 바탕 + 탑 그림자 (탑이 바뀔 때만 다시 그림)
-  let shadeFor = '';
+  let shadowBase = null;  // 바탕 + 탑·울림등 그림자 (탑을 짓고·올리고·팔 때만 다시 그림)
+  let lightCv = null;     // 빛 고르기 그라데이션 두 장을 미리 겹친 투명 층 (크기가 바뀔 때만)
+  let shadeLayer = null;  // shadowBase + 공명 선 + 빛 (흔들릴 때만 합쳐 씀 — 평소엔 baseFrame이 바로 합침)
+  let shadeVer = 0;       // 그림자·공명 선이 바뀔 때마다 +1 (baseFrame·shadeLayer가 이 번호로 다시 합침)
+  let shadeNeed = 2;      // 0 최신, 1 공명 선만 바뀜(다시 합치기만), 2 그림자부터 다시 그림
   let shadeBaked = false; // 이번 프레임에 탑 그림자를 층에서 그렸는지
   let manyEnemies = false;
   /*
@@ -35058,7 +35063,7 @@ RG.render = (() => {
     corpses = [];
     projStart.clear();
     dprCap = 2; perfT = 0; perfN = 0; perfSlow = 0; perfLast = 0; perfWin = 0; perfRaised = false; perfNoRaise = false; slowFx = false;
-    shadeFor = '';
+    seenT.n = -1; shadeNeed = 2; linkPairs.length = 0; towerKeys.clear();
     ambientFor = '';
     bg = null;
     bgFor = '';
@@ -35301,8 +35306,8 @@ RG.render = (() => {
     const plain = plainTransform();
     if (sh && !plain) shadowAt(cx - w * ax + sh[0], cy - h * ay + sh[1], sh[2], sh[3], sh[4]); // 구운 그림을 못 쓰면 그늘만 따로
     const img = plain ? (sh ? fittedSh(s, w, h, flip, sh) : fitted(s, w, h, flip)) : fitted(s, w, h, false);
-    const a0 = ctx.globalAlpha;
     const setA = alpha != null && alpha !== 1; // 투명도를 바꿀 때만 쓰고 되돌림 (그림마다 두 번씩 쓰던 것 — 적 300이면 프레임마다 600번)
+    const a0 = setA ? ctx.globalAlpha : 1; // 읽기도 바꿀 때만 (캔버스 값 읽기도 매번 비용이 듦)
     if (setA) ctx.globalAlpha = a0 * alpha;
     if (img !== s.canvas && plain) {
       // 줄여 둔 그림(반전본 포함): 정수 화소 위치에 원래 크기 그대로 찍음 — 늘이기·반 화소·뒤집기 없이 가장 빠른 길
@@ -35380,11 +35385,32 @@ RG.render = (() => {
     c2.save(); c2.scale(1, 0.5); c2.beginPath(); c2.arc(64, 64, 64, 0, Math.PI * 2); c2.fill(); c2.restore();
     return blobCanvas;
   }
+  /*
+   * 그늘을 표시 크기(화면 배율 포함)로 줄여 둔 그림: 128px 그늘 그림을 매 프레임 적·병사마다 늘이고 줄여 그리면
+   * 느린 길(화소마다 샘플링)로 그려졌음. 크기마다 한 번만 줄여 두고 정수 화소 자리에 그대로 찍음.
+   */
+  const blobFit = new Map();
+  function blobAt(x, y, w, h) {
+    if (!ctx._xf || !plainTransform()) { ctx.drawImage(blob(), x - w / 2, y - h / 2, w, h); return; }
+    const pw = Math.max(1, Math.round(w * dpr));
+    const ph = Math.max(1, Math.round(h * dpr));
+    const k = pw * 4096 + ph;
+    let cv = blobFit.get(k);
+    if (!cv) {
+      if (blobFit.size > 48) blobFit.clear();
+      cv = document.createElement('canvas');
+      cv.width = pw; cv.height = ph;
+      cv.getContext('2d').drawImage(blob(), 0, 0, pw, ph);
+      blobFit.set(k, cv);
+      toBitmap(blobFit, k, cv);
+    }
+    ctx.drawImage(cv, Math.round((x - w / 2) * dpr) / dpr, Math.round((y - h / 2) * dpr) / dpr, pw / dpr, ph / dpr);
+  }
   /** 화면 좌표(CSS 화소)에 그늘 하나 — 가운데·너비·높이·진하기 */
   function shadowAt(x, y, w, h, a) {
     const a0 = ctx.globalAlpha;
     ctx.globalAlpha = a0 * a;
-    ctx.drawImage(blob(), x - w / 2, y - h / 2, w, h);
+    blobAt(x, y, w, h);
     ctx.globalAlpha = a0;
   }
   function shadow(x, y, rx, ry, a = 0.32) {
@@ -35392,7 +35418,7 @@ RG.render = (() => {
     ctx.globalAlpha = a0 * Math.min(1, a * 1.6);
     const w = Math.max(4, rx * T * 2.2);
     const h = Math.max(2, ry * T * 2.2);
-    ctx.drawImage(blob(), X(x) - w / 2 + T * 0.03, Y(y) - h / 2 + T * 0.01, w, h);
+    blobAt(X(x) + T * 0.03, Y(y) + T * 0.01, w, h);
     ctx.globalAlpha = a0;
   }
   // 드리운 그림자: 그림 모양 그대로 오른쪽 아래로 눕힘 (그림마다 한 번 만들어 둠)
@@ -35414,11 +35440,56 @@ RG.render = (() => {
     shadowCache.set(key, cv);
     return cv;
   }
+  /*
+   * 드리운 그림자를 화면 화소 크기로 미리 기울여 둔 그림: 매 프레임 기울임 변환으로 작은 그림자 그림을 늘여 그리면
+   * 화소마다 따로 샘플링하는 느린 길로 그려져, 적 수십 마리면 그림자만으로 프레임이 크게 늦었음.
+   * 그림·크기·좌우마다 한 번만 기울여 그려 두고 그 뒤엔 정수 화소 자리에 그대로 찍음 (뜬 높이는 옆으로 옮기기만 하므로 같은 그림).
+   */
+  function skewedShadow(cv, w, h, ax, ay, flip) {
+    const pw = Math.max(1, Math.round(w * dpr));
+    const ph = Math.max(1, Math.round(h * dpr));
+    const k = (((pw * 4096 + ph) * 2 + (flip ? 1 : 0)) * 1024 + Math.round(ay * 1000)) * 1024 + Math.round(ax * 1000);
+    let m = cv._sk;
+    if (!m) { m = new Map(); cv._sk = m; }
+    let out = m.get(k);
+    if (out) return out;
+    if (m.size > 8) m.clear(); // 크기가 자주 바뀌면(창 크기·화질) 오래된 것은 버림
+    const a = flip ? -1 : 1;
+    // 기울인 네 모서리의 범위 (기준점 기준, 화면 화소)
+    let x0 = Infinity; let x1 = -Infinity; let y0 = Infinity; let y1 = -Infinity;
+    for (const x of [-w * ax, w * (1 - ax)]) {
+      for (const y of [-h * ay, h * (1 - ay)]) {
+        const sx = (a * x - 0.6 * y) * dpr;
+        const sy = -0.4 * y * dpr;
+        if (sx < x0) x0 = sx; if (sx > x1) x1 = sx; if (sy < y0) y0 = sy; if (sy > y1) y1 = sy;
+      }
+    }
+    const bx = Math.floor(x0) - 1;
+    const by = Math.floor(y0) - 1;
+    out = document.createElement('canvas');
+    out.width = Math.max(1, Math.ceil(x1) + 1 - bx);
+    out.height = Math.max(1, Math.ceil(y1) + 1 - by);
+    const c2 = out.getContext('2d');
+    c2.setTransform(a * dpr, 0, -0.6 * dpr, -0.4 * dpr, -bx, -by);
+    c2.drawImage(cv, -w * ax, -h * ay, w, h);
+    out._ox = bx; out._oy = by;
+    m.set(k, out);
+    toBitmap(m, k, out);
+    return out;
+  }
   /** (cx, by) = 바닥 기준점, w·h·ax·ay = 그림 배치, lift = 땅에서 뜬 높이(비행) */
   function castShadow(key, cx, by, w, h, ax, ay, flip, alpha, lift = 0) {
     if (!shadowsOn) return;
     const cv = shadowCanvas(key);
     if (!cv) return;
+    if (ctx._xf && plainTransform()) {
+      const img = skewedShadow(cv, w, h, ax, ay, flip);
+      const a0 = ctx.globalAlpha;
+      ctx.globalAlpha = a0 * alpha;
+      ctx.drawImage(img, (Math.round((cx + lift * 0.55) * dpr) + img._ox) / dpr, (Math.round(by * dpr) + img._oy) / dpr, img.width / dpr, img.height / dpr);
+      ctx.globalAlpha = a0;
+      return;
+    }
     ctx.save();
     ctx.globalAlpha *= alpha;
     // (cx+lift·0.55, by)로 옮긴 뒤 기울임: 높이 H인 점 → 오른쪽으로 0.6H, 아래로 0.4H (좌우 반전이면 x축을 뒤집음)
@@ -35516,53 +35587,150 @@ RG.render = (() => {
   /* ---------------- 바탕·경로 ---------------- */
   /*
    * 탑 그림자 층: 탑은 움직이지 않으므로 발밑 그늘·드리운 그림자(쉬는 자세 모양)를 바탕과 한 장에 구워 둠.
-   * 탑을 짓고·올리고·팔 때만 다시 그림 → 매 프레임 탑 40개의 그림자를 그리지 않음.
+   * 세 장으로 나눠 둠 — 공명 선은 공명을 끊는 적·멈추게 하는 적이 탑 곁을 지날 때마다 바뀌는데(탑이 꽉 찬 후반 웨이브면
+   * 초당 여러 번), 예전엔 그때마다 바탕·탑 그림자 88개·빛 그라데이션을 통째로 다시 그려 휴대폰에서 프레임이 크게 늦었음.
+   *  - shadowBase: 바탕 + 탑·울림등 그림자. 탑을 짓고·올리고·팔 때(또는 바탕·그림자 설정이 바뀔 때)만 다시 그림.
+   *  - lightCv: 빛 고르기 그라데이션 두 장을 미리 겹쳐 둔 투명 층. 크기가 바뀔 때만.
+   *  - 공명 선이 바뀌면 shadowBase 위에 선을 긋고 lightCv를 덮어 합치기만 함 (평소엔 baseFrame에 바로, 흔들릴 때는 shadeLayer에).
+   * 바뀜 확인은 매 프레임 탑 목록을 숫자·문자 비교로만 훑음 (예전처럼 탑마다 긴 문자열을 만들지 않음).
    */
-  function towerShadeLayer() {
+  const seenT = { n: -1, id: [], type: [], lv: [], br: [], bld: [], nl: [], links: [], ready: 0, waiting: false };
+  const linkPairs = []; // 공명 선 [탑, 이웃, 탑, 이웃, ...] (같은 짝은 한 번) — 공명 선이 바뀔 때만 다시 만듦
+  /** 그림자를 구울 쉬는 자세 그림 중 준비된 수 (울림등 포함) — 다 준비되기 전에 구웠으면 준비될 때마다 다시 구움 */
+  function shadeReady(ts) {
+    const A = RG.art.sprites;
+    let n = A.get(A.lanternKey(1)) ? 1 : 0;
+    for (let i = 0; i < ts.length; i++) { const t = ts[i]; if (A.get(towerKeysOf(t).idle)) n++; }
+    return n;
+  }
+  /** 탑 목록이 지난 프레임과 달라졌는지: 짓기·팔기·강화·분기·건설 끝 → 그림자부터, 공명 선만 → 다시 합치기만 */
+  function syncTowers() {
+    const ts = game.state.towers;
+    const S = seenT;
+    let stat = ts.length !== S.n;
+    let link = stat;
+    if (!stat) {
+      let li = 0;
+      for (let i = 0; i < ts.length; i++) {
+        const t = ts[i];
+        if (t.id !== S.id[i] || t.type !== S.type[i] || t.level !== S.lv[i] || t.branch !== S.br[i] || !!t.building !== S.bld[i]) { stat = true; link = true; break; }
+        if (link) continue;
+        const L = t.links;
+        if (L.length !== S.nl[i]) { link = true; continue; }
+        for (let j = 0; j < L.length; j++) if (L[j] !== S.links[li + j]) { link = true; break; }
+        li += L.length;
+      }
+      if (!stat && S.waiting && shadeReady(ts) > S.ready) stat = true;
+    }
+    if (!stat && !link) return;
+    S.n = ts.length;
+    S.links.length = 0;
+    for (let i = 0; i < ts.length; i++) {
+      const t = ts[i];
+      S.id[i] = t.id; S.type[i] = t.type; S.lv[i] = t.level; S.br[i] = t.branch; S.bld[i] = !!t.building; S.nl[i] = t.links.length;
+      for (let j = 0; j < t.links.length; j++) S.links.push(t.links[j]);
+    }
+    S.id.length = S.type.length = S.lv.length = S.br.length = S.bld.length = S.nl.length = ts.length;
+    linkPairs.length = 0;
+    const byId = new Map();
+    for (const t of ts) byId.set(t.id, t);
+    for (const t of ts) for (const id of t.links) { if (id < t.id) continue; const n = byId.get(id); if (n) linkPairs.push(t, n); }
+    if (stat) shadeNeed = 2; else if (!shadeNeed) shadeNeed = 1;
+  }
+  /** 바탕 + 탑·울림등 그림자 */
+  function drawShadowBase() {
     const st = game.state;
     const m = game.map;
     const A = RG.art.sprites;
-    let key = `${bgFor}|${shadowsOn ? 1 : 0}`;
-    for (const t of st.towers) key += `|${t.id}:${t.type}:${t.level}:${t.branch || ''}:${t.building ? 1 : 0}:${A.get(A.towerKey(t.type, t.level, t.branch, 'idle')) ? 1 : 0}:${t.links.join('.')}`;
-    if (key === shadeFor && shadeLayer) return shadeLayer;
-    shadeFor = key;
-    if (!shadeLayer || shadeLayer.width !== bg.width || shadeLayer.height !== bg.height) {
-      shadeLayer = document.createElement('canvas');
-      shadeLayer.width = bg.width;
-      shadeLayer.height = bg.height;
+    if (!shadowBase || shadowBase.width !== bg.width || shadowBase.height !== bg.height) {
+      shadowBase = document.createElement('canvas');
+      shadowBase.width = bg.width;
+      shadowBase.height = bg.height;
     }
-    const c2 = shadeLayer.getContext('2d');
+    const c2 = shadowBase.getContext('2d');
     c2.setTransform(1, 0, 0, 1, 0, 0);
     c2.globalAlpha = 1;
-    c2.clearRect(0, 0, shadeLayer.width, shadeLayer.height);
+    c2.clearRect(0, 0, shadowBase.width, shadowBase.height);
     c2.drawImage(bg, 0, 0);
     c2.setTransform(bg.width / (m.cols * T), 0, 0, bg.height / (m.rows * T), 0, 0);
     const keep = { ctx, ox, oy };
     ctx = c2; ox = 0; oy = 0;
     try {
       for (const t of st.towers) shadow(t.x, t.r + 0.8, 0.36, 0.12, 0.28);
-      for (const t of st.towers) castShadow(A.towerKey(t.type, t.level, t.branch, 'idle'), X(t.x), Y(t.r + 0.82), T, T * 1.3, 0.5, 112 / 130, false, t.building ? 0.2 : 0.42);
+      for (const t of st.towers) castShadow(towerKeysOf(t).idle, X(t.x), Y(t.r + 0.82), T, T * 1.3, 0.5, 112 / 130, false, t.building ? 0.2 : 0.42);
       const L = m.lantern;
       castShadow(A.lanternKey(1), X(L.x), Y(L.r + 0.82), T, T * 1.3, 0.5, 112 / 130, false, 0.42);
-      bakeLinks(c2);
-      // 빛 고르기: 왼쪽 위(빛이 오는 쪽)는 따뜻하게 살짝 밝게, 오른쪽 아래는 푸른 보랏빛으로 살짝 어둡게, 가장자리는 어둡게.
-      // 매 프레임이 아니라 이 층에 한 번 구워 둠 (그리기 비용 없음)
-      const W2 = m.cols * T;
-      const H2 = m.rows * T;
-      const lgr = c2.createLinearGradient(0, 0, W2, H2);
-      lgr.addColorStop(0, 'rgba(255,232,180,0.08)');
-      lgr.addColorStop(0.45, 'rgba(255,232,180,0)');
-      lgr.addColorStop(1, 'rgba(38,22,72,0.10)');
-      c2.fillStyle = lgr;
-      c2.fillRect(0, 0, W2, H2);
-      const vg = c2.createRadialGradient(W2 / 2, H2 / 2, Math.min(W2, H2) * 0.38, W2 / 2, H2 / 2, Math.hypot(W2, H2) * 0.55);
-      vg.addColorStop(0, 'rgba(12,7,22,0)');
-      vg.addColorStop(1, 'rgba(12,7,22,0.24)');
-      c2.fillStyle = vg;
-      c2.fillRect(0, 0, W2, H2);
     } finally {
       ctx = keep.ctx; ox = keep.ox; oy = keep.oy;
     }
+    seenT.ready = shadeReady(st.towers);
+    seenT.waiting = seenT.ready < st.towers.length + 1;
+  }
+  /**
+   * 빛 고르기: 왼쪽 위(빛이 오는 쪽)는 따뜻하게 살짝 밝게, 오른쪽 아래는 푸른 보랏빛으로 살짝 어둡게, 가장자리는 어둡게.
+   * 두 그라데이션을 투명 층 한 장에 미리 겹쳐 둠(겹치는 순서가 같아 결과도 같음) — 합칠 때 그라데이션을 다시 칠하지 않고 한 번 찍기만.
+   */
+  function lightLayer() {
+    const m = game.map;
+    const W2 = m.cols * T;
+    const H2 = m.rows * T;
+    if (lightCv && lightCv.width === bg.width && lightCv.height === bg.height && lightCv._w === W2 && lightCv._h === H2) return lightCv;
+    if (!lightCv || lightCv.width !== bg.width || lightCv.height !== bg.height) {
+      lightCv = document.createElement('canvas');
+      lightCv.width = bg.width;
+      lightCv.height = bg.height;
+    }
+    const c2 = lightCv.getContext('2d');
+    c2.setTransform(1, 0, 0, 1, 0, 0);
+    c2.clearRect(0, 0, lightCv.width, lightCv.height);
+    c2.setTransform(bg.width / W2, 0, 0, bg.height / H2, 0, 0);
+    const lgr = c2.createLinearGradient(0, 0, W2, H2);
+    lgr.addColorStop(0, 'rgba(255,232,180,0.08)');
+    lgr.addColorStop(0.45, 'rgba(255,232,180,0)');
+    lgr.addColorStop(1, 'rgba(38,22,72,0.10)');
+    c2.fillStyle = lgr;
+    c2.fillRect(0, 0, W2, H2);
+    const vg = c2.createRadialGradient(W2 / 2, H2 / 2, Math.min(W2, H2) * 0.38, W2 / 2, H2 / 2, Math.hypot(W2, H2) * 0.55);
+    vg.addColorStop(0, 'rgba(12,7,22,0)');
+    vg.addColorStop(1, 'rgba(12,7,22,0.24)');
+    c2.fillStyle = vg;
+    c2.fillRect(0, 0, W2, H2);
+    lightCv._w = W2; lightCv._h = H2;
+    return lightCv;
+  }
+  /** 그림자 층이 최신이 되게 (바탕 그림이 없으면 false) — 프레임마다 한 번 */
+  function updateShade() {
+    if (!bg) return false;
+    if (!shadowBase || shadowBase._bg !== bg || shadowBase._sh !== shadowsOn) shadeNeed = 2;
+    if (shadeNeed === 2) { drawShadowBase(); shadowBase._bg = bg; shadowBase._sh = shadowsOn; }
+    if (shadeNeed) { shadeVer++; shadeNeed = 0; }
+    return true;
+  }
+  /** c2(변환 = CSS 화소)의 (x0, y0)에 맵 크기로: 그림자 층 → 공명 선 → 빛 */
+  function composeMap(c2, x0, y0) {
+    const m = game.map;
+    c2.drawImage(shadowBase, x0, y0, m.cols * T, m.rows * T);
+    const kx = ox; const ky = oy;
+    ox = x0; oy = y0;
+    try { bakeLinks(c2); } finally { ox = kx; oy = ky; }
+    c2.drawImage(lightLayer(), x0, y0, m.cols * T, m.rows * T);
+  }
+  /** 바탕 + 탑 그림자 + 공명 선 + 빛을 합친 맵 크기 한 장 (흔들릴 때 — 평소엔 baseFrame이 바로 합침) */
+  function towerShadeLayer() {
+    if (shadeLayer && shadeLayer._v === shadeVer && shadeLayer.width === bg.width && shadeLayer.height === bg.height) return shadeLayer;
+    if (!shadeLayer || shadeLayer.width !== bg.width || shadeLayer.height !== bg.height) {
+      shadeLayer = document.createElement('canvas');
+      shadeLayer.width = bg.width;
+      shadeLayer.height = bg.height;
+    }
+    const m = game.map;
+    const c2 = shadeLayer.getContext('2d');
+    c2.setTransform(1, 0, 0, 1, 0, 0);
+    c2.globalAlpha = 1;
+    c2.clearRect(0, 0, shadeLayer.width, shadeLayer.height);
+    c2.setTransform(bg.width / (m.cols * T), 0, 0, bg.height / (m.rows * T), 0, 0);
+    composeMap(c2, 0, 0);
+    shadeLayer._v = shadeVer;
     return shadeLayer;
   }
 
@@ -35765,6 +35933,44 @@ RG.render = (() => {
 
   /* ---------------- 장판·덫 ---------------- */
   const ZONE_FLAT = { fire: 'rgba(255,120,60,0.4)', lava: 'rgba(255,90,40,0.45)', void: 'rgba(110,31,102,0.5)', thorn: 'rgba(74,122,38,0.4)', blizzard: 'rgba(200,236,255,0.35)' };
+  /*
+   * 장판 바닥(움직이지 않는 타원 — 그라데이션이나 한 색): 종류·크기마다 한 번만 그려 두고 정수 화소 자리에 찍음.
+   * 탑이 꽉 차면 장판이 여럿 깔리는데, 장판마다 매 프레임 그라데이션을 만들어 큰 타원을 칠하던 것이 비쌌음.
+   * 위에서 도는 고리·눈송이·가시는 예전처럼 그때그때 그림.
+   */
+  const zoneDiscs = new Map();
+  function zoneDisc(kind, cx, cy, R, alpha) {
+    const pr = Math.max(1, Math.round(R * dpr));
+    if (!plainTransform() || pr > 512) return false;
+    const k = `${kind}|${pr}`;
+    let cv = zoneDiscs.get(k);
+    if (!cv) {
+      if (zoneDiscs.size > 40) zoneDiscs.clear();
+      const r = pr / dpr; // 그려 둘 반지름 (CSS 화소)
+      const half = Math.ceil(r * dpr) + 2;
+      cv = document.createElement('canvas');
+      cv.width = half * 2; cv.height = half * 2;
+      const c2 = cv.getContext('2d');
+      c2.setTransform(dpr, 0, 0, dpr, half, half); // 가운데 = (0, 0)
+      if (kind === 'blizzard') c2.fillStyle = 'rgba(200,236,255,0.28)';
+      else if (kind === 'thorn') c2.fillStyle = 'rgba(74,122,38,0.35)';
+      else {
+        const g = c2.createRadialGradient(0, 0, 1, 0, 0, r);
+        if (kind === 'void') { g.addColorStop(0, 'rgba(20,6,30,0.9)'); g.addColorStop(0.7, 'rgba(110,31,102,0.55)'); g.addColorStop(1, 'rgba(209,79,192,0)'); }
+        else { g.addColorStop(0, 'rgba(255,214,120,0.75)'); g.addColorStop(0.55, 'rgba(255,107,61,0.45)'); g.addColorStop(1, 'rgba(160,40,20,0)'); }
+        c2.fillStyle = g;
+      }
+      c2.beginPath(); c2.ellipse(0, 0, r, r * 0.8, 0, 0, Math.PI * 2); c2.fill();
+      cv._ox = half; cv._oy = half; // ImageBitmap으로 바꿀 때 _ox·_oy만 옮겨 감
+      zoneDiscs.set(k, cv);
+      toBitmap(zoneDiscs, k, cv);
+    }
+    const a0 = ctx.globalAlpha;
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(cv, (Math.round(cx * dpr) - cv._ox) / dpr, (Math.round(cy * dpr) - cv._oy) / dpr, cv.width / dpr, cv.height / dpr);
+    ctx.globalAlpha = a0;
+    return true;
+  }
   function drawZones() {
     const st = game.state;
     const lite = lowFx();
@@ -35784,8 +35990,10 @@ RG.render = (() => {
       ctx.globalAlpha = 0.85 * fade;
       if (z.kind === 'blizzard') {
         // 눈보라: 옅은 하늘색 타원 + 도는 눈송이(한 경로) + 가장자리 바람 고리
-        ctx.fillStyle = 'rgba(200,236,255,0.28)';
-        ctx.beginPath(); ctx.ellipse(cx, cy, R, R * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+        if (!zoneDisc('blizzard', cx, cy, R, ctx.globalAlpha)) {
+          ctx.fillStyle = 'rgba(200,236,255,0.28)';
+          ctx.beginPath(); ctx.ellipse(cx, cy, R, R * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+        }
         ctx.strokeStyle = 'rgba(235,248,255,0.7)';
         ctx.lineWidth = Math.max(1, T * 0.035);
         for (let i = 0; i < 2; i++) {
@@ -35804,20 +36012,24 @@ RG.render = (() => {
         }
         ctx.fill();
       } else if (z.kind === 'fire' || z.kind === 'lava') { // lava: 카라 고유 재능 '용암 자국'
-        const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, R);
-        g.addColorStop(0, 'rgba(255,214,120,0.75)');
-        g.addColorStop(0.55, 'rgba(255,107,61,0.45)');
-        g.addColorStop(1, 'rgba(160,40,20,0)');
-        ctx.fillStyle = g;
-        ctx.beginPath(); ctx.ellipse(cx, cy, R, R * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+        if (!zoneDisc('fire', cx, cy, R, ctx.globalAlpha)) {
+          const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, R);
+          g.addColorStop(0, 'rgba(255,214,120,0.75)');
+          g.addColorStop(0.55, 'rgba(255,107,61,0.45)');
+          g.addColorStop(1, 'rgba(160,40,20,0)');
+          ctx.fillStyle = g;
+          ctx.beginPath(); ctx.ellipse(cx, cy, R, R * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+        }
         if (Math.random() < 0.25) RG.fx.burst(z.x + (Math.random() - 0.5) * z.radius, z.y + (Math.random() - 0.5) * z.radius * 0.6, '#ffb070', 1, 0.6, 0.5, 0.05, -1.5);
       } else if (z.kind === 'void') {
-        const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, R);
-        g.addColorStop(0, 'rgba(20,6,30,0.9)');
-        g.addColorStop(0.7, 'rgba(110,31,102,0.55)');
-        g.addColorStop(1, 'rgba(209,79,192,0)');
-        ctx.fillStyle = g;
-        ctx.beginPath(); ctx.ellipse(cx, cy, R, R * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+        if (!zoneDisc('void', cx, cy, R, ctx.globalAlpha)) {
+          const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, R);
+          g.addColorStop(0, 'rgba(20,6,30,0.9)');
+          g.addColorStop(0.7, 'rgba(110,31,102,0.55)');
+          g.addColorStop(1, 'rgba(209,79,192,0)');
+          ctx.fillStyle = g;
+          ctx.beginPath(); ctx.ellipse(cx, cy, R, R * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+        }
         ctx.strokeStyle = 'rgba(242,184,234,0.6)';
         ctx.lineWidth = Math.max(1, T * 0.03);
         for (let i = 0; i < 3; i++) {
@@ -35825,8 +36037,10 @@ RG.render = (() => {
           ctx.beginPath(); ctx.ellipse(cx, cy, R * (0.4 + i * 0.18), R * 0.8 * (0.4 + i * 0.18), 0, a, a + 1.4); ctx.stroke();
         }
       } else if (z.kind === 'thorn') {
-        ctx.fillStyle = 'rgba(74,122,38,0.35)';
-        ctx.beginPath(); ctx.ellipse(cx, cy, R, R * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+        if (!zoneDisc('thorn', cx, cy, R, ctx.globalAlpha)) {
+          ctx.fillStyle = 'rgba(74,122,38,0.35)';
+          ctx.beginPath(); ctx.ellipse(cx, cy, R, R * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+        }
         ctx.fillStyle = '#9fd36a';
         ctx.strokeStyle = '#2b4a17';
         ctx.lineWidth = 1;
@@ -35993,19 +36207,80 @@ RG.render = (() => {
   }
 
   /* ---------------- 공명 선 ---------------- */
-  /** 공명 선 목록 [탑, 이웃] (같은 짝은 한 번) */
-  function linkPairs() {
-    const st = game.state;
-    const byId = new Map(st.towers.map((t) => [t.id, t]));
-    const out = [];
-    for (const t of st.towers) for (const id of t.links) { if (id < t.id) continue; const n = byId.get(id); if (n) out.push([t, n]); }
-    return out;
+  /*
+   * 공명 선(움직이지 않는 부분): 탑 그림자 층에 함께 구워 둠 — 공명 선이 바뀔 때만 다시 그림 (짝 목록은 syncTowers가 만듦).
+   * 선 하나 = 두 원소 색 그라데이션 띠 + 흰 심. 탑이 꽉 차면 선이 백 개를 넘어 바뀔 때마다 그라데이션 선 수백 개를 긋는 것이
+   * 비쌌으므로, 방향·두 색·화소 아래 자리(1/8 화소)마다 선 한 개를 작은 그림으로 그려 두고 정수 화소 자리에 찍음 — 같은 순서로 겹쳐 결과는 같음.
+   */
+  const linkSprites = new Map();
+  function linkSprite(key, dc, dr, qx, qy, s, ca, cb) {
+    let sp = linkSprites.get(key);
+    if (sp) return sp;
+    if (linkSprites.size > 1024) linkSprites.clear();
+    const lw = Math.max(2, T * 0.09) * s;
+    const lc = Math.max(1, T * 0.025) * s;
+    const pad = Math.ceil(lw / 2) + 2;
+    const step = T * s;
+    const px = qx / 8;
+    const py = qy / 8;
+    const bx = px + dc * step;
+    const by = py + dr * step;
+    const x0 = Math.floor(Math.min(px, bx)) - pad;
+    const y0 = Math.floor(Math.min(py, by)) - pad;
+    sp = document.createElement('canvas');
+    sp.width = Math.ceil(Math.max(px, bx)) + pad - x0;
+    sp.height = Math.ceil(Math.max(py, by)) + pad - y0;
+    const c2 = sp.getContext('2d');
+    c2.translate(-x0, -y0);
+    c2.lineCap = 'round';
+    const g = c2.createLinearGradient(px, py, bx, by);
+    g.addColorStop(0, ca);
+    g.addColorStop(1, cb);
+    c2.globalAlpha = 0.55;
+    c2.strokeStyle = g;
+    c2.lineWidth = lw;
+    c2.beginPath(); c2.moveTo(px, py); c2.lineTo(bx, by); c2.stroke();
+    c2.globalAlpha = 0.8;
+    c2.strokeStyle = '#ffffff';
+    c2.lineWidth = lc;
+    c2.beginPath(); c2.moveTo(px, py); c2.lineTo(bx, by); c2.stroke();
+    sp._ox = x0; sp._oy = y0;
+    linkSprites.set(key, sp); // 층을 다시 합칠 때만 쓰므로 ImageBitmap으로 바꾸지 않음 (매 프레임 쓰는 그림이 먼저 바뀌게)
+    return sp;
   }
-  /** 공명 선(움직이지 않는 부분): 탑 그림자 층에 함께 구워 둠 — 탑이 바뀔 때만 다시 그림 */
   function bakeLinks(c) {
+    if (!linkPairs.length) return;
+    const m = c.getTransform();
+    const s = m.a;
+    if (!(s > 0) || m.b !== 0 || m.c !== 0 || Math.abs(m.d - s) > 1e-9) { strokeLinks(c); return; } // 회전·눌림이 끼면 예전처럼 그음
+    c.save();
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.globalAlpha = 1;
+    for (let i = 0; i < linkPairs.length; i += 2) {
+      const t = linkPairs[i];
+      const n = linkPairs[i + 1];
+      const ax = s * X(t.x) + m.e;
+      const ay = s * Y(t.y + 0.15) + m.f;
+      const fx = Math.floor(ax);
+      const fy = Math.floor(ay);
+      const qx = Math.round((ax - fx) * 8);
+      const qy = Math.round((ay - fy) * 8);
+      const dc = Math.round(n.x - t.x);
+      const dr = Math.round(n.y - t.y);
+      const ca = elColor(RG.data.towers[t.type].element);
+      const cb = elColor(RG.data.towers[n.type].element);
+      const sp = linkSprite(`${s}|${T}|${dc}|${dr}|${qx}|${qy}|${ca}|${cb}`, dc, dr, qx, qy, s, ca, cb);
+      c.drawImage(sp, fx + sp._ox, fy + sp._oy);
+    }
+    c.restore();
+  }
+  /** 공명 선을 바로 긋기 (변환이 화면 배율·이동만이 아닐 때) */
+  function strokeLinks(c) {
     c.save();
     c.lineCap = 'round';
-    for (const [t, n] of linkPairs()) {
+    for (let i = 0; i < linkPairs.length; i += 2) {
+      const t = linkPairs[i];
+      const n = linkPairs[i + 1];
       const ax = X(t.x); const ay = Y(t.y + 0.15); const bx = X(n.x); const by = Y(n.y + 0.15);
       const g = c.createLinearGradient(ax, ay, bx, by);
       g.addColorStop(0, elColor(RG.data.towers[t.type].element));
@@ -36024,14 +36299,15 @@ RG.render = (() => {
   /** 공명 선 위를 흐르는 빛 구슬: 모든 구슬을 한 경로로 모아 한 번에 칠함 (층이 없으면 선도 여기서) */
   function drawLinks() {
     if (!shadeBaked) bakeLinks(ctx);
-    const pairs = linkPairs();
-    if (!pairs.length || lowFx()) return; // 가벼운 단계: 선 위를 도는 빛은 생략(선 자체는 바탕에 구워져 있음)
+    if (!linkPairs.length || lowFx()) return; // 가벼운 단계: 선 위를 도는 빛은 생략(선 자체는 바탕에 구워져 있음)
     const r = Math.max(1.5, T * 0.05);
     ctx.save();
     ctx.fillStyle = '#ffffff';
     ctx.globalAlpha = 0.9;
     ctx.beginPath();
-    for (const [t, n] of pairs) {
+    for (let i = 0; i < linkPairs.length; i += 2) {
+      const t = linkPairs[i];
+      const n = linkPairs[i + 1];
       const k = (time * 0.7 + (t.id * 0.13)) % 1;
       const x = lerp(X(t.x), X(n.x), k);
       const y = lerp(Y(t.y + 0.15), Y(n.y + 0.15), k);
@@ -36230,18 +36506,47 @@ RG.render = (() => {
 
   /* ---------------- 탑 ---------------- */
   /** 각성한 탑(Lv5): 발밑 원소 빛 고리(천천히 숨쉬듯) + 머리 위 금빛 별, 가끔 오르는 불티 — 번쩍임 없음(효과 줄이기에도 안전) */
+  // 각성 빛 고리의 그라데이션 타원: 원소 색·칸 크기마다 한 번만 그려 두고 정수 화소 자리에 찍음 (탑마다 매 프레임 그라데이션을 만들지 않음)
+  const auraDiscs = new Map();
+  function auraDisc(col) {
+    const k = `${col}|${T}|${dpr}`;
+    let cv = auraDiscs.get(k);
+    if (cv) return cv;
+    if (auraDiscs.size > 24) auraDiscs.clear();
+    const hw = Math.ceil(T * 0.62 * dpr) + 2;
+    const hh = Math.ceil(T * 0.26 * dpr) + 2;
+    cv = document.createElement('canvas');
+    cv.width = hw * 2; cv.height = hh * 2;
+    const c2 = cv.getContext('2d');
+    c2.setTransform(dpr, 0, 0, dpr, hw, hh);
+    const g = c2.createRadialGradient(0, 0, T * 0.05, 0, 0, T * 0.62);
+    g.addColorStop(0, '#fff3c8cc');
+    g.addColorStop(0.45, col + 'aa');
+    g.addColorStop(1, col + '00');
+    c2.fillStyle = g;
+    c2.beginPath(); c2.ellipse(0, 0, T * 0.62, T * 0.26, 0, 0, Math.PI * 2); c2.fill();
+    cv._ox = hw; cv._oy = hh; // ImageBitmap으로 바꿀 때 _ox·_oy만 옮겨 감
+    auraDiscs.set(k, cv);
+    toBitmap(auraDiscs, k, cv);
+    return cv;
+  }
   function drawAwakenAura(t, cx, baseY, front) {
     const col = elColor(RG.data.towers[t.type].element);
     const k = 0.5 + 0.5 * Math.sin(time * 2.2 + t.id);
     ctx.save();
     if (!front) {
-      const g = ctx.createRadialGradient(cx, baseY, T * 0.05, cx, baseY, T * 0.62);
-      g.addColorStop(0, '#fff3c8cc');
-      g.addColorStop(0.45, col + 'aa');
-      g.addColorStop(1, col + '00');
       ctx.globalAlpha = 0.55 + 0.25 * k;
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.ellipse(cx, baseY, T * 0.62, T * 0.26, 0, 0, Math.PI * 2); ctx.fill();
+      if (plainTransform()) {
+        const cv = auraDisc(col);
+        ctx.drawImage(cv, (Math.round(cx * dpr) - cv._ox) / dpr, (Math.round(baseY * dpr) - cv._oy) / dpr, cv.width / dpr, cv.height / dpr);
+      } else {
+        const g = ctx.createRadialGradient(cx, baseY, T * 0.05, cx, baseY, T * 0.62);
+        g.addColorStop(0, '#fff3c8cc');
+        g.addColorStop(0.45, col + 'aa');
+        g.addColorStop(1, col + '00');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.ellipse(cx, baseY, T * 0.62, T * 0.26, 0, 0, Math.PI * 2); ctx.fill();
+      }
       ctx.globalAlpha = 0.7;
       ctx.strokeStyle = '#ffd27a';
       ctx.lineWidth = Math.max(1, T * 0.035);
@@ -36263,6 +36568,45 @@ RG.render = (() => {
     ctx.restore();
   }
 
+  /*
+   * 탑마다 그림 이름(쉬기·겨누기·쏘기)을 한 번만 만들어 둠: 매 프레임 탑마다 이름 문자열 두 개와 그림 만드는 함수를 새로 만들면
+   * 탑이 꽉 찬 판(88개)에서 그것만으로도 쓰레기·찾기 비용이 컸음. 단계·분기가 바뀌면 새로 만듦.
+   */
+  const towerKeys = new Map(); // 탑 id → { type, level, branch, idle, aim, fire }
+  function towerKeysOf(t) {
+    let k = towerKeys.get(t.id);
+    if (!k || k.type !== t.type || k.level !== t.level || k.branch !== t.branch) {
+      const A = RG.art.sprites;
+      k = { type: t.type, level: t.level, branch: t.branch, idle: A.towerKey(t.type, t.level, t.branch, 'idle'), aim: A.towerKey(t.type, t.level, t.branch, 'aim'), fire: A.towerKey(t.type, t.level, t.branch, 'fire') };
+      if (towerKeys.size > 512) towerKeys.clear();
+      towerKeys.set(t.id, k);
+    }
+    return k;
+  }
+  /**
+   * 쏠 때 눌림: 바닥(cx, by) 기준으로 가로 kx·세로 ky배 — 변환(save·scale·restore) 없이 줄여 둔 그림을 그 크기로 바로 찍음.
+   * 예전처럼 변환을 걸고 sprite()로 그린 것과 같은 자리·같은 크기(같은 늘이기)로 그려짐.
+   */
+  function spriteSquish(key, cx, by, w, h, ax, ay, kx, ky) {
+    const s = RG.art.sprites.get(key);
+    if (!s) return false;
+    if (!plainTransform()) {
+      ctx.save();
+      ctx.translate(cx, by); ctx.scale(kx, ky); ctx.translate(-cx, -by);
+      sprite(key, cx, by, w, h, ax, ay, false);
+      ctx.restore();
+      return true;
+    }
+    const img = fitted(s, w, h, false);
+    if (img === s.canvas) ctx.drawImage(img, cx - w * ax * kx, by - h * ay * ky, w * kx, h * ky);
+    else {
+      const fx = w / img._fw;
+      const fy = h / img._fh;
+      ctx.drawImage(img, cx + (img._ox * fx - w * ax) * kx, by + (img._oy * fy - h * ay) * ky, img.width * fx * kx, img.height * fy * ky);
+    }
+    return true;
+  }
+
   function drawTower(t) {
     const cx = X(t.x);
     const baseY = Y(t.r + 0.82);
@@ -36271,22 +36615,21 @@ RG.render = (() => {
     let sy = 1;
     if (t.anim > 0) sy = 1 - 0.025 * (t.anim / 0.25); // 쏠 때 아주 살짝 눌림 (동작은 그림 자세가 맡음)
     const pose = towerPose(t);
-    const key = poseSprite(RG.art.sprites.towerKey(t.type, t.level, t.branch, pose), RG.art.sprites.towerKey(t.type, t.level, t.branch, 'idle'),
-      () => RG.art.tower(t.type, t.level, t.branch, pose), RG.art.sprites.TW, RG.art.sprites.TH);
+    const K = towerKeysOf(t);
+    const pk = K[pose];
+    // 준비된 자세 그림이면 바로 (아니면 준비를 시작하고 쉬는 자세로)
+    const key = RG.art.sprites.get(pk) ? pk : poseSprite(pk, K.idle, () => RG.art.tower(t.type, t.level, t.branch, pose), RG.art.sprites.TW, RG.art.sprites.TH);
     if (!shadeBaked) castShadow(key, cx, baseY, w, h, 0.5, 112 / 130, false, t.building ? 0.2 : 0.42);
     if (t.level >= 5 && !t.building) drawAwakenAura(t, cx, baseY, false);
-    // 쏠 때 눌림은 적이 아주 많으면 생략 — 늘이기 변환이 끼면 줄여 둔 그림을 못 써서 느린 길로 그려짐(자세 그림이 동작을 보여 줌)
+    // 쏠 때 눌림은 적이 아주 많으면 생략 — 늘여 그리면 화소마다 샘플링하는 느린 길로 그려짐(자세 그림이 동작을 보여 줌)
     const squish = sy !== 1 && !manyEnemies;
-    const saved = t.building || squish;
-    if (saved) ctx.save();
-    if (t.building) ctx.globalAlpha = 0.55;
-    if (squish) { ctx.translate(cx, baseY); ctx.scale(1 + (1 - sy) * 0.5, sy); ctx.translate(-cx, -baseY); }
-    const ok = sprite(key, cx, baseY, w, h, 0.5, 112 / 130, false);
+    if (t.building) { ctx.save(); ctx.globalAlpha = 0.55; }
+    const ok = squish ? spriteSquish(key, cx, baseY, w, h, 0.5, 112 / 130, 1 + (1 - sy) * 0.5, sy) : sprite(key, cx, baseY, w, h, 0.5, 112 / 130, false);
     if (!ok) {
       ctx.fillStyle = elColor(RG.data.towers[t.type].element);
       ctx.fillRect(cx - T * 0.3, baseY - T * 0.7, T * 0.6, T * 0.7);
     }
-    if (saved) ctx.restore();
+    if (t.building) ctx.restore();
     if (t.level >= 5 && !t.building) drawAwakenAura(t, cx, baseY, true);
     if (t.disabled) {
       ctx.save();
@@ -36407,6 +36750,11 @@ RG.render = (() => {
   }
 
   const iconCache = new Map();
+  /*
+   * 상태 아이콘(멈춤·침묵·공명 끊김·저주·기절)은 SVG 그림이라 캔버스에 찍을 때마다 도형을 처음부터 다시 그림 —
+   * 후반 웨이브엔 탑 수십 개·적 여럿에 매 프레임 붙어 비쌌음. 표시 크기(화면 배율 포함)마다 한 번만 그려 두고 그대로 찍음.
+   */
+  const iconFit = new Map(); // 이름 → (화소 크기 → 그려 둔 그림)
   function icon(name, cx, cy, size) {
     let img = iconCache.get(name);
     if (!img && RG.art.icon) {
@@ -36414,7 +36762,22 @@ RG.render = (() => {
       img.src = RG.art.sprites.dataUrl(RG.art.sprites.sized(RG.art.icon(name), 64, 64));
       iconCache.set(name, img);
     }
-    if (img && img.complete && img.naturalWidth) ctx.drawImage(img, cx - size / 2, cy - size / 2, size, size);
+    if (!img || !img.complete || !img.naturalWidth) return;
+    const px = Math.max(1, Math.round(size * dpr));
+    if (!plainTransform() || px > 256) { ctx.drawImage(img, cx - size / 2, cy - size / 2, size, size); return; }
+    let m = iconFit.get(name);
+    if (!m) { m = new Map(); iconFit.set(name, m); }
+    let cv = m.get(px);
+    if (!cv) {
+      if (m.size > 6) m.clear(); // 크기가 자주 바뀌면(창 크기·화질) 오래된 것은 버림
+      cv = document.createElement('canvas');
+      cv.width = px; cv.height = px;
+      cv.getContext('2d').drawImage(img, 0, 0, px, px);
+      m.set(px, cv);
+      toBitmap(m, px, cv);
+    }
+    // 정수 화소 자리에 원래 크기 그대로 (늘이기·반 화소 없이 또렷하게)
+    ctx.drawImage(cv, Math.round((cx - size / 2) * dpr) / dpr, Math.round((cy - size / 2) * dpr) / dpr, px / dpr, px / dpr);
   }
 
   /* ---------------- 울림등 ---------------- */
@@ -37077,20 +37440,25 @@ RG.render = (() => {
     const sx = Math.round(sx0 * dpr) / dpr;
     const sy = Math.round(sy0 * dpr) / dpr;
     // 바깥 바탕 + 테두리 + 맵(탑 그림자 포함)을 한 장으로 구워 두고 매 프레임 한 번만 찍음 (화면 크기 그림 두 번 → 한 번)
-    const layer = bg ? towerShadeLayer() : null;
+    syncTowers();
+    const shaded = updateShade();
     let based = false;
-    if (layer && !sx && !sy) {
-      const bk = `${backdrop._k}|${shadeFor}|${ox},${oy},${T},${dpr}`;
-      if (!baseFrame || baseFrame._k !== bk || baseFrame._layer !== layer) {
-        baseFrame = baseFrame && baseFrame.width === canvas.width && baseFrame.height === canvas.height ? baseFrame : document.createElement('canvas');
-        baseFrame.width = canvas.width; baseFrame.height = canvas.height;
+    if (shaded && !sx && !sy) {
+      const B = baseFrame;
+      // 그림자·공명 선(shadeVer)·바깥 바탕·자리·크기가 그대로면 다시 굽지 않음 (매 프레임 긴 열쇠 문자열을 만들지 않음)
+      if (!B || B._v !== shadeVer || B._bd !== backdrop || B._ox !== ox || B._oy !== oy || B._T !== T || B._dpr !== dpr) {
+        if (!B || B.width !== canvas.width || B.height !== canvas.height) {
+          baseFrame = document.createElement('canvas');
+          baseFrame.width = canvas.width; baseFrame.height = canvas.height;
+        }
         const c2 = baseFrame.getContext('2d', { alpha: false });
         c2.setTransform(1, 0, 0, 1, 0, 0);
-        c2.drawImage(backdrop, 0, 0);
+        c2.globalAlpha = 1;
+        c2.drawImage(backdrop, 0, 0); // 화면 크기 불투명 그림이 전체를 덮으므로 지우지 않아도 됨
         c2.setTransform(dpr, 0, 0, dpr, 0, 0);
         drawFrameBorder(c2);
-        c2.drawImage(layer, X(0), Y(0), game.map.cols * T, game.map.rows * T);
-        baseFrame._k = bk; baseFrame._layer = layer;
+        composeMap(c2, X(0), Y(0));
+        baseFrame._v = shadeVer; baseFrame._bd = backdrop; baseFrame._ox = ox; baseFrame._oy = oy; baseFrame._T = T; baseFrame._dpr = dpr;
       }
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.drawImage(baseFrame, 0, 0);
