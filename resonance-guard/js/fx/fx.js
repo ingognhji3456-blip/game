@@ -604,6 +604,10 @@ RG.fx = (() => {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const from = lite ? Math.max(0, texts.length - (lite2 ? 6 : 12)) : 0; // 적이 아주 많으면 최근 글자만
+    // 글꼴·테두리는 바뀔 때만 씀: ctx.font를 읽으면 매번 글꼴 문자열을 새로 만들고, 쓰면 글꼴을 다시 해석함
+    // (탑이 꽉 찬 판에서는 숫자가 늘 수십 개 — 글자마다 읽고 쓰던 것이 숫자 그리기 시간의 40%쯤이었음)
+    let curFont = null;
+    ctx.strokeStyle = 'rgba(20,14,30,0.9)';
     for (let i = from; i < texts.length; i++) {
       const t = texts[i];
       const a = Math.min(1, t.life / t.max * 2);
@@ -611,9 +615,7 @@ RG.fx = (() => {
       const fs = Math.round(Math.max(11, T * (t.big ? 0.42 : 0.3)) * (settings.textScale || 1));
       let font = fontCache.get(fs);
       if (!font) { font = `800 ${fs}px system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`; fontCache.set(fs, font); }
-      if (ctx.font !== font) ctx.font = font;
-      ctx.lineWidth = Math.max(2.5, fs * 0.22);
-      ctx.strokeStyle = 'rgba(20,14,30,0.9)';
+      if (curFont !== font) { ctx.font = font; ctx.lineWidth = Math.max(2.5, fs * 0.22); curFont = font; }
       ctx.strokeText(t.str, X(t.x), Y(t.y));
       ctx.fillStyle = t.color;
       ctx.fillText(t.str, X(t.x), Y(t.y));
