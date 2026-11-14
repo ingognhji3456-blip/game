@@ -890,12 +890,17 @@ async function crystalRun(browser) {
   const spots = await page.evaluate(targetsInPage);
   await page.evaluate((sp) => {
     const ui = RG.ui.game; const g = ui.game; RG.ui.closeAllModals(); g.state.gold += 4000;
+    const types = ['ember_archer', 'frost_crystal', 'stone_barracks'];
     let k = 0;
-    for (const t of sp) { if (k >= 9) break; if (ui.doCmd({ type: 'build', tower: ['ember_archer', 'frost_crystal', 'stone_barracks'][k % 3], c: t.c, r: t.r }, true).ok) k++; }
-    for (const t of g.state.towers) for (let i = 0; i < 2; i++) g.cmd({ type: 'upgrade', id: t.id });
+    // 사람처럼: 번 골드로 길가에 탑을 더 짓고, 남으면 올림 (20웨이브라 처음에 지은 것만으로는 모자람)
+    const spend = () => {
+      for (const t of sp) { if (g.state.gold < 120) break; if (g.tileTower && g.tileTower(t.c, t.r)) continue; if (g.cmd({ type: 'build', tower: types[k % 3], c: t.c, r: t.r }).ok) k++; }
+      for (const t of g.state.towers.slice().sort((a, b) => a.level - b.level)) { if (t.level < 3) g.cmd({ type: 'upgrade', id: t.id }); }
+    };
+    spend();
     g.cmd({ type: 'callWave' });
-    for (let i = 0; i < 30 * 60 * 20 && !g.state.result; i++) g.step(); // 다음 웨이브는 저절로 (일찍 부르면 겹쳐 몰려옴)
-  }, spots);
+    for (let i = 0; i < 30 * 60 * 30 && !g.state.result; i++) { if (i % 30 === 0) spend(); g.step(); } // 다음 웨이브는 저절로 (일찍 부르면 겹쳐 몰려옴)
+  }, spots.slice(0, 40));
   await page.waitForSelector('#screen-result.active .cr-result', { timeout: 15000 });
   const res = await page.evaluate(() => ({ text: document.querySelector('#screen-result').textContent, crystals: RG.progress.gachaState().crystals, clears: RG.progress.crystalClears(1), maps: Object.keys(RG.progress.get().maps).filter((k) => k.startsWith('C')).length }));
   r.got500 = res.crystals === 540 && res.clears === 1 && res.text.includes('+500');
