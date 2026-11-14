@@ -12,11 +12,13 @@ RG.data.crystal = {
    *  체력 배율: 그 시점에 가졌을 법한 탑(쉬움 = 기본 탑 3종, 보통 = 원소마다 1종, 어려움 = 원소마다 2종) + 카라로
    *  그리디 봇이 4판 모두 이기는 최대 배율 ÷ 1.25 (기술 나무·뽑기 강화 없이) */
   difficulty: [
-    { name: '쉬움', map: 'C1', waves: 8, hp: 0.72, regions: [1], reward: 500, needMap: '1-3' },
-    { name: '보통', map: 'C2', waves: 10, hp: 0.6, regions: [1, 2, 3], reward: 800, needMap: '2-6' },
-    { name: '어려움', map: 'C3', waves: 12, hp: 0.24, regions: [3, 4, 5], reward: 1200, needMap: '4-6' },
+    { name: '쉬움', map: 'C1', waves: 20, hp: 0.86, regions: [1], reward: 500, needMap: '1-3' },
+    { name: '보통', map: 'C2', waves: 25, hp: 0.6, regions: [1, 2, 3], reward: 800, needMap: '2-6' },
+    { name: '어려움', map: 'C3', waves: 30, hp: 0.29, regions: [3, 4, 5], reward: 1200, needMap: '4-6' },
   ],
   startGold: [320, 480, 650],
+  /** 웨이브가 길어진 만큼(사용자 요청 2026-11-14: 보상이 크니 웨이브를 많이) 뒤로 갈수록 단단하게: 첫 웨이브 ×from → 마지막 ×to (사이는 고르게) */
+  ramp: { from: 0.7, to: 1.6 },
 };
 
 /** 공명석 웨이브 맵 (캠페인 목록·별에 들어가지 않음). region은 그림 팔레트·음악 */

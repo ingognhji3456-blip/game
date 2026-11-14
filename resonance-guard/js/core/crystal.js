@@ -20,7 +20,7 @@ RG.crystal = (() => {
     return out;
   }
 
-  /** 웨이브 문자열들 (sim이 grid.parseWaves로 읽는 형식) */
+  /** 웨이브 문자열들 (sim이 grid.parseWaves로 읽는 형식) — 웨이브 수가 많아도 마지막 웨이브가 지나치게 커지지 않게 진행 비율(f)로 늘림 */
   function waves(d) {
     const diff = C().difficulty[d - 1];
     const P = pool(d);
@@ -29,14 +29,15 @@ RG.crystal = (() => {
     const N = diff.waves;
     const out = [];
     for (let i = 0; i < N; i++) {
+      const f = N > 1 ? i / (N - 1) : 1;
       const last = i === N - 1;
       const groups = [];
-      const nGroups = last ? 3 : 1 + Math.min(2, Math.floor(i / 3));
+      const nGroups = last ? 3 : 1 + Math.min(2, Math.floor(i / 4));
       for (let g = 0; g < nGroups; g++) {
         const useElite = elites.length && (last ? g === 0 : (i + g) % 4 === 3);
         const list = useElite ? elites : normals.length ? normals : P;
         const e = list[(hash(`${d}:${i}:${g}`)) % list.length];
-        const n = useElite ? Math.max(1, Math.round(1 + i * 0.25 + (last ? 1 : 0))) : Math.round(5 + i * 0.9 + (last ? 3 : 0));
+        const n = useElite ? 1 + Math.round(3 * f) + (last ? 1 : 0) : Math.round(5 + 10 * f) + (last ? 3 : 0);
         const gap = useElite ? 1.8 : 0.8;
         groups.push(`${e}*${n}/${gap}${g ? `@${g * 3}` : ''}`);
       }
@@ -45,10 +46,17 @@ RG.crystal = (() => {
     return out;
   }
 
+  /** 웨이브마다 적 체력 배율 (뒤로 갈수록 단단하게) */
+  function ramp(d) {
+    const N = C().difficulty[d - 1].waves;
+    const R = C().ramp;
+    return Array.from({ length: N }, (_, i) => Math.round((R.from + (R.to - R.from) * (N > 1 ? i / (N - 1) : 1)) * 1000) / 1000);
+  }
+
   /** 판 설정 조각 (게임 opts에 합침): { mapId, hpMult, crystal } */
   function setup(d) {
     const diff = C().difficulty[d - 1];
-    return { mapId: diff.map, hpMult: diff.hp, crystal: { d, waves: waves(d), startGold: C().startGold[d - 1] } };
+    return { mapId: diff.map, hpMult: diff.hp, crystal: { d, waves: waves(d), ramp: ramp(d), startGold: C().startGold[d - 1] } };
   }
 
   /** 받는 공명석: 끝까지 막으면 난이도 보상 전부, 지면 보상 × loseShare × 막아 낸 비율 (10 단위) */
@@ -59,5 +67,5 @@ RG.crystal = (() => {
     return Math.floor((R * C().loseShare * frac) / 10) * 10;
   }
 
-  return { pool, waves, setup, reward };
+  return { pool, waves, ramp, setup, reward };
 })();

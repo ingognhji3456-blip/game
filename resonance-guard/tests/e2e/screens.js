@@ -264,8 +264,8 @@ async function run() {
     await page.evaluate(() => RG.ui.game.setSpeed(1));
     await shot(page, dir, '21a-crystal-battle'); await checkLayout(page, `${sizeName}/crystal-battle`, issues);
     await page.evaluate(() => {
-      const rec = RG.progress.recordCrystal(1, { result: 'win', wave: { index: 8, total: 8, queue: [] }, enemies: [], hero: { heroId: 'kara' } });
-      RG.ui.show('result', { crystal: { d: 1 }, mapId: 'C1', mode: 'normal', result: 'win', rec, opts: { heroId: 'kara', mode: 'normal' }, waves: 8, totalWaves: 8, stats: { damage: {}, kills: 90, gold: 900, heroDamage: 600, towers: [], time: 240 } });
+      const rec = RG.progress.recordCrystal(1, { result: 'win', wave: { index: 20, total: 20, queue: [] }, enemies: [], hero: { heroId: 'kara' } });
+      RG.ui.show('result', { crystal: { d: 1 }, mapId: 'C1', mode: 'normal', result: 'win', rec, opts: { heroId: 'kara', mode: 'normal' }, waves: 20, totalWaves: 20, stats: { damage: {}, kills: 90, gold: 900, heroDamage: 600, towers: [], time: 240 } });
     });
     await page.waitForTimeout(1800);
     await shot(page, dir, '21b-crystal-result'); await checkLayout(page, `${sizeName}/crystal-result`, issues);

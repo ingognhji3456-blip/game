@@ -153,3 +153,29 @@ test('막아 낸 웨이브: 새어 나간 적이 그 웨이브의 20% 이하면 
   const base = { result: 'lose', enemies: [], wave: { index: 4, total: 8, queue: [], spawned: { 0: 10, 1: 10, 2: 10, 3: 10 }, leaks: { 1: 2, 2: 3 } } };
   assert.strictEqual(RG.raid.wavesCleared(base), 3, '웨이브 2(30%)만 빠짐');
 });
+
+test('웨이브가 많음(20·25·30) — 뒤로 갈수록 단단해지고, 레이드·캠페인에는 이 배율이 없음', () => {
+  const { RG } = fresh();
+  assert.strictEqual(JSON.stringify(RG.data.crystal.difficulty.map((d) => d.waves)), JSON.stringify([20, 25, 30]));
+  for (let d = 1; d <= 3; d++) {
+    const r = RG.crystal.ramp(d);
+    assert.strictEqual(r.length, RG.data.crystal.difficulty[d - 1].waves);
+    assert.ok(r[0] < 1 && r[r.length - 1] > 1.5);
+    for (let i = 1; i < r.length; i++) assert.ok(r[i] >= r[i - 1], '점점 단단하게');
+  }
+  // 같은 적이라도 뒤 웨이브가 더 단단함
+  const g = RG.sim.create(Object.assign({ mode: 'normal', seed: 1, heroId: null }, RG.crystal.setup(1)));
+  const a = g.api.spawnEnemy('mist_rat', 0, null, 0);
+  const b = g.api.spawnEnemy('mist_rat', 0, null, 19);
+  assert.ok(b.maxHp > a.maxHp * 2, `${a.maxHp} → ${b.maxHp}`);
+  const raid = RG.sim.create(Object.assign({ mode: 'normal', seed: 1, heroId: 'kara' }, RG.raid.setup('ember_archer', 1, 'kara')));
+  const c = raid.api.spawnEnemy('mist_rat', 0, null, 0);
+  const e = raid.api.spawnEnemy('mist_rat', 0, null, 5);
+  assert.strictEqual(c.maxHp, e.maxHp, '레이드에는 웨이브 체력 배율 없음');
+  // 마지막 웨이브 적 수가 지나치게 크지 않음
+  for (let d = 1; d <= 3; d++) {
+    const last = RG.grid.parseWaves([RG.crystal.waves(d).slice(-1)[0]])[0];
+    const n = last.groups.reduce((s, x) => s + x.n, 0);
+    assert.ok(n <= 60, `난이도 ${d} 마지막 웨이브 ${n}마리 (마지막은 큰 무리지만 끝없이 커지지 않게)`);
+  }
+});

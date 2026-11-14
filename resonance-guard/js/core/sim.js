@@ -583,6 +583,7 @@ RG.sim = (() => {
       if (o.hpMult) hp *= o.hpMult;
       if (def.hpMult) hp *= def.hpMult; // 맵 난이도 계수 (밸런스 조정)
       if (def.ramp && o.mode !== 'endless' && waveIdx != null && waveIdx < def.ramp.length) hp *= def.ramp[waveIdx]; // 초반 몸풀기
+      if (RA && RA.ramp && waveIdx != null && waveIdx < RA.ramp.length) hp *= RA.ramp[waveIdx]; // 공명석 웨이브: 뒤로 갈수록 단단하게
       if (from && from.hpPct) hp *= from.hpPct;
       if (st.wave.hpScale) hp *= st.wave.hpScale;
       const e = {
