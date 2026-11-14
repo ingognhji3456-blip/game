@@ -179,3 +179,67 @@ test('웨이브가 많음(20·25·30) — 뒤로 갈수록 단단해지고, 레�
     assert.ok(n <= 60, `난이도 ${d} 마지막 웨이브 ${n}마리 (마지막은 큰 무리지만 끝없이 커지지 않게)`);
   }
 });
+
+test('골드: 난이도마다 적 체력 1당 처치 골드가 설정대로, 처치 골드에 배율이 붙음 — 어려움이 골드를 훨씬 많이 벌어 쉬워지지 않게 (검토 2026-11-14)', () => {
+  const { RG } = fresh();
+  for (let d = 1; d <= 3; d++) {
+    const s = RG.crystal.setup(d);
+    const diff = RG.data.crystal.difficulty[d - 1];
+    let hp = 0; let gold = 0;
+    RG.grid.parseWaves(s.crystal.waves).forEach((w, i) => { for (const g of w.groups) { const ed = RG.data.enemies[g.e]; hp += g.n * ed.hp * diff.hp * s.crystal.ramp[i]; gold += g.n * ed.bounty * s.crystal.goldMult; } });
+    assert.ok(Math.abs(gold / hp - diff.gold) < diff.gold * 0.01, `난이도 ${d}: 체력 1당 ${(gold / hp).toFixed(4)} (설정 ${diff.gold})`);
+  }
+  // 처치 골드 = 기본 골드 × 배율 (반올림)
+  const g = RG.sim.create(Object.assign({ mode: 'normal', seed: 1, heroId: null }, RG.crystal.setup(3)));
+  const e = g.api.spawnEnemy('rock_crab', 0, null, 0);
+  const g0 = g.state.gold;
+  g.api.damage(e, 1e7, 'fire', { calc: { dmgBonus: 0, mods: {}, onHit: {} } }, {});
+  assert.strictEqual(g.state.gold - g0, Math.max(1, Math.round(RG.data.enemies.rock_crab.bounty * RG.crystal.goldMult(3))));
+  // 레이드·캠페인에는 이 배율이 없음
+  assert.ok(!RG.raid.setup('ember_archer', 1, 'kara').raid.goldMult);
+});
+
+test('같은 탑이면 쉬움 > 보통 > 어려움: 기본 탑 3종 + 시오는 쉬움·보통을 막고 어려움은 못 막음, 어려움은 원소마다 2종이면 막음 (검토 2026-11-14)', () => {
+  const { RG } = fresh();
+  const { makeEnv } = require('./bots');
+  const env = makeEnv(RG);
+  const run = (d, towers, heroId) => env.run(Object.assign({ mode: 'normal', seed: 1, heroId, towers, branches: d > 1, finalLv2: true, shardStart: true }, RG.crystal.setup(d)), 'greedy');
+  const basic = ['ember_archer', 'frost_crystal', 'stone_barracks'];
+  const r = [1, 2, 3].map((d) => run(d, basic, 'sio'));
+  assert.deepStrictEqual(r.map((x) => x.result), ['win', 'win', 'lose'], r.map((x) => `${x.result} ${x.waves}/${x.total} 목숨 ${x.lives}`).join(' · '));
+  const mix2 = ['ember_archer', 'flame_mortar', 'frost_crystal', 'ice_ballista', 'lightning_rod', 'gale_cannon', 'stone_barracks', 'quake_hammer', 'sun_lens', 'radiance_spire', 'hex_spire', 'void_orb'];
+  const h = run(3, mix2, 'sera');
+  assert.strictEqual(h.result, 'win', `어려움 원소마다 2종 + 세라: ${h.result} ${h.waves}/${h.total}`);
+  assert.ok(h.game.state.towers.length < 88, '맵을 탑으로 가득 채울 만큼 골드가 남지 않음');
+});
+
+test('여기서 끝내기: 공명석 웨이브에서만, 지는 것과 같은 정산(막아 낸 만큼), 판 기록에 남아 다시 돌려도 같음 (검토 2026-11-14)', () => {
+  const { RG } = fresh();
+  for (const id of ['1-1', '1-2', '1-3']) win(RG, id);
+  const { makeEnv } = require('./bots');
+  const env = makeEnv(RG);
+  const opts = Object.assign({ mode: 'normal', seed: 7, heroId: 'kara', towers: ['ember_archer', 'frost_crystal', 'stone_barracks'] }, RG.crystal.setup(1));
+  const full = env.run(opts, 'greedy');
+  // 봇 판을 웨이브 8쯤까지 다시 돌리고 거기서 끝냄
+  const g = RG.sim.create(opts);
+  const log = full.game.log.slice();
+  let k = 0;
+  while (g.state.wave.index < 8 && !g.state.result) { while (k < log.length && log[k][0] <= g.state.tick) g.cmd(log[k++][1]); g.step(); }
+  const cleared = RG.raid.wavesCleared(g.state);
+  assert.ok(cleared >= 4, `막아 낸 웨이브 ${cleared}`);
+  assert.ok(g.cmd({ type: 'endRun' }).ok);
+  assert.strictEqual(g.state.result, 'lose');
+  assert.ok(g.state.ended);
+  assert.ok(!g.cmd({ type: 'endRun' }).ok, '두 번은 안 됨');
+  const rec = RG.progress.recordCrystal(1, g.state);
+  assert.strictEqual(rec.crystals, RG.crystal.reward(1, { win: false, cleared, total: 20 }));
+  assert.ok(rec.crystals > 0);
+  // 기록을 다시 돌려도 같은 끝
+  const again = RG.sim.replay(opts, g.log, g.state.tick + 5);
+  assert.strictEqual(again.state.result, 'lose');
+  assert.strictEqual(again.hash(), g.hash());
+  // 캠페인에서는 안 됨
+  const c = RG.sim.create({ mapId: '1-1', mode: 'normal', seed: 1, heroId: 'kara' });
+  assert.ok(!c.cmd({ type: 'endRun' }).ok);
+  assert.ok(!c.state.result);
+});

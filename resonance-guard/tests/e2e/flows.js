@@ -909,6 +909,37 @@ async function crystalRun(browser) {
   await page.click('#screen-result .result-buttons .btn-gacha');
   await page.waitForSelector('#screen-gacha.active .gc-pull');
   r.toGacha = await page.evaluate(() => !document.querySelector('.gc-pull:not(.gc-ten)').disabled);
+  // 판 중간: 이어하기 글은 '웨이브 n/20', 일시정지 → '끝내고 +x 받기'로 막아 낸 만큼 받음 (검토 2026-11-14)
+  await page.evaluate(() => RG.ui.show('crystal', {}));
+  await page.waitForSelector('#screen-crystal.active .cr-card');
+  await page.click('#screen-crystal .brief-actions .btn-primary');
+  await page.waitForFunction(() => RG.ui.game.game && !document.querySelector('#screen-game').classList.contains('loading'));
+  await page.evaluate((sp) => {
+    const g = RG.ui.game.game; RG.ui.closeAllModals(); g.state.gold += 1500;
+    for (const t of sp) g.cmd({ type: 'build', tower: 'ember_archer', c: t.c, r: t.r });
+    g.cmd({ type: 'callWave' });
+    for (let i = 0; i < 30 * 60 * 30 && g.state.wave.index < 7; i++) g.step();
+  }, spots.slice(0, 14));
+  await page.evaluate(() => RG.ui.show('title', {})); // 나가면 이어하기로 저장
+  await page.waitForSelector('#screen-title.active');
+  r.resumeLabel = await page.evaluate(() => /웨이브 \d+\/20/.test(document.querySelector('.tm-kicker').textContent));
+  await page.click('#screen-title .tm-hero');
+  await page.waitForFunction(() => RG.ui.game.game && RG.ui.game.game.state.wave.index >= 7 && !document.querySelector('#screen-game').classList.contains('loading'), null, { timeout: 30000 });
+  await page.evaluate(() => RG.ui.closeAllModals());
+  const before = await page.evaluate(() => ({ c: RG.progress.gachaState().crystals, hud: document.querySelector('.task-box').textContent }));
+  const hudNow = +((/지금 끝나면 \+(\d+)/.exec(before.hud) || [])[1] || -1);
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('.modal .modal-buttons');
+  const endBtn = page.locator('.modal .modal-buttons .btn', { hasText: '끝내고' });
+  r.endButton = (await endBtn.count()) === 1 && hudNow > 0;
+  if (r.endButton) {
+    await endBtn.click();
+    await page.click('.modal .modal-buttons .btn-primary');
+    await page.waitForSelector('#screen-result.active .cr-result', { timeout: 15000 });
+    const after = await page.evaluate(() => ({ c: RG.progress.gachaState().crystals, text: document.querySelector('#screen-result').textContent, run: RG.save.get(RG.save.KEYS.run) }));
+    r.endPaid = after.c - before.c === hudNow && after.text.includes('여기서 마쳤다') && after.text.includes(`+${hudNow}`) && !after.run;
+    if (!r.endPaid) console.log('crystal end', JSON.stringify({ before, hudNow, after: { c: after.c, text: after.text.slice(0, 160) } }));
+  }
   await ctx.close();
   const ok = Object.values(r).every(Boolean) && !errors.length;
   return { name: '공명석 웨이브', ok, detail: Object.entries(r).map(([k, v]) => `${k} ${v ? '✓' : '✗'}`).join(' · '), errors };

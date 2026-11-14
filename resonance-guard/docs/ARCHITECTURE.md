@@ -257,6 +257,7 @@ RG.sim.replay(opts, log, untilTick) // 기록으로 같은 상태 재현
 | `heroMove` | `x, y` | 영웅 이동 |
 | `heroSkill` | `x, y, targetId?` | 영웅 기술 |
 | `callWave` | — | 다음 웨이브 호출 |
+| `endRun` | — | 공명석 웨이브만: 여기서 끝내기 (지는 것과 같은 정산, `state.ended`) |
 
 명령은 받는 즉시 적용되고, 성공하면 `[현재 틱, 명령]`이 `log`에 쌓입니다. `replay`는 각 틱을 진행하기 **전에** 그 틱의 명령을 적용합니다.
 

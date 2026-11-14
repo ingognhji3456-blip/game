@@ -1556,6 +1556,11 @@
   function openPause() {
     if (!game) return;
     UI.sfx('click');
+    // 공명석 웨이브: 지금 끝내면 받을 공명석 (HUD '지금 끝나면'과 같은 셈)
+    const cr = opts.crystal && !game.state.result ? (() => {
+      const cd = opts.crystal.d;
+      return { now: RG.crystal.reward(cd, { win: false, cleared: RG.raid.wavesCleared(game.state), total: game.state.wave.total }), full: D().crystal.difficulty[cd - 1].reward };
+    })() : null;
     const body = el('div', { class: 'pause-body' }, [
       el('p', { class: 'dim', text: `${opts.crystal ? `공명석 웨이브 · ${D().crystal.difficulty[opts.crystal.d - 1].name}` : opts.raid ? `조각 레이드 · ${D().towers[opts.raid.tower].name} · ${D().raid.difficulty[opts.raid.d - 1].name}` : `${game.def.id} ${game.def.name}`} · 웨이브 ${game.state.wave.index}/${isFinite(game.state.wave.total) ? game.state.wave.total : '∞'}` }),
     ]);
@@ -1564,7 +1569,8 @@
       buttons: [
         { text: '설정', onClick: () => RG.ui.openSettings && RG.ui.openSettings() },
         { text: '조작법', onClick: openControls },
-        { text: '다시 시작', onClick: () => UI.confirmBox('처음부터 다시 시작할까요?', () => { RG.save.remove(RG.save.KEYS.run); UI.show('game', { opts }); }) },
+        { text: '다시 시작', onClick: () => UI.confirmBox(`처음부터 다시 시작할까요?${cr && cr.now ? ` 지금까지 막아 낸 공명석 +${cr.now}은 받지 못합니다 (받으려면 "끝내고 받기").` : ''}`, () => { RG.save.remove(RG.save.KEYS.run); UI.show('game', { opts }); }) },
+        cr ? { text: cr.now ? `끝내고 +${cr.now} 받기` : '여기서 끝내기', onClick: () => UI.confirmBox(cr.now ? `여기서 끝내고 공명석 +${cr.now}을 받을까요? (끝까지 막으면 +${cr.full.toLocaleString()})` : '여기서 끝낼까요? 아직 끝까지 막아 낸 웨이브가 없어 받을 공명석이 없습니다.', () => { if (game && !game.state.result) game.cmd({ type: 'endRun' }); }) } : null,
         opts.crystal ? { text: '공명석 웨이브로', onClick: () => UI.confirmBox('공명석 웨이브 화면으로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('crystal', { keep: true, d: opts.crystal.d })) }
           : opts.raid ? { text: '레이드로', onClick: () => UI.confirmBox('레이드 화면으로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('raid', { tower: opts.raid.tower, d: opts.raid.d })) }
           : { text: '지도로', onClick: () => UI.confirmBox('지도로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('world', {})) },
@@ -1625,7 +1631,7 @@
       damage: st.stats.damageByTower, kills: st.stats.kills, gold: st.stats.goldEarned, heroDamage: st.stats.heroDamage,
       towers: st.towers.map((t) => ({ id: t.id, type: t.type, level: t.level, branch: t.branch })), time: st.time,
     };
-    return { mapId: game.def.id, mode: opts.mode, result: st.result, lives: st.lives, maxLives: st.maxLives, task: st.task, rec, stats, opts, waves: st.wave.index, totalWaves: st.wave.total, timeout: st.timeout, raid: opts.raid ? { tower: opts.raid.tower, d: opts.raid.d } : null, crystal: opts.crystal ? { d: opts.crystal.d } : null };
+    return { mapId: game.def.id, mode: opts.mode, result: st.result, lives: st.lives, maxLives: st.maxLives, task: st.task, rec, stats, opts, waves: st.wave.index, totalWaves: st.wave.total, timeout: st.timeout, raid: opts.raid ? { tower: opts.raid.tower, d: opts.raid.d } : null, crystal: opts.crystal ? { d: opts.crystal.d } : null, ended: !!st.ended };
   }
 
   /* =====================================================

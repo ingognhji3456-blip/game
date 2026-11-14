@@ -138,8 +138,8 @@
         el('div', { class: 'sec-title', text: '나오는 적' }), enemyRow,
         el('div', { class: 'sec-title', text: '영웅' }), heroRow,
         el('div', { class: 'brief-actions' }, [
-          resume ? el('button', { class: 'btn', 'data-autofocus': '', onclick: () => UI.show('game', { resume: run }) }, [`이어하기 (웨이브 ${run.wave})`]) : null,
-          el('button', { class: 'btn btn-primary btn-big', 'data-autofocus': resume ? null : '', onclick: () => (resume ? UI.confirmBox('하던 공명석 웨이브 판을 지우고 새로 시작할까요?', () => start(d, pickHero)) : start(d, pickHero)) }, [resume ? '새로 시작' : '출발!']),
+          resume ? el('button', { class: 'btn', 'data-autofocus': '', onclick: () => UI.show('game', { resume: run }) }, [`이어하기 (웨이브 ${UI.runWaves(run)})`]) : null,
+          el('button', { class: 'btn btn-primary btn-big', 'data-autofocus': resume ? null : '', onclick: () => (resume ? UI.confirmBox('하던 공명석 웨이브 판을 지우고 새로 시작할까요? 하던 판에서 막아 낸 만큼의 공명석은 받지 못합니다 (받으려면 이어하기 → 일시정지 → 끝내고 받기).', () => start(d, pickHero)) : start(d, pickHero)) }, [resume ? '새로 시작' : '출발!']),
         ]),
       ]);
       sec.append(head, body);
@@ -156,8 +156,8 @@
     const rr = data.rec;
     const box = el('div', { class: `result-box ${win ? 'win' : 'lose'}` });
     const hero = data.opts.heroId;
-    if (hero) box.appendChild(UI.portrait(hero, win ? 'happy' : 'worried', 'result-portrait'));
-    box.appendChild(el('h2', { text: win ? '공명석을 지켜 냈다!' : data.timeout ? '시간이 너무 오래 걸렸다…' : '등불이 꺼졌다…' }));
+    if (hero) box.appendChild(UI.portrait(hero, win ? 'happy' : data.ended ? 'normal' : 'worried', 'result-portrait'));
+    box.appendChild(el('h2', { text: win ? '공명석을 지켜 냈다!' : data.ended ? '여기서 마쳤다' : data.timeout ? '시간이 너무 오래 걸렸다…' : '등불이 꺼졌다…' }));
     box.appendChild(el('p', { class: 'dim', text: `공명석 웨이브 · ${df.name} (${rr.cleared}/${rr.waves}웨이브 막아 냄)` }));
     const pulls = Math.floor(rr.total / RG.gacha.COST.one);
     box.appendChild(el('div', { class: 'reward-box cr-result' }, [

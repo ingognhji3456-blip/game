@@ -19,7 +19,7 @@
 
 ## 지금 상태
 
-- **공명석 웨이브 (2026-11-13)**: 뽑기 재화를 모으는 전용 웨이브 — 쉬움 500(20웨이브)·보통 800(25)·어려움 1200(30), 가진 탑 모두, 몇 번이든(하루 제한 없음)(`docs/design/crystal.md`, `tests/crystal.test.js`).
+- **공명석 웨이브 (2026-11-13)**: 뽑기 재화를 모으는 전용 웨이브 — 쉬움 500(20웨이브)·보통 800(25)·어려움 1200(30), 가진 탑 모두, 몇 번이든(하루 제한 없음), 처치 골드는 적 체력만큼·같은 탑이면 쉬움 > 보통 > 어려움, 일시정지 메뉴에서 '끝내고 받기'(`docs/design/crystal.md`, `tests/crystal.test.js`, 밸런스 `tools/crystal-balance.js`).
 - **진행 옮기기 (2026-11-13)**: 타이틀 "진행 옮기기"·설정에서 저장 파일/코드로 내보내고 가져옴 — `js/core/transfer.js`, `tests/transfer.test.js`, e2e `flows.js --only transfer`(두 브라우저 사이 코드·파일 둘 다).
 - **조각 레이드 (2026-11-13)**: 탑 하나만으로(영웅은 함께) 레이드 맵을 막아 그 탑의 조각을 모으고, 조각으로 탑을 강화(1~5단계, 도전 제외).
   2-6을 깨면 열림. 설계·밸런스 결과는 `docs/design/raid.md`, 화면 `js/ui/raid.js`, 시험 `tests/raid.test.js`·e2e `flows.js --only raid`, 밸런스 `tools/raid-balance.js`.

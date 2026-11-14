@@ -4955,17 +4955,18 @@ RG.data.awaken = {
 RG.data.crystal = {
   unlockAfter: '1-3',                  // 이 맵을 깨면 열림
   loseShare: 0.5,                      // 지면: 보상 × 0.5 × (막아 낸 웨이브 / 전체), 10 단위
-  /** 난이도: 맵, 웨이브 수, 적 체력 배율, 나오는 적(지역 무리), 보상, 여는 조건(그 캠페인 맵을 깨야)
-   *  체력 배율: 그 시점에 가졌을 법한 탑(쉬움 = 기본 탑 3종, 보통 = 원소마다 1종, 어려움 = 원소마다 2종) + 카라로
-   *  그리디 봇이 4판 모두 이기는 최대 배율 ÷ 1.25 (기술 나무·뽑기 강화 없이) */
+  /** 난이도: 맵, 웨이브 수, 적 체력 배율, 적 체력 1당 처치 골드(gold — 규칙: RG.crystal.goldMult), 나오는 적(지역 무리), 보상, 여는 조건(그 캠페인 맵을 깨야)
+   *  보정(tools/crystal-balance.js --margins): 그 시점에 가졌을 법한 탑(쉬움 = 기본 탑 3종, 보통 = 원소마다 1종, 어려움 = 원소마다 2종)으로
+   *  봇(전략 7가지 중 하나라도)이 이기는 최대 체력 여유가 1.3배 안팎. 같은 탑이면 쉬움 > 보통 > 어려움 순으로 여유가 줄게 (기술 나무·뽑기 강화 없이) */
   difficulty: [
-    { name: '쉬움', map: 'C1', waves: 20, hp: 0.86, regions: [1], reward: 500, needMap: '1-3' },
-    { name: '보통', map: 'C2', waves: 25, hp: 0.6, regions: [1, 2, 3], reward: 800, needMap: '2-6' },
-    { name: '어려움', map: 'C3', waves: 30, hp: 0.29, regions: [3, 4, 5], reward: 1200, needMap: '4-6' },
+    { name: '쉬움', map: 'C1', waves: 20, hp: 0.86, gold: 0.06, regions: [1], reward: 500, needMap: '1-3' },
+    { name: '보통', map: 'C2', waves: 25, hp: 0.6, gold: 0.066, regions: [1, 2, 3], reward: 800, needMap: '2-6' },
+    { name: '어려움', map: 'C3', waves: 30, hp: 0.36, gold: 0.06, regions: [3, 4, 5], reward: 1200, needMap: '4-6' },
   ],
-  startGold: [320, 480, 650],
-  /** 웨이브가 길어진 만큼(사용자 요청 2026-11-14: 보상이 크니 웨이브를 많이) 뒤로 갈수록 단단하게: 첫 웨이브 ×from → 마지막 ×to (사이는 고르게) */
-  ramp: { from: 0.7, to: 1.6 },
+  startGold: [320, 480, 800],
+  /** 웨이브가 길어진 만큼(사용자 요청 2026-11-14: 보상이 크니 웨이브를 많이) 뒤로 갈수록 단단하게: 첫 웨이브 ×from → 마지막 ×to.
+   *  pow 1.5: 앞은 천천히 오르고 뒤에서 가파르게 — 고르게 오르면 판이 앞 웨이브에서 갈리고 뒤 웨이브는 손을 놔도 막혔음 (2026-11-14 검토) */
+  ramp: { from: 0.55, to: 1.8, pow: 1.5 },
 };
 
 /** 공명석 웨이브 맵 (캠페인 목록·별에 들어가지 않음). region은 그림 팔레트·음악 */
@@ -5015,7 +5016,7 @@ RG.data.crystalMaps = [
       'S..##....##...##',
       '####T#####^####^',
     ],
-    startGold: 650,
+    startGold: 800,
     waves: ['mist_rat*1'],
   },
 ];
@@ -6486,7 +6487,7 @@ RG.crystal = (() => {
       const f = N > 1 ? i / (N - 1) : 1;
       const last = i === N - 1;
       const groups = [];
-      const nGroups = last ? 3 : 1 + Math.min(2, Math.floor(i / 4));
+      const nGroups = last ? 3 : f >= 0.45 ? 3 : f >= 0.2 ? 2 : 1; // 무리 수도 웨이브 번호가 아니라 진행 비율로 — 웨이브가 많은 난이도는 큰 웨이브가 늦게 옴
       for (let g = 0; g < nGroups; g++) {
         const useElite = elites.length && (last ? g === 0 : (i + g) % 4 === 3);
         const list = useElite ? elites : normals.length ? normals : P;
@@ -6500,17 +6501,36 @@ RG.crystal = (() => {
     return out;
   }
 
-  /** 웨이브마다 적 체력 배율 (뒤로 갈수록 단단하게) */
+  /** 웨이브마다 적 체력 배율 (뒤로 갈수록 단단하게): from + (to − from) × f^pow — pow > 1이면 앞은 천천히, 뒤에서 가파르게 */
   function ramp(d) {
     const N = C().difficulty[d - 1].waves;
     const R = C().ramp;
-    return Array.from({ length: N }, (_, i) => Math.round((R.from + (R.to - R.from) * (N > 1 ? i / (N - 1) : 1)) * 1000) / 1000);
+    const pow = R.pow || 1;
+    return Array.from({ length: N }, (_, i) => Math.round((R.from + (R.to - R.from) * Math.pow(N > 1 ? i / (N - 1) : 1, pow)) * 1000) / 1000);
+  }
+
+  /** 처치 골드 배율: 적 체력 1당 버는 골드가 난이도의 gold가 되게 (체력 배율·웨이브 배율을 넣은 전체 체력 기준).
+   *  골드를 적 기본값 그대로 주면 체력 배율이 낮은 어려운 난이도(지역 4~5 적: 기본 골드가 큼)가 골드를 훨씬 많이 벌어
+   *  맵을 탑으로 가득 채우고 오히려 쉬워짐 (2026-11-14 검토). 웨이브 배율(ramp)만큼 골드는 늘지 않아 뒤 웨이브일수록 체력당 골드가 적음 */
+  function goldMult(d) {
+    const diff = C().difficulty[d - 1];
+    const rp = ramp(d);
+    let hp = 0;
+    let gold = 0;
+    RG.grid.parseWaves(waves(d)).forEach((w, i) => {
+      for (const g of w.groups) {
+        const ed = D().enemies[g.e];
+        hp += g.n * ed.hp * diff.hp * rp[i];
+        gold += g.n * ed.bounty;
+      }
+    });
+    return gold > 0 ? Math.round((diff.gold * hp / gold) * 1000) / 1000 : 1;
   }
 
   /** 판 설정 조각 (게임 opts에 합침): { mapId, hpMult, crystal } */
   function setup(d) {
     const diff = C().difficulty[d - 1];
-    return { mapId: diff.map, hpMult: diff.hp, crystal: { d, waves: waves(d), ramp: ramp(d), startGold: C().startGold[d - 1] } };
+    return { mapId: diff.map, hpMult: diff.hp, crystal: { d, waves: waves(d), ramp: ramp(d), goldMult: goldMult(d), startGold: C().startGold[d - 1] } };
   }
 
   /** 받는 공명석: 끝까지 막으면 난이도 보상 전부, 지면 보상 × loseShare × 막아 낸 비율 (10 단위) */
@@ -6521,7 +6541,7 @@ RG.crystal = (() => {
     return Math.floor((R * C().loseShare * frac) / 10) * 10;
   }
 
-  return { pool, waves, ramp, setup, reward };
+  return { pool, waves, ramp, goldMult, setup, reward };
 })();
 
 </script>
@@ -7038,6 +7058,7 @@ RG.sim = (() => {
       if (e.fragment) bounty = Math.max(1, Math.round(ed.bounty * (ed.traits.split ? ed.traits.split.hpPct || 0.25 : 0.25)));
       bounty = Math.round(bounty * (1 + bountyBonus(e, src)));
       if (RA && RA.bountyMult) bounty = Math.round(bounty * RA.bountyMult); // 지원 탑 레이드: 적이 적은 만큼 처치 골드를 더
+      if (RA && RA.goldMult) bounty = Math.max(1, Math.round(bounty * RA.goldMult)); // 공명석 웨이브: 난이도마다 적 체력만큼 버는 골드가 같게 (경험치는 그대로)
       st.gold += bounty;
       st.stats.goldEarned += bounty;
       st.stats.kills += 1;
@@ -8768,6 +8789,16 @@ RG.sim = (() => {
       return { groups };
     }
 
+    /** 공명석 웨이브: 여기서 끝내고 막아 낸 만큼 받기 — 지는 것과 같은 정산이라, 받으려고 일부러 목숨을 다 잃지 않아도 되게 (검토 2026-11-14) */
+    function endRun() {
+      if (!o.crystal) return fail('공명석 웨이브에서만 끝낼 수 있습니다');
+      if (st.result) return fail('판이 끝났습니다');
+      st.result = 'lose';
+      st.ended = true;
+      ev('lose', { ended: true });
+      return { ok: true };
+    }
+
     function cmd(c) {
       let res;
       switch (c && c.type) {
@@ -8779,6 +8810,7 @@ RG.sim = (() => {
         case 'heroMove': res = heroMove(c); break;
         case 'heroSkill': res = heroSkill(c); break;
         case 'callWave': res = callWave(false); break;
+        case 'endRun': res = endRun(); break;
         default: res = fail('알 수 없는 명령');
       }
       if (res.ok) log.push([st.tick, JSON.parse(JSON.stringify(c))]);
@@ -37301,6 +37333,12 @@ RG.render = (() => {
   /** 지금 뽑기를 할 수 있나 (공명석 100 이상) */
   const canPull = () => RG.progress.gachaState().crystals >= RG.gacha.COST.one;
   RG.ui.canPull = canPull;
+  /** 이어하기 글: 부른 웨이브 / 전체 (공명석 웨이브·레이드는 저장된 판 설정의 웨이브, 캠페인은 맵의 웨이브, 끝없는 모드는 번호만) */
+  RG.ui.runWaves = function runWaves(run, def) {
+    const o = run.opts || {};
+    const list = o.crystal ? o.crystal.waves : o.raid ? o.raid.waves : o.mode === 'endless' ? null : def && def.waves;
+    return list && list.length ? `${run.wave}/${list.length}` : `${run.wave}`;
+  };
 
   /* =====================================================
    * 타이틀
@@ -37358,7 +37396,7 @@ RG.render = (() => {
         bannerOf(rd.region || 1),
         el('span', { class: 'tm-medal tm-medal-big' }, [UI.icon('play', 'tm-ico')]),
         el('span', { class: 'tm-text' }, [
-          el('span', { class: 'tm-kicker', text: crystalRun ? `하던 공명석 웨이브 · 웨이브 ${run.wave}` : raidRun ? `하던 레이드 · 웨이브 ${run.wave}` : `하던 판 · ${run.mapId} 웨이브 ${run.wave}` }),
+          el('span', { class: 'tm-kicker', text: crystalRun ? `하던 공명석 웨이브 · 웨이브 ${UI.runWaves(run, rd)}` : raidRun ? `하던 레이드 · 웨이브 ${UI.runWaves(run, rd)}` : `하던 판 · ${run.mapId} 웨이브 ${UI.runWaves(run, rd)}` }),
           el('b', { class: 'tm-title', text: '이어하기' }),
           el('span', { class: 'tm-sub', text: crystalRun ? `${D().crystal.difficulty[crystalRun.d - 1].name} · ${rd.name}` : raidRun ? `${D().towers[raidRun.tower].name} · ${D().raid.difficulty[raidRun.d - 1].name}` : rd.name || '' }),
         ]),
@@ -37966,7 +38004,7 @@ RG.render = (() => {
         else go();
       };
       const actions = el('div', { class: 'brief-actions' }, [
-        resume ? el('button', { class: 'btn', 'data-autofocus': '', onclick: () => UI.show('game', { resume: run }) }, [`이어하기 (웨이브 ${run.wave})`]) : null,
+        resume ? el('button', { class: 'btn', 'data-autofocus': '', onclick: () => UI.show('game', { resume: run }) }, [`이어하기 (웨이브 ${UI.runWaves(run, def)})`]) : null,
         el('button', { class: 'btn btn-primary btn-big', 'data-autofocus': resume ? null : '', onclick: start }, [resume ? '새로 시작' : '출정!']),
       ]);
       info.append(
@@ -39216,7 +39254,7 @@ RG.render = (() => {
         el('div', { class: 'sec-title', text: '나오는 적' }), enemyRow,
         el('div', { class: 'sec-title', text: '영웅' }), heroRow,
         el('div', { class: 'brief-actions' }, [
-          resume ? el('button', { class: 'btn', 'data-autofocus': '', onclick: () => UI.show('game', { resume: run }) }, [`이어하기 (웨이브 ${run.wave})`]) : null,
+          resume ? el('button', { class: 'btn', 'data-autofocus': '', onclick: () => UI.show('game', { resume: run }) }, [`이어하기 (웨이브 ${UI.runWaves(run)})`]) : null,
           el('button', { class: 'btn btn-primary btn-big', 'data-autofocus': resume ? null : '', onclick: () => (resume ? UI.confirmBox('하던 레이드 판을 지우고 새로 시작할까요?', () => start(type, d, pickHero)) : start(type, d, pickHero)) }, [resume ? '새로 시작' : '레이드 시작!']),
         ]),
       ]);
@@ -39413,8 +39451,8 @@ RG.render = (() => {
         el('div', { class: 'sec-title', text: '나오는 적' }), enemyRow,
         el('div', { class: 'sec-title', text: '영웅' }), heroRow,
         el('div', { class: 'brief-actions' }, [
-          resume ? el('button', { class: 'btn', 'data-autofocus': '', onclick: () => UI.show('game', { resume: run }) }, [`이어하기 (웨이브 ${run.wave})`]) : null,
-          el('button', { class: 'btn btn-primary btn-big', 'data-autofocus': resume ? null : '', onclick: () => (resume ? UI.confirmBox('하던 공명석 웨이브 판을 지우고 새로 시작할까요?', () => start(d, pickHero)) : start(d, pickHero)) }, [resume ? '새로 시작' : '출발!']),
+          resume ? el('button', { class: 'btn', 'data-autofocus': '', onclick: () => UI.show('game', { resume: run }) }, [`이어하기 (웨이브 ${UI.runWaves(run)})`]) : null,
+          el('button', { class: 'btn btn-primary btn-big', 'data-autofocus': resume ? null : '', onclick: () => (resume ? UI.confirmBox('하던 공명석 웨이브 판을 지우고 새로 시작할까요? 하던 판에서 막아 낸 만큼의 공명석은 받지 못합니다 (받으려면 이어하기 → 일시정지 → 끝내고 받기).', () => start(d, pickHero)) : start(d, pickHero)) }, [resume ? '새로 시작' : '출발!']),
         ]),
       ]);
       sec.append(head, body);
@@ -39431,8 +39469,8 @@ RG.render = (() => {
     const rr = data.rec;
     const box = el('div', { class: `result-box ${win ? 'win' : 'lose'}` });
     const hero = data.opts.heroId;
-    if (hero) box.appendChild(UI.portrait(hero, win ? 'happy' : 'worried', 'result-portrait'));
-    box.appendChild(el('h2', { text: win ? '공명석을 지켜 냈다!' : data.timeout ? '시간이 너무 오래 걸렸다…' : '등불이 꺼졌다…' }));
+    if (hero) box.appendChild(UI.portrait(hero, win ? 'happy' : data.ended ? 'normal' : 'worried', 'result-portrait'));
+    box.appendChild(el('h2', { text: win ? '공명석을 지켜 냈다!' : data.ended ? '여기서 마쳤다' : data.timeout ? '시간이 너무 오래 걸렸다…' : '등불이 꺼졌다…' }));
     box.appendChild(el('p', { class: 'dim', text: `공명석 웨이브 · ${df.name} (${rr.cleared}/${rr.waves}웨이브 막아 냄)` }));
     const pulls = Math.floor(rr.total / RG.gacha.COST.one);
     box.appendChild(el('div', { class: 'reward-box cr-result' }, [
@@ -41020,6 +41058,11 @@ RG.render = (() => {
   function openPause() {
     if (!game) return;
     UI.sfx('click');
+    // 공명석 웨이브: 지금 끝내면 받을 공명석 (HUD '지금 끝나면'과 같은 셈)
+    const cr = opts.crystal && !game.state.result ? (() => {
+      const cd = opts.crystal.d;
+      return { now: RG.crystal.reward(cd, { win: false, cleared: RG.raid.wavesCleared(game.state), total: game.state.wave.total }), full: D().crystal.difficulty[cd - 1].reward };
+    })() : null;
     const body = el('div', { class: 'pause-body' }, [
       el('p', { class: 'dim', text: `${opts.crystal ? `공명석 웨이브 · ${D().crystal.difficulty[opts.crystal.d - 1].name}` : opts.raid ? `조각 레이드 · ${D().towers[opts.raid.tower].name} · ${D().raid.difficulty[opts.raid.d - 1].name}` : `${game.def.id} ${game.def.name}`} · 웨이브 ${game.state.wave.index}/${isFinite(game.state.wave.total) ? game.state.wave.total : '∞'}` }),
     ]);
@@ -41028,7 +41071,8 @@ RG.render = (() => {
       buttons: [
         { text: '설정', onClick: () => RG.ui.openSettings && RG.ui.openSettings() },
         { text: '조작법', onClick: openControls },
-        { text: '다시 시작', onClick: () => UI.confirmBox('처음부터 다시 시작할까요?', () => { RG.save.remove(RG.save.KEYS.run); UI.show('game', { opts }); }) },
+        { text: '다시 시작', onClick: () => UI.confirmBox(`처음부터 다시 시작할까요?${cr && cr.now ? ` 지금까지 막아 낸 공명석 +${cr.now}은 받지 못합니다 (받으려면 "끝내고 받기").` : ''}`, () => { RG.save.remove(RG.save.KEYS.run); UI.show('game', { opts }); }) },
+        cr ? { text: cr.now ? `끝내고 +${cr.now} 받기` : '여기서 끝내기', onClick: () => UI.confirmBox(cr.now ? `여기서 끝내고 공명석 +${cr.now}을 받을까요? (끝까지 막으면 +${cr.full.toLocaleString()})` : '여기서 끝낼까요? 아직 끝까지 막아 낸 웨이브가 없어 받을 공명석이 없습니다.', () => { if (game && !game.state.result) game.cmd({ type: 'endRun' }); }) } : null,
         opts.crystal ? { text: '공명석 웨이브로', onClick: () => UI.confirmBox('공명석 웨이브 화면으로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('crystal', { keep: true, d: opts.crystal.d })) }
           : opts.raid ? { text: '레이드로', onClick: () => UI.confirmBox('레이드 화면으로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('raid', { tower: opts.raid.tower, d: opts.raid.d })) }
           : { text: '지도로', onClick: () => UI.confirmBox('지도로 나갈까요? 진행 상황은 이어하기로 저장됩니다.', () => UI.show('world', {})) },
@@ -41089,7 +41133,7 @@ RG.render = (() => {
       damage: st.stats.damageByTower, kills: st.stats.kills, gold: st.stats.goldEarned, heroDamage: st.stats.heroDamage,
       towers: st.towers.map((t) => ({ id: t.id, type: t.type, level: t.level, branch: t.branch })), time: st.time,
     };
-    return { mapId: game.def.id, mode: opts.mode, result: st.result, lives: st.lives, maxLives: st.maxLives, task: st.task, rec, stats, opts, waves: st.wave.index, totalWaves: st.wave.total, timeout: st.timeout, raid: opts.raid ? { tower: opts.raid.tower, d: opts.raid.d } : null, crystal: opts.crystal ? { d: opts.crystal.d } : null };
+    return { mapId: game.def.id, mode: opts.mode, result: st.result, lives: st.lives, maxLives: st.maxLives, task: st.task, rec, stats, opts, waves: st.wave.index, totalWaves: st.wave.total, timeout: st.timeout, raid: opts.raid ? { tower: opts.raid.tower, d: opts.raid.d } : null, crystal: opts.crystal ? { d: opts.crystal.d } : null, ended: !!st.ended };
   }
 
   /* =====================================================

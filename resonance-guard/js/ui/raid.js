@@ -249,7 +249,7 @@
         el('div', { class: 'sec-title', text: '나오는 적' }), enemyRow,
         el('div', { class: 'sec-title', text: '영웅' }), heroRow,
         el('div', { class: 'brief-actions' }, [
-          resume ? el('button', { class: 'btn', 'data-autofocus': '', onclick: () => UI.show('game', { resume: run }) }, [`이어하기 (웨이브 ${run.wave})`]) : null,
+          resume ? el('button', { class: 'btn', 'data-autofocus': '', onclick: () => UI.show('game', { resume: run }) }, [`이어하기 (웨이브 ${UI.runWaves(run)})`]) : null,
           el('button', { class: 'btn btn-primary btn-big', 'data-autofocus': resume ? null : '', onclick: () => (resume ? UI.confirmBox('하던 레이드 판을 지우고 새로 시작할까요?', () => start(type, d, pickHero)) : start(type, d, pickHero)) }, [resume ? '새로 시작' : '레이드 시작!']),
         ]),
       ]);

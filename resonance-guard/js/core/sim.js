@@ -510,6 +510,7 @@ RG.sim = (() => {
       if (e.fragment) bounty = Math.max(1, Math.round(ed.bounty * (ed.traits.split ? ed.traits.split.hpPct || 0.25 : 0.25)));
       bounty = Math.round(bounty * (1 + bountyBonus(e, src)));
       if (RA && RA.bountyMult) bounty = Math.round(bounty * RA.bountyMult); // 지원 탑 레이드: 적이 적은 만큼 처치 골드를 더
+      if (RA && RA.goldMult) bounty = Math.max(1, Math.round(bounty * RA.goldMult)); // 공명석 웨이브: 난이도마다 적 체력만큼 버는 골드가 같게 (경험치는 그대로)
       st.gold += bounty;
       st.stats.goldEarned += bounty;
       st.stats.kills += 1;
@@ -2240,6 +2241,16 @@ RG.sim = (() => {
       return { groups };
     }
 
+    /** 공명석 웨이브: 여기서 끝내고 막아 낸 만큼 받기 — 지는 것과 같은 정산이라, 받으려고 일부러 목숨을 다 잃지 않아도 되게 (검토 2026-11-14) */
+    function endRun() {
+      if (!o.crystal) return fail('공명석 웨이브에서만 끝낼 수 있습니다');
+      if (st.result) return fail('판이 끝났습니다');
+      st.result = 'lose';
+      st.ended = true;
+      ev('lose', { ended: true });
+      return { ok: true };
+    }
+
     function cmd(c) {
       let res;
       switch (c && c.type) {
@@ -2251,6 +2262,7 @@ RG.sim = (() => {
         case 'heroMove': res = heroMove(c); break;
         case 'heroSkill': res = heroSkill(c); break;
         case 'callWave': res = callWave(false); break;
+        case 'endRun': res = endRun(); break;
         default: res = fail('알 수 없는 명령');
       }
       if (res.ok) log.push([st.tick, JSON.parse(JSON.stringify(c))]);

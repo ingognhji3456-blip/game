@@ -18,6 +18,12 @@
   /** 지금 뽑기를 할 수 있나 (공명석 100 이상) */
   const canPull = () => RG.progress.gachaState().crystals >= RG.gacha.COST.one;
   RG.ui.canPull = canPull;
+  /** 이어하기 글: 부른 웨이브 / 전체 (공명석 웨이브·레이드는 저장된 판 설정의 웨이브, 캠페인은 맵의 웨이브, 끝없는 모드는 번호만) */
+  RG.ui.runWaves = function runWaves(run, def) {
+    const o = run.opts || {};
+    const list = o.crystal ? o.crystal.waves : o.raid ? o.raid.waves : o.mode === 'endless' ? null : def && def.waves;
+    return list && list.length ? `${run.wave}/${list.length}` : `${run.wave}`;
+  };
 
   /* =====================================================
    * 타이틀
@@ -75,7 +81,7 @@
         bannerOf(rd.region || 1),
         el('span', { class: 'tm-medal tm-medal-big' }, [UI.icon('play', 'tm-ico')]),
         el('span', { class: 'tm-text' }, [
-          el('span', { class: 'tm-kicker', text: crystalRun ? `하던 공명석 웨이브 · 웨이브 ${run.wave}` : raidRun ? `하던 레이드 · 웨이브 ${run.wave}` : `하던 판 · ${run.mapId} 웨이브 ${run.wave}` }),
+          el('span', { class: 'tm-kicker', text: crystalRun ? `하던 공명석 웨이브 · 웨이브 ${UI.runWaves(run, rd)}` : raidRun ? `하던 레이드 · 웨이브 ${UI.runWaves(run, rd)}` : `하던 판 · ${run.mapId} 웨이브 ${UI.runWaves(run, rd)}` }),
           el('b', { class: 'tm-title', text: '이어하기' }),
           el('span', { class: 'tm-sub', text: crystalRun ? `${D().crystal.difficulty[crystalRun.d - 1].name} · ${rd.name}` : raidRun ? `${D().towers[raidRun.tower].name} · ${D().raid.difficulty[raidRun.d - 1].name}` : rd.name || '' }),
         ]),
@@ -683,7 +689,7 @@
         else go();
       };
       const actions = el('div', { class: 'brief-actions' }, [
-        resume ? el('button', { class: 'btn', 'data-autofocus': '', onclick: () => UI.show('game', { resume: run }) }, [`이어하기 (웨이브 ${run.wave})`]) : null,
+        resume ? el('button', { class: 'btn', 'data-autofocus': '', onclick: () => UI.show('game', { resume: run }) }, [`이어하기 (웨이브 ${UI.runWaves(run, def)})`]) : null,
         el('button', { class: 'btn btn-primary btn-big', 'data-autofocus': resume ? null : '', onclick: start }, [resume ? '새로 시작' : '출정!']),
       ]);
       info.append(
