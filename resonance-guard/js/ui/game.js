@@ -55,13 +55,127 @@
     sel = null; pick = null; drag = null; skillAim = null; bossTrackOn = false; keyCursor = null;
     speed = UI.getSettings().speed || 1;
     simBudget = SIM_BUDGET_MAX;
-    if (data.resume) {
-      opts = data.resume.opts;
-      game = RG.sim.replay(opts, data.resume.log, data.resume.tick);
-    } else {
-      opts = data.opts;
-      game = RG.sim.create(opts);
-    }
+    if (data.resume) { startResume(data); return; }
+    opts = data.opts;
+    begin(RG.sim.create(opts), data);
+  }
+
+  /* 이어하기: 저장은 처음 설정 + 명령 기록이라 0틱부터 다시 돌려야 함 (공명석 웨이브 끝 무렵이면 2만 틱 넘게 —
+     느린 휴대폰에서 수 초). 화면(진행률)을 먼저 그리고, 재현은 RG.sim.replayer로 조금씩 나눠서 한 뒤 보통 시작으로.
+     재현하는 동안 game은 비어 있음 → 명령·루프·자동 저장(saveRun)이 모두 돌지 않음(저장된 판을 덮어쓰지 않음).
+     그림은 그동안 함께 준비 (js/art/sprites.js stagedForGame) */
+  const RESUME_SLICE_MS = 10; // 한 조각의 재현 시간 — 그 사이사이 브라우저가 화면을 그리고 입력(취소)을 받음
+  let resuming = null;        // { stop(), back } — 재현 중일 때만
+  let prep = null;            // 이 판의 그림 나눠 준비 (화면을 떠나면 그만)
+
+  const nextTask = (() => {
+    // setTimeout(0)은 몇 번 이어지면 4ms씩 쉬므로 MessageChannel로 (없으면 setTimeout)
+    if (typeof MessageChannel === 'undefined') return (fn) => { const id = setTimeout(fn, 0); return () => clearTimeout(id); };
+    const ch = new MessageChannel();
+    const q = [];
+    ch.port1.onmessage = () => { const f = q.shift(); if (f) f(); };
+    return (fn) => { let live = true; q.push(() => { if (live) fn(); }); ch.port2.postMessage(0); return () => { live = false; }; };
+  })();
+
+  /** 재현을 그만두면 돌아갈 곳: 이어하기를 누른 화면 (enter 중엔 body의 data-screen이 아직 그 화면) */
+  function resumeBack(prev, run) {
+    const o = run.opts || {};
+    if (prev === 'crystal' && o.crystal) return ['crystal', { d: o.crystal.d }];
+    if (prev === 'raid' && o.raid) return ['raid', { tower: o.raid.tower, d: o.raid.d }];
+    if (prev === 'brief' && run.mapId) return ['brief', { mapId: run.mapId, mode: o.mode }];
+    return ['title', {}];
+  }
+
+  function startResume(data) {
+    const run = data.resume;
+    opts = run.opts;
+    const back = resumeBack(document.body.dataset.screen, run);
+    const where = opts.crystal ? `공명석 웨이브 · ${D().crystal.difficulty[opts.crystal.d - 1].name}` : opts.raid ? `조각 레이드 · ${D().towers[opts.raid.tower].name}` : run.mapId || '';
+    const pct = el('b', { class: 'rv-pct', text: '0%' });
+    const fill = el('i');
+    const bar = el('div', { class: 'rv-bar', role: 'progressbar', 'aria-label': '이어하는 중', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': '0' }, [fill]);
+    // 화면 읽기 프로그램에는 25%마다만 (1%마다 읽으면 시끄러움) — 눈에 보이는 숫자는 aria-hidden
+    const live = el('p', { class: 'rv-live', role: 'status', 'aria-live': 'polite' });
+    const box = el('div', { class: 'resume-veil' }, [
+      el('p', { class: 'rv-title', 'aria-hidden': 'true' }, ['이어하는 중… ', pct]),
+      el('p', { class: 'rv-sub', text: `${where}${where ? ' · ' : ''}웨이브 ${run.wave || 0}까지 다시 맞추는 중` }),
+      bar,
+      // 자동 초점은 주지 않음: 이어하기를 Enter로 눌렀다면 누르고 있는 Enter(키 반복)가 바로 취소를 누름
+      el('button', { class: 'btn rv-cancel', onclick: () => UI.show(back[0], back[1]) }, ['취소', el('span', { class: 'rv-key', text: ' (Esc)' })]),
+      live,
+    ]);
+    root.innerHTML = '';
+    root.append(box);
+    const state = { back, cancel: null, said: 0 };
+    let r;
+    try {
+      r = RG.sim.replayer(opts, run.log || [], run.tick);
+      // 그림: 재현과 같은 판이라 목록은 지금 알 수 있음 — 등불·영웅·저장된 웨이브 무렵의 적부터 (맵 위 탑은 재현이 끝나면)
+      prep = RG.art.sprites.stagedForGame(r.game);
+      prep.need(RG.art.sprites.essentialForGame(r.game, { wave: run.wave || 0 }));
+    } catch (e) { resumeFailed(e, back); return; }
+    const onEsc = (e) => { if (e.key === 'Escape' && !UI.modalOpen()) { e.preventDefault(); UI.show(back[0], back[1]); } };
+    document.addEventListener('keydown', onEsc);
+    let lastPct = -1;
+    const slice = () => {
+      state.cancel = null;
+      if (resuming !== state) return;
+      let done;
+      try { done = r.step(RESUME_SLICE_MS); } catch (e) { resumeFailed(e, back); return; }
+      const p = Math.floor(r.progress * 100);
+      if (p !== lastPct) {
+        lastPct = p;
+        pct.textContent = `${p}%`;
+        fill.style.width = `${p}%`;
+        bar.setAttribute('aria-valuenow', String(p));
+        if (p >= state.said + 25 && p < 100) { state.said = p - (p % 25); live.textContent = `이어하는 중 ${state.said}%`; }
+      }
+      if (!done && !state.warm && p >= 1) {
+        // 맵 바탕 SVG(느린 휴대폰에서 1초쯤)를 첫 진행률이 보인 뒤 미리 만들어 둠 — 맵마다 보관되므로(js/art/terrain.js)
+        // 재현이 끝나고 판을 열 때(render.attach) 100%에서 멈춰 있는 시간이 그만큼 줄어듦
+        state.warm = true;
+        state.cancel = nextTask(() => {
+          state.cancel = null;
+          if (resuming !== state) return;
+          try { if (RG.art.mapBackground) RG.art.mapBackground(r.game.map); } catch (e) { /* 판을 열 때 다시 */ }
+          state.cancel = nextTask(slice);
+        });
+        return;
+      }
+      if (!done) { state.cancel = nextTask(slice); return; }
+      stopResume();
+      begin(r.game, data);
+    };
+    // 먼저 그리고(진행률 화면) 다음 프레임 뒤부터 재현 (알림 문구는 알림 영역이 생긴 뒤에 넣어야 읽힘)
+    const rafId = requestAnimationFrame(() => { live.textContent = '이어하는 중'; state.cancel = nextTask(slice); });
+    state.cancel = () => cancelAnimationFrame(rafId);
+    state.stop = () => { if (state.cancel) state.cancel(); state.cancel = null; document.removeEventListener('keydown', onEsc); box.remove(); };
+    resuming = state;
+  }
+
+  /** 재현 그만 (끝났거나, 화면을 떠났거나, 오류) — 저장된 판은 그대로 둠 */
+  function stopResume() {
+    const s = resuming;
+    resuming = null;
+    if (s && s.stop) s.stop();
+  }
+
+  /** 재현이 실패함(망가진 저장 등): 예전엔 클릭 안에서 오류가 나 빈 전투 화면에 멈췄음 → 알리고 돌아감 (저장은 지우지 않음) */
+  function resumeFailed(err, back) {
+    stopResume();
+    if (prep) { prep.cancel(); prep = null; }
+    console.error('이어하기 재현 실패', err);
+    // 화면 전환 도중(enter 안)일 수 있으므로 전환이 끝난 다음에
+    setTimeout(() => {
+      if (UI.currentId() !== 'game' || game || resuming) return;
+      UI.toast('저장된 판을 이어할 수 없습니다', 'warn', 3200);
+      UI.show(back[0], back[1]);
+    }, 0);
+  }
+
+  /** 판 시작 (새 판은 바로, 이어하기는 재현이 끝난 뒤) */
+  function begin(g, data) {
+    game = g;
     RG.fx.clear();
     buildDom();
     fitDock();
@@ -69,15 +183,28 @@
     // 탑 목록이 접히거나 글자 크기가 바뀌어 전장 크기가 달라져도 맵이 잘리지 않게
     if (window.ResizeObserver) { stageObs = new ResizeObserver(() => { RG.render.resize(); placeLabel(); }); stageObs.observe(R.stage); }
     Object.assign(RG.render.overlay, { hover: null, keyCursor: false, selectedTower: null, ghost: null, selectedEnemy: null, heroSelected: false, skill: null, rally: null });
+    // 그림: 지금 보이는 것만 준비되면 판을 보여 주고(그동안 '그림 준비 중'), 나머지는 판을 하면서 쉬는 틈에
+    // (예전엔 모든 탑의 모든 단계·모든 적 동작 수백 장을 한꺼번에 — 느린 휴대폰에서 클릭 뒤 수십 초)
+    // 그동안은 맵을 한 번만 그려 두고(가림막 뒤로 흐리게 보임) 루프는 준비가 끝나면 — 판이 멈춘 동안 매 프레임 그리면
+    // 느린 휴대폰에서 그림 준비와 시간을 나눠 써서 더 늦어졌음
     root.classList.add('loading');
-    RG.art.sprites.prepareForGame(game).then(() => { root.classList.remove('loading'); });
+    if (!prep) prep = RG.art.sprites.stagedForGame(game);
+    const which = game;
+    const sprites = prep;
+    raf = requestAnimationFrame(() => { if (game === which && root.classList.contains('loading')) RG.render.frame(1, 0); });
+    prep.need(RG.art.sprites.essentialForGame(game)).then(() => {
+      if (game !== which || prep !== sprites) return;
+      root.classList.remove('loading');
+      cancelAnimationFrame(raf);
+      last = performance.now();
+      raf = requestAnimationFrame(loop);
+      sprites.background();
+    });
     const region = D().regions.find((r) => r.id === game.def.region);
     UI.music(region ? region.music : 'meadow');
     window.addEventListener('resize', onResize);
     document.addEventListener('keydown', onKey);
     document.addEventListener('pointerdown', onOutsideDown, true);
-    last = performance.now();
-    raf = requestAnimationFrame(loop);
     updateHud(true);
     // 튜토리얼 팁
     // 특정 탑을 설명하는 팁은 그 탑을 가지고 있을 때만 (탑은 뽑기로 얻으므로) — 안 보인 팁은 '본 것'으로 치지 않아 나중에 다시 나옴
@@ -87,7 +214,13 @@
     if (RG.ui.tutorial && RG.ui.tutorial.shouldRun(game, opts, data)) {
       tipsQueue = tipsQueue.filter((t) => t !== 'build' && t !== 'callWave');
       const which = game;
-      setTimeout(() => { if (game === which && UI.currentId() === 'game') RG.ui.tutorial.start(root, () => setTimeout(nextTip, 400)); }, 700);
+      // 안내 말풍선은 루프가 채우므로 그림 준비가 끝난 뒤에 (루프는 그때부터 돎)
+      const startTut = () => {
+        if (game !== which || UI.currentId() !== 'game') return;
+        if (root.classList.contains('loading')) { setTimeout(startTut, 200); return; }
+        RG.ui.tutorial.start(root, () => setTimeout(nextTip, 400));
+      };
+      setTimeout(startTut, 700);
     } else if (!data.resume && opts.mode === 'normal') setTimeout(nextTip, 600);
     if (!data.resume && opts.crystal) banner(`공명석 웨이브 · ${D().crystal.difficulty[opts.crystal.d - 1].name}`, `끝까지 막으면 공명석 ${D().crystal.difficulty[opts.crystal.d - 1].reward.toLocaleString()} — 가진 탑을 모두 쓸 수 있습니다`);
     else if (!data.resume && opts.raid) banner(`조각 레이드 · ${D().towers[opts.raid.tower].name}`, `${D().raid.difficulty[opts.raid.d - 1].name} · ${D().towers[opts.raid.tower].name}만 지을 수 있습니다`);
@@ -95,6 +228,8 @@
   }
 
   function leave() {
+    stopResume(); // 재현 중이면 그만 — game이 비어 있어 아래 saveRun도 하지 않음(저장된 판 그대로)
+    if (prep) { prep.cancel(); prep = null; }
     cancelAnimationFrame(raf);
     if (RG.ui.tutorial) RG.ui.tutorial.stop();
     window.removeEventListener('resize', onResize);

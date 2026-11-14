@@ -241,7 +241,8 @@ game.previewLinks(type, c, r)  // → [{ c, r, towerId, resId }] 생길 공명
 game.towerInfo(id)             // → 화면 표시용 계산값(능력치, 공명 효과 목록, 강화 비용)
 game.log            // [[tick, command], ...] 성공한 명령 기록
 game.hash()         // 상태 해시(결정성 검사용)
-RG.sim.replay(opts, log, untilTick) // 기록으로 같은 상태 재현
+RG.sim.replay(opts, log, untilTick) // 기록으로 같은 상태 재현 (한 번에)
+RG.sim.replayer(opts, log, untilTick) // 같은 재현을 나눠서: { step(ms) → 끝났으면 true, progress 0..1, game }
 ```
 
 ### 4.1 명령
@@ -260,6 +261,7 @@ RG.sim.replay(opts, log, untilTick) // 기록으로 같은 상태 재현
 | `endRun` | — | 공명석 웨이브만: 여기서 끝내기 (지는 것과 같은 정산, `state.ended`) |
 
 명령은 받는 즉시 적용되고, 성공하면 `[현재 틱, 명령]`이 `log`에 쌓입니다. `replay`는 각 틱을 진행하기 **전에** 그 틱의 명령을 적용합니다.
+`replay`는 `replayer`를 끝까지 한 번에 돌린 것이라 둘의 결과는 같습니다 — 어디서 나누든 상태가 바이트까지 같음(`tests/replay.test.js`).
 
 ### 4.2 상태 모양
 
@@ -350,7 +352,14 @@ state = {
 |---|---|
 | `rg.progress.v1` | `{ stars: { '1-1': { normal: 3, hard: true, challenge: false } }, skills: [...], seen: { enemies: [...], story: [...] }, endless: { E1: 12 } }` |
 | `rg.settings.v1` | 음량, 배속, 흔들림, 숫자, 큰 글씨 |
-| `rg.run.v1` | 진행 중인 판: `{ opts, log, tick }` — 이어하기는 `RG.sim.replay`로 재현 |
+| `rg.run.v1` | 진행 중인 판: `{ opts, log, tick, mapId, wave }` — 이어하기는 0틱부터 재현 (아래) |
+
+**이어하기** (`js/ui/game.js` `startResume`): 공명석 웨이브 끝 무렵이면 2만 틱 넘게 다시 돌려야 해 느린 휴대폰에서 수 초 걸림.
+클릭 안에서는 진행률 화면만 그리고(`이어하는 중… 42%`, 25%마다 `aria-live` 알림, 취소 단추·Esc → 들어온 화면으로), 재현은 `RG.sim.replayer`로
+약 10ms씩 나눠 한 뒤 보통 시작(`begin`)으로 이어 감. 재현하는 동안 `game`이 비어 있어 명령·루프·자동 저장이 돌지 않고 저장된 판은 그대로.
+재현이 실패하면(망가진 저장) 알리고 들어온 화면으로 돌아감(저장은 지우지 않음).
+판 그림(`RG.art.sprites.stagedForGame`)은 지금 보이는 것(`essentialForGame`: 등불·영웅·맵 위 탑·지금 웨이브의 적)만 먼저 준비하고 '그림 준비 중'을 걷음,
+나머지는 판을 하면서 쉬는 틈에 한 장씩(`requestIdleCallback`). 예전 `prepareForGame`은 수백 장을 한꺼번에 만들어 클릭 뒤 오래 멈췄음.
 
 **진행 옮기기** (`RG.transfer`, `js/core/transfer.js`): 진행은 브라우저 저장 공간에만 있으므로, 다른 기기·사람에게는 저장 코드/파일로 옮김.
 코드 = `RG1z.` + base64url(deflate-raw(JSON)) (압축을 못 하는 브라우저는 `RG1.` + base64url(JSON)), JSON = `{ game: 'resonance-guard', kind: 'save', v: 1, at, progress }`.

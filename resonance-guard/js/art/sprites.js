@@ -100,26 +100,19 @@ RG.art.sprites = (() => {
     return `lantern:${best}`;
   }
 
-  /** 한 판에 필요한 그림을 모두 준비 */
-  function prepareForGame(game) {
-    const jobs = [];
-    const A = RG.art;
-    const types = new Set(game.opts.towers || Object.keys(RG.data.towers));
-    // 탑: 모든 단계의 쉬는 자세 + Lv1의 동작 자세는 미리, 나머지 동작은 처음 쓸 때(ensure)
-    for (const t of types) {
-      for (const lv of [1, 2, 3]) jobs.push(load(towerKey(t, lv, null), () => A.tower(t, lv, null, 'idle'), TW, TH));
-      for (const b of ['A', 'B']) jobs.push(load(towerKey(t, 4, b), () => A.tower(t, 4, b, 'idle'), TW, TH));
-      for (const p of ['aim', 'fire']) jobs.push(load(towerKey(t, 1, null, p), () => A.tower(t, 1, null, p), TW, TH));
-    }
-    // 탑과 따로 움직이는 효과 그림 (불사조·바위·철구)
-    if (A.fxSprite) {
-      if (types.has('phoenix_nest')) for (const fr of [0, 1]) jobs.push(load(`fx:phoenix:${fr}`, () => A.fxSprite('phoenix', fr), 120, 120));
-      if (types.has('titan_boulder')) { jobs.push(load('fx:boulder', () => A.fxSprite('boulder', 0), 120, 120)); jobs.push(load('fx:ironball', () => A.fxSprite('ironball', 0), 120, 120)); }
-    }
-    const enemies = new Set();
-    for (const w of RG.grid.parseWaves(game.waveStrings || game.def.waves || [])) for (const g of w.groups) enemies.add(g.e);
-    if (game.opts.mode === 'endless') for (const e of RG.data.regionPools[game.def.region] || []) enemies.add(e);
-    // 분열·소환으로 나오는 적
+  /* ---------- 한 판의 그림 ---------- */
+  const A = () => RG.art;
+  const towerJob = (t, lv, b, pose = 'idle') => ({ key: towerKey(t, lv, b, pose), make: () => A().tower(t, lv, b, pose), w: TW, h: TH });
+  const enemySize = (e) => ((RG.data.enemies[e] && RG.data.enemies[e].size >= 1.4) ? 288 : 168);
+  const enemyJob = (e, f) => ({ key: enemyKey(e, f), make: () => A().enemy(e, f), w: enemySize(e), h: enemySize(e) });
+  const heroJob = (id, p) => { const s = id.endsWith('_giant') ? 256 : 160; return { key: heroKey(id, p), make: () => A().hero(id, p), w: s, h: s }; };
+  const unitJob = (k, p) => ({ key: unitKey(k, p), make: () => A().unit(k, p), w: 128, h: 128 });
+  const lanternJob = (s) => ({ key: `lantern:${s}`, make: () => A().lantern(s), w: TW, h: TH });
+  const heroSkillOf = (game) => game.opts.heroId && RG.data.heroes[game.opts.heroId] && RG.data.heroes[game.opts.heroId].skill;
+  const unitKindsOf = (game) => { const sk = heroSkillOf(game); return ['stone_soldier', 'granite_guard', 'obsidian_blade', 'drone', 'rock_wall'].concat(sk && sk.snowman ? ['snowman'] : []); };
+
+  /** 적 목록에 분열·소환으로 나오는 적을 더함 */
+  function withSpawned(enemies) {
     for (const e of [...enemies]) {
       const ed = RG.data.enemies[e];
       if (ed && ed.traits.split) enemies.add(ed.traits.split.into);
@@ -130,25 +123,159 @@ RG.art.sprites = (() => {
         for (const ph of bd.phases || []) enemies.add(ph.summon.type);
       }
     }
-    for (const e of enemies) {
-      const big = (RG.data.enemies[e] && RG.data.enemies[e].size >= 1.4) ? 288 : 168;
-      for (const f of (A.ENEMY_FRAMES || ['walk0', 'walk2'])) jobs.push(load(enemyKey(e, f), () => A.enemy(e, f), big, big));
+    return enemies;
+  }
+
+  /** 한 판에 미리 준비할 그림 목록 [{ key, make, w, h }] — 불러오지는 않음 */
+  function planForGame(game) {
+    const jobs = [];
+    const AR = A();
+    const types = new Set(game.opts.towers || Object.keys(RG.data.towers));
+    // 탑: 모든 단계의 쉬는 자세 + Lv1의 동작 자세는 미리, 나머지 동작은 처음 쓸 때(ensure)
+    for (const t of types) {
+      for (const lv of [1, 2, 3]) jobs.push(towerJob(t, lv, null));
+      for (const b of ['A', 'B']) jobs.push(towerJob(t, 4, b));
+      for (const p of ['aim', 'fire']) jobs.push(towerJob(t, 1, null, p));
     }
+    // 탑과 따로 움직이는 효과 그림 (불사조·바위·철구)
+    if (AR.fxSprite) {
+      if (types.has('phoenix_nest')) for (const fr of [0, 1]) jobs.push({ key: `fx:phoenix:${fr}`, make: () => A().fxSprite('phoenix', fr), w: 120, h: 120 });
+      if (types.has('titan_boulder')) for (const k of ['boulder', 'ironball']) jobs.push({ key: `fx:${k}`, make: () => A().fxSprite(k, 0), w: 120, h: 120 });
+    }
+    const enemies = new Set();
+    for (const w of RG.grid.parseWaves(game.waveStrings || game.def.waves || [])) for (const g of w.groups) enemies.add(g.e);
+    if (game.opts.mode === 'endless') for (const e of RG.data.regionPools[game.def.region] || []) enemies.add(e);
+    for (const e of withSpawned(enemies)) for (const f of (AR.ENEMY_FRAMES || ['walk0', 'walk2'])) jobs.push(enemyJob(e, f));
     for (const id of RG.data.heroOrder) {
       if (game.opts.heroId !== id) continue;
-      for (const p of (A.HERO_POSES || ['idle0'])) jobs.push(load(heroKey(id, p), () => A.hero(id, p), 160, 160));
+      for (const p of (AR.HERO_POSES || ['idle0'])) jobs.push(heroJob(id, p));
       // 토리: 거인 변신 그림도 미리 (크게)
       const hd = RG.data.heroes[id];
-      if (hd && hd.skill && hd.skill.giant) for (const p of (A.HERO_POSES || ['idle0'])) jobs.push(load(heroKey(`${id}_giant`, p), () => A.hero(`${id}_giant`, p), 256, 256));
+      if (hd && hd.skill && hd.skill.giant) for (const p of (AR.HERO_POSES || ['idle0'])) jobs.push(heroJob(`${id}_giant`, p));
     }
-    const heroSkill = game.opts.heroId && RG.data.heroes[game.opts.heroId] && RG.data.heroes[game.opts.heroId].skill;
-    const unitKinds = ['stone_soldier', 'granite_guard', 'obsidian_blade', 'drone', 'rock_wall'];
-    if (heroSkill && heroSkill.snowman) unitKinds.push('snowman');
-    for (const k of unitKinds) {
-      for (const p of (A.UNIT_POSES || ['idle', 'attack'])) jobs.push(load(unitKey(k, p), () => A.unit(k, p), 128, 128));
+    for (const k of unitKindsOf(game)) for (const p of (AR.UNIT_POSES || ['idle', 'attack'])) jobs.push(unitJob(k, p));
+    for (const s of LANTERN_STEPS) jobs.push(lanternJob(s));
+    return jobs;
+  }
+
+  /** 한 판에 필요한 그림을 모두 한꺼번에 준비 */
+  function prepareForGame(game) {
+    return Promise.all(planForGame(game).map((j) => load(j.key, j.make, j.w, j.h)));
+  }
+
+  /**
+   * 지금 화면에 바로 보이는 그림만: 등불, 영웅·병사·벽의 기본 자세, 맵 위의 탑, 살아 있는 적과 지금·다음 웨이브 적의 기본 그림(walk0).
+   * 다른 자세는 렌더러가 기본 그림으로 대신하다 처음 그릴 때 부름(ensure), 나머지는 background가 쉬는 틈에.
+   * hint.wave: 아직 재현 전이면 저장된 웨이브 번호.
+   */
+  function essentialForGame(game, hint) {
+    const st = game.state;
+    const out = new Map();
+    const add = (j) => { if (!out.has(j.key)) out.set(j.key, j); };
+    for (const s of LANTERN_STEPS) add(lanternJob(s));
+    if (game.opts.heroId) add(heroJob(game.opts.heroId, 'idle0'));
+    for (const k of unitKindsOf(game)) add(unitJob(k, 'idle'));
+    for (const t of st.towers) add(towerJob(t.type, t.level, t.branch));
+    const enemies = new Set();
+    for (const e of st.enemies) if (!e.dead) enemies.add(e.type);
+    const waves = RG.grid.parseWaves(game.waveStrings || game.def.waves || []);
+    const w0 = hint && hint.wave != null ? hint.wave : st.wave.index;
+    for (let i = Math.max(0, w0 - 1); i <= w0 + 1 && i < waves.length; i++) for (const g of waves[i].groups) enemies.add(g.e);
+    for (const e of enemies) if (RG.data.enemies[e]) add(enemyJob(e, 'walk0'));
+    return [...out.values()];
+  }
+
+  /*
+   * 나눠서 준비하기 (js/ui/game.js): 그림 한 장을 만드는 데(SVG 글 + 브라우저가 SVG를 읽기) 느린 휴대폰에서 수십 ms.
+   * 한꺼번에 수백 장이면 화면이 수 초~수십 초 멈췄음 → 한 작업에 한 장씩, 지금 보이는 것(need)은 바로바로,
+   * 나머지(background)는 판을 하면서 쉬는 틈에(requestIdleCallback). 같은 그림을 두 번 만들지 않음(load가 묶음).
+   */
+  const post = (() => {
+    if (typeof MessageChannel === 'undefined') return (fn) => { const id = setTimeout(fn, 0); return () => clearTimeout(id); };
+    const ch = new MessageChannel();
+    const q = [];
+    ch.port1.onmessage = () => { const fn = q.shift(); if (fn) fn(); };
+    return (fn) => { let live = true; q.push(() => { if (live) fn(); }); ch.port2.postMessage(0); return () => { live = false; }; };
+  })();
+  const idleLater = (fn) => {
+    if (typeof requestIdleCallback === 'function') { const id = requestIdleCallback(fn, { timeout: 1000 }); return () => cancelIdleCallback(id); }
+    const id = setTimeout(fn, 120);
+    return () => clearTimeout(id);
+  };
+
+  /**
+   * const p = stagedForGame(game)
+   * p.need(jobs) → Promise: 이 그림들을 먼저(앞줄) 준비, 다 되면 풀림
+   * p.background() → 나머지(planForGame에서 앞줄에 없던 것)를 쉬는 틈에 하나씩
+   * p.cancel() → 아직 시작하지 않은 것은 그만 (이미 시작한 한 장은 끝까지 — 보관소에 남아 다음에 씀)
+   */
+  function stagedForGame(game) {
+    const front = [];
+    let back = null;
+    let stop = null;
+    let cancelled = false;
+    const pending = new Map(); // key → [resolve] (앞줄 그림이 준비되면)
+    function startOne(job) {
+      const p = load(job.key, job.make, job.w, job.h);
+      const res = pending.get(job.key);
+      if (res) { pending.delete(job.key); p.then(() => res.forEach((f) => f())); }
     }
-    for (const s of LANTERN_STEPS) jobs.push(load(`lantern:${s}`, () => A.lantern(s), TW, TH));
-    return Promise.all(jobs);
+    function pump() {
+      stop = null;
+      if (cancelled) return;
+      const job = front.length ? front.shift() : back && back.length ? back.shift() : null;
+      if (job) startOne(job);
+      schedule();
+    }
+    function schedule() {
+      if (cancelled || stop) return;
+      if (front.length) stop = post(pump);
+      else if (back && back.length) stop = idleLater(pump);
+    }
+    function need(jobs) {
+      if (cancelled) return Promise.resolve();
+      const waits = [];
+      for (const j of jobs) {
+        if (cache.has(j.key)) continue;
+        if (loading.has(j.key)) { waits.push(loading.get(j.key)); continue; }
+        waits.push(new Promise((res) => { if (!pending.has(j.key)) { pending.set(j.key, []); front.push(j); } pending.get(j.key).push(res); }));
+      }
+      // 앞줄이 생겼으면 쉬는 틈 대기 대신 바로
+      if (front.length && stop && back && back.length) { stop(); stop = null; }
+      schedule();
+      return Promise.all(waits).then(() => undefined);
+    }
+    function background() {
+      if (cancelled || back) return;
+      // 순서: 탑 목록의 탑을 놓을 때 보이는 그림(설치 단계의 쉬는 자세 — 렌더러가 스스로 부르지 않음) → 곧 올 웨이브 적의 걷는 동작
+      // → 그 적의 다른 동작 → 나머지. (화면에 나온 탑·적·영웅의 다른 자세는 렌더러가 처음 그릴 때 ensure로 부름)
+      const ghost = new Set();
+      for (const t of game.opts.towers || Object.keys(RG.data.towers)) ghost.add(towerKey(t, game.startLevel ? game.startLevel(t) : 1, null));
+      const waves = RG.grid.parseWaves(game.waveStrings || game.def.waves || []);
+      const soon = new Set();
+      for (const e of game.state.enemies) if (!e.dead) soon.add(e.type);
+      for (let i = Math.max(0, game.state.wave.index - 1); i < game.state.wave.index + 3 && i < waves.length; i++) for (const g of waves[i].groups) soon.add(g.e);
+      withSpawned(soon);
+      const rank = (j) => {
+        const [kind, name, frame] = j.key.split(':');
+        if (ghost.has(j.key)) return 0;
+        if (kind === 'enemy' && soon.has(name)) return frame.startsWith('walk') ? 1 : 2;
+        return 3;
+      };
+      back = planForGame(game).filter((j) => !cache.has(j.key) && !pending.has(j.key))
+        .map((j, i) => [rank(j), i, j]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map((x) => x[2]);
+      schedule();
+    }
+    function cancel() {
+      cancelled = true;
+      if (stop) stop();
+      stop = null;
+      front.length = 0;
+      if (back) back.length = 0;
+      for (const res of pending.values()) res.forEach((f) => f());
+      pending.clear();
+    }
+    return { need, background, cancel, get left() { return front.length + (back ? back.length : 0); } };
   }
 
   /** 건설 메뉴 등 DOM용 작은 그림 (data URL) */
@@ -164,5 +291,5 @@ RG.art.sprites = (() => {
     return null;
   }
 
-  return { sized, load, get, ensure, TW, TH, towerKey, enemyKey, heroKey, unitKey, lanternKey, prepareForGame, dataUrl, LANTERN_STEPS };
+  return { sized, load, get, ensure, TW, TH, towerKey, enemyKey, heroKey, unitKey, lanternKey, prepareForGame, planForGame, essentialForGame, stagedForGame, dataUrl, LANTERN_STEPS };
 })();

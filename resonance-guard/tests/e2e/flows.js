@@ -317,9 +317,95 @@ async function resumeRun(browser) {
     const ref = RG.sim.replay(saved.opts, saved.log, T);
     return { tick: T, hash: g.hash(), ref: ref.hash(), towers: g.state.towers.length };
   }, await page.evaluate(() => RG.save.get(RG.save.KEYS.run)) || before.run);
+  const long = await longResume(page, ctx, errors);
   await ctx.close();
-  const ok = /이어하기/.test(label) && after.tick >= before.tick && after.tick - before.tick < 90 && after.hash === after.ref;
-  return { name: '판 도중 새로고침 → 이어하기', ok, detail: `버튼 "${label.trim()}", 저장 틱 ${before.tick} → 이어서 ${after.tick}, 재현 상태와 해시 ${after.hash === after.ref ? '같음' : '다름'}, 탑 ${after.towers}개`, errors };
+  const ok = /이어하기/.test(label) && after.tick >= before.tick && after.tick - before.tick < 90 && after.hash === after.ref && Object.values(long.r).every(Boolean);
+  return { name: '판 도중 새로고침 → 이어하기', ok, detail: `버튼 "${label.trim()}", 저장 틱 ${before.tick} → 이어서 ${after.tick}, 재현 상태와 해시 ${after.hash === after.ref ? '같음' : '다름'}, 탑 ${after.towers}개 / 긴 판 ${long.tick}틱: ${Object.entries(long.r).map(([k, v]) => `${k} ${v ? '✓' : '✗'}`).join(' · ')}`, errors };
+}
+
+/**
+ * 긴 판 이어하기 (공명석 웨이브처럼 수천~수만 틱): 클릭은 바로 끝나고 진행률이 보임, 재현하는 동안 입력·자동 저장이 없음,
+ * Esc로 그만두면 타이틀로(저장 그대로, 남은 재현 없음), 다시 누르면 끝까지 같은 해시, 재현이 실패하면 알리고 돌아감
+ */
+async function longResume(page, ctx, errors) {
+  const r = {};
+  await page.evaluate(() => RG.ui.show('title', {}));
+  const saved = await page.evaluate(() => {
+    // 적 체력을 낮춰(hpMult — 판 설정이라 재현도 같음) 웨이브 10 넘게 가는 긴 판
+    const opts = Object.assign({ mode: 'normal', seed: 5, heroId: 'kara', towers: ['ember_archer', 'frost_crystal', 'stone_barracks'], branches: true }, RG.crystal.setup(1), { hpMult: 0.3 });
+    const g = RG.sim.create(opts);
+    const m = g.map;
+    const spots = [];
+    for (let rr = 0; rr < m.rows; rr++) for (let c = 0; c < m.cols; c++) {
+      if (m.kinds[rr * m.cols + c] !== RG.grid.T.BUILD) continue;
+      let near = 0;
+      for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) if (m.kinds[(rr + dr) * m.cols + (c + dc)] === RG.grid.T.PATH) near++;
+      spots.push({ near, c, r: rr });
+    }
+    spots.sort((a, b) => b.near - a.near);
+    const types = ['ember_archer', 'frost_crystal', 'stone_barracks'];
+    let k = 0;
+    const spend = () => {
+      for (const t of spots.slice(0, 30)) { if (g.state.gold < 120) break; if (!g.tileTower(t.c, t.r) && g.cmd({ type: 'build', tower: types[k % 3], c: t.c, r: t.r }).ok) k++; }
+      for (const t of g.state.towers.slice().sort((a, b) => a.level - b.level)) if (t.level < 3) g.cmd({ type: 'upgrade', id: t.id });
+    };
+    spend();
+    g.cmd({ type: 'callWave' });
+    for (let i = 0; i < 12000 && !g.state.result; i++) { if (i % 60 === 0) spend(); g.step(); }
+    // 판이 끝났으면 끝나기 조금 전까지로 (이어할 판)
+    const T = g.state.result ? g.state.tick - 200 : g.state.tick;
+    const log = g.log.filter((x) => x[0] <= T);
+    const at = RG.sim.replay(opts, log, T);
+    const run = { opts, log, tick: T, mapId: g.def.id, wave: at.state.wave.index, savedAt: Date.now() };
+    RG.save.set(RG.save.KEYS.run, run);
+    return { tick: run.tick, json: localStorage.getItem('rg.run.v1'), result: at.state.result };
+  });
+  await page.goto(URL);
+  await page.waitForSelector('#screen-title.active .tm-hero');
+  const cdp = await ctx.newCDPSession(page);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 6 }); // 재현이 몇 초 걸리게 (느린 휴대폰처럼)
+  const click = await page.evaluate(() => {
+    const t0 = performance.now();
+    document.querySelector('.tm-hero').click();
+    return { ms: performance.now() - t0, veil: !!document.querySelector('#screen-game.active .resume-veil'), game: !!RG.ui.game.game };
+  });
+  r.instant = !saved.result && saved.tick > 5000 && click.veil && !click.game && click.ms < 1000;
+  if (!r.instant) console.log('긴 판 클릭', JSON.stringify({ tick: saved.tick, result: saved.result, click }));
+  await page.waitForFunction(() => { const p = document.querySelector('.rv-pct'); return p && parseInt(p.textContent, 10) >= 3; }, null, { timeout: 30000 });
+  const live = await page.evaluate(() => ({ status: !!document.querySelector('.resume-veil [role="status"][aria-live="polite"]'), bar: (document.querySelector('.resume-veil [role="progressbar"]') || { getAttribute: () => '0' }).getAttribute('aria-valuenow') }));
+  // 재현하는 동안 키·누르기: 웨이브 호출(Space)·탑 고르기(1)·일시정지(P)·배속(F), 화면 아무 데나 → 판도 루프도 없음, 저장 그대로
+  for (const k of ['Space', '1', 'p', 'f']) await page.keyboard.press(k);
+  await page.mouse.click(60, 60);
+  await page.evaluate(() => RG.ui.game.doCmd({ type: 'callWave' }));
+  r.blocked = await page.evaluate((json) => !RG.ui.game.game && RG.ui.currentId() === 'game' && !!document.querySelector('.resume-veil') && localStorage.getItem('rg.run.v1') === json, saved.json);
+  r.progress = live.status && +live.bar >= 3;
+  // Esc → 들어온 화면(타이틀)으로, 남은 재현이 판을 열지 않음
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('#screen-title.active');
+  await page.waitForTimeout(1500);
+  const cancel = await page.evaluate((json) => ({ scr: RG.ui.currentId(), game: !!RG.ui.game.game, veil: !!document.querySelector('.resume-veil'), save: localStorage.getItem('rg.run.v1') === json, tile: !!document.querySelector('.tm-hero') }), saved.json);
+  r.cancel = cancel.scr === 'title' && !cancel.game && !cancel.veil && cancel.save && cancel.tile;
+  if (!r.cancel) console.log('Esc 취소', JSON.stringify(cancel));
+  // 다시 → 끝까지: 저장된 기록을 그 틱까지 한 번에 재현한 것과 같은 해시
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+  await page.click('.tm-hero');
+  await page.waitForFunction(() => RG.ui.game.game && !document.querySelector('#screen-game').classList.contains('loading'), null, { timeout: 60000 });
+  const fin = await page.evaluate((json) => {
+    const run = JSON.parse(json);
+    const g = RG.ui.game.game;
+    return { tick: g.state.tick, hash: g.hash(), ref: RG.sim.replay(run.opts, run.log, g.state.tick).hash() };
+  }, saved.json);
+  r.same = fin.tick >= saved.tick && fin.tick - saved.tick < 90 && fin.hash === fin.ref;
+  // 망가진 저장(재현 도중 오류): 알리고 들어온 화면으로, 저장은 지우지 않음, 잡히지 않은 오류 없음
+  await page.evaluate(() => RG.ui.show('title', {}));
+  await page.evaluate((json) => { const run = JSON.parse(json); run.log = [[10, { type: 'callWave' }], null]; run.tick = 3000; localStorage.setItem('rg.run.v1', JSON.stringify(run)); RG.ui.show('title', {}); }, saved.json);
+  const nErr = errors.length;
+  await page.click('.tm-hero');
+  await page.waitForFunction(() => RG.ui.currentId() === 'title' && document.querySelector('#toast-root').textContent.includes('이어할 수 없습니다'), null, { timeout: 10000 });
+  const failErrs = errors.splice(nErr);
+  r.badSave = failErrs.length === 1 && /이어하기 재현 실패/.test(failErrs[0]) && await page.evaluate(() => !RG.ui.game.game && !!localStorage.getItem('rg.run.v1'));
+  if (!r.badSave) console.log('망가진 저장', JSON.stringify(failErrs));
+  return { r, tick: saved.tick };
 }
 
 async function worldRun(browser) {

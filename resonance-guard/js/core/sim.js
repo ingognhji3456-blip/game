@@ -3140,17 +3140,54 @@ RG.sim = (() => {
     return game;
   }
 
-  /** 기록 재현: untilTick까지 진행한 게임을 돌려줌 */
-  function replay(opts, log, untilTick) {
+  /**
+   * 기록 재현을 조금씩 (이어하기가 화면을 멈추지 않게 — js/ui/game.js): untilTick까지 나눠서 진행.
+   *   const r = replayer(opts, log, untilTick);
+   *   r.step(10)       // 10ms어치(최소 1틱) 진행, 끝났으면 true
+   *   r.progress       // 0..1
+   *   r.game           // 처음부터 같은 게임 객체 (끝나기 전엔 중간 상태)
+   * 나누는 곳이 어디든 순서는 replay와 같음: 각 틱을 진행하기 전에 그 틱의 명령을 적용, 끝에 남은 명령.
+   * replay()도 이것으로 돌아가므로 둘의 결과는 늘 같음 (tests/replay.test.js).
+   * maxTicks(선택): 한 번에 진행할 틱 수 상한 (시험에서 나누는 곳을 정해 두려고).
+   */
+  function replayer(opts, log, untilTick) {
     const g = create(opts);
     let li = 0;
-    while (g.state.tick < untilTick && !g.state.result) {
-      while (li < log.length && log[li][0] <= g.state.tick) { g.cmd(log[li][1]); li += 1; }
-      g.step();
+    let done = false;
+    const clock = typeof performance !== 'undefined' && performance.now ? () => performance.now() : () => Date.now();
+    const apply = () => { while (li < log.length && log[li][0] <= g.state.tick) { g.cmd(log[li][1]); li += 1; } };
+    function step(budgetMs, maxTicks) {
+      if (done) return true;
+      const timed = budgetMs != null && budgetMs !== Infinity;
+      const t0 = timed ? clock() : 0;
+      let n = 0;
+      while (g.state.tick < untilTick && !g.state.result) {
+        apply();
+        g.step();
+        n += 1;
+        if ((maxTicks != null && n >= maxTicks) || (timed && clock() - t0 >= budgetMs)) {
+          if (g.state.tick < untilTick && !g.state.result) return false;
+          break;
+        }
+      }
+      apply();
+      done = true;
+      return true;
     }
-    while (li < log.length && log[li][0] <= g.state.tick) { g.cmd(log[li][1]); li += 1; }
-    return g;
+    return {
+      game: g,
+      step,
+      get done() { return done; },
+      get progress() { return done ? 1 : untilTick > 0 ? Math.min(1, g.state.tick / untilTick) : 0; },
+    };
   }
 
-  return { create, replay, DT, orbitPos };
+  /** 기록 재현: untilTick까지 진행한 게임을 돌려줌 (한 번에 — 시험·도구용, 화면은 replayer로 나눠서) */
+  function replay(opts, log, untilTick) {
+    const r = replayer(opts, log, untilTick);
+    r.step();
+    return r.game;
+  }
+
+  return { create, replay, replayer, DT, orbitPos };
 })();
