@@ -7,7 +7,7 @@
   <meta name="description" content="네온 레이드 — 보스 10명 × 4단계 네온 탄막 슈팅." />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='180' height='180' rx='36' fill='%23FF3C00'/%3E%3C/svg%3E" />
   <style>/* css/style.css */
-/* NEON RAID — 원본(index.css + NeonRaid.tsx 의 인라인 스타일)과 같은 화면 구성 */
+/* 네온 레이드 — 원본(index.css + NeonRaid.tsx)과 같은 화면 구성. 캔버스 크기는 엔진의 fitToParent() 가 정함 */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { width: 100%; height: 100%; overflow: hidden; background: #03030A; }
 #root { width: 100%; height: 100%; }
@@ -23,18 +23,18 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #03030A; }
 }
 
 #game {
+  display: block;
   max-width: 100%;
   max-height: 100%;
-  image-rendering: pixelated;
-  aspect-ratio: 540 / 960;
   touch-action: none;
   user-select: none;
+  -webkit-user-select: none;
 }
 
 </style>
 </head>
 <body>
-  <!-- 원본(React)의 화면 구성 그대로: 가운데 정렬한 540×960 캔버스 하나 -->
+  <!-- 가운데 정렬한 세로 캔버스 하나 (크기는 main.js 가 화면에 맞춰 정하고, 고해상도로 그림) -->
   <div id="root">
     <div class="stage">
       <canvas id="game" width="540" height="960"></canvas>
@@ -139,6 +139,178 @@ const STAGE_COLORS = {
 };
 
 </script>
+  <script>/* js/graphics.js */
+'use strict';
+
+/* =========================================================
+ * NEON RAID — 그래픽 도우미
+ *  - 오프스크린 캔버스 · 그림 캐시 (빛 번짐 점, 탄, 배경 성운, 화면 테두리 어둡게)
+ *  - 색 밝게/어둡게 (금속 명암용)
+ * 게임 규칙과는 상관없고, 그리는 모습만 담당합니다.
+ * ========================================================= */
+
+/** 화면에 붙지 않는 캔버스 (브라우저: <canvas>, 워커: OffscreenCanvas, 그 밖에는 null) */
+function makeCanvas(w, h) {
+  if (typeof document !== 'undefined' && document.createElement) {
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    return c;
+  }
+  if (typeof OffscreenCanvas !== 'undefined') return new OffscreenCanvas(w, h);
+  return null;
+}
+
+/** '#RRGGBB' 꼴인지 */
+function isHex(c) { return typeof c === 'string' && c.length === 7 && c[0] === '#'; }
+
+/** f > 0 이면 흰색 쪽으로, f < 0 이면 검은색 쪽으로 (−1 ~ 1) */
+function shadeHex(hex, f) {
+  if (!isHex(hex)) return hex;
+  const [r, g, b] = hexToRgb(hex);
+  if (f >= 0) return rgbToHex(r + (255 - r) * f, g + (255 - g) * f, b + (255 - b) * f);
+  return rgbToHex(r * (1 + f), g * (1 + f), b * (1 + f));
+}
+
+/** 명암을 넣을 만큼 밝은 색인지 (어두운 UI 바탕색에는 금속 명암을 넣지 않음) */
+function isShadeable(c) {
+  if (!isHex(c)) return false;
+  const [r, g, b] = hexToRgb(c);
+  return Math.max(r, g, b) > 90;
+}
+
+/** 아주 단순한 시드 난수 (배경 성운 배치용 — 게임의 Math.random 순서를 건드리지 않음) */
+function seededRandom(seed) {
+  let s = seed >>> 0;
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+}
+
+/**
+ * 그림 캐시. 게임 좌표(540×960) 단위로 그리고, 화면 배율(scale)만큼 고해상도로 만들어 둡니다.
+ * 배율이 바뀌면 다시 만듭니다. 크기가 정해진 큰 그림(배경 등)은 fixed 에 따로 둡니다.
+ */
+class SpriteCache {
+  constructor() {
+    this.scale = 1;
+    this.map = new Map();
+    this.fixed = new Map();
+  }
+  setScale(s) {
+    if (s === this.scale) return;
+    this.scale = s;
+    this.map.clear();
+  }
+  /** 정사각형 그림: size(게임 좌표) 안에 draw(ctx, size) 로 그림 */
+  get(key, size, draw) {
+    let c = this.map.get(key);
+    if (c === undefined) {
+      const px = Math.max(2, Math.ceil(size * this.scale));
+      c = makeCanvas(px, px);
+      if (c) {
+        const x = c.getContext('2d');
+        x.scale(px / size, px / size);
+        draw(x, size);
+      }
+      if (this.map.size > 400) this.map.clear();
+      this.map.set(key, c);
+    }
+    return c;
+  }
+  /** 크기가 정해진 그림 (배율과 상관없이 w×h 픽셀) */
+  once(key, w, h, draw) {
+    let c = this.fixed.get(key);
+    if (c === undefined) {
+      c = makeCanvas(w, h);
+      if (c) draw(c.getContext('2d'), w, h);
+      this.fixed.set(key, c);
+    }
+    return c;
+  }
+}
+
+const GFX = {
+  /** 빛 번짐 점: 가운데가 밝고 가장자리로 사라지는 원 (더하기 합성으로 그리면 네온 빛) */
+  glow(cache, color) {
+    return cache.get('glow|' + color, 64, (x, s) => {
+      const [r, g, b] = hexToRgb(color);
+      const grd = x.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+      grd.addColorStop(0, `rgba(${r},${g},${b},0.85)`);
+      grd.addColorStop(0.25, `rgba(${r},${g},${b},0.4)`);
+      grd.addColorStop(0.6, `rgba(${r},${g},${b},0.1)`);
+      grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      x.fillStyle = grd;
+      x.fillRect(0, 0, s, s);
+    });
+  },
+
+  /** 적 탄: 색 번짐 + 색 테두리 + 하얗게 달아오른 가운데 (탄막 슈팅에서 가장 잘 보이는 모양) */
+  bullet(cache, color, r) {
+    const rr = Math.round(r * 2) / 2;
+    const size = rr * 4.4;
+    return cache.get(`bullet|${color}|${rr}`, size, (x, s) => {
+      const c = s / 2;
+      const [cr, cg, cb] = hexToRgb(color);
+      const halo = x.createRadialGradient(c, c, rr * 0.6, c, c, c);
+      halo.addColorStop(0, `rgba(${cr},${cg},${cb},0.55)`);
+      halo.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+      x.fillStyle = halo;
+      x.fillRect(0, 0, s, s);
+      const body = x.createRadialGradient(c - rr * 0.25, c - rr * 0.3, rr * 0.1, c, c, rr);
+      body.addColorStop(0, '#FFFFFF');
+      body.addColorStop(0.45, shadeHex(color, 0.55));
+      body.addColorStop(0.8, color);
+      body.addColorStop(1, shadeHex(color, -0.35));
+      x.fillStyle = body;
+      x.beginPath(); x.arc(c, c, rr, 0, Math.PI * 2); x.fill();
+    });
+  },
+
+  /** 배경: 깊은 우주 그라데이션 + 성운 + 먼지 별 (스테이지마다 색이 다름). 540×960 고정 */
+  space(cache, palette, seed) {
+    return cache.once('space|' + palette.join(',') + '|' + seed, WIDTH, HEIGHT, (x, w, h) => {
+      const base = x.createLinearGradient(0, 0, 0, h);
+      base.addColorStop(0, '#05040F');
+      base.addColorStop(0.5, '#070519');
+      base.addColorStop(1, '#020208');
+      x.fillStyle = base;
+      x.fillRect(0, 0, w, h);
+      const rnd = seededRandom(seed);
+      x.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 7; i++) {
+        const col = palette[i % palette.length];
+        const [r, g, b] = hexToRgb(col);
+        const cx = rnd() * w, cy = rnd() * h, rad = 160 + rnd() * 300;
+        const a = 0.05 + rnd() * 0.07;
+        const grd = x.createRadialGradient(cx, cy, 0, cx, cy, rad);
+        grd.addColorStop(0, `rgba(${r},${g},${b},${a})`);
+        grd.addColorStop(0.5, `rgba(${r},${g},${b},${a * 0.4})`);
+        grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
+        x.fillStyle = grd;
+        x.fillRect(0, 0, w, h);
+      }
+      // 아주 멀리 있는 먼지 별
+      for (let i = 0; i < 520; i++) {
+        const a = 0.08 + rnd() * 0.3;
+        x.fillStyle = `rgba(200,210,255,${a})`;
+        const sz = rnd() < 0.9 ? 1 : 1.5;
+        x.fillRect(rnd() * w, rnd() * h, sz, sz);
+      }
+      x.globalCompositeOperation = 'source-over';
+    });
+  },
+
+  /** 화면 가장자리를 살짝 어둡게 (렌즈 느낌). 540×960 고정 */
+  vignette(cache) {
+    return cache.once('vignette', WIDTH, HEIGHT, (x, w, h) => {
+      const grd = x.createRadialGradient(w / 2, h * 0.48, h * 0.32, w / 2, h * 0.48, h * 0.75);
+      grd.addColorStop(0, 'rgba(0,0,0,0)');
+      grd.addColorStop(1, 'rgba(0,0,0,0.55)');
+      x.fillStyle = grd;
+      x.fillRect(0, 0, w, h);
+    });
+  },
+};
+
+</script>
   <script>/* js/engine.js */
 'use strict';
 
@@ -150,7 +322,7 @@ const STAGE_COLORS = {
  * ========================================================= */
 
 const TAU = Math.PI * 2;
-const MAX_PARTICLES = 80;
+const MAX_PARTICLES = 150;   // 원본 80 — 빛 입자를 조금 더 (보기용)
 /** 켜진 채 남아 있는 레이저(쓸어 가는 레이저 · 회전 광선 · 블랙홀 레이저)가 맞기 시작하기 전 예열 시간 (틱) */
 const BEAM_WARMUP = 60;
 
@@ -283,6 +455,12 @@ class NeonRaidEngine {
   b10TimeAttack = 2400;
   armAngle = 0;
   phaseTimer = 0;   // 이번 단계가 시작된 뒤 지난 틱 (레이저 예열용)
+
+  // 그래픽 (게임 규칙과 상관없음)
+  pixelScale = 1;              // 캔버스 실제 픽셀 ÷ 게임 좌표 — 고해상도 화면에서 또렷하게
+  sprites = new SpriteCache(); // 빛 번짐 · 탄 · 배경 그림 캐시
+  fxRings = [];                // 충격파 고리
+  fxHp = 0; fxItime = 0; fxCoins = 0;   // 맞음 · 회복 · 코인 줍기를 알아채려고 직전 값을 기억
 
   // virtual joystick
   joyBase = [90, HEIGHT - 120];
@@ -422,6 +600,7 @@ class NeonRaidEngine {
     this.flashColor = C_WHITE;
     this.armAngle = 0;
     this.phaseTimer = 0;
+    this.fxRings = []; this.fxHp = this.php; this.fxItime = 0; this.fxCoins = 0;
 
     for (let i = 0; i < 3; i++) this.spawnCoin();
   }
@@ -447,6 +626,7 @@ class NeonRaidEngine {
     this.bhp = this.bmax;
     this.flash = 200; this.flashColor = C_WHITE; this.shake = 20;
     this.spawnParticles(WIDTH / 2, 100, C_WHITE, 20, 10, 10);
+    this.addRing(this.bx, this.by, C_WHITE, 330, 5, 0.022); this.addRing(this.bx, this.by, this.bColor, 230, 3, 0.03);
     this.bossBullets = [];
     this.lasers = [];
     this.b2Mines = [];
@@ -617,6 +797,25 @@ class NeonRaidEngine {
     }
   }
 
+  /** 캔버스를 부모 상자에 맞게(비율 유지) 키우고, 화면 배율(devicePixelRatio)만큼 고해상도로 그림 */
+  fitToParent() {
+    const box = this.canvas.parentElement;
+    if (!box || !box.clientWidth || !box.clientHeight) return;
+    const fit = Math.min(box.clientWidth / WIDTH, box.clientHeight / HEIGHT);
+    this.canvas.style.width = Math.floor(WIDTH * fit) + 'px';
+    this.canvas.style.height = Math.floor(HEIGHT * fit) + 'px';
+    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+    this.setPixelScale(clamp(Math.round(fit * dpr * 4) / 4, 1, 3));
+  }
+
+  setPixelScale(sc) {
+    const w = Math.round(WIDTH * sc), h = Math.round(HEIGHT * sc);
+    if (sc === this.pixelScale && this.canvas.width === w && this.canvas.height === h) return;
+    this.pixelScale = sc;
+    this.canvas.width = w; this.canvas.height = h;
+    this.sprites.setScale(sc);
+  }
+
   inRect(mx, my, x, y, w, h) {
     return mx >= x && mx <= x + w && my >= y && my <= y + h;
   }
@@ -650,11 +849,12 @@ class NeonRaidEngine {
     // 화면 흔들림 · 번쩍임은 어느 화면에서든 줄어들게 합니다. 원본은 전투 중(updatePlay)에만 줄여서,
     // 맞다가 죽거나 보스를 깨고 나가면 메뉴 · 전환 · 승리 화면이 계속 흔들리고 색으로 덮여 있었습니다.
     if (this.state !== 'PLAY') this.fadeScreenFx();
+    this.updateBackdrop();
     if (this.state === 'LOBBY') return;
     if (this.state === 'HANGAR') { this.hangarTimer++; return; }
     if (this.state === 'UPGRADE') { this.upgTimer++; return; }
     if (this.state === 'STAGE_SELECT') { this.selTimer++; return; }
-    if (this.state === 'WIN') return;
+    if (this.state === 'WIN') { this.updateWinFx(); return; }
     if (this.state === 'TRANSITION') { this.updateTransition(); return; }
     if (this.state === 'PLAY') this.updatePlay();
   }
@@ -998,6 +1198,7 @@ class NeonRaidEngine {
       } else {
         this.flash = 200; this.flashColor = C_WHITE; this.shake = 40;
         this.spawnParticles(this.bx, this.by, C_WHITE, 40, 15, 12);
+        this.addRing(this.bx, this.by, C_WHITE, 420, 6, 0.018); this.addRing(this.bx, this.by, this.bColor, 300, 4, 0.025); this.addRing(this.bx, this.by, C_GOLD, 180, 3, 0.035);
         if (this.bossStage < 10) {
           this.state = 'TRANSITION'; this.transitionTimer = 0;
           this.bossBullets = []; this.lasers = []; this.orbs = [];
@@ -1054,6 +1255,46 @@ class NeonRaidEngine {
     for (const p of this.particles) { p.x += p.vx; p.y += p.vy; p.life -= p.life_dec; }
     this.particles = this.particles.filter(p => p.life > 0);
     this.fadeScreenFx();
+  }
+
+  /** 보기용 움직임: 별이 아래로 흐르고(전투 중엔 빠르게 — 앞으로 날아가는 느낌), 충격파 고리가 퍼짐.
+   *  맞음(빨강) · 무적 구슬(청록) · 회복(초록) · 코인(금색)을 직전 값과 비교해 알아채고 고리를 띄움 */
+  updateBackdrop() {
+    const v = this.state === 'PLAY' ? 1 : 0.2;
+    for (const st of this.stars) {
+      st[1] += (st[4] >= 2 ? 1.2 : 0.5) * v;
+      if (st[1] > HEIGHT + 3) { st[1] = -3; st[0] = Math.random() * WIDTH; }
+    }
+    for (let i = this.fxRings.length - 1; i >= 0; i--) {
+      const r = this.fxRings[i];
+      r.r += (r.max - r.r) * 0.1 + 0.5;
+      r.life -= r.decay;
+      if (r.life <= 0) this.fxRings.splice(i, 1);
+    }
+    if (this.state === 'PLAY') {
+      const pcx = this.px + 17, pcy = this.py + 17;
+      const hurt = this.php < this.fxHp - 0.5;
+      if (this.itime > this.fxItime + 5) this.addRing(pcx, pcy, hurt ? C_RED : C_CYAN, hurt ? 70 : 110, 3);
+      else if (this.php > this.fxHp + 20) this.addRing(pcx, pcy, C_GREEN, 95, 3);
+      if (this.sessionCoins > this.fxCoins) this.addRing(pcx, pcy, C_COIN, 46, 2, 0.06);
+    }
+    this.fxHp = this.php; this.fxItime = this.itime; this.fxCoins = this.sessionCoins;
+  }
+
+  addRing(x, y, c, max, w = 3, decay = 0.035) {
+    if (this.fxRings.length < 24) this.fxRings.push({ x, y, r: 4, max, c, w, life: 1, decay });
+  }
+
+  /** 승리 화면: 불꽃놀이 */
+  updateWinFx() {
+    for (const p of this.particles) { p.x += p.vx; p.y += p.vy; p.vy += 0.05; p.life -= p.life_dec; }
+    this.particles = this.particles.filter(p => p.life > 0);
+    if (this.lobbyTimer % 26 === 0) {
+      const x = 70 + Math.random() * (WIDTH - 140), y = 110 + Math.random() * 260;
+      const c = [C_GOLD, C_CYAN, C_MAGENTA, C_LIME, C_ORANGE][(this.lobbyTimer / 26 | 0) % 5];
+      this.spawnParticles(x, y, c, 34, 6, 6);
+      this.addRing(x, y, c, 90, 2);
+    }
   }
 
   /** 화면 흔들림은 틱마다 1, 번쩍임은 틱마다 12 씩 줄어듦 (원본과 같은 속도) */
@@ -1553,7 +1794,9 @@ class NeonRaidEngine {
   // ─── RENDER ───────────────────────────────
   render() {
     const ctx = this.ctx;
-    // clear the ENTIRE canvas before any transform so shake never leaves edge ghosts
+    // 고해상도: 게임 좌표(540×960)를 캔버스 실제 픽셀에 맞춰 늘려 그림 (글자 · 선이 또렷함)
+    const sc = this.pixelScale;
+    ctx.setTransform(sc, 0, 0, sc, 0, 0);
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     ctx.save();
     // defensive reset — wipes any shadow/composite state that leaked from last frame
@@ -1562,14 +1805,12 @@ class NeonRaidEngine {
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
 
+    // 먼 배경(성운 · 별)은 흔들리지 않음
+    this.renderBackground();
+
     const ox = this.shake > 0 ? rand(-this.shake, this.shake) : 0;
     const oy = this.shake > 0 ? rand(-this.shake, this.shake) : 0;
     ctx.translate(ox, oy);
-
-    ctx.fillStyle = C_BG;
-    ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-    this.renderStars();
 
     switch (this.state) {
       case 'LOBBY': this.renderLobby(); break;
@@ -1580,22 +1821,21 @@ class NeonRaidEngine {
       case 'TRANSITION': this.renderTransition(); break;
       case 'WIN': this.renderWin(); break;
     }
+    ctx.restore();
 
+    ctx.save();
     // flash
     if (this.flash > 0) {
-      ctx.save();
       const [r, g, b] = hexToRgb(this.flashColor);
       ctx.fillStyle = `rgba(${r},${g},${b},${this.flash / 255})`;
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
-      ctx.restore();
     }
-
-    // scanlines
-    ctx.fillStyle = 'rgba(0,0,0,0.04)';
+    // 가장자리를 살짝 어둡게 + 옅은 주사선
+    this.blit(GFX.vignette(this.sprites), 0, 0, WIDTH, HEIGHT);
+    ctx.fillStyle = 'rgba(0,0,0,0.035)';
     for (let y = 0; y < HEIGHT; y += 3) {
       ctx.fillRect(0, y, WIDTH, 1);
     }
-
     ctx.restore();
   }
 
@@ -1615,7 +1855,7 @@ class NeonRaidEngine {
     // 네온 빛: 원본은 글자를 2px 씩 24번 겹쳐 찍어 빛을 냈지만, 한글은 획이 촘촘해 작은 글자가 뭉개집니다.
     // 그래서 그림자 번짐으로 빛을 내고, 그 위에 글자를 한 번 더 또렷하게 찍습니다.
     ctx.shadowColor = `rgba(${r},${g},${b},0.9)`;
-    ctx.shadowBlur = Math.max(4, size * 0.45);
+    ctx.shadowBlur = Math.max(4, size * 0.45) * this.pixelScale;   // 그림자 번짐은 실제 픽셀 단위
     ctx.fillStyle = color;
     if (center) ctx.textAlign = 'center';
     ctx.fillText(txt, x, y);
@@ -1627,8 +1867,26 @@ class NeonRaidEngine {
   circle(x, y, r, color, fill = true, lw = 2) {
     const ctx = this.ctx;
     ctx.beginPath(); ctx.arc(x, y, r, 0, TAU);
-    if (fill) { ctx.fillStyle = color; ctx.fill(); }
+    // 채운 원은 왼쪽 위에서 빛을 받는 공처럼 명암 (원본은 단색)
+    if (fill) { ctx.fillStyle = (r >= 6 && isShadeable(color)) ? this.sphereGrad(x, y, r, color) : color; ctx.fill(); }
     else { ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.stroke(); }
+  }
+
+  sphereGrad(x, y, r, color) {
+    const g = this.ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.08, x, y, r);
+    g.addColorStop(0, shadeHex(color, 0.6));
+    g.addColorStop(0.5, color);
+    g.addColorStop(1, shadeHex(color, -0.45));
+    return g;
+  }
+
+  /** 금속판 명암: 왼쪽 위가 밝고 아래로 어두워짐 */
+  metalGrad(x0, y0, x1, y1, color) {
+    const g = this.ctx.createLinearGradient(x0, y0, x0 + (x1 - x0) * 0.35, y1);
+    g.addColorStop(0, shadeHex(color, 0.5));
+    g.addColorStop(0.45, color);
+    g.addColorStop(1, shadeHex(color, -0.5));
+    return g;
   }
   line(x1, y1, x2, y2, color, lw = 1) {
     const ctx = this.ctx;
@@ -1639,7 +1897,7 @@ class NeonRaidEngine {
     const ctx = this.ctx;
     ctx.beginPath();
     ctx.roundRect(x, y, w, h, radius);
-    if (fill) { ctx.fillStyle = color; ctx.fill(); }
+    if (fill) { ctx.fillStyle = (h >= 8 && isShadeable(color)) ? this.metalGrad(x, y, x + w, y + h, color) : color; ctx.fill(); }
     else { ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.stroke(); }
   }
   poly(pts, color, fill = true, lw = 2) {
@@ -1647,13 +1905,18 @@ class NeonRaidEngine {
     ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
     for (const p of pts.slice(1)) ctx.lineTo(p[0], p[1]);
     ctx.closePath();
-    if (fill) { ctx.fillStyle = color; ctx.fill(); }
+    if (fill) {
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const p of pts) { if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0]; if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1]; }
+      ctx.fillStyle = (y1 - y0 >= 8 && isShadeable(color)) ? this.metalGrad(x0, y0, x1, y1, color) : color;
+      ctx.fill();
+    }
     else { ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.stroke(); }
   }
   neonRect(x, y, w, h, color, lw = 2) {
     // glow
     this.ctx.save();
-    this.ctx.shadowBlur = 8; this.ctx.shadowColor = color;
+    this.ctx.shadowBlur = 8 * this.pixelScale; this.ctx.shadowColor = color;
     this.rect(x, y, w, h, color, false, 5, lw);
     this.ctx.shadowBlur = 0; this.ctx.restore();
   }
@@ -1666,14 +1929,150 @@ class NeonRaidEngine {
     this.circle(x1, y1, 1.5 + 3 * k, colorWithAlpha(C_WHITE, 0.5 + 0.4 * k));
   }
 
-  renderStars() {
+  /** 그림(캐시된 캔버스)을 (x, y) 가운데에 size 크기로 */
+  sprite(img, x, y, size) {
+    if (img) this.ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
+  }
+
+  blit(img, x, y, w, h) {
+    if (img) this.ctx.drawImage(img, x, y, w, h);
+  }
+
+  /** 네온 빛줄기: 넓고 옅은 빛 → 색 → 하얀 심지, 살짝 일렁임 + 쏘는 곳의 빛 (더하기 합성) */
+  beam(x1, y1, x2, y2, w, color, muzzle = true) {
     const ctx = this.ctx;
-    for (const s of this.stars) {
-      s[2] += s[3];
-      const br = Math.round(100 + 80 * Math.sin(s[2]));
-      ctx.fillStyle = `rgb(${br},${br},${Math.min(255, br + 50)})`;
-      ctx.fillRect(s[0] | 0, s[1] | 0, s[4], s[4]);
+    const fl = 0.9 + 0.1 * Math.sin(this.lobbyTimer * 0.9);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    this.line(x1, y1, x2, y2, colorWithAlpha(color, 0.16), (w + 24) * fl);
+    this.line(x1, y1, x2, y2, colorWithAlpha(color, 0.4), (w + 9) * fl);
+    this.line(x1, y1, x2, y2, colorWithAlpha(color, 0.95), w * fl);
+    this.line(x1, y1, x2, y2, 'rgba(255,255,255,0.9)', Math.max(1.5, w * 0.38) * fl);
+    if (muzzle) this.sprite(GFX.glow(this.sprites, color), x1, y1, (w * 3 + 30) * fl);
+    ctx.restore();
+  }
+
+  /** 빛나는 고리 (충격파 · 지진 고리 · EMP) */
+  glowRing(x, y, r, color, w, alpha = 1) {
+    if (r <= 0) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = alpha * 0.3; this.circle(x, y, r, color, false, w * 3.2);
+    ctx.globalAlpha = alpha; this.circle(x, y, r, color, false, w);
+    ctx.restore();
+  }
+
+  /** 불꽃 입자: 빛 번짐 + 움직이는 방향으로 짧은 꼬리 */
+  drawParticles() {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const p of this.particles) {
+      const li = Math.max(0, Math.min(1, p.life));
+      const sz = Math.max(1, p.size * li);
+      ctx.globalAlpha = li;
+      this.sprite(GFX.glow(this.sprites, p.c), p.x, p.y, sz * 3.4);
+      this.line(p.x - p.vx * 1.6, p.y - p.vy * 1.6, p.x, p.y, p.c, Math.max(1, sz * 0.45));
     }
+    ctx.restore();
+  }
+
+  drawFxRings() {
+    for (const r of this.fxRings) this.glowRing(r.x, r.y, r.r, r.c, r.w * r.life + 0.6, r.life);
+  }
+
+  /** 유리 같은 네온 버튼 (위쪽 광택 · 빛나는 테두리 · 모서리 표시) */
+  neonButton(x, y, w, h, color, label, hov, size = 14) {
+    const ctx = this.ctx;
+    ctx.save();
+    const g = ctx.createLinearGradient(x, y, x, y + h);
+    g.addColorStop(0, colorWithAlpha(color, hov ? 0.32 : 0.16));
+    g.addColorStop(1, colorWithAlpha(color, hov ? 0.12 : 0.03));
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, 8); ctx.fill();
+    const gl = ctx.createLinearGradient(x, y, x, y + h * 0.5);
+    gl.addColorStop(0, 'rgba(255,255,255,0.10)');
+    gl.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = gl;
+    ctx.beginPath(); ctx.roundRect(x + 2, y + 2, w - 4, h * 0.5, 6); ctx.fill();
+    ctx.shadowBlur = (hov ? 18 : 10) * this.pixelScale; ctx.shadowColor = color;
+    ctx.strokeStyle = hov ? '#FFFFFF' : color; ctx.lineWidth = hov ? 2 : 1.5;
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, 8); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = colorWithAlpha(color, 0.9); ctx.lineWidth = 2;
+    const k = 9;
+    ctx.beginPath();
+    ctx.moveTo(x + 4, y + 4 + k); ctx.lineTo(x + 4, y + 4); ctx.lineTo(x + 4 + k, y + 4);
+    ctx.moveTo(x + w - 4 - k, y + h - 4); ctx.lineTo(x + w - 4, y + h - 4); ctx.lineTo(x + w - 4, y + h - 4 - k);
+    ctx.stroke();
+    ctx.restore();
+    this.glowText(label, x + w / 2, y + h / 2 + size * 0.36, hov ? '#FFFFFF' : color, size, true);
+  }
+
+  /** 카드 광택: 위쪽 은은한 빛 + 왼쪽 색 띠 */
+  cardSheen(x, y, w, h, color) {
+    const ctx = this.ctx;
+    ctx.save();
+    const g = ctx.createLinearGradient(x, y, x, y + h * 0.55);
+    g.addColorStop(0, 'rgba(255,255,255,0.06)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.roundRect(x + 1, y + 1, w - 2, h * 0.55, 5); ctx.fill();
+    if (isHex(color)) {
+      const s = ctx.createLinearGradient(x, y, x + 40, y);
+      s.addColorStop(0, colorWithAlpha(color, 0.22));
+      s.addColorStop(1, colorWithAlpha(color, 0));
+      ctx.fillStyle = s;
+      ctx.beginPath(); ctx.roundRect(x + 1, y + 1, 40, h - 2, 5); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /** HP 막대: 색 명암 + 위쪽 광택 */
+  barGrad(y, h, color) {
+    if (!isHex(color)) return color;
+    const g = this.ctx.createLinearGradient(0, y, 0, y + h);
+    g.addColorStop(0, shadeHex(color, 0.45));
+    g.addColorStop(0.55, color);
+    g.addColorStop(1, shadeHex(color, -0.35));
+    return g;
+  }
+
+  barGloss(x, y, w, h, r) {
+    if (w <= 2) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    ctx.beginPath(); ctx.roundRect(x + 1, y + 1, w - 2, h * 0.38, r); ctx.fill();
+    ctx.restore();
+  }
+
+  /** 배경: 스테이지 색의 성운 + 흐르는 별 (크게 보이는 별은 빛 번짐) */
+  renderBackground() {
+    const ctx = this.ctx;
+    const fight = this.state === 'PLAY' || this.state === 'TRANSITION';
+    const palette = fight ? STAGE_COLORS[this.bossStage].slice(0, 3) : [C_CYAN, C_MAGENTA, C_PURPLE];
+    this.blit(GFX.space(this.sprites, palette, fight ? this.bossStage * 7919 : 1), 0, 0, WIDTH, HEIGHT);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const halo = GFX.glow(this.sprites, '#B4C8FF');
+    for (const st of this.stars) {
+      st[2] += st[3];
+      const br = (100 + 80 * Math.sin(st[2])) / 255;
+      if (st[4] >= 2) {
+        ctx.globalAlpha = br;
+        this.sprite(halo, st[0], st[1], 10);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(st[0] - 0.8, st[1] - 0.8, 1.6, 1.6);
+      } else {
+        ctx.globalAlpha = br * 0.9;
+        ctx.fillStyle = '#C8D2FF';
+        ctx.fillRect(st[0], st[1], 1, 1);
+      }
+    }
+    ctx.restore();
   }
 
   // ─── LOBBY ────────────────────────────────
@@ -1681,38 +2080,62 @@ class NeonRaidEngine {
     const t = this.lobbyTimer;
     const pulse = 0.85 + 0.15 * Math.sin(t * 0.05);
     const cx = WIDTH / 2;
-
-    // spinning rings
     const ctx = this.ctx;
+    const char = CHARACTERS[this.save.selected_char];
+
+    // 도는 고리: 옅은 빛 + 가는 선, 고리 위를 도는 빛 점
     for (let i = 0; i < 3; i++) {
       const r = [160, 220, 290][i];
       const ang = t * 0.008 * (i % 2 === 0 ? 1 : -1);
       const col = [C_CYAN, C_MAGENTA, C_PURPLE][i];
+      this.glowRing(cx, HEIGHT / 2, r, col, 1, 0.45);
       ctx.save();
-      ctx.strokeStyle = colorWithAlpha(col, 0.3);
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      for (let k = 0; k <= 60; k++) {
-        const a = ang + k * TAU / 60;
+      ctx.globalCompositeOperation = 'lighter';
+      for (let k = 0; k < 3; k++) {
+        const a = ang * (1.6 + i * 0.3) + k * TAU / 3;
         const x = cx + Math.cos(a) * r, y = HEIGHT / 2 + Math.sin(a) * r;
-        k === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        this.sprite(GFX.glow(this.sprites, col), x, y, 22);
+        ctx.fillStyle = '#FFFFFF'; ctx.fillRect(x - 1, y - 1, 2, 2);
       }
-      ctx.closePath(); ctx.stroke(); ctx.restore();
+      ctx.restore();
     }
 
+    // 가운데: 고른 기체가 떠 있음 (받침 빛 + 엔진 불꽃)
+    const sy = HEIGHT / 2 - 12 + Math.sin(t * 0.035) * 6;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.55;
+    this.sprite(GFX.glow(this.sprites, char.color), cx, HEIGHT / 2 + 62, 230);
+    ctx.globalAlpha = 0.8;
+    ctx.strokeStyle = colorWithAlpha(char.color, 0.7); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(cx, HEIGHT / 2 + 62, 64, 12, 0, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = colorWithAlpha(char.color, 0.3); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(cx, HEIGHT / 2 + 62, 92, 18, 0, 0, TAU); ctx.stroke();
+    ctx.restore();
+    this.drawShip(this.save.selected_char, cx, sy, 2.4, char.color, t, Math.sin(t * 0.02) * 0.07, 2);
+
+    // 제목: 빛나는 글자 위에 위가 밝은 그라데이션
     const titleC = rgbToHex(0, 255 * pulse, 255 * pulse);
     this.glowText('네온 레이드', cx, HEIGHT / 2 - 280, titleC, 40, true);
+    ctx.save();
+    ctx.font = `bold 40px ${FONT_STACK}`; ctx.textAlign = 'center';
+    const tg = ctx.createLinearGradient(0, HEIGHT / 2 - 312, 0, HEIGHT / 2 - 278);
+    tg.addColorStop(0, 'rgba(255,255,255,0.95)'); tg.addColorStop(1, colorWithAlpha(titleC, 0));
+    ctx.fillStyle = tg; ctx.fillText('네온 레이드', cx, HEIGHT / 2 - 280);
+    ctx.restore();
     this.glowText('영원한 지배자', cx, HEIGHT / 2 - 235, rgbToHex(255 * pulse, 0, 255 * pulse), 22, true);
 
-    ctx.save(); ctx.strokeStyle = colorWithAlpha(C_CYAN, 0.4); ctx.lineWidth = 1;
+    ctx.save();
     const lw = 220 + 40 * Math.sin(t * 0.04);
-    ctx.beginPath(); ctx.moveTo(cx - lw / 2, HEIGHT / 2 - 208); ctx.lineTo(cx + lw / 2, HEIGHT / 2 - 208); ctx.stroke(); ctx.restore();
+    const lg = ctx.createLinearGradient(cx - lw / 2, 0, cx + lw / 2, 0);
+    lg.addColorStop(0, colorWithAlpha(C_CYAN, 0)); lg.addColorStop(0.5, colorWithAlpha(C_CYAN, 0.8)); lg.addColorStop(1, colorWithAlpha(C_CYAN, 0));
+    ctx.strokeStyle = lg; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx - lw / 2, HEIGHT / 2 - 208); ctx.lineTo(cx + lw / 2, HEIGHT / 2 - 208); ctx.stroke();
+    ctx.restore();
 
     this.glowText(`⬡ ${this.save.coins}`, cx, HEIGHT / 2 - 180, C_COIN, 20, true);
-
-    const char = CHARACTERS[this.save.selected_char];
     this.glowText(`조종사: ${char.name}`, cx, HEIGHT / 2 - 148, char.color, 13, true);
-    this.text(char.desc, cx, HEIGHT / 2 - 128, '#888899', 10, true);
+    this.text(char.desc, cx, HEIGHT / 2 - 128, '#9A9AB0', 10, true);
 
     const btns = [
       { label: '▶  도전', color: C_CYAN, y: HEIGHT / 2 + 100 },
@@ -1721,16 +2144,10 @@ class NeonRaidEngine {
     ];
     for (const btn of btns) {
       const hov = this.inRect(this.mouseX, this.mouseY, cx - 150, btn.y, 300, 55);
-      const c = hov ? C_WHITE : btn.color;
-      if (hov) {
-        ctx.save(); ctx.fillStyle = colorWithAlpha(btn.color, 0.1);
-        ctx.roundRect(cx - 150, btn.y, 300, 55, 6); ctx.fill(); ctx.restore();
-      }
-      this.neonRect(cx - 150, btn.y, 300, 55, c);
-      this.glowText(btn.label, cx, btn.y + 33, c, 14, true);
+      this.neonButton(cx - 150, btn.y, 300, 55, btn.color, btn.label, hov, 15);
     }
 
-    this.text('WASD / 방향키로 이동  ·  공격은 항상 자동', cx, HEIGHT - 30, '#404050', 9, true);
+    this.text('WASD / 방향키로 이동  ·  공격은 항상 자동', cx, HEIGHT - 30, '#5A5A72', 9, true);
   }
 
   // ─── HANGAR ───────────────────────────────
@@ -1752,11 +2169,13 @@ class NeonRaidEngine {
       ctx.save();
       ctx.fillStyle = selected ? colorWithAlpha(char.color, 0.08) : (preview ? colorWithAlpha(char.color, 0.04) : 'rgba(8,8,15,0.9)');
       ctx.beginPath(); ctx.roundRect(30, cy, WIDTH - 60, 105, 5); ctx.fill();
+      this.cardSheen(30, cy, WIDTH - 60, 105, owned ? char.color : null);
       ctx.strokeStyle = selected ? char.color : (preview ? colorWithAlpha(char.color, 0.6) : '#303040');
       ctx.lineWidth = selected ? 2 : 1; ctx.beginPath(); ctx.roundRect(30, cy, WIDTH - 60, 105, 5); ctx.stroke();
       ctx.restore();
 
-      this.text(char.icon, 50, cy + 60, col, 22);
+      // 기체 그림 (원본은 글자 아이콘)
+      this.drawShip(cid, 54, cy + 50, 0.95, owned ? char.color : '#3A3A4A', this.hangarTimer, 0, 0, !owned);
       this.line(78, cy + 8, 78, cy + 97, colorWithAlpha(col, 0.3), 1);
       this.text(char.name, 88, cy + 25, col, 13);
       this.text(char.desc, 88, cy + 42, owned ? '#909090' : '#404040', 10);
@@ -1795,9 +2214,7 @@ class NeonRaidEngine {
     }
 
     const hov = this.inRect(this.mouseX, this.mouseY, 30, HEIGHT - 90, 140, 50);
-    this.rect(30, HEIGHT - 90, 140, 50, '#141420', true, 5);
-    this.rect(30, HEIGHT - 90, 140, 50, hov ? C_WHITE : '#808090', false, 5, 1);
-    this.text('← 뒤로', 100, HEIGHT - 58, hov ? C_WHITE : '#808090', 12, true);
+    this.neonButton(30, HEIGHT - 90, 140, 50, '#9A9AB8', '← 뒤로', hov, 13);
   }
 
   // ─── UPGRADE ──────────────────────────────
@@ -1818,6 +2235,7 @@ class NeonRaidEngine {
 
       ctx.fillStyle = maxed ? colorWithAlpha(C_GREEN, 0.05) : colorWithAlpha(col, 0.04);
       ctx.beginPath(); ctx.roundRect(30, cy, WIDTH - 60, 96, 5); ctx.fill();
+      this.cardSheen(30, cy, WIDTH - 60, 96, col);
       ctx.strokeStyle = maxed ? C_GREEN : col; ctx.lineWidth = maxed ? 2 : 1;
       ctx.beginPath(); ctx.roundRect(30, cy, WIDTH - 60, 96, 5); ctx.stroke();
 
@@ -1846,9 +2264,7 @@ class NeonRaidEngine {
     }
 
     const hov = this.inRect(this.mouseX, this.mouseY, 30, HEIGHT - 90, 140, 50);
-    this.rect(30, HEIGHT - 90, 140, 50, '#141420', true, 5);
-    this.rect(30, HEIGHT - 90, 140, 50, hov ? C_WHITE : '#808090', false, 5, 1);
-    this.text('← 뒤로', 100, HEIGHT - 58, hov ? C_WHITE : '#808090', 12, true);
+    this.neonButton(30, HEIGHT - 90, 140, 50, '#9A9AB8', '← 뒤로', hov, 13);
   }
 
   // ─── STAGE SELECT ─────────────────────────
@@ -1882,7 +2298,9 @@ class NeonRaidEngine {
       const cy = 130 + i * 115;
 
       ctx.fillStyle = sel ? colorWithAlpha(col, 0.1) : (cleared ? 'rgba(0,100,50,0.05)' : 'rgba(8,8,15,0.9)');
-      ctx.roundRect(30, cy, WIDTH - 60, 105, 5); ctx.fill();
+      // 원본은 beginPath 가 없어 앞 카드까지 다시 칠해져 글자가 흐려졌음
+      ctx.beginPath(); ctx.roundRect(30, cy, WIDTH - 60, 105, 5); ctx.fill();
+      this.cardSheen(30, cy, WIDTH - 60, 105, unlocked ? col : null);
       ctx.strokeStyle = sel ? col : (cleared ? C_GREEN : '#2a2a38'); ctx.lineWidth = sel ? 2 : 1;
       ctx.beginPath(); ctx.roundRect(30, cy, WIDTH - 60, 105, 5); ctx.stroke();
 
@@ -1904,24 +2322,20 @@ class NeonRaidEngine {
       }
       this.text(`체력: ${info.hp.toLocaleString()}`, 98, cy + 78, '#606070', 8);
       if (cleared) {
-        ctx.fillStyle = 'rgba(0,160,60,0.8)'; ctx.roundRect(WIDTH - 90, cy + 12, 58, 20, 3); ctx.fill();
+        ctx.fillStyle = 'rgba(0,160,60,0.8)'; ctx.beginPath(); ctx.roundRect(WIDTH - 90, cy + 12, 58, 20, 3); ctx.fill();
         this.text('클리어', WIDTH - 61, cy + 26, C_BG, 8, true);
       }
     }
 
     // buttons
     const bhov = this.inRect(this.mouseX, this.mouseY, 30, HEIGHT - 90, 140, 50);
-    this.rect(30, HEIGHT - 90, 140, 50, '#141420', true, 5);
-    this.rect(30, HEIGHT - 90, 140, 50, bhov ? C_WHITE : '#808090', false, 5, 1);
-    this.text('← 뒤로', 100, HEIGHT - 58, bhov ? C_WHITE : '#808090', 12, true);
+    this.neonButton(30, HEIGHT - 90, 140, 50, '#9A9AB8', '← 뒤로', bhov, 13);
 
     const canLaunch = this.selectedStage === 1 || this.selectedStage === 6 || this.save.cleared_stages.includes(this.selectedStage - 1);
     if (canLaunch) {
       const lcol = STAGE_INFO[this.selectedStage].color;
       const lhov = this.inRect(this.mouseX, this.mouseY, WIDTH - 185, HEIGHT - 90, 160, 50);
-      if (lhov) { ctx.fillStyle = colorWithAlpha(lcol, 0.15); ctx.roundRect(WIDTH - 185, HEIGHT - 90, 160, 50, 5); ctx.fill(); }
-      this.rect(WIDTH - 185, HEIGHT - 90, 160, 50, lcol, false, 5, 2);
-      this.glowText('▶ 출격', WIDTH - 105, HEIGHT - 60, lcol, 13, true);
+      this.neonButton(WIDTH - 185, HEIGHT - 90, 160, 50, lcol, '▶ 출격', lhov, 15);
     } else {
       this.rect(WIDTH - 185, HEIGHT - 90, 160, 50, '#252535', false, 5, 1);
       this.text('스테이지를 고르세요', WIDTH - 105, HEIGHT - 60, '#505060', 11, true);
@@ -1935,22 +2349,26 @@ class NeonRaidEngine {
 
     // boss
     this.renderBoss();
+    this.renderBossHitGlow();
 
     // b6 quake rings
     for (const ring of this.b6QuakeRings) {
-      if (ring.r < ring.max_r) this.circle(ring.x, ring.y, ring.r, ring.c, false, 3);
+      if (ring.r < ring.max_r) this.glowRing(ring.x, ring.y, ring.r, ring.c, 3);
     }
     // emp rings
     for (const ring of this.b5EmpRings) {
-      if (ring.r < ring.max_r) this.circle(ring.x, ring.y, ring.r, ring.c, false, 4);
+      if (ring.r < ring.max_r) this.glowRing(ring.x, ring.y, ring.r, ring.c, 4);
     }
     // b2 rings
     for (const ring of this.b2Rings) {
-      if (ring.r < ring.max_r) this.circle(ring.x, ring.y, ring.r, ring.c, false, 3);
+      if (ring.r < ring.max_r) this.glowRing(ring.x, ring.y, ring.r, ring.c, 3);
     }
 
     // mines
     for (const mine of this.b2Mines) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      this.sprite(GFX.glow(this.sprites, mine.is_water_mine ? C_TEAL : (mine.timer > 40 ? C_YELLOW : C_RED)), mine.x, mine.y, mine.r * 4);
+      ctx.restore();
       if (mine.is_water_mine) {
         this.circle(mine.x, mine.y, mine.r, C_TEAL, false, 2);
         this.line(mine.x - mine.r, mine.y, mine.x + mine.r, mine.y, C_WHITE, 2);
@@ -1965,8 +2383,7 @@ class NeonRaidEngine {
     for (const beam of this.b2Beams) {
       const ex = bx + Math.cos(beam.ang) * 1100, ey = by + Math.sin(beam.ang) * 1100;
       if ((beam.age || 0) <= BEAM_WARMUP) { this.laserCharge(bx, by, ex, ey, (beam.age || 0) / BEAM_WARMUP, this.bColor); continue; }
-      this.line(bx, by, ex, ey, colorWithAlpha(C_WHITE, 0.4), 8);
-      this.line(bx, by, ex, ey, colorWithAlpha(this.bColor, 0.7), 4);
+      this.beam(bx, by, ex, ey, 4, this.bColor);
     }
 
     // lasers
@@ -1976,8 +2393,7 @@ class NeonRaidEngine {
         this.laserCharge(l.s[0], l.s[1], ep[0], ep[1], clamp(1 - (l.t - 15) / 40, 0, 1), this.bColor);
       } else {
         const w = l.t * 4;
-        this.line(l.s[0], l.s[1], ep[0], ep[1], colorWithAlpha(C_WHITE, 0.7), w + 8);
-        this.line(l.s[0], l.s[1], ep[0], ep[1], this.bColor, w + 3);
+        this.beam(l.s[0], l.s[1], ep[0], ep[1], w + 3, this.bColor);
       }
     }
 
@@ -1988,8 +2404,7 @@ class NeonRaidEngine {
       const ey = by + Math.sin(this.b1SweepAng) * 1200;
       if (this.phaseTimer <= BEAM_WARMUP) this.laserCharge(bx, by, ex, ey, this.phaseTimer / BEAM_WARMUP, C_RED);
       else {
-        this.line(bx, by, ex, ey, colorWithAlpha(C_RED, 0.7), 30);
-        this.line(bx, by, ex, ey, colorWithAlpha(C_WHITE, 0.5), 12);
+        this.beam(bx, by, ex, ey, 18, C_RED);
       }
     }
 
@@ -2008,8 +2423,7 @@ class NeonRaidEngine {
           const tx = this.bx + Math.cos(a) * al, ty = this.by + Math.sin(a) * al;
           const ex = tx + Math.cos(a) * 1200, ey = ty + Math.sin(a) * 1200;   // 판정과 같은 길이 (원본 700)
           if (!firing) { this.laserCharge(tx, ty, ex, ey, k, this.bColor); continue; }
-          this.line(tx, ty, ex, ey, colorWithAlpha(C_WHITE, 0.6), 8);
-          this.line(tx, ty, ex, ey, this.bColor, 4);
+          this.beam(tx, ty, ex, ey, 4, this.bColor);
         }
       }
     }
@@ -2021,16 +2435,14 @@ class NeonRaidEngine {
         const a = this.timer * 0.018 + j * (TAU / lc);
         const ex = this.bx + Math.cos(a) * 1200, ey = this.by + Math.sin(a) * 1200;   // 판정과 같은 길이 (원본 700)
         if (this.phaseTimer <= BEAM_WARMUP) { this.laserCharge(this.bx, this.by, ex, ey, this.phaseTimer / BEAM_WARMUP, C_GOLD); continue; }
-        this.line(this.bx, this.by, ex, ey, colorWithAlpha(C_GOLD, 0.6), 5);
-        this.line(this.bx, this.by, ex, ey, colorWithAlpha(C_WHITE, 0.3), 2);
+        this.beam(this.bx, this.by, ex, ey, 3, C_GOLD);
       }
     }
 
     // boss7 link laser
     if (this.bossStage === 7 && !this.b7Enraged) {   // 갈라지면 연결 레이저도 사라짐
       const lc = C_SKY;
-      this.line(this.b7Pos1[0], this.b7Pos1[1], this.b7Pos2[0], this.b7Pos2[1], colorWithAlpha(C_WHITE, 0.4), 6);
-      this.line(this.b7Pos1[0], this.b7Pos1[1], this.b7Pos2[0], this.b7Pos2[1], colorWithAlpha(lc, 0.6), 3);
+      this.beam(this.b7Pos1[0], this.b7Pos1[1], this.b7Pos2[0], this.b7Pos2[1], 3, lc, false);
     }
 
     // boss8 gravity ring
@@ -2058,6 +2470,7 @@ class NeonRaidEngine {
         [bpx + Math.cos(a + 2.4) * 6, bpy + Math.sin(a + 2.4) * 6],
         [bpx + Math.cos(a - 2.4) * 6, bpy + Math.sin(a - 2.4) * 6],
       ];
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; this.sprite(GFX.glow(this.sprites, C_PURPLE), bpx, bpy, 34); ctx.restore();
       this.poly(pts, C_PURPLE);
       this.poly(pts, C_WHITE, false, 1);
     }
@@ -2068,6 +2481,9 @@ class NeonRaidEngine {
       if (bb.type === 'plasma_saw') {
         const sa = bb.spin_angle || 0;
         ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        this.sprite(GFX.glow(this.sprites, C_RED), bpx, bpy, (bb.r || 19) * 3.2);
+        ctx.globalCompositeOperation = 'source-over';
         ctx.strokeStyle = C_RED; ctx.lineWidth = 2;
         ctx.beginPath();
         for (let k = 0; k < 8; k++) {
@@ -2077,28 +2493,35 @@ class NeonRaidEngine {
         }
         ctx.closePath(); ctx.stroke(); ctx.restore();
       } else {
+        // 색 번짐 + 하얗게 달아오른 가운데 (미리 그려 둔 그림 — 원본의 그림자 효과보다 빠름)
         const r = bb.r || 5;
         const c = bb.c || this.bColor;
-        ctx.save();
-        ctx.shadowBlur = 4; ctx.shadowColor = c;
-        this.circle(bpx, bpy, r, c);
-        ctx.restore();
+        this.sprite(GFX.bullet(this.sprites, isHex(c) ? c : C_RED, r), bb.p[0], bb.p[1], Math.round(r * 2) / 2 * 4.4);
       }
     }
 
     // player bullets
+    // 내 탄: 날아가는 방향으로 길쭉한 빛줄기
+    ctx.save();
+    ctx.lineCap = 'round';
     for (const b of this.bullets) {
       const bc = b.c || C_CYAN;
       const br = b.r || 5;
-      ctx.save(); ctx.shadowBlur = 4; ctx.shadowColor = bc;
-      this.circle(b.p[0] | 0, b.p[1] | 0, br, bc);
-      ctx.restore();
+      const sp = Math.hypot(b.v[0], b.v[1]) || 1;
+      const ux = b.v[0] / sp, uy = b.v[1] / sp, len = br * 2.4;
+      ctx.globalCompositeOperation = 'lighter';
+      this.sprite(GFX.glow(this.sprites, bc), b.p[0], b.p[1], br * 5);
+      ctx.globalCompositeOperation = 'source-over';
+      this.line(b.p[0] - ux * len, b.p[1] - uy * len, b.p[0], b.p[1], bc, br * 1.25);
+      this.line(b.p[0] - ux * len * 0.7, b.p[1] - uy * len * 0.7, b.p[0], b.p[1], '#FFFFFF', br * 0.55);
     }
+    ctx.restore();
 
     // attack orbs
     for (const o of this.orbs) {
       const oy = o.y + Math.sin(o.t) * 5;
-      ctx.save(); ctx.shadowBlur = 6; ctx.shadowColor = C_CYAN;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter'; this.sprite(GFX.glow(this.sprites, C_CYAN), o.x, oy, 54); ctx.globalCompositeOperation = 'source-over';
       this.circle(o.x, oy | 0, 11, C_CYAN, false, 2);
       this.circle(o.x, oy | 0, 4, C_WHITE);
       ctx.restore();
@@ -2107,7 +2530,8 @@ class NeonRaidEngine {
     // heal orbs
     for (const h of this.healOrbs) {
       const hy = h.y + Math.sin(h.t) * 6;
-      ctx.save(); ctx.shadowBlur = 6; ctx.shadowColor = C_GREEN;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter'; this.sprite(GFX.glow(this.sprites, C_GREEN), h.x, hy, 58); ctx.globalCompositeOperation = 'source-over';
       this.circle(h.x, hy | 0, 12, C_GREEN, false, 2);
       this.circle(h.x, hy | 0, 5, C_WHITE);
       this.line(h.x - 5, hy | 0, h.x + 5, hy | 0, C_WHITE, 2);
@@ -2118,21 +2542,17 @@ class NeonRaidEngine {
     // coin orbs
     for (const coin of this.coinOrbs) {
       const cy2 = coin.y + Math.sin(coin.t) * 4;
-      ctx.save(); ctx.shadowBlur = 5; ctx.shadowColor = C_COIN;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter'; this.sprite(GFX.glow(this.sprites, C_COIN), coin.x, cy2, 34); ctx.globalCompositeOperation = 'source-over';
       this.circle(coin.x, cy2 | 0, 8, C_COIN);
       this.circle(coin.x, cy2 | 0, 5, '#FFE868');
       ctx.restore();
       this.text('¢', coin.x, (cy2 + 5) | 0, '#503000', 8, true);
     }
 
-    // particles
-    for (const p of this.particles) {
-      const li = p.life;
-      const [r, g, b2] = hexToRgb(p.c);
-      ctx.fillStyle = `rgba(${r * li | 0},${g * li | 0},${b2 * li | 0},${li})`;
-      const sz = Math.max(1, p.size * li | 0);
-      ctx.fillRect((p.x - sz / 2) | 0, (p.y - sz / 2) | 0, sz, sz);
-    }
+    // particles · 충격파
+    this.drawParticles();
+    this.drawFxRings();
 
     // player
     this.renderPlayer();
@@ -2140,12 +2560,19 @@ class NeonRaidEngine {
     // HUD
     this.renderHUD();
 
-    // joystick
+    // joystick: 유리 받침 + 빛나는 손잡이
     ctx.save();
-    ctx.strokeStyle = colorWithAlpha(C_CYAN, 0.3); ctx.lineWidth = 1;
+    const jg = ctx.createRadialGradient(this.joyBase[0], this.joyBase[1], 10, this.joyBase[0], this.joyBase[1], 42);
+    jg.addColorStop(0, colorWithAlpha(C_CYAN, 0.02)); jg.addColorStop(1, colorWithAlpha(C_CYAN, 0.10));
+    ctx.fillStyle = jg; ctx.beginPath(); ctx.arc(this.joyBase[0], this.joyBase[1], 42, 0, TAU); ctx.fill();
+    ctx.strokeStyle = colorWithAlpha(C_CYAN, 0.35); ctx.lineWidth = 1;
     ctx.beginPath(); ctx.arc(this.joyBase[0], this.joyBase[1], 42, 0, TAU); ctx.stroke();
-    ctx.fillStyle = colorWithAlpha(C_CYAN, 0.35);
-    ctx.beginPath(); ctx.arc(this.joyPos[0], this.joyPos[1], 20, 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = this.joyDragging ? 0.8 : 0.4;
+    this.sprite(GFX.glow(this.sprites, C_CYAN), this.joyPos[0], this.joyPos[1], 70);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 0.55;
+    this.circle(this.joyPos[0], this.joyPos[1], 20, C_CYAN);
     ctx.restore();
   }
 
@@ -2154,13 +2581,12 @@ class NeonRaidEngine {
     const { bx, by, bColor, phase, timer } = this;
     const t = timer * 0.04;
 
+    // 보스가 내는 빛: 더하기 합성으로 주변을 밝힘 (원본은 옅은 원)
     const glow = (x, y, r, c) => {
       ctx.save();
-      const [ri, gi, bi] = hexToRgb(c);
-      const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-      grad.addColorStop(0, `rgba(${ri},${gi},${bi},0.35)`);
-      grad.addColorStop(1, `rgba(${ri},${gi},${bi},0)`);
-      ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.restore();
+      ctx.globalCompositeOperation = 'lighter';
+      this.sprite(GFX.glow(this.sprites, c), x, y, r * 2.6);
+      ctx.restore();
     };
 
     switch (this.bossStage) {
@@ -2358,48 +2784,107 @@ class NeonRaidEngine {
   }
 
   renderPlayer() {
-    const ctx = this.ctx;
     const { px, py, itime, timer } = this;
-    const char = CHARACTERS[this.save.selected_char];
+    const cid = this.save.selected_char;
+    const char = CHARACTERS[cid];
     const flash_p = itime % 4 < 2;
     const col = (flash_p && itime > 0) ? '#AACCFF' : char.color;
-    const cx = px + 17, cy = py + 17;
+    // 옆으로 움직이면 그쪽으로 살짝 기울어짐
+    const tilt = clamp(this.pvx * 0.035, -0.3, 0.3);
+    this.drawShip(cid, px + 17, py + 17, 1, col, timer, tilt, Math.hypot(this.pvx, this.pvy));
+    if (itime > 0) this.glowRing(px + 17, py + 17, 24 + Math.sin(timer * 0.5) * 2, C_SKY, 1.2, Math.min(1, itime / 30) * 0.7);
+  }
+
+  /** 기체 그리기 (전투 · 로비 · 격납고 공용). 모양은 원본 그대로이고, 빛 · 엔진 불꽃 · 명암 · 기울기를 더함 */
+  drawShip(cid, cx, cy, scale = 1, col = null, timer = 0, tilt = 0, speed = 0, dim = false) {
+    const ctx = this.ctx;
+    const char = CHARACTERS[cid];
+    col = col || char.color;
     ctx.save();
-    ctx.shadowBlur = 8; ctx.shadowColor = char.color;
-    switch (this.save.selected_char) {
-      case 0:
-        this.poly([[cx,cy-17],[cx+17,cy+17],[cx,cy+12],[cx-17,cy+17]], col);
-        this.circle(cx, cy+10, 5, C_WHITE);
-        if (timer % 4 < 2) this.poly([[cx-8,cy+17],[cx,cy+22],[cx+8,cy+17]], char.color);
-        break;
-      case 1:
-        this.poly([[cx,cy-17],[cx+15,cy+5],[cx,cy+18],[cx-15,cy+5]], col);
-        this.poly([[cx,cy-17],[cx+15,cy+5],[cx,cy+18],[cx-15,cy+5]], C_WHITE, false, 1);
-        this.circle(cx,cy+5,4,C_MAGENTA);
-        if (timer % 3 < 1) this.poly([[cx-5,cy+18],[cx,cy+24],[cx+5,cy+18]], C_PURPLE);
-        break;
-      case 2:
-        this.rect(cx-18,cy-10,36,22,col,true,3); this.rect(cx-18,cy-10,36,22,C_WHITE,false,3,1);
-        this.circle(cx,cy,7,C_WHITE); this.circle(cx,cy,5,col);
-        this.rect(cx-27,cy-3,11,15,col,true,2); this.rect(cx+16,cy-3,11,15,col,true,2);
-        break;
-      case 3:
-        this.poly([[cx,cy-17],[cx+10,cy],[cx+12,cy+16],[cx,cy+18],[cx-12,cy+16],[cx-10,cy]], col);
-        this.circle(cx,cy,6,C_WHITE); this.circle(cx,cy,3.5,col);
-        if (timer % 5 < 2) { this.line(cx-8,cy+16,cx-8,cy+24,col,2); this.line(cx+8,cy+16,cx+8,cy+24,col,2); }
-        break;
-      case 4:
-        this.circle(cx,cy,16,col,false,2); this.circle(cx,cy,12,C_WHITE,false,1);
-        const ir = 6+Math.sin(timer*0.2)*2; this.circle(cx,cy,ir,col);
-        for (let i = 0; i < 4; i++) { const a = timer*0.08+i*Math.PI/2; this.circle(cx+Math.cos(a)*11,cy+Math.sin(a)*11,2,C_WHITE); }
-        break;
+    if (!dim) {
+      ctx.globalCompositeOperation = 'lighter';
+      this.sprite(GFX.glow(this.sprites, char.color), cx, cy, 70 * scale);
+      // 엔진 불꽃: 바깥(기체 색)과 하얀 심지 두 겹, 일렁이며 움직일수록 길어짐
+      const fl = (1 + 0.18 * Math.sin(timer * 0.9) + 0.08 * Math.sin(timer * 2.3) + Math.min(0.5, speed * 0.06)) * scale;
+      const ey = cy + [15, 16, 10, 16, 13][cid] * scale;
+      const fw = [4.5, 3.5, 7, 4.5, 4][cid] * scale;
+      const flame = (w, len, c0, c1) => {
+        const g = ctx.createLinearGradient(cx, ey, cx, ey + len);
+        g.addColorStop(0, c0); g.addColorStop(1, c1);
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.moveTo(cx - w, ey); ctx.quadraticCurveTo(cx - w * 0.5, ey + len * 0.6, cx, ey + len);
+        ctx.quadraticCurveTo(cx + w * 0.5, ey + len * 0.6, cx + w, ey); ctx.closePath(); ctx.fill();
+      };
+      flame(fw, 22 * fl, colorWithAlpha(char.color, 0.7), colorWithAlpha(char.color, 0));
+      flame(fw * 0.45, 11 * fl, 'rgba(255,255,255,0.85)', colorWithAlpha(char.color, 0));
+      ctx.globalCompositeOperation = 'source-over';
     }
+    ctx.translate(cx, cy); ctx.rotate(tilt); ctx.scale(scale, scale);
+    {
+      const cx = 0, cy = 0;
+      switch (cid) {
+        case 0:
+          this.poly([[cx,cy-17],[cx+17,cy+17],[cx,cy+12],[cx-17,cy+17]], col);
+          this.poly([[cx,cy-17],[cx+17,cy+17],[cx,cy+12],[cx-17,cy+17]], colorWithAlpha(C_WHITE, 0.35), false, 1);
+          this.circle(cx, cy+10, 5, C_WHITE);
+          if (timer % 4 < 2) this.poly([[cx-8,cy+17],[cx,cy+22],[cx+8,cy+17]], char.color);
+          break;
+        case 1:
+          this.poly([[cx,cy-17],[cx+15,cy+5],[cx,cy+18],[cx-15,cy+5]], col);
+          this.poly([[cx,cy-17],[cx+15,cy+5],[cx,cy+18],[cx-15,cy+5]], C_WHITE, false, 1);
+          this.circle(cx,cy+5,4,C_MAGENTA);
+          if (timer % 3 < 1) this.poly([[cx-5,cy+18],[cx,cy+24],[cx+5,cy+18]], C_PURPLE);
+          break;
+        case 2:
+          this.rect(cx-18,cy-10,36,22,col,true,3); this.rect(cx-18,cy-10,36,22,C_WHITE,false,3,1);
+          this.circle(cx,cy,7,C_WHITE); this.circle(cx,cy,5,col);
+          this.rect(cx-27,cy-3,11,15,col,true,2); this.rect(cx+16,cy-3,11,15,col,true,2);
+          break;
+        case 3:
+          this.poly([[cx,cy-17],[cx+10,cy],[cx+12,cy+16],[cx,cy+18],[cx-12,cy+16],[cx-10,cy]], col);
+          this.poly([[cx,cy-17],[cx+10,cy],[cx+12,cy+16],[cx,cy+18],[cx-12,cy+16],[cx-10,cy]], colorWithAlpha(C_WHITE, 0.35), false, 1);
+          this.circle(cx,cy,6,C_WHITE); this.circle(cx,cy,3.5,col);
+          if (timer % 5 < 2) { this.line(cx-8,cy+16,cx-8,cy+24,col,2); this.line(cx+8,cy+16,cx+8,cy+24,col,2); }
+          break;
+        case 4: {
+          this.circle(cx,cy,16,col,false,2); this.circle(cx,cy,12,C_WHITE,false,1);
+          const ir = 6+Math.sin(timer*0.2)*2; this.circle(cx,cy,ir,col);
+          for (let i = 0; i < 4; i++) { const a = timer*0.08+i*Math.PI/2; this.circle(cx+Math.cos(a)*11,cy+Math.sin(a)*11,2,C_WHITE); }
+          break;
+        }
+      }
+      // 조종석 반사광
+      if (!dim && cid !== 4) {
+        ctx.fillStyle = 'rgba(255,255,255,0.45)';
+        ctx.beginPath(); ctx.ellipse(cx - 2.5, cy - 4, 1.8, 4.2, -0.35, 0, TAU); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  /** 보스가 맞으면 잠깐 하얗게 달아오름 */
+  renderBossHitGlow() {
+    if (this.bHpFlash <= 14) return;
+    let x = this.bx, y = this.by;
+    if (this.bossStage === 7) { x = this.b7Pos1[0]; y = this.b7Pos1[1]; }
+    else if (this.bossStage === 8 && this.b8Clones.length) { x = this.b8Clones[this.b8RealIdx][0]; y = this.b8Clones[this.b8RealIdx][1]; }
+    else if (this.bossStage === 9 && this.b9Submerged) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = Math.min(1, (this.bHpFlash - 14) / 8) * 0.45;
+    this.sprite(GFX.glow(this.sprites, '#FFFFFF'), x, y, 150);
     ctx.restore();
   }
 
   renderHUD() {
     const ctx = this.ctx;
     const { bColor, phase, bossStage } = this;
+
+    // 위쪽을 살짝 어둡게 해서 HUD 글자가 탄 위에서도 잘 보이게
+    const hg = ctx.createLinearGradient(0, 0, 0, 110);
+    hg.addColorStop(0, 'rgba(0,0,8,0.55)'); hg.addColorStop(1, 'rgba(0,0,8,0)');
+    ctx.fillStyle = hg; ctx.fillRect(0, 0, WIDTH, 110);
 
     // ── boss HP bar ──────────────────────────────────────
     const BW = 400, BX = WIDTH / 2 - BW / 2, BY = 12, BH = 14;
@@ -2420,7 +2905,8 @@ class NeonRaidEngine {
     const bFillW = Math.max(0, BW * this.bHpDisplay);
     if (bFillW > 0) {
       ctx.beginPath(); ctx.roundRect(BX, BY, bFillW, BH, 6);
-      ctx.fillStyle = bFillCol; ctx.fill();
+      ctx.fillStyle = this.barGrad(BY, BH, bFillCol); ctx.fill();
+      this.barGloss(BX, BY, bFillW, BH, 6);
     }
 
     // phase pip markers
@@ -2442,6 +2928,9 @@ class NeonRaidEngine {
     const bHpText = `${Math.max(0, this.bhp | 0).toLocaleString()} / ${this.bmax.toLocaleString()}`;
     ctx.save();
     ctx.textAlign = 'center'; ctx.font = `bold 8px ${FONT_STACK}`;
+    // 흰 막대 위에서도 읽히게 어두운 테두리 (원본은 흰 글자만이라 4단계 흰 막대에서 안 보였음)
+    ctx.strokeStyle = 'rgba(0,0,10,0.75)'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+    ctx.strokeText(bHpText, WIDTH / 2, BY + BH - 2);
     ctx.fillStyle = C_WHITE; ctx.fillText(bHpText, WIDTH / 2, BY + BH - 2);
     ctx.restore();
     this.text(`${bossNames[bossStage]}  [${phase}단계]`, WIDTH / 2, BY + BH + 16, bColor, 9, true);
@@ -2468,7 +2957,8 @@ class NeonRaidEngine {
     const pFillW = Math.max(0, PW * this.pHpDisplay);
     if (pFillW > 0) {
       ctx.beginPath(); ctx.roundRect(PX, PY, pFillW, PH, 5);
-      ctx.fillStyle = pFillCol; ctx.fill();
+      ctx.fillStyle = this.barGrad(PY, PH, pFillCol); ctx.fill();
+      this.barGloss(PX, PY, pFillW, PH, 5);
     }
 
     // border
@@ -2498,31 +2988,26 @@ class NeonRaidEngine {
 
     // back button (click handled in handleClick)
     const bhov = this.inRect(this.mouseX, this.mouseY, WIDTH-135, HEIGHT-55, 125, 40);
-    this.rect(WIDTH-135, HEIGHT-55, 125, 40, '#141420', true, 5);
-    this.rect(WIDTH-135, HEIGHT-55, 125, 40, bhov?C_WHITE:'#707080', false, 5, 1);
-    this.text('← 나가기', WIDTH-73, HEIGHT-29, bhov?C_WHITE:'#707080', 10, true);
+    this.neonButton(WIDTH-135, HEIGHT-55, 125, 40, '#8A8AA6', '← 나가기', bhov, 12);
   }
 
   // ─── TRANSITION ───────────────────────────
   renderTransition() {
     const ctx = this.ctx;
-    const alpha = Math.abs(Math.sin(this.transitionTimer * 0.1)) * 0.6;
-    ctx.fillStyle = `rgba(${hexToRgb(C_PURPLE).join(',')},${alpha})`;
-    ctx.fillRect(0,0,WIDTH,HEIGHT);
+    const alpha = Math.abs(Math.sin(this.transitionTimer * 0.1)) * 0.45;
+    const g = ctx.createRadialGradient(WIDTH / 2, HEIGHT / 3, 40, WIDTH / 2, HEIGHT / 3, HEIGHT * 0.8);
+    g.addColorStop(0, colorWithAlpha(C_PURPLE, alpha));
+    g.addColorStop(1, colorWithAlpha(C_INDIGO, alpha * 0.4));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
     let txt = '';
     if (this.transitionTimer < 60) txt = '보스 격파!';
     else if (this.transitionTimer < 120) txt = `스테이지 ${this.bossStage + 1} 진입`;
     else txt = STAGE_INFO[Math.min(10, this.bossStage + 1)]?.name || '???';
-    this.glowText(txt, WIDTH/2, HEIGHT/3, C_WHITE, 20, true);
-
-    for (const p of this.particles) {
-      const li = p.life;
-      const [r,g,b] = hexToRgb(p.c);
-      ctx.fillStyle=`rgba(${r*li|0},${g*li|0},${b*li|0},${li})`;
-      const sz = Math.max(1,p.size*li|0);
-      ctx.fillRect((p.x-sz/2)|0,(p.y-sz/2)|0,sz,sz);
-    }
+    this.drawFxRings();
+    this.drawParticles();
+    this.glowText(txt, WIDTH/2, HEIGHT/3, C_WHITE, 26, true);
   }
 
   // ─── WIN ──────────────────────────────────
@@ -2530,16 +3015,15 @@ class NeonRaidEngine {
     const t = this.lobbyTimer;
     const pulse = 0.8 + 0.2*Math.sin(t*0.04);
     const gc = rgbToHex(255*pulse,215*pulse,0);
-    this.glowText('승리!', WIDTH/2, HEIGHT/3-50, gc, 38, true);
-    this.glowText('모든 보스를 물리쳤다', WIDTH/2, HEIGHT/3+15, C_WHITE, 16, true);
-    this.text(`최종 점수: ${this.score.toLocaleString()}`, WIDTH/2, HEIGHT/3+50, C_WHITE, 12, true);
-    this.text('스테이지 10개 × 4단계 클리어', WIDTH/2, HEIGHT/3+70, C_LIME, 10, true);
-    this.text(`⬡ 모은 코인: ${this.save.coins}`, WIDTH/2, HEIGHT/3+90, C_COIN, 12, true);
+    this.drawFxRings();
+    this.drawParticles();
+    this.glowText('승리!', WIDTH/2, HEIGHT/3-50, gc, 44, true);
+    this.glowText('모든 보스를 물리쳤다', WIDTH/2, HEIGHT/3+15, C_WHITE, 18, true);
+    this.text(`최종 점수: ${this.score.toLocaleString()}`, WIDTH/2, HEIGHT/3+50, C_WHITE, 13, true);
+    this.text('스테이지 10개 × 4단계 클리어', WIDTH/2, HEIGHT/3+72, C_LIME, 11, true);
+    this.text(`⬡ 모은 코인: ${this.save.coins}`, WIDTH/2, HEIGHT/3+94, C_COIN, 13, true);
     const bhov = this.inRect(this.mouseX, this.mouseY, WIDTH/2-130, HEIGHT/2+30, 260, 55);
-    const bc = bhov ? C_WHITE : C_GOLD;
-    if (bhov) { this.ctx.fillStyle=colorWithAlpha(C_GOLD,0.1); this.ctx.roundRect(WIDTH/2-130,HEIGHT/2+30,260,55,6); this.ctx.fill(); }
-    this.neonRect(WIDTH/2-130, HEIGHT/2+30, 260, 55, bc);
-    this.glowText('스테이지 선택', WIDTH/2, HEIGHT/2+63, bc, 14, true);
+    this.neonButton(WIDTH/2-130, HEIGHT/2+30, 260, 55, C_GOLD, '스테이지 선택', bhov, 15);
   }
 }
 
@@ -2548,12 +3032,15 @@ class NeonRaidEngine {
 'use strict';
 
 /* =========================================================
- * NEON RAID — 시작 (원본 NeonRaid.tsx 가 하던 일)
- * 캔버스에 엔진을 붙이고 돌립니다.
+ * 네온 레이드 — 시작 (원본 NeonRaid.tsx 가 하던 일)
+ * 캔버스에 엔진을 붙이고, 창 크기에 맞춰 고해상도로 그리게 한 뒤 돌립니다.
  * ========================================================= */
 (() => {
   const canvas = document.getElementById('game');
   const engine = new NeonRaidEngine(canvas);
+  const fit = () => engine.fitToParent();
+  window.addEventListener('resize', fit);
+  fit();
   engine.start();
   window.neonRaid = engine; // 콘솔에서 살펴보기용
 })();

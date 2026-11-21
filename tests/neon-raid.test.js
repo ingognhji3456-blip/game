@@ -71,13 +71,15 @@ function load() {
   const sandbox = {
     console, Math, JSON, Object, Array, Number, String, Set, Map, Error,
     window: dom.window, localStorage: dom.localStorage,
+    // 그림 캐시가 만드는 오프스크린 캔버스도 가짜 캔버스로 (그리는 코드까지 실제로 돌아감)
+    document: { createElement: () => ({ width: 0, height: 0, getContext: () => dom.canvas.getContext('2d') }) },
     performance: { now: () => 0 }, requestAnimationFrame: () => 0, cancelAnimationFrame: () => {},
   };
   vm.createContext(sandbox);
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const scripts = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
-  assert.deepStrictEqual(scripts, ['js/constants.js', 'js/engine.js', 'js/main.js']);
-  for (const src of scripts.slice(0, 2)) {
+  assert.deepStrictEqual(scripts, ['js/constants.js', 'js/graphics.js', 'js/engine.js', 'js/main.js']);
+  for (const src of scripts.slice(0, 3)) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, src), 'utf8'), sandbox, { filename: src });
   }
   const get = (name) => vm.runInContext(name, sandbox);
@@ -408,9 +410,13 @@ test('7번 보스: 체력 절반에서 갈라지면 연결 레이저가 끊기�
 test('화면 흔들림 · 번쩍임은 어느 화면에서든 금방 멈춤 (맞다가 죽어도 메뉴가 계속 흔들리지 않음)', () => {
   // 화면이 멈춰 있는지: render 를 몇 번 불러 화면 이동이 모두 0 이고 덮개가 없는지
   const still = (e, env, where) => {
-    env.dom.translates.length = 0;
-    for (let i = 0; i < 5; i++) e.render();
-    assert.ok(env.dom.translates.every(([x, y]) => x === 0 && y === 0), `${where}: 화면이 계속 흔들림`);
+    // render 의 첫 이동이 화면 흔들림 (그 뒤 기체 그림 등의 이동은 상관없음)
+    for (let i = 0; i < 5; i++) {
+      env.dom.translates.length = 0;
+      e.render();
+      const [x, y] = env.dom.translates[0];
+      assert.ok(x === 0 && y === 0, `${where}: 화면이 계속 흔들림`);
+    }
     assert.strictEqual(e.flash, 0, `${where}: 번쩍임 덮개가 남아 있음`);
   };
   const ticks = (e, n) => { for (let i = 0; i < n; i++) e.update(); };
