@@ -9,6 +9,7 @@
  *  - 글자: 모든 화면의 글자가 한국어 (영어 낱말이 남아 있지 않음)
  *  - 레이저: 화면 끝까지 그려짐(판정과 같은 길이), 쏜 보스에 붙어 움직임, 맞기 전에 예고(충전),
  *            물 지뢰는 십자 네 방향, 7번 보스는 갈라지면 연결 레이저가 사라지고 남은 기체에서만 쏨
+ *  - 화면 흔들림 · 번쩍임: 전투가 끝나 메뉴 · 전환 · 승리 화면으로 가도 금방 멈춤
  * 원본(Replit)과의 비교는 브라우저에서 같은 난수 · 같은 입력으로 화면을 찍어 픽셀 단위로 했습니다 (README 참고).
  */
 const fs = require('fs');
@@ -25,6 +26,7 @@ function fakeDom() {
   const badDraws = [];
   const texts = [];
   const lines = [];          // 그려진 선분 (moveTo → lineTo)
+  const translates = [];     // 화면 흔들림 (render 가 ctx.translate 로 화면을 옮김)
   let pen = null;
   const gradient = { addColorStop() {} };
   const ctxTarget = { canvas: null };
@@ -34,6 +36,7 @@ function fakeDom() {
       if (k === 'createRadialGradient' || k === 'createLinearGradient') return () => gradient;
       if (k === 'measureText') return () => ({ width: 10 });
       if (k === 'fillText') return (txt) => { texts.push(String(txt)); };
+      if (k === 'translate') return (x, y) => { translates.push([x, y]); };
       if (k === 'moveTo') return (x, y) => { pen = [x, y]; };
       if (k === 'lineTo') return (x, y) => { if (pen) lines.push([pen[0], pen[1], x, y]); pen = [x, y]; };
       return (...args) => {
@@ -60,7 +63,7 @@ function fakeDom() {
     clear: () => { for (const k of Object.keys(store)) delete store[k]; },
   };
   const fire = (key, ev) => (listeners[key] || []).forEach((fn) => fn(ev));
-  return { canvas, window, localStorage, store, fire, badDraws, texts, lines };
+  return { canvas, window, localStorage, store, fire, badDraws, texts, lines, translates };
 }
 
 function load() {
@@ -400,6 +403,57 @@ test('7번 보스: 체력 절반에서 갈라지면 연결 레이저가 끊기�
   e.bullets = [{ p: [e.b7Pos1[0], e.b7Pos1[1]], v: [0, 0] }];
   const bhp = e.bhp; e.php = 1e9; e.update();
   assert.ok(e.bhp < bhp);
+});
+
+test('화면 흔들림 · 번쩍임은 어느 화면에서든 금방 멈춤 (맞다가 죽어도 메뉴가 계속 흔들리지 않음)', () => {
+  // 화면이 멈춰 있는지: render 를 몇 번 불러 화면 이동이 모두 0 이고 덮개가 없는지
+  const still = (e, env, where) => {
+    env.dom.translates.length = 0;
+    for (let i = 0; i < 5; i++) e.render();
+    assert.ok(env.dom.translates.every(([x, y]) => x === 0 && y === 0), `${where}: 화면이 계속 흔들림`);
+    assert.strictEqual(e.flash, 0, `${where}: 번쩍임 덮개가 남아 있음`);
+  };
+  const ticks = (e, n) => { for (let i = 0; i < n; i++) e.update(); };
+
+  // 1) 맞아서 흔들리는 중에 체력이 0 → 스테이지 선택 → 로비 (영상의 증상)
+  let { e, env } = newEngine();
+  e.reset(1); e.state = 'PLAY'; e.update();
+  e.shake = 6; e.flash = 30; e.php = 0; e.update();
+  assert.strictEqual(e.state, 'STAGE_SELECT');
+  ticks(e, 30); still(e, env, '죽은 뒤 스테이지 선택');
+  click(env, 100, 895); ticks(e, 5);
+  assert.strictEqual(e.state, 'LOBBY'); still(e, env, '죽은 뒤 로비');
+
+  // 2) 보스 격파 → 다음 스테이지로 넘어가는 동안 (흔들림 40 · 흰 덮개 200 이 3초 내내 남지 않음)
+  ({ e, env } = newEngine());
+  e.reset(1); e.state = 'PLAY'; e.update();
+  for (let p = 1; p <= 4; p++) { e.bhp = 1; e.bullets.push({ p: [e.bx, e.by], v: [0, 0] }); e.php = 1e9; e.update(); }
+  assert.strictEqual(e.state, 'TRANSITION');
+  ticks(e, 60); still(e, env, '스테이지 전환 화면');
+
+  // 3) 마지막 보스 격파 → 승리 화면
+  ({ e, env } = newEngine(RICH));
+  e.reset(10); e.state = 'PLAY'; e.update();
+  for (let p = 1; p <= 4; p++) { e.bhp = 1; e.bullets.push({ p: [e.bx, e.by], v: [0, 0] }); e.php = 1e9; e.update(); }
+  assert.strictEqual(e.state, 'WIN');
+  ticks(e, 60); still(e, env, '승리 화면');
+
+  // 4) 상점에서 사면 잠깐 번쩍이고 사라짐
+  ({ e, env } = newEngine({ coins: 5000, cleared_stages: [], selected_char: 0, owned_chars: [0], upgrades: { speed: 0, hp: 0, damage: 0, fire: 0, shield: 0, magnet: 0 } }));
+  click(env, 270, 748); click(env, 470, 75 + 50);              // 강화 → 이동 속도 구매
+  assert.strictEqual(e.save.upgrades.speed, 1);
+  assert.ok(e.flash > 0, '살 때 번쩍임');
+  ticks(e, 10); still(e, env, '강화 화면');
+  click(env, 100, 895); click(env, 270, 680); click(env, 470, 80 + 115 + 70);   // 격납고 → 팬텀 구매
+  assert.ok(e.save.owned_chars.includes(1));
+  ticks(e, 10); still(e, env, '격납고');
+
+  // 전투 중의 흔들림은 원본과 같은 속도로 줄어듦 (틱마다 1)
+  ({ e, env } = newEngine());
+  e.reset(1); e.state = 'PLAY'; e.update();
+  e.bossBullets = []; e.lasers = [];
+  e.shake = 10; e.php = 1e9; e.update();
+  assert.strictEqual(e.shake, 9, '전투 중 흔들림은 원본처럼 틱마다 1 씩');
 });
 
 console.log(process.exitCode ? '\n실패한 테스트가 있습니다.' : `\n모두 통과 (${passed}개)`);

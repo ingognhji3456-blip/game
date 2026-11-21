@@ -647,6 +647,9 @@ class NeonRaidEngine {
   // ─── update ───────────────────────────────
   update() {
     this.lobbyTimer++;
+    // 화면 흔들림 · 번쩍임은 어느 화면에서든 줄어들게 합니다. 원본은 전투 중(updatePlay)에만 줄여서,
+    // 맞다가 죽거나 보스를 깨고 나가면 메뉴 · 전환 · 승리 화면이 계속 흔들리고 색으로 덮여 있었습니다.
+    if (this.state !== 'PLAY') this.fadeScreenFx();
     if (this.state === 'LOBBY') return;
     if (this.state === 'HANGAR') { this.hangarTimer++; return; }
     if (this.state === 'UPGRADE') { this.upgTimer++; return; }
@@ -1050,6 +1053,11 @@ class NeonRaidEngine {
     // particles
     for (const p of this.particles) { p.x += p.vx; p.y += p.vy; p.life -= p.life_dec; }
     this.particles = this.particles.filter(p => p.life > 0);
+    this.fadeScreenFx();
+  }
+
+  /** 화면 흔들림은 틱마다 1, 번쩍임은 틱마다 12 씩 줄어듦 (원본과 같은 속도) */
+  fadeScreenFx() {
     if (this.shake > 0) this.shake--;
     if (this.flash > 0) this.flash = Math.max(0, this.flash - 12);
   }
