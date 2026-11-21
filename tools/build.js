@@ -7,6 +7,7 @@
  *
  *   index.html          → dist/card-expedition.html  (카드 원정대)
  *   shooter/index.html  → dist/sky-hunter.html       (하늘 사냥꾼)
+ *   neon-raid/index.html → dist/neon-raid.html       (NEON RAID)
  */
 const fs = require('fs');
 const path = require('path');
@@ -16,6 +17,7 @@ const OUT_DIR = path.join(ROOT, 'dist');
 const GAMES = [
   { html: 'index.html', out: 'card-expedition.html' },
   { html: 'shooter/index.html', out: 'sky-hunter.html' },
+  { html: 'neon-raid/index.html', out: 'neon-raid.html' },
 ];
 
 function guard(code, rel, tag) {

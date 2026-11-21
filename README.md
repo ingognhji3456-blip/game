@@ -1,11 +1,73 @@
 # 게임 모음
 
-이 저장소에는 설치 없이 브라우저에서 바로 하는 게임 두 개가 들어 있습니다.
+이 저장소에는 설치 없이 브라우저에서 바로 하는 게임 세 개가 들어 있습니다.
 
 | 게임 | 장르 | 바로 하기 (파일 하나) |
 |---|---|---|
+| 🌌 **NEON RAID: ETERNAL OVERLORD** | 네온 탄막 슈팅 · 보스 10명 × 4단계 (세로 화면) | [`dist/neon-raid.html`](dist/neon-raid.html) |
 | 🛩️ **하늘 사냥꾼** | 픽셀 아트 슈팅 · 기계 요새 보스 결전 (가로 화면) | [`dist/sky-hunter.html`](dist/sky-hunter.html) |
 | 🃏 **카드 원정대** | 로그라이크 덱빌딩 카드 배틀 | [`dist/card-expedition.html`](dist/card-expedition.html) |
+
+---
+
+# NEON RAID: ETERNAL OVERLORD
+
+Replit 에서 만든 게임 **NEON RAID: ETERNAL OVERLORD** 를 이 저장소로 그대로 옮긴 것입니다.
+검은 우주에서 네온 보스 10명과 차례로 싸우는 **세로 화면(540×960) 탄막 슈팅**입니다.
+보스마다 4단계가 있고, 단계가 오를 때마다 체력이 두 배가 되고 공격이 거세집니다.
+싸우며 모은 코인으로 새 기체를 사고 능력을 강화합니다. 게임 안 글자는 원본처럼 영어입니다.
+
+| 로비 | 스테이지 선택 | STEEL OVERLORD (3단계) | NEON DRAGON | DOOMSDAY APEX |
+|---|---|---|---|---|
+| ![로비](docs/screenshots/neon-raid-lobby.png) | ![스테이지](docs/screenshots/neon-raid-stages.png) | ![1번 보스](docs/screenshots/neon-raid-overlord.png) | ![3번 보스](docs/screenshots/neon-raid-dragon.png) | ![10번 보스](docs/screenshots/neon-raid-apex.png) |
+
+### 하는 법
+
+[`dist/neon-raid.html`](dist/neon-raid.html) 파일 하나를 브라우저로 여세요. (저장소를 받았다면 `neon-raid/index.html`)
+
+| 동작 | 키보드 · 마우스 | 휴대폰 |
+|---|---|---|
+| 이동 | 방향키 / WASD | 왼쪽 아래 가상 조이스틱을 끌기 |
+| 공격 | 자동 발사 | 자동 발사 |
+| 메뉴 | 버튼 클릭 | 버튼 터치 |
+| 전투 중 나가기 | 오른쪽 아래 `← SELECT` | 같음 |
+
+- 화면에 떠다니는 **청록 구슬**을 먹으면 잠깐 무적이 되고 보스에게 탄 5발을 날립니다. **초록 구슬**은 체력 +50, **노란 코인**은 코인 +10.
+- 1장(보스 1~5)을 모두 깨면 2장(보스 6~10)이 열립니다. 진행 · 코인 · 기체 · 강화는 브라우저에 자동 저장됩니다.
+
+### 보스 10명
+
+| | 보스 | 체력 | 특징 |
+|---|---|---|---|
+| I | STEEL OVERLORD | 30,000 | 회전 레이저와 원형 탄막 |
+| II | CRYSTAL PHANTOM | 40,000 | 지뢰, 회전 빔, 켜졌다 꺼지는 방어막 |
+| III | NEON DRAGON | 60,000 | 꿈틀대는 몸 마디마다 탄을 뿜음 |
+| IV | VOID MANTIS | 80,000 | 순간이동, 휘어 날아오는 낫 |
+| V | OMEGA MACHINE | 120,000 | EMP 충격파, 팔 레이저, 유도 미사일 |
+| VI | IRON GUARDIAN | 150,000 | 과충전 레이저, 지진 고리, 파편 미사일 |
+| VII | TWIN INTERCEPTORS | 180,000 | 레이저로 이어진 두 대, 체력 절반부터 폭주 |
+| VIII | PHANTOM LORD | 220,000 | 분신 4개 중 진짜만 맞음, 중력 왜곡 |
+| IX | ABYSSAL PREDATOR | 260,000 | 잠수했다가 소나로 위치를 잡고 돌진 |
+| X | DOOMSDAY APEX | 380,000 | 3단계부터 블랙홀이 끌어당기고 제한 시간 |
+
+기체 5종(VANGUARD · PHANTOM · TITAN · SPECTER · NOVA)과 강화 6종(속도 · 최대 체력 · 공격력 · 연사 · 자동 회복 · 코인 자석)이 있습니다.
+
+### 원본과 같은지 어떻게 확인했나
+
+- **코드**: 원본 `src/game/engine.ts` · `constants.ts` 에서 TypeScript 타입 표기만 지우고 줄 배치는 그대로 두었습니다. 두 쪽을 TypeScript 로 정규화해 비교하면 한 줄도 다르지 않습니다.
+- **화면**: 원본(Replit)과 이 저장소 버전을 같은 난수 · 같은 입력(클릭 · 키보드)으로 돌려 37장을 찍어 픽셀 단위로 비교했고, 모두 차이 0 이었습니다 (메뉴 전부, 보스 10명, 기체 5종으로 긴 전투).
+- 원본의 React · Vite 껍데기는 빼고, 같은 화면 구성(가운데 정렬한 540×960 캔버스)을 HTML/CSS 로 만들었습니다.
+
+### 구조
+
+```
+neon-raid/
+  index.html        캔버스 하나 (원본 NeonRaid.tsx 의 화면 구성)
+  css/style.css     원본 index.css + 인라인 스타일
+  js/constants.js   색 · 보스 · 기체 · 강화 · 스테이지 색 (원본 constants.ts)
+  js/engine.js      게임 전부: 메뉴 · 보스 10명 패턴 · 그리기 (원본 engine.ts)
+  js/main.js        엔진을 캔버스에 붙여 시작
+```
 
 ---
 
@@ -216,7 +278,7 @@ fireSlash: {
 
 ## 한 파일로 만들기
 
-코드를 고친 뒤 아래 명령을 실행하면 모든 CSS/JS 를 합친 `dist/card-expedition.html` 과 `dist/sky-hunter.html` 이 다시 만들어집니다.
+코드를 고친 뒤 아래 명령을 실행하면 모든 CSS/JS 를 합친 `dist/card-expedition.html` · `dist/sky-hunter.html` · `dist/neon-raid.html` 이 다시 만들어집니다.
 
 ```bash
 node tools/build.js
@@ -230,6 +292,10 @@ node tests/engine.test.js
 
 ```bash
 node tests/shooter.test.js
+```
+
+```bash
+node tests/neon-raid.test.js
 ```
 
 ```bash
