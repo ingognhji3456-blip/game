@@ -6,6 +6,9 @@
  *  - 메뉴: 로비 → 스테이지 선택 → 출격, 잠긴 스테이지 · 2장 잠금, 격납고 구매 · 강화 구매 · 저장
  *  - 전투: 보스 10명 × 4단계를 각각 돌리며 오류 · 숫자 이상이 없는지 (그리기 포함)
  *  - 규칙: 단계 전환(체력 2배), 4단계 격파 → 다음 스테이지, 10번째 보스 → 승리, 체력 0 → 스테이지 선택
+ *  - 글자: 모든 화면의 글자가 한국어 (영어 낱말이 남아 있지 않음)
+ *  - 레이저: 화면 끝까지 그려짐(판정과 같은 길이), 쏜 보스에 붙어 움직임, 맞기 전에 예고(충전),
+ *            물 지뢰는 십자 네 방향, 7번 보스는 갈라지면 연결 레이저가 사라지고 남은 기체에서만 쏨
  * 원본(Replit)과의 비교는 브라우저에서 같은 난수 · 같은 입력으로 화면을 찍어 픽셀 단위로 했습니다 (README 참고).
  */
 const fs = require('fs');
@@ -20,6 +23,9 @@ function fakeDom() {
   const listeners = {};
   const store = {};
   const badDraws = [];
+  const texts = [];
+  const lines = [];          // 그려진 선분 (moveTo → lineTo)
+  let pen = null;
   const gradient = { addColorStop() {} };
   const ctxTarget = { canvas: null };
   const ctx = new Proxy(ctxTarget, {
@@ -27,6 +33,9 @@ function fakeDom() {
       if (k in t) return t[k];
       if (k === 'createRadialGradient' || k === 'createLinearGradient') return () => gradient;
       if (k === 'measureText') return () => ({ width: 10 });
+      if (k === 'fillText') return (txt) => { texts.push(String(txt)); };
+      if (k === 'moveTo') return (x, y) => { pen = [x, y]; };
+      if (k === 'lineTo') return (x, y) => { if (pen) lines.push([pen[0], pen[1], x, y]); pen = [x, y]; };
       return (...args) => {
         for (const a of args) if (typeof a === 'number' && !Number.isFinite(a)) badDraws.push(`${String(k)}(${args.join(', ')})`);
         // 진짜 캔버스는 반지름이 음수면 오류를 냄
@@ -51,7 +60,7 @@ function fakeDom() {
     clear: () => { for (const k of Object.keys(store)) delete store[k]; },
   };
   const fire = (key, ev) => (listeners[key] || []).forEach((fn) => fn(ev));
-  return { canvas, window, localStorage, store, fire, badDraws };
+  return { canvas, window, localStorage, store, fire, badDraws, texts, lines };
 }
 
 function load() {
@@ -270,6 +279,127 @@ test('체력이 0 이 되면 스테이지 선택으로 · 코인을 주우면 �
   e.update();
   assert.strictEqual(e.state, 'STAGE_SELECT');
   assert.strictEqual(savedData(env).coins, 10);
+});
+
+test('모든 화면의 글자가 한국어 (영어 낱말이 남아 있지 않음)', () => {
+  const { e, env } = newEngine({ coins: 650, cleared_stages: [1, 2, 3, 4, 5, 6], selected_char: 2, owned_chars: [0, 1, 2], upgrades: { speed: 5, hp: 2, damage: 0, fire: 1, shield: 0, magnet: 3 } });
+  const show = (setup, ticks = 1) => { setup(); for (let i = 0; i < ticks; i++) e.update(); e.render(); };
+  show(() => { e.state = 'LOBBY'; });
+  show(() => { e.state = 'HANGAR'; });
+  show(() => { e.state = 'UPGRADE'; });
+  show(() => { e.state = 'STAGE_SELECT'; e.currentChapter = 1; e.selectedStage = 3; });
+  show(() => { e.state = 'STAGE_SELECT'; e.currentChapter = 2; e.selectedStage = 9; });  // 9는 잠김 → '스테이지를 고르세요'
+  for (let stage = 1; stage <= 10; stage++) {
+    show(() => { e.reset(stage); e.state = 'PLAY'; e.php = 1e9; if (stage === 6) e.b6OverchargeTimer = 999; if (stage === 10) { e.triggerPhaseTransition(); e.triggerPhaseTransition(); } }, 30);
+  }
+  show(() => { e.pHpFlashHeal = 20; });
+  for (const t of [10, 70, 130]) show(() => { e.reset(3); e.state = 'TRANSITION'; e.transitionTimer = t; }, 0);
+  show(() => { e.state = 'WIN'; });
+  const drawn = [...new Set(env.dom.texts)];
+  const ALLOWED = new Set(['WASD', 'EMP', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']);
+  const english = drawn.filter((t) => (t.match(/[A-Za-z]+/g) || []).some((w) => !ALLOWED.has(w)));
+  assert.deepStrictEqual(english, [], '영어가 남은 글자');
+  for (const must of ['네온 레이드', '▶  도전', '조종사 격납고', '강화', '스테이지 선택', '▶ 출격', '⚠ 중력 왜곡', '▶ 과충전 ◀', '보스 격파!', '승리!']) {
+    assert.ok(drawn.includes(must), `화면에 '${must}' 가 나와야 함`);
+  }
+  assert.ok(drawn.some((t) => /^⚠ 붕괴까지 \d+초$/.test(t)), '블랙홀 제한 시간');
+  assert.ok(drawn.some((t) => /\[\d단계\]$/.test(t)), '보스 이름 옆 단계 표시');
+});
+
+test('레이저는 화면 끝까지 그려짐 (판정 길이와 같음 · 중간에서 끊기지 않음)', () => {
+  const cases = [
+    ['1번 4단계 쓸어 가는 레이저', 1, 4, (e) => { e.phaseTimer = 0; }, 120],
+    ['2번 회전 광선', 2, 3, () => {}, 120],
+    ['3번 조준 레이저', 3, 4, () => {}, 130],
+    ['5번 팔 레이저', 5, 1, (e) => { e.b5ArmLaserTimer = 170; }, 40],
+    ['6번 과충전 레이저', 6, 2, (e) => { e.b6OverchargeTimer = 999; }, 50],
+    ['9번 물 지뢰 레이저', 9, 2, (e) => { e.b2Mines.push({ x: 270, y: 500, vy: 0, timer: 2, r: 13, is_water_mine: true }); }, 10],
+    ['10번 블랙홀 레이저', 10, 3, () => {}, 120],
+  ];
+  for (const [name, stage, phase, setup, ticks] of cases) {
+    const { e, env } = newEngine();
+    e.reset(stage); e.state = 'PLAY';
+    for (let p = 1; p < phase; p++) e.triggerPhaseTransition();
+    setup(e);
+    let longLines = 0;
+    for (let i = 0; i < ticks; i++) {
+      e.php = 1e9; e.update();
+      env.dom.lines.length = 0;
+      e.render();
+      for (const [x1, y1, x2, y2] of env.dom.lines) {
+        if (Math.hypot(x2 - x1, y2 - y1) < 400) continue;           // 레이저만 (몸체·HUD 선은 짧음)
+        longLines += 1;
+        const inside = x2 > -1 && x2 < 541 && y2 > -1 && y2 < 961;
+        assert.ok(!inside, `${name}: 레이저가 화면 안 (${x2 | 0}, ${y2 | 0}) 에서 끊김`);
+      }
+    }
+    assert.ok(longLines > 0, `${name}: 레이저가 그려져야 함`);
+  }
+});
+
+test('보스가 쏜 레이저는 보스에 붙어 움직이고, 물 지뢰는 십자 네 방향', () => {
+  const { e } = newEngine();
+  e.reset(3); e.state = 'PLAY'; e.triggerPhaseTransition();      // 드래곤 2단계: 머리에서 조준 레이저
+  let checked = 0;
+  for (let i = 0; i < 400; i++) {
+    e.php = 1e9; e.update();
+    for (const l of e.lasers) { assert.ok(l.s[0] === e.bx && l.s[1] === e.by, '레이저 시작점 = 드래곤 머리'); checked += 1; }
+  }
+  assert.ok(checked > 50);
+
+  const w = newEngine().e;
+  w.reset(9); w.state = 'PLAY'; w.triggerPhaseTransition(); w.update();
+  w.lasers = []; w.b2Mines = [{ x: 270, y: 500, vy: 0, timer: 1, r: 13, is_water_mine: true }];
+  w.timer = 1;                                                     // 다른 패턴과 겹치지 않는 틱
+  w.php = 1e9; w.update();
+  const dirs = w.lasers.filter((l) => !l.follow).map((l) => Math.round(((l.ang % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI) / (Math.PI / 2)) % 4).sort();
+  assert.deepStrictEqual(dirs, [0, 1, 2, 3]);
+});
+
+test('켜진 채 남는 레이저는 예열(조준선)이 끝나야 맞음', () => {
+  // 1번 4단계: 단계가 바뀐 직후에는 바로 아래에 있어도 안 맞고, 예열이 끝나면 맞음
+  const { e } = newEngine();
+  e.reset(1); e.state = 'PLAY';
+  for (let p = 1; p < 4; p++) e.triggerPhaseTransition();
+  e.bx = 270; e.by = 100; e.b1SweepAng = Math.PI / 2; e.b1SweepDir = 1; e.itime = 0;
+  const hp = e.php;
+  e.phaseTimer = 10; e.updateBoss1(270, 400, 14);
+  assert.strictEqual(e.php, hp, '예열 중에는 안 맞음');
+  e.phaseTimer = 100; e.b1SweepAng = Math.PI / 2; e.updateBoss1(270, 400, 14);
+  assert.strictEqual(e.php, hp - 4, '예열 뒤에는 맞음');
+  // 2번 회전 광선: 막 나온 광선은 안 맞고, 예열 뒤에는 맞음
+  const b = newEngine().e;
+  b.reset(2); b.state = 'PLAY'; b.triggerPhaseTransition();
+  b.bx = 270; b.by = 100; b.itime = 0; b.timer = 1;
+  b.b2Beams = [{ cx: 270, cy: 100, ang: Math.PI / 2, speed: 0, life: 999 }];
+  const hp2 = b.php;
+  b.updateBoss2(270, 400, 14);
+  assert.strictEqual(b.php, hp2);
+  b.b2Beams[0].age = 100; b.updateBoss2(270, 400, 14);
+  assert.ok(b.php < hp2);
+});
+
+test('7번 보스: 체력 절반에서 갈라지면 연결 레이저가 끊기고, 남은 기체(맞는 쪽)에서만 쏨', () => {
+  const { e } = newEngine();
+  e.reset(7); e.state = 'PLAY'; e.update();
+  // 이어져 있을 때: 두 기체 사이 레이저에 맞음
+  let mid = [(e.b7Pos1[0] + e.b7Pos2[0]) / 2, (e.b7Pos1[1] + e.b7Pos2[1]) / 2];
+  e.itime = 0; let hp = e.php;
+  e.timer = 1; e.updateBoss7(mid[0], mid[1], 14);
+  assert.ok(e.php < hp, '연결 레이저에 맞아야 함');
+  // 갈라지면: 같은 자리여도 안 맞고, 탄은 첫 번째 기체에서만 나감
+  e.bhp = e.bmax * 0.4; e.timer = 1; e.updateBoss7(0, 0, 14);
+  assert.ok(e.b7Enraged);
+  mid = [(e.b7Pos1[0] + e.b7Pos2[0]) / 2, (e.b7Pos1[1] + e.b7Pos2[1]) / 2];
+  e.itime = 0; hp = e.php; e.bossBullets = [];
+  e.timer = 70; e.updateBoss7(mid[0], mid[1], 14);             // timer 70: 조준탄 + 톱날이 함께 나오는 틱
+  assert.strictEqual(e.php, hp, '갈라진 뒤에는 연결 레이저가 없음');
+  assert.ok(e.bossBullets.length >= 4);
+  for (const b of e.bossBullets) assert.ok(b.p[0] === e.b7Pos1[0] && b.p[1] === e.b7Pos1[1], '남은 기체에서만 쏨');
+  // 맞는 판정도 남은 기체(첫 번째)
+  e.bullets = [{ p: [e.b7Pos1[0], e.b7Pos1[1]], v: [0, 0] }];
+  const bhp = e.bhp; e.php = 1e9; e.update();
+  assert.ok(e.bhp < bhp);
 });
 
 console.log(process.exitCode ? '\n실패한 테스트가 있습니다.' : `\n모두 통과 (${passed}개)`);

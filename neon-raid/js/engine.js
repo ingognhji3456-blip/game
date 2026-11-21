@@ -2,12 +2,15 @@
 
 /* =========================================================
  * NEON RAID: ETERNAL OVERLORD — 게임 엔진 (메뉴 · 보스 10명 · 그리기 전부)
- * Replit 원본(src/game/engine.ts)과 같은 코드입니다. 타입 표기만 뺐고 줄 배치와 동작은 그대로입니다.
+ * Replit 원본(src/game/engine.ts)과 같은 코드입니다. 타입 표기를 빼고 화면 글자를 한국어로 바꿨을 뿐,
+ * 줄 배치와 동작은 그대로입니다.
  * 캔버스 540×960(세로), 1초 60틱 고정, 저장은 localStorage 'neon_raid_save'.
  * ========================================================= */
 
 const TAU = Math.PI * 2;
 const MAX_PARTICLES = 80;
+/** 켜진 채 남아 있는 레이저(쓸어 가는 레이저 · 회전 광선 · 블랙홀 레이저)가 맞기 시작하기 전 예열 시간 (틱) */
+const BEAM_WARMUP = 60;
 
 function dist(ax, ay, bx, by) {
   const dx = ax - bx, dy = ay - by;
@@ -137,6 +140,7 @@ class NeonRaidEngine {
   b9SonarRadius = 0;
   b10TimeAttack = 2400;
   armAngle = 0;
+  phaseTimer = 0;   // 이번 단계가 시작된 뒤 지난 틱 (레이저 예열용)
 
   // virtual joystick
   joyBase = [90, HEIGHT - 120];
@@ -275,6 +279,7 @@ class NeonRaidEngine {
     this.flash = 0;
     this.flashColor = C_WHITE;
     this.armAngle = 0;
+    this.phaseTimer = 0;
 
     for (let i = 0; i < 3; i++) this.spawnCoin();
   }
@@ -295,6 +300,7 @@ class NeonRaidEngine {
 
   triggerPhaseTransition() {
     this.phase++;
+    this.phaseTimer = 0;
     this.bmax *= 2;
     this.bhp = this.bmax;
     this.flash = 200; this.flashColor = C_WHITE; this.shake = 20;
@@ -524,7 +530,7 @@ class NeonRaidEngine {
         this.bossStage++;
         this.bmax = STAGE_INFO[this.bossStage].hp;
       }
-      this.bhp = this.bmax; this.phase = 1; this.timer = 0;
+      this.bhp = this.bmax; this.phase = 1; this.timer = 0; this.phaseTimer = 0;
       this.particles = []; this.bullets = []; this.orbs = [];
       this.healOrbs = []; this.bossBullets = []; this.lasers = [];
       this.b4SickleBlades = []; this.b5EmpRings = [];
@@ -609,6 +615,7 @@ class NeonRaidEngine {
     this.bx = WIDTH / 2;
     this.by = 100 + Math.sin(this.timer * 0.03) * shakeAmp;
     this.timer++;
+    this.phaseTimer++;
 
     const p_hit_r = 14;
 
@@ -736,8 +743,8 @@ class NeonRaidEngine {
       mine.y += mine.vy; mine.timer--;
       if (mine.is_water_mine) {
         if (mine.timer <= 0) {
-          this.lasers.push({ s: [mine.x, mine.y], ang: 0, t: 20 });
-          this.lasers.push({ s: [mine.x, mine.y], ang: Math.PI / 2, t: 20 });
+          // 십자 모양 지뢰 → 네 방향으로 (원본은 오른쪽과 아래로만 나갔음)
+          for (const ang of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) this.lasers.push({ s: [mine.x, mine.y], ang, t: 20 });
           this.spawnParticles(mine.x, mine.y, C_TEAL, 10);
           this.b2Mines.splice(i, 1);
           continue;
@@ -917,11 +924,13 @@ class NeonRaidEngine {
     this.bossBullets.push({ p: [cx, cy], v: [Math.cos(a) * speed, Math.sin(a) * speed], c, r });
   }
   laserAim(cx, cy, pcx, pcy, spread = 0) {
-    this.lasers.push({ s: [cx, cy], ang: Math.atan2(pcy - cy, pcx - cx) + spread, t: 70 });
+    this.lasers.push({ s: [cx, cy], ang: Math.atan2(pcy - cy, pcx - cx) + spread, t: 70, follow: true });
   }
   updateLasers(pcx, pcy, p_hit_r, dmg = 18) {
     for (let i = this.lasers.length - 1; i >= 0; i--) {
       const l = this.lasers[i];
+      // 보스가 쏜 레이저는 보스(총구)에 붙어서 같이 움직임 — 원본은 쏜 자리에 남아 움직이는 보스와 떨어졌음
+      if (l.follow) { l.s[0] = this.bx; l.s[1] = this.by; }
       l.t--;
       if (l.t <= 0) { this.lasers.splice(i, 1); continue; }
       if (l.t <= 15 && this.itime === 0) {
@@ -946,7 +955,7 @@ class NeonRaidEngine {
       if (this.timer % 80 === 40) this.laserAim(bx, by, pcx, pcy, 0.35);
     } else if (this.phase === 3) {
       if (this.timer % 60 === 0) { this.addBulletRadial(bx, by, 20, this.bColor, 5, 3.5, this.timer % 20); this.addBulletRadial(bx, by, 20, this.bColor, 5, 3.5, (this.timer % 20) + 10); }
-      if (this.timer % 55 === 0) { const ba = Math.atan2(pcy - by, pcx - bx); [-0.35, 0, 0.35].forEach(s => this.lasers.push({ s: [bx, by], ang: ba + s, t: 70 })); }
+      if (this.timer % 55 === 0) { const ba = Math.atan2(pcy - by, pcx - bx); [-0.35, 0, 0.35].forEach(s => this.lasers.push({ s: [bx, by], ang: ba + s, t: 70, follow: true })); }
     } else {
       if (this.timer % 8 === 0) { for (let j = 0; j < 2; j++) { const r = rnd360(); this.bossBullets.push({ p: [bx, by], v: [Math.cos(r) * 4.5, Math.sin(r) * 4.5], c: C_RED, r: 6 }); } }
       this.b1SweepAng += 0.022 * this.b1SweepDir;
@@ -957,7 +966,7 @@ class NeonRaidEngine {
       const ey = by + Math.sin(this.b1SweepAng) * 1200;
       const dx = ex - bx, dy = ey - by;
       const tl = clamp(((pcx - bx) * dx + (pcy - by) * dy) / (dx * dx + dy * dy + 1e-9), 0, 1);
-      if (dist(bx + tl * dx, by + tl * dy, pcx, pcy) < p_hit_r && this.itime === 0) {
+      if (this.phaseTimer > BEAM_WARMUP && dist(bx + tl * dx, by + tl * dy, pcx, pcy) < p_hit_r && this.itime === 0) {
         this.php -= 4; this.itime = 8;
       }
     }
@@ -1002,7 +1011,8 @@ class NeonRaidEngine {
       const beam = this.b2Beams[i];
       beam.ang += beam.speed * Math.PI / 180;
       beam.life--;
-      if (this.itime === 0) {
+      beam.age = (beam.age || 0) + 1;   // 나온 뒤 예열하는 동안은 조준선만 (원본은 갑자기 나타나 바로 맞았음)
+      if (beam.age > BEAM_WARMUP && this.itime === 0) {
         const ex = bx + Math.cos(beam.ang) * 1100, ey = by + Math.sin(beam.ang) * 1100;
         const dx = ex - bx, dy = ey - by;
         const tl = clamp(((pcx - bx) * dx + (pcy - by) * dy) / (dx * dx + dy * dy + 1e-9), 0, 1);
@@ -1035,10 +1045,10 @@ class NeonRaidEngine {
       if (this.timer % 90 === 0) this.laserAim(bx, by, pcx, pcy);
     } else if (this.phase === 3) {
       if (this.timer % 40 === 0) { for (const s of randSegs(5)) { for (let j = 0; j < 7; j++) { const a = rnd360(); this.bossBullets.push({ p: [s[0], s[1]], v: [Math.cos(a) * 4.5, Math.sin(a) * 4.5], c: C_YELLOW, r: 5 }); } } }
-      if (this.timer % 65 === 0) { const ba = Math.atan2(pcy - by, pcx - bx); [-0.26, 0.26].forEach(s => this.lasers.push({ s: [bx, by], ang: ba + s, t: 60 })); }
+      if (this.timer % 65 === 0) { const ba = Math.atan2(pcy - by, pcx - bx); [-0.26, 0.26].forEach(s => this.lasers.push({ s: [bx, by], ang: ba + s, t: 60, follow: true })); }
     } else {
       if (this.timer % 28 === 0) { for (const s of this.b3Segments) { const a = rnd360(); this.bossBullets.push({ p: [s[0], s[1]], v: [Math.cos(a) * 5, Math.sin(a) * 5], c: C_RED, r: 5 }); } }
-      if (this.timer % 65 === 0) { const ba = Math.atan2(pcy - by, pcx - bx); [-0.35, 0, 0.35].forEach(s => this.lasers.push({ s: [bx, by], ang: ba + s, t: 60 })); }
+      if (this.timer % 65 === 0) { const ba = Math.atan2(pcy - by, pcx - bx); [-0.35, 0, 0.35].forEach(s => this.lasers.push({ s: [bx, by], ang: ba + s, t: 60, follow: true })); }
     }
     this.updateLasers(pcx, pcy, p_hit_r);
   }
@@ -1180,7 +1190,7 @@ class NeonRaidEngine {
       const triggers = { 1: [30], 2: [35, 52], 3: [30, 45, 60], 4: [25, 38, 51, 64] };
       if (triggers[this.phase]?.includes(this.b6OverchargeLife)) {
         const angles = [Math.PI / 2, Math.PI / 4, Math.PI * 3 / 4, Math.PI / 6, Math.PI * 5 / 6, Math.PI / 3, Math.PI * 2 / 3];
-        for (const a of angles.slice(0, this.phase + 1)) this.lasers.push({ s: [this.bx, this.by], ang: a, t: 55 });
+        for (const a of angles.slice(0, this.phase + 1)) this.lasers.push({ s: [this.bx, this.by], ang: a, t: 55, follow: true });
       }
       if (this.b6OverchargeLife <= 0) {
         this.b6OverchargeActive = false; this.b6OverchargeTimer = 0;
@@ -1218,35 +1228,45 @@ class NeonRaidEngine {
     const tspd = this.b7Enraged ? 0.085 : 0.040;
     this.b7Pos1 = [cx - 110 + Math.cos(this.timer * tspd) * 160, cy + Math.sin(this.timer * tspd * 1.6) * 90];
     this.b7Pos2 = [cx + 110 + Math.cos(this.timer * tspd + Math.PI) * 160, cy + Math.sin(this.timer * tspd * 1.6 + Math.PI) * 90];
+    const wasEnraged = this.b7Enraged;
     this.b7Enraged = this.bhp < this.bmax / 2;
     this.bx = cx; this.by = cy;
-
-    // link laser damage
-    const [x1, y1] = this.b7Pos1, [x2, y2] = this.b7Pos2;
-    const dx = x2 - x1, dy = y2 - y1;
-    const tl = clamp(((pcx - x1) * dx + (pcy - y1) * dy) / (dx * dx + dy * dy + 1e-9), 0, 1);
-    if (dist(x1 + tl * dx, y1 + tl * dy, pcx, pcy) < p_hit_r && this.itime === 0) {
-      this.php -= this.b7Enraged ? 9 : 6; this.itime = 40; this.shake = 12;
+    // 체력 절반: 두 번째 기체가 터지고 연결 레이저가 끊김 (원본은 보이지 않는 기체에 레이저가 계속 이어졌음)
+    if (this.b7Enraged && !wasEnraged) {
+      this.spawnParticles(this.b7Pos2[0], this.b7Pos2[1], C_ORANGE, 20, 10, 8);
+      this.flash = 60; this.flashColor = C_RED; this.shake = 14;
     }
+
+    // link laser damage (두 기체가 이어져 있을 때만)
+    if (!this.b7Enraged) {
+      const [x1, y1] = this.b7Pos1, [x2, y2] = this.b7Pos2;
+      const dx = x2 - x1, dy = y2 - y1;
+      const tl = clamp(((pcx - x1) * dx + (pcy - y1) * dy) / (dx * dx + dy * dy + 1e-9), 0, 1);
+      if (dist(x1 + tl * dx, y1 + tl * dy, pcx, pcy) < p_hit_r && this.itime === 0) {
+        this.php -= 6; this.itime = 40; this.shake = 12;
+      }
+    }
+    // 쏘는 기체: 이어져 있으면 둘, 갈라지면 남은 기체가 두 발씩 (탄 수는 원본과 같음)
+    const guns = this.b7Enraged ? [[this.b7Pos1, -0.12], [this.b7Pos1, 0.12]] : [[this.b7Pos1, 0], [this.b7Pos2, 0]];
     const fireI = [35, 28, 22, 16];
     if (this.timer % fireI[this.phase - 1] === 0) {
-      for (const pos of [this.b7Pos1, this.b7Pos2]) {
-        const a = Math.atan2(pcy - pos[1], pcx - pos[0]);
+      for (const [pos, off] of guns) {
+        const a = Math.atan2(pcy - pos[1], pcx - pos[0]) + off;
         this.bossBullets.push({ p: [pos[0], pos[1]], v: [Math.cos(a) * 4.5, Math.sin(a) * 4.5], c: C_RED, r: 4 });
       }
     }
     const chargeC = [220, 190, 160, 130];
     const cc = chargeC[this.phase - 1];
     if (this.timer % cc === 30) {
-      for (const pos of [this.b7Pos1, this.b7Pos2]) {
-        const a = Math.atan2(pcy - pos[1], pcx - pos[0]);
+      for (const [pos, off] of guns) {
+        const a = Math.atan2(pcy - pos[1], pcx - pos[0]) + off;
         this.bossBullets.push({ p: [pos[0], pos[1]], v: [Math.cos(a) * 9, Math.sin(a) * 9], c: C_WHITE, r: 11 });
       }
     }
     if (this.b7Enraged) {
       if (this.timer % 70 === 0) {
-        for (const pos of [this.b7Pos1, this.b7Pos2]) {
-          const a = Math.atan2(pcy - pos[1], pcx - pos[0]);
+        for (const [pos, off] of guns) {
+          const a = Math.atan2(pcy - pos[1], pcx - pos[0]) + off;
           this.bossBullets.push({ p: [pos[0], pos[1]], v: [Math.cos(a) * 3.5, Math.sin(a) * 3.5], c: C_RED, r: 19, type: 'plasma_saw', spin_angle: 0 });
         }
       }
@@ -1363,7 +1383,7 @@ class NeonRaidEngine {
         const lex = this.bx + Math.cos(a) * 1200, ley = this.by + Math.sin(a) * 1200;
         const ldx = lex - this.bx, ldy = ley - this.by;
         const tl = clamp(((this.px + 17 - this.bx) * ldx + (this.py + 17 - this.by) * ldy) / (ldx * ldx + ldy * ldy + 1e-9), 0, 1);
-        if (dist(this.bx + tl * ldx, this.by + tl * ldy, pcx, pcy) < p_hit_r && this.itime === 0) {
+        if (this.phaseTimer > BEAM_WARMUP && dist(this.bx + tl * ldx, this.by + tl * ldy, pcx, pcy) < p_hit_r && this.itime === 0) {
           this.php -= 20; this.itime = 45; this.shake = 12;
         }
       }
@@ -1432,25 +1452,26 @@ class NeonRaidEngine {
   // ─── draw helpers ─────────────────────────
   text(txt, x, y, color, size, center = false, bold = true) {
     const ctx = this.ctx;
-    ctx.font = `${bold ? 'bold ' : ''}${size}px Arial`;
+    ctx.font = `${bold ? 'bold ' : ''}${size}px ${FONT_STACK}`;
     ctx.fillStyle = color;
     if (center) { ctx.textAlign = 'center'; ctx.fillText(txt, x, y); ctx.textAlign = 'left'; }
     else ctx.fillText(txt, x, y);
   }
   glowText(txt, x, y, color, size, center = false) {
     const ctx = this.ctx;
-    ctx.font = `bold ${size}px Arial`;
+    ctx.font = `bold ${size}px ${FONT_STACK}`;
     ctx.save();
     const [r, g, b] = hexToRgb(color);
-    ctx.fillStyle = `rgba(${r},${g},${b},0.3)`;
-    for (let ox = -2; ox <= 2; ox++) for (let oy = -2; oy <= 2; oy++) {
-      if (ox === 0 && oy === 0) continue;
-      if (center) { ctx.textAlign = 'center'; ctx.fillText(txt, x + ox, y + oy); }
-      else ctx.fillText(txt, x + ox, y + oy);
-    }
+    // 네온 빛: 원본은 글자를 2px 씩 24번 겹쳐 찍어 빛을 냈지만, 한글은 획이 촘촘해 작은 글자가 뭉개집니다.
+    // 그래서 그림자 번짐으로 빛을 내고, 그 위에 글자를 한 번 더 또렷하게 찍습니다.
+    ctx.shadowColor = `rgba(${r},${g},${b},0.9)`;
+    ctx.shadowBlur = Math.max(4, size * 0.45);
     ctx.fillStyle = color;
-    if (center) { ctx.textAlign = 'center'; ctx.fillText(txt, x, y); ctx.textAlign = 'left'; }
-    else ctx.fillText(txt, x, y);
+    if (center) ctx.textAlign = 'center';
+    ctx.fillText(txt, x, y);
+    ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+    ctx.fillText(txt, x, y);
+    if (center) ctx.textAlign = 'left';
     ctx.restore();
   }
   circle(x, y, r, color, fill = true, lw = 2) {
@@ -1485,6 +1506,14 @@ class NeonRaidEngine {
     this.ctx.shadowBlur = 8; this.ctx.shadowColor = color;
     this.rect(x, y, w, h, color, false, 5, lw);
     this.ctx.shadowBlur = 0; this.ctx.restore();
+  }
+
+  /** 레이저 충전 (k: 0 → 1): 조준선이 점점 밝고 굵어지고, 쏘는 곳에 빛이 모임 */
+  laserCharge(x1, y1, x2, y2, k, color) {
+    this.line(x1, y1, x2, y2, colorWithAlpha(C_WHITE, 0.15 + 0.25 * k), 1 + 1.5 * k);
+    this.line(x1, y1, x2, y2, colorWithAlpha(color, 0.12 + 0.3 * k), 3 + 3 * k);
+    this.circle(x1, y1, 3 + 8 * k, colorWithAlpha(color, 0.35 + 0.45 * k));
+    this.circle(x1, y1, 1.5 + 3 * k, colorWithAlpha(C_WHITE, 0.5 + 0.4 * k));
   }
 
   renderStars() {
@@ -1522,8 +1551,8 @@ class NeonRaidEngine {
     }
 
     const titleC = rgbToHex(0, 255 * pulse, 255 * pulse);
-    this.glowText('NEON RAID', cx, HEIGHT / 2 - 280, titleC, 40, true);
-    this.glowText('ETERNAL OVERLORD', cx, HEIGHT / 2 - 235, rgbToHex(255 * pulse, 0, 255 * pulse), 22, true);
+    this.glowText('네온 레이드', cx, HEIGHT / 2 - 280, titleC, 40, true);
+    this.glowText('영원한 지배자', cx, HEIGHT / 2 - 235, rgbToHex(255 * pulse, 0, 255 * pulse), 22, true);
 
     ctx.save(); ctx.strokeStyle = colorWithAlpha(C_CYAN, 0.4); ctx.lineWidth = 1;
     const lw = 220 + 40 * Math.sin(t * 0.04);
@@ -1532,13 +1561,13 @@ class NeonRaidEngine {
     this.glowText(`⬡ ${this.save.coins}`, cx, HEIGHT / 2 - 180, C_COIN, 20, true);
 
     const char = CHARACTERS[this.save.selected_char];
-    this.glowText(`PILOT: ${char.name}`, cx, HEIGHT / 2 - 148, char.color, 13, true);
+    this.glowText(`조종사: ${char.name}`, cx, HEIGHT / 2 - 148, char.color, 13, true);
     this.text(char.desc, cx, HEIGHT / 2 - 128, '#888899', 10, true);
 
     const btns = [
-      { label: '▶  CHALLENGE', color: C_CYAN, y: HEIGHT / 2 + 100 },
-      { label: '⚙  HANGAR',   color: C_ORANGE, y: HEIGHT / 2 + 175 },
-      { label: '▲  UPGRADE',  color: C_LIME, y: HEIGHT / 2 + 243 },
+      { label: '▶  도전', color: C_CYAN, y: HEIGHT / 2 + 100 },
+      { label: '⚙  격납고',   color: C_ORANGE, y: HEIGHT / 2 + 175 },
+      { label: '▲  강화',  color: C_LIME, y: HEIGHT / 2 + 243 },
     ];
     for (const btn of btns) {
       const hov = this.inRect(this.mouseX, this.mouseY, cx - 150, btn.y, 300, 55);
@@ -1551,16 +1580,16 @@ class NeonRaidEngine {
       this.glowText(btn.label, cx, btn.y + 33, c, 14, true);
     }
 
-    this.text('WASD / ARROW KEYS  ·  AUTO-FIRE ALWAYS ON', cx, HEIGHT - 30, '#404050', 9, true);
+    this.text('WASD / 방향키로 이동  ·  공격은 항상 자동', cx, HEIGHT - 30, '#404050', 9, true);
   }
 
   // ─── HANGAR ───────────────────────────────
   renderHangar() {
     const ctx = this.ctx;
-    this.glowText('PILOT HANGAR', WIDTH / 2, 45, C_ORANGE, 22, true);
+    this.glowText('조종사 격납고', WIDTH / 2, 45, C_ORANGE, 22, true);
     this.line(30, 60, WIDTH - 30, 60, '#2a2a38', 1);
     this.glowText(`⬡ ${this.save.coins}`, WIDTH - 15, 55, C_COIN, 13);
-    ctx.textAlign = 'right'; ctx.fillStyle = C_COIN; ctx.font = 'bold 13px Arial'; ctx.fillText(`⬡ ${this.save.coins}`, WIDTH - 15, 55); ctx.textAlign = 'left';
+    ctx.textAlign = 'right'; ctx.fillStyle = C_COIN; ctx.font = `bold 13px ${FONT_STACK}`; ctx.fillText(`⬡ ${this.save.coins}`, WIDTH - 15, 55); ctx.textAlign = 'left';
 
     for (let cid = 0; cid < 5; cid++) {
       const char = CHARACTERS[cid];
@@ -1583,7 +1612,7 @@ class NeonRaidEngine {
       this.text(char.desc, 88, cy + 42, owned ? '#909090' : '#404040', 10);
 
       // stat bars
-      const stats = [['SPD', char.speed_bonus + 5], ['HP', (char.hp_bonus + 150) / 30 | 0], ['RATE', 10 - char.fire_rate]];
+      const stats = [['속도', char.speed_bonus + 5], ['체력', (char.hp_bonus + 150) / 30 | 0], ['연사', 10 - char.fire_rate]];
       for (let si = 0; si < 3; si++) {
         const [sn, sv] = stats[si];
         this.text(sn, 88 + si * 62, cy + 62, '#606070', 8);
@@ -1594,16 +1623,16 @@ class NeonRaidEngine {
           ctx.fillRect(fx, cy + 53, 6, 5);
         }
       }
-      this.text(`SPECIAL: ${char.special.toUpperCase()}`, 88, cy + 76, colorWithAlpha(col, 0.8), 9);
+      this.text(`특수 사격: ${char.special_name}`, 88, cy + 76, colorWithAlpha(col, 0.8), 9);
 
       if (selected) {
         ctx.fillStyle = colorWithAlpha(char.color, 0.85); ctx.beginPath(); ctx.roundRect(WIDTH - 95, cy + 10, 60, 22, 3); ctx.fill();
-        this.text('ACTIVE', WIDTH - 84, cy + 24, C_BG, 10);
+        this.text('사용 중', WIDTH - 84, cy + 24, C_BG, 10);
       } else if (owned) {
         const hov = this.inRect(this.mouseX, this.mouseY, WIDTH - 110, cy + 30, 95, 40);
         this.rect(WIDTH - 110, cy + 30, 95, 40, hov ? colorWithAlpha(char.color, 0.9) : '#1a1a28', true, 4);
         this.rect(WIDTH - 110, cy + 30, 95, 40, char.color, false, 4, 1);
-        this.text('SELECT', WIDTH - 73, cy + 55, hov ? C_BG : char.color, 11, true);
+        this.text('선택', WIDTH - 73, cy + 55, hov ? C_BG : char.color, 11, true);
       } else {
         this.text(`⬡ ${char.cost}`, WIDTH - 80, cy + 25, C_COIN, 10, true);
         const canBuy = this.save.coins >= char.cost;
@@ -1611,22 +1640,22 @@ class NeonRaidEngine {
         const bc = canBuy ? C_COIN : '#333340';
         this.rect(WIDTH - 110, cy + 55, 95, 35, '#151520', true, 4);
         this.rect(WIDTH - 110, cy + 55, 95, 35, bc, false, 4, 1);
-        this.text(canBuy ? 'UNLOCK' : 'LOCKED', WIDTH - 73, cy + 77, bc, 10, true);
+        this.text(canBuy ? '구매' : '잠김', WIDTH - 73, cy + 77, bc, 10, true);
       }
     }
 
     const hov = this.inRect(this.mouseX, this.mouseY, 30, HEIGHT - 90, 140, 50);
     this.rect(30, HEIGHT - 90, 140, 50, '#141420', true, 5);
     this.rect(30, HEIGHT - 90, 140, 50, hov ? C_WHITE : '#808090', false, 5, 1);
-    this.text('← BACK', 100, HEIGHT - 58, hov ? C_WHITE : '#808090', 12, true);
+    this.text('← 뒤로', 100, HEIGHT - 58, hov ? C_WHITE : '#808090', 12, true);
   }
 
   // ─── UPGRADE ──────────────────────────────
   renderUpgrade() {
     const ctx = this.ctx;
-    this.glowText('UPGRADES', WIDTH / 2, 45, C_LIME, 22, true);
+    this.glowText('강화', WIDTH / 2, 45, C_LIME, 22, true);
     this.line(30, 58, WIDTH - 30, 58, '#2a2a38', 1);
-    ctx.textAlign = 'right'; ctx.font = 'bold 12px Arial'; ctx.fillStyle = C_COIN; ctx.fillText(`⬡ ${this.save.coins}`, WIDTH - 15, 53); ctx.textAlign = 'left';
+    ctx.textAlign = 'right'; ctx.font = `bold 12px ${FONT_STACK}`; ctx.fillStyle = C_COIN; ctx.fillText(`⬡ ${this.save.coins}`, WIDTH - 15, 53); ctx.textAlign = 'left';
 
     const keys = Object.keys(UPGRADES);
     for (let i = 0; i < keys.length; i++) {
@@ -1646,7 +1675,7 @@ class NeonRaidEngine {
       this.line(72, cy + 8, 72, cy + 88, colorWithAlpha(col, 0.3), 1);
       this.text(upg.name, 82, cy + 22, col, 12);
       this.text(upg.desc, 82, cy + 38, '#909090', 9);
-      this.text(`LEVEL ${lv} / ${upg.max}`, 82, cy + 55, col, 9);
+      this.text(`레벨 ${lv} / ${upg.max}`, 82, cy + 55, col, 9);
       for (let bi = 0; bi < upg.max; bi++) {
         ctx.fillStyle = bi < lv ? col : '#252535';
         ctx.fillRect(82 + 42 + bi * 20, cy + 46, 14, 6);
@@ -1654,7 +1683,7 @@ class NeonRaidEngine {
       }
 
       if (maxed) {
-        this.text('MAXED!', WIDTH - 80, cy + 50, C_GREEN, 11, true);
+        this.text('최대!', WIDTH - 80, cy + 50, C_GREEN, 11, true);
       } else {
         const cost = upg.costs[lv];
         const can = this.save.coins >= cost;
@@ -1662,20 +1691,20 @@ class NeonRaidEngine {
         ctx.fillStyle = can && hov ? colorWithAlpha(col, 0.7) : '#151520'; ctx.beginPath(); ctx.roundRect(WIDTH - 130, cy + 28, 110, 48, 5); ctx.fill();
         ctx.strokeStyle = can ? col : '#333340'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.roundRect(WIDTH - 130, cy + 28, 110, 48, 5); ctx.stroke();
         this.text(`⬡ ${cost}`, WIDTH - 75, cy + 45, can ? C_COIN : '#404040', 9, true);
-        this.text('UPGRADE', WIDTH - 75, cy + 62, can ? col : '#404040', 10, true);
+        this.text('강화하기', WIDTH - 75, cy + 62, can ? col : '#404040', 10, true);
       }
     }
 
     const hov = this.inRect(this.mouseX, this.mouseY, 30, HEIGHT - 90, 140, 50);
     this.rect(30, HEIGHT - 90, 140, 50, '#141420', true, 5);
     this.rect(30, HEIGHT - 90, 140, 50, hov ? C_WHITE : '#808090', false, 5, 1);
-    this.text('← BACK', 100, HEIGHT - 58, hov ? C_WHITE : '#808090', 12, true);
+    this.text('← 뒤로', 100, HEIGHT - 58, hov ? C_WHITE : '#808090', 12, true);
   }
 
   // ─── STAGE SELECT ─────────────────────────
   renderStageSelect() {
     const ctx = this.ctx;
-    this.glowText('SELECT STAGE', WIDTH / 2, 45, C_WHITE, 22, true);
+    this.glowText('스테이지 선택', WIDTH / 2, 45, C_WHITE, 22, true);
     this.line(30, 58, WIDTH - 30, 58, '#2a2a38', 1);
 
     const ch1Done = [1,2,3,4,5].every(s => this.save.cleared_stages.includes(s));
@@ -1687,10 +1716,10 @@ class NeonRaidEngine {
     const t2col = !ch1Done ? '#404050' : (this.currentChapter === 2 ? C_MAGENTA : (t2hov ? C_WHITE : '#808090'));
     this.rect(30, 75, 210, 40, '#141420', true, 5);
     this.rect(30, 75, 210, 40, t1col, false, 5, this.currentChapter === 1 ? 2 : 1);
-    this.text('CHAPTER I', 135, 100, t1col, 11, true);
+    this.text('1장', 135, 100, t1col, 11, true);
     this.rect(WIDTH - 240, 75, 210, 40, '#141420', true, 5);
     this.rect(WIDTH - 240, 75, 210, 40, t2col, false, 5, this.currentChapter === 2 ? 2 : 1);
-    this.text(ch1Done ? 'CHAPTER II' : '🔒 CH.II', WIDTH - 135, 100, t2col, 11, true);
+    this.text(ch1Done ? '2장' : '🔒 2장', WIDTH - 135, 100, t2col, 11, true);
 
     const range = this.currentChapter === 1 ? [1,2,3,4,5] : [6,7,8,9,10];
     for (let i = 0; i < 5; i++) {
@@ -1708,7 +1737,7 @@ class NeonRaidEngine {
       ctx.beginPath(); ctx.roundRect(30, cy, WIDTH - 60, 105, 5); ctx.stroke();
 
       if (!unlocked) {
-        this.text('LOCKED', WIDTH / 2, cy + 58, '#505060', 18, true);
+        this.text('잠김', WIDTH / 2, cy + 58, '#505060', 18, true);
         continue;
       }
 
@@ -1718,15 +1747,15 @@ class NeonRaidEngine {
       this.text(info.name, 98, cy + 28, col, 12);
       this.text(info.desc, 98, cy + 44, '#909090', 9);
       const tl = sid <= 5 ? sid : sid - 5;
-      this.text('THREAT', 98, cy + 62, '#505060', 8);
+      this.text('위험도', 98, cy + 62, '#505060', 8);
       for (let d = 0; d < 5; d++) {
         ctx.fillStyle = d < tl ? col : '#252535';
         ctx.fillRect(128 + d * 14, cy + 53, 10, 5);
       }
-      this.text(`HP: ${info.hp.toLocaleString()}`, 98, cy + 78, '#606070', 8);
+      this.text(`체력: ${info.hp.toLocaleString()}`, 98, cy + 78, '#606070', 8);
       if (cleared) {
         ctx.fillStyle = 'rgba(0,160,60,0.8)'; ctx.roundRect(WIDTH - 90, cy + 12, 58, 20, 3); ctx.fill();
-        this.text('CLEARED', WIDTH - 61, cy + 26, C_BG, 8, true);
+        this.text('클리어', WIDTH - 61, cy + 26, C_BG, 8, true);
       }
     }
 
@@ -1734,7 +1763,7 @@ class NeonRaidEngine {
     const bhov = this.inRect(this.mouseX, this.mouseY, 30, HEIGHT - 90, 140, 50);
     this.rect(30, HEIGHT - 90, 140, 50, '#141420', true, 5);
     this.rect(30, HEIGHT - 90, 140, 50, bhov ? C_WHITE : '#808090', false, 5, 1);
-    this.text('← BACK', 100, HEIGHT - 58, bhov ? C_WHITE : '#808090', 12, true);
+    this.text('← 뒤로', 100, HEIGHT - 58, bhov ? C_WHITE : '#808090', 12, true);
 
     const canLaunch = this.selectedStage === 1 || this.selectedStage === 6 || this.save.cleared_stages.includes(this.selectedStage - 1);
     if (canLaunch) {
@@ -1742,10 +1771,10 @@ class NeonRaidEngine {
       const lhov = this.inRect(this.mouseX, this.mouseY, WIDTH - 185, HEIGHT - 90, 160, 50);
       if (lhov) { ctx.fillStyle = colorWithAlpha(lcol, 0.15); ctx.roundRect(WIDTH - 185, HEIGHT - 90, 160, 50, 5); ctx.fill(); }
       this.rect(WIDTH - 185, HEIGHT - 90, 160, 50, lcol, false, 5, 2);
-      this.glowText('▶ LAUNCH', WIDTH - 105, HEIGHT - 60, lcol, 13, true);
+      this.glowText('▶ 출격', WIDTH - 105, HEIGHT - 60, lcol, 13, true);
     } else {
       this.rect(WIDTH - 185, HEIGHT - 90, 160, 50, '#252535', false, 5, 1);
-      this.text('SELECT A STAGE', WIDTH - 105, HEIGHT - 60, '#505060', 11, true);
+      this.text('스테이지를 고르세요', WIDTH - 105, HEIGHT - 60, '#505060', 11, true);
     }
   }
 
@@ -1785,6 +1814,7 @@ class NeonRaidEngine {
     // b2 beams
     for (const beam of this.b2Beams) {
       const ex = bx + Math.cos(beam.ang) * 1100, ey = by + Math.sin(beam.ang) * 1100;
+      if ((beam.age || 0) <= BEAM_WARMUP) { this.laserCharge(bx, by, ex, ey, (beam.age || 0) / BEAM_WARMUP, this.bColor); continue; }
       this.line(bx, by, ex, ey, colorWithAlpha(C_WHITE, 0.4), 8);
       this.line(bx, by, ex, ey, colorWithAlpha(this.bColor, 0.7), 4);
     }
@@ -1793,7 +1823,7 @@ class NeonRaidEngine {
     for (const l of this.lasers) {
       const ep = [l.s[0] + Math.cos(l.ang) * 1200, l.s[1] + Math.sin(l.ang) * 1200];
       if (l.t > 15) {
-        this.line(l.s[0], l.s[1], ep[0], ep[1], colorWithAlpha(C_WHITE, 0.15), 1);
+        this.laserCharge(l.s[0], l.s[1], ep[0], ep[1], clamp(1 - (l.t - 15) / 40, 0, 1), this.bColor);
       } else {
         const w = l.t * 4;
         this.line(l.s[0], l.s[1], ep[0], ep[1], colorWithAlpha(C_WHITE, 0.7), w + 8);
@@ -1803,21 +1833,34 @@ class NeonRaidEngine {
 
     // boss1 sweep laser (phase 4)
     if (this.bossStage === 1 && this.phase === 4) {
-      const ex = bx + Math.cos(this.b1SweepAng) * 700;
-      const ey = by + Math.sin(this.b1SweepAng) * 700;
-      this.line(bx, by, ex, ey, colorWithAlpha(C_RED, 0.7), 30);
-      this.line(bx, by, ex, ey, colorWithAlpha(C_WHITE, 0.5), 12);
+      // 맞는 판정과 같은 길이로 끝까지 (원본은 700 이라 화면 중간에서 끊겨 보였음)
+      const ex = bx + Math.cos(this.b1SweepAng) * 1200;
+      const ey = by + Math.sin(this.b1SweepAng) * 1200;
+      if (this.phaseTimer <= BEAM_WARMUP) this.laserCharge(bx, by, ex, ey, this.phaseTimer / BEAM_WARMUP, C_RED);
+      else {
+        this.line(bx, by, ex, ey, colorWithAlpha(C_RED, 0.7), 30);
+        this.line(bx, by, ex, ey, colorWithAlpha(C_WHITE, 0.5), 12);
+      }
     }
 
     // boss arm lasers (boss5)
-    if (this.bossStage === 5 && this.b5ArmLaserActive && this.b5ArmLaserLife <= 40 - this.phase * 4) {
-      const na = this.phase < 2 ? 4 : (this.phase < 4 ? 6 : 8);
-      const al = 65 + this.phase * 5;
-      for (let j = 0; j < na; j++) {
-        const a = this.b5ArmAng + j * TAU / na;
-        const tx = this.bx + Math.cos(a) * al, ty = this.by + Math.sin(a) * al;
-        this.line(tx, ty, tx + Math.cos(a) * 700, ty + Math.sin(a) * 700, colorWithAlpha(C_WHITE, 0.6), 8);
-        this.line(tx, ty, tx + Math.cos(a) * 700, ty + Math.sin(a) * 700, this.bColor, 4);
+    if (this.bossStage === 5) {
+      const firing = this.b5ArmLaserActive && this.b5ArmLaserLife <= 40 - this.phase * 4;
+      // 충전: 켜지기 30틱 전부터 팔 끝에서 조준선이 밝아짐 (원본은 예고 없이 갑자기 나타났음)
+      const toOn = [180, 155, 125, 95][this.phase - 1] - this.b5ArmLaserTimer;
+      const charging = !firing && (this.b5ArmLaserActive || toOn <= 30);
+      if (firing || charging) {
+        const k = this.b5ArmLaserActive ? 1 : clamp(1 - toOn / 30, 0, 1);
+        const na = this.phase < 2 ? 4 : (this.phase < 4 ? 6 : 8);
+        const al = 65 + this.phase * 5;
+        for (let j = 0; j < na; j++) {
+          const a = this.b5ArmAng + j * TAU / na;
+          const tx = this.bx + Math.cos(a) * al, ty = this.by + Math.sin(a) * al;
+          const ex = tx + Math.cos(a) * 1200, ey = ty + Math.sin(a) * 1200;   // 판정과 같은 길이 (원본 700)
+          if (!firing) { this.laserCharge(tx, ty, ex, ey, k, this.bColor); continue; }
+          this.line(tx, ty, ex, ey, colorWithAlpha(C_WHITE, 0.6), 8);
+          this.line(tx, ty, ex, ey, this.bColor, 4);
+        }
       }
     }
 
@@ -1826,14 +1869,16 @@ class NeonRaidEngine {
       const lc = this.phase === 3 ? 3 : 5;
       for (let j = 0; j < lc; j++) {
         const a = this.timer * 0.018 + j * (TAU / lc);
-        this.line(this.bx, this.by, this.bx + Math.cos(a) * 700, this.by + Math.sin(a) * 700, colorWithAlpha(C_GOLD, 0.6), 5);
-        this.line(this.bx, this.by, this.bx + Math.cos(a) * 700, this.by + Math.sin(a) * 700, colorWithAlpha(C_WHITE, 0.3), 2);
+        const ex = this.bx + Math.cos(a) * 1200, ey = this.by + Math.sin(a) * 1200;   // 판정과 같은 길이 (원본 700)
+        if (this.phaseTimer <= BEAM_WARMUP) { this.laserCharge(this.bx, this.by, ex, ey, this.phaseTimer / BEAM_WARMUP, C_GOLD); continue; }
+        this.line(this.bx, this.by, ex, ey, colorWithAlpha(C_GOLD, 0.6), 5);
+        this.line(this.bx, this.by, ex, ey, colorWithAlpha(C_WHITE, 0.3), 2);
       }
     }
 
     // boss7 link laser
-    if (this.bossStage === 7) {
-      const lc = this.b7Enraged ? C_RED : C_SKY;
+    if (this.bossStage === 7 && !this.b7Enraged) {   // 갈라지면 연결 레이저도 사라짐
+      const lc = C_SKY;
       this.line(this.b7Pos1[0], this.b7Pos1[1], this.b7Pos2[0], this.b7Pos2[1], colorWithAlpha(C_WHITE, 0.4), 6);
       this.line(this.b7Pos1[0], this.b7Pos1[1], this.b7Pos2[0], this.b7Pos2[1], colorWithAlpha(lc, 0.6), 3);
     }
@@ -1846,7 +1891,7 @@ class NeonRaidEngine {
       ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
       ctx.beginPath(); ctx.arc(WIDTH / 2, HEIGHT / 2, r, 0, TAU); ctx.stroke();
       ctx.setLineDash([]); ctx.restore();
-      this.glowText('⚠ GRAVITY DISTORTION', WIDTH / 2, HEIGHT / 2 - 100, C_PURPLE, 10, true);
+      this.glowText('⚠ 중력 왜곡', WIDTH / 2, HEIGHT / 2 - 100, C_PURPLE, 10, true);
     }
 
     // boss9 sonar
@@ -2083,7 +2128,7 @@ class NeonRaidEngine {
         const cr = 14+Math.sin(t*5)*2;
         if (this.b6OverchargeActive) {
           glow(bx,by+5,cr+10,C_RED);
-          this.glowText('▶ OVERCHARGE ◀', bx, by-55, C_RED, 9, true);
+          this.glowText('▶ 과충전 ◀', bx, by-55, C_RED, 9, true);
         }
         this.circle(bx,by+5,cr,this.b6OverchargeActive?C_RED:bColor); this.circle(bx,by+5,Math.max(1,cr-5),C_WHITE); this.circle(bx,by+5,Math.max(1,cr-10),this.b6OverchargeActive?C_RED:bColor);
         for (const sx of [-26,26]) { this.rect(bx+sx-5,by-43,11,17,C_STEEL,true,2); this.rect(bx+sx-5,by-43,11,17,C_WHITE,false,2,1); }
@@ -2091,7 +2136,7 @@ class NeonRaidEngine {
       }
       case 7: {
         for (const [pi, pos] of [[0,this.b7Pos1],[1,this.b7Pos2]]) {
-          if (this.b7Enraged && pi === 0) continue;
+          if (this.b7Enraged && pi === 1) continue;   // 갈라지면 두 번째 기체(터진 쪽)를 그리지 않음 — 맞는 판정이 남은 첫 번째 기체와 맞게 (원본은 반대로 숨겼음)
           const [px2,py2] = pos;
           const c7 = this.b7Enraged ? C_RED : bColor;
           const er = 11+Math.sin(t*8+pi)*3;
@@ -2240,16 +2285,16 @@ class NeonRaidEngine {
     ctx.strokeStyle = colorWithAlpha(bColor, 0.6); ctx.lineWidth = 1; ctx.stroke();
 
     const bossNames = {
-      1:'STEEL OVERLORD', 2:'CRYSTAL PHANTOM', 3:'NEON DRAGON', 4:'VOID MANTIS',
-      5:'OMEGA MACHINE',  6:'IRON GUARDIAN',   7:'TWIN INTERCEPTORS', 8:'PHANTOM LORD',
-      9:'ABYSSAL PREDATOR', 10:'DOOMSDAY APEX'
+      1:'강철 군주', 2:'수정 망령', 3:'네온 드래곤', 4:'공허 사마귀',
+      5:'오메가 머신',  6:'철의 수호자',   7:'쌍둥이 요격기', 8:'환영 군주',
+      9:'심연의 포식자', 10:'종말의 정점'
     };
     const bHpText = `${Math.max(0, this.bhp | 0).toLocaleString()} / ${this.bmax.toLocaleString()}`;
     ctx.save();
-    ctx.textAlign = 'center'; ctx.font = 'bold 8px Arial';
+    ctx.textAlign = 'center'; ctx.font = `bold 8px ${FONT_STACK}`;
     ctx.fillStyle = C_WHITE; ctx.fillText(bHpText, WIDTH / 2, BY + BH - 2);
     ctx.restore();
-    this.text(`${bossNames[bossStage]}  [PHASE ${phase}]`, WIDTH / 2, BY + BH + 16, bColor, 9, true);
+    this.text(`${bossNames[bossStage]}  [${phase}단계]`, WIDTH / 2, BY + BH + 16, bColor, 9, true);
 
     // ── player HP bar ────────────────────────────────────
     const PW = 200, PX = 25, PY = 47, PH = 11;
@@ -2281,31 +2326,31 @@ class NeonRaidEngine {
     ctx.strokeStyle = colorWithAlpha(C_CYAN, 0.5); ctx.lineWidth = 1; ctx.stroke();
 
     const hpLabel = this.pHpFlashHeal > 0
-      ? `+HP  ${this.php | 0} / ${this.pmaxHp}`
-      : `HP  ${this.php | 0} / ${this.pmaxHp}`;
+      ? `+체력  ${this.php | 0} / ${this.pmaxHp}`
+      : `체력  ${this.php | 0} / ${this.pmaxHp}`;
     const hpLabelCol = this.pHpFlashHeal > 0 ? C_GREEN :
                        this.pHpFlashDmg > 0  ? C_RED   : C_CYAN;
     this.text(hpLabel, PX, PY + PH + 14, hpLabelCol, 9);
 
     const char = CHARACTERS[this.save.selected_char];
-    this.text(`${char.icon} ${char.name}`, 25, 80, char.color, 9);
+    this.text(`${char.icon} ${char.name}`, 25, 87, char.color, 9);  // 한글은 키가 커서 체력 글자와 겹치지 않게 조금 아래로 (원본 80)
 
     // score & coins
-    ctx.textAlign='right'; ctx.font='bold 10px Arial'; ctx.fillStyle=C_WHITE; ctx.fillText(`SCORE ${this.score}`,WIDTH-12,25); ctx.textAlign='left';
-    ctx.textAlign='right'; ctx.font='bold 9px Arial'; ctx.fillStyle=C_COIN; ctx.fillText(`⬡ ${this.save.coins}  (+${this.sessionCoins})`,WIDTH-12,40); ctx.textAlign='left';
+    ctx.textAlign='right'; ctx.font=`bold 10px ${FONT_STACK}`; ctx.fillStyle=C_WHITE; ctx.fillText(`점수 ${this.score}`,WIDTH-12,25); ctx.textAlign='left';
+    ctx.textAlign='right'; ctx.font=`bold 9px ${FONT_STACK}`; ctx.fillStyle=C_COIN; ctx.fillText(`⬡ ${this.save.coins}  (+${this.sessionCoins})`,WIDTH-12,40); ctx.textAlign='left';
 
     // boss10 time attack
     if (this.bossStage === 10 && this.phase >= 3) {
       const sec = Math.max(0, (this.b10TimeAttack / 60) | 0);
       const c = sec <= 15 ? C_RED : C_GOLD;
-      this.glowText(`⚠ COLLAPSE IN: ${sec}s`, WIDTH/2, 93, c, 11, true);
+      this.glowText(`⚠ 붕괴까지 ${sec}초`, WIDTH/2, 93, c, 11, true);
     }
 
     // back button (click handled in handleClick)
     const bhov = this.inRect(this.mouseX, this.mouseY, WIDTH-135, HEIGHT-55, 125, 40);
     this.rect(WIDTH-135, HEIGHT-55, 125, 40, '#141420', true, 5);
     this.rect(WIDTH-135, HEIGHT-55, 125, 40, bhov?C_WHITE:'#707080', false, 5, 1);
-    this.text('← SELECT', WIDTH-73, HEIGHT-29, bhov?C_WHITE:'#707080', 10, true);
+    this.text('← 나가기', WIDTH-73, HEIGHT-29, bhov?C_WHITE:'#707080', 10, true);
   }
 
   // ─── TRANSITION ───────────────────────────
@@ -2316,8 +2361,8 @@ class NeonRaidEngine {
     ctx.fillRect(0,0,WIDTH,HEIGHT);
 
     let txt = '';
-    if (this.transitionTimer < 60) txt = 'OVERLORD DEFEATED';
-    else if (this.transitionTimer < 120) txt = `STAGE ${this.bossStage + 1} INCOMING`;
+    if (this.transitionTimer < 60) txt = '보스 격파!';
+    else if (this.transitionTimer < 120) txt = `스테이지 ${this.bossStage + 1} 진입`;
     else txt = STAGE_INFO[Math.min(10, this.bossStage + 1)]?.name || '???';
     this.glowText(txt, WIDTH/2, HEIGHT/3, C_WHITE, 20, true);
 
@@ -2335,15 +2380,15 @@ class NeonRaidEngine {
     const t = this.lobbyTimer;
     const pulse = 0.8 + 0.2*Math.sin(t*0.04);
     const gc = rgbToHex(255*pulse,215*pulse,0);
-    this.glowText('VICTORY!', WIDTH/2, HEIGHT/3-50, gc, 38, true);
-    this.glowText('ALL OVERLORDS DEFEATED', WIDTH/2, HEIGHT/3+15, C_WHITE, 16, true);
-    this.text(`FINAL SCORE: ${this.score.toLocaleString()}`, WIDTH/2, HEIGHT/3+50, C_WHITE, 12, true);
-    this.text('10 STAGES × 4 PHASES CLEARED', WIDTH/2, HEIGHT/3+70, C_LIME, 10, true);
-    this.text(`⬡ TOTAL COINS: ${this.save.coins}`, WIDTH/2, HEIGHT/3+90, C_COIN, 12, true);
+    this.glowText('승리!', WIDTH/2, HEIGHT/3-50, gc, 38, true);
+    this.glowText('모든 보스를 물리쳤다', WIDTH/2, HEIGHT/3+15, C_WHITE, 16, true);
+    this.text(`최종 점수: ${this.score.toLocaleString()}`, WIDTH/2, HEIGHT/3+50, C_WHITE, 12, true);
+    this.text('스테이지 10개 × 4단계 클리어', WIDTH/2, HEIGHT/3+70, C_LIME, 10, true);
+    this.text(`⬡ 모은 코인: ${this.save.coins}`, WIDTH/2, HEIGHT/3+90, C_COIN, 12, true);
     const bhov = this.inRect(this.mouseX, this.mouseY, WIDTH/2-130, HEIGHT/2+30, 260, 55);
     const bc = bhov ? C_WHITE : C_GOLD;
     if (bhov) { this.ctx.fillStyle=colorWithAlpha(C_GOLD,0.1); this.ctx.roundRect(WIDTH/2-130,HEIGHT/2+30,260,55,6); this.ctx.fill(); }
     this.neonRect(WIDTH/2-130, HEIGHT/2+30, 260, 55, bc);
-    this.glowText('STAGE SELECT', WIDTH/2, HEIGHT/2+63, bc, 14, true);
+    this.glowText('스테이지 선택', WIDTH/2, HEIGHT/2+63, bc, 14, true);
   }
 }
